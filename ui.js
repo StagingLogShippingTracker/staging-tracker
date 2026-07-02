@@ -1,3 +1,6 @@
+// --- ui.js ---
+window.batchSelectedIds = window.batchSelectedIds || new Set();
+
 window.adjustCount = function(id, amt) { if($('#'+id)) $('#'+id).value = Math.max(0, (parseInt($('#'+id).value)||0) + amt); };
 window.adjustEditCount = function(id, amt) { if($('#'+id)) $('#'+id).value = Math.max(0, (parseInt($('#'+id).value)||0) + amt); };
 
@@ -64,7 +67,7 @@ window.renderTables = function() {
         const editBtn = canEdit ? `<button class="btn-edit" onclick="window.openUniversalEditor('staging', '${o.id}')">Edit</button>` : `<span style="color:#94a3b8; font-size:11px;">Read-Only</span>`;
         const chkBox = canEdit ? `<input type="checkbox" onchange="if(this.checked){ window.triggerShipModal('${o.id}'); this.checked=false; }">` : `<span style="color:#9ca3af;">—</span>`;
         const commentBtn = o.comments ? `<button class="btn" style="padding:4px 8px; font-size:12px; background:#8b5cf6; color:#fff; height:auto;" onclick="window.openCommentModal('staging', '${o.id}')">See</button>` : (canEdit ? `<button class="btn" style="padding:4px 8px; font-size:12px; background:#e2e8f0; color:#475569; height:auto;" onclick="window.openCommentModal('staging', '${o.id}')">Add</button>` : `<span style="color:#9ca3af;">—</span>`);
-        const batchChk = `<input type="checkbox" style="width:18px;height:18px;" onchange="window.toggleBatchSelect('${o.id}', this.checked)" ${batchSelectedIds.has(o.id) ? 'checked' : ''}>`;
+        const batchChk = `<input type="checkbox" style="width:18px;height:18px;" onchange="window.toggleBatchSelect('${o.id}', this.checked)" ${window.batchSelectedIds.has(o.id) ? 'checked' : ''}>`;
 
         sBody.insertAdjacentHTML('beforeend', `<tr>
           <td class="show-in-batch" style="text-align:center;">${batchChk}</td>
@@ -108,7 +111,7 @@ window.renderTables = function() {
 
 window.openUniversalEditor = function(table, id) {
   const o = appData[table].find(x => x.id === id); if (!o) return;
-  currentEditId = o.id; editTargetRecord = { table: table, id: o.id, so: o.so, photo_urls: o.photo_urls || [] };
+  window.currentEditId = o.id; window.editTargetRecord = { table: table, id: o.id, so: o.so, photo_urls: o.photo_urls || [] };
   const isRet = (table === 'shipped' && (o.carrier === 'RETURNED TO STOCK' || o.carrier === 'CONSOLIDATED'));
   
   if($('#e_so')) $('#e_so').value = o.so; if($('#e_cust')) $('#e_cust').value = o.customer; if($('#e_loc')) $('#e_loc').value = o.location || ''; 
@@ -168,7 +171,7 @@ window.triggerReturnModal = function() {
 };
 
 window.openCommentModal = function(table, id) {
-  const o = appData[table].find(x => x.id === id); if(!o) return; currentCommentTarget = { table: table, id: id };
+  const o = appData[table].find(x => x.id === id); if(!o) return; window.currentCommentTarget = { table: table, id: id };
   if($('#quick_comments')) { $('#quick_comments').value = o.comments || ''; $('#quick_comments').disabled = !currentUser; }
   if($('#saveCommentBtn')) $('#saveCommentBtn').style.display = currentUser ? 'block' : 'none';
   if($('#commentModal')) $('#commentModal').style.display = 'flex';
@@ -179,17 +182,16 @@ window.togglePMEmail = function(isChecked, inputId, btnId) {
 };
 
 window.triggerShipModal = function(id) {
-  const item = appData.staging.find(x => x.id === id); if (!item) return; activeShipTargetItem = item; 
-  if($('#photoPreviewStrip')) $('#photoPreviewStrip').innerHTML = ''; selectedPhotoBlobs = [];
+  const item = appData.staging.find(x => x.id === id); if (!item) return; window.activeShipTargetItem = item; 
+  if($('#photoPreviewStrip')) $('#photoPreviewStrip').innerHTML = ''; window.selectedPhotoBlobs = [];
   if($('#m_so')) $('#m_so').value = item.so; if($('#m_cust')) $('#m_cust').value = item.customer; if($('#m_qty')) $('#m_qty').value = item.type;
   if($('#m_carrier')) $('#m_carrier').value = ''; if($('#m_loc')) $('#m_loc').value = item.location; if($('#m_weight')) $('#m_weight').value = item.weight || '—'; if($('#m_by')) $('#m_by').value = '';
   
-  // NEW LINE: Pull the original staging comments directly into the dispatch prompt
   if($('#m_comments')) $('#m_comments').value = item.comments || ''; 
   
   if($('#m_pm_chk')) $('#m_pm_chk').checked = false; window.togglePMEmail(false, 'm_pm_email', 'm_pm_email_btn');
   if($('#shipModal')) $('#shipModal').style.display = 'flex';
-  window.renderPhotoStrip('#photoPreviewStrip', selectedPhotoBlobs);
+  window.renderPhotoStrip('#photoPreviewStrip', window.selectedPhotoBlobs);
 };
 
 window.closeShipModal = function() { if($('#shipModal')) $('#shipModal').style.display = 'none'; window.loadCloudData(); };
@@ -264,7 +266,6 @@ document.addEventListener('click', function(e) {
   if (!e.target.matches('.hamburger-btn')) { document.querySelectorAll('.dropdown-content.show-menu').forEach(menu => { menu.classList.remove('show-menu'); }); }
 });
 
-// --- STATUS AUTO-SHIFT & MODAL LOGIC ---
 window.getFormattedStatus = function(dbStatus) {
   if (/^\d{4}-\d{2}-\d{2}$/.test(dbStatus)) {
     const todayStr = new Date().toLocaleDateString('en-CA'); 
