@@ -1,3 +1,9 @@
+// --- media.js ---
+window.openMapInstance = null;
+window.openMapMarkers = [];
+window.mainPhotoBlobs = [];
+window.selectedPhotoBlobs = [];
+
 window.fetchBrowserGPS = function(targetInputId) {
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(
@@ -9,28 +15,28 @@ window.fetchBrowserGPS = function(targetInputId) {
 
 window.initOpenStreetMapEngine = function() {
   if(!$('#openFreightMap')) return;
-  openMapInstance = L.map('openFreightMap').setView([53.5461, -113.4938], 11);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(openMapInstance);
+  window.openMapInstance = L.map('openFreightMap').setView([53.5461, -113.4938], 11);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(window.openMapInstance);
   window.syncMapPins();
 };
 
 window.syncMapPins = function() {
-  if (!openMapInstance) return;
-  openMapMarkers.forEach(m => openMapInstance.removeLayer(m));
-  openMapMarkers = []; let bounds = L.latLngBounds(); let hasPins = false;
+  if (!window.openMapInstance) return;
+  window.openMapMarkers.forEach(m => window.openMapInstance.removeLayer(m));
+  window.openMapMarkers = []; let bounds = L.latLngBounds(); let hasPins = false;
 
   appData.staging.forEach(item => {
     if (item.coords && item.coords.includes(',')) {
       const [lat, lng] = item.coords.split(',').map(n => parseFloat(n.trim()));
       if (!isNaN(lat) && !isNaN(lng)) {
-        const marker = L.marker([lat, lng]).addTo(openMapInstance);
+        const marker = L.marker([lat, lng]).addTo(window.openMapInstance);
         const pp = item.photo_urls && item.photo_urls.length > 0 ? `<br><img src="${SUPABASE_URL}/storage/v1/object/public/freight-photos/${item.photo_urls[0]}" style="width:100%;max-height:120px;object-fit:cover;margin-top:8px;border-radius:6px;">` : '';
         marker.bindPopup(`<b>${item.so}</b> - ${item.customer}<br>Location: ${item.location}<br>Status: ${item.status}<br><button class="btn" style="margin-top:8px; width:100%; font-size:12px; padding:6px; height:auto;" onclick="window.viewMapDetails('${item.id}')">View Details</button>${pp}`);
-        openMapMarkers.push(marker); bounds.extend([lat, lng]); hasPins = true;
+        window.openMapMarkers.push(marker); bounds.extend([lat, lng]); hasPins = true;
       }
     }
   });
-  if (hasPins) openMapInstance.fitBounds(bounds, { padding: [30, 30] });
+  if (hasPins) window.openMapInstance.fitBounds(bounds, { padding: [30, 30] });
 };
 
 window.viewMapDetails = function(id) {
@@ -49,32 +55,32 @@ window.viewMapDetails = function(id) {
 
 window.addMainPhotoBlob = function(inputEl) {
   if(!inputEl.files || inputEl.files.length === 0) return;
-  Array.from(inputEl.files).forEach(f => { if(mainPhotoBlobs.length < 10) mainPhotoBlobs.push(f); });
+  Array.from(inputEl.files).forEach(f => { if(window.mainPhotoBlobs.length < 10) window.mainPhotoBlobs.push(f); });
   window.renderMainPhotoStrip();
 };
 
 window.renderMainPhotoStrip = function() {
   const container = $('#mainPhotoPreviewStrip'); if(!container) return; container.innerHTML = '';
-  mainPhotoBlobs.forEach((f, idx) => {
-    container.insertAdjacentHTML('beforeend', `<span class="photo-badge">📎 Img-${idx+1} <span onclick="mainPhotoBlobs.splice(${idx},1); window.renderMainPhotoStrip()">&times;</span></span>`);
+  window.mainPhotoBlobs.forEach((f, idx) => {
+    container.insertAdjacentHTML('beforeend', `<span class="photo-badge">📎 Img-${idx+1} <span onclick="window.mainPhotoBlobs.splice(${idx},1); window.renderMainPhotoStrip()">&times;</span></span>`);
   });
 };
 
 window.addPhotoBlob = function(inputEl) {
   if(!inputEl.files || inputEl.files.length === 0) return;
-  Array.from(inputEl.files).forEach(f => { if(selectedPhotoBlobs.length < 10) selectedPhotoBlobs.push(f); });
-  window.renderPhotoStrip('#photoPreviewStrip', selectedPhotoBlobs);
+  Array.from(inputEl.files).forEach(f => { if(window.selectedPhotoBlobs.length < 10) window.selectedPhotoBlobs.push(f); });
+  window.renderPhotoStrip('#photoPreviewStrip', window.selectedPhotoBlobs);
 };
 
 window.renderPhotoStrip = function(containerSel, blobArray) {
   const container = $(containerSel); if(!container) return; container.innerHTML = '';
-  if (containerSel === '#photoPreviewStrip' && activeShipTargetItem && activeShipTargetItem.photo_urls) {
-    activeShipTargetItem.photo_urls.forEach((url, idx) => {
-      container.insertAdjacentHTML('beforeend', `<span class="photo-badge">📎 Staged-${idx+1} <span onclick="activeShipTargetItem.photo_urls.splice(${idx},1); window.renderPhotoStrip('${containerSel}', selectedPhotoBlobs)">&times;</span></span>`);
+  if (containerSel === '#photoPreviewStrip' && window.activeShipTargetItem && window.activeShipTargetItem.photo_urls) {
+    window.activeShipTargetItem.photo_urls.forEach((url, idx) => {
+      container.insertAdjacentHTML('beforeend', `<span class="photo-badge">📎 Staged-${idx+1} <span onclick="window.activeShipTargetItem.photo_urls.splice(${idx},1); window.renderPhotoStrip('${containerSel}', window.selectedPhotoBlobs)">&times;</span></span>`);
     });
   }
   blobArray.forEach((f, idx) => {
-    container.insertAdjacentHTML('beforeend', `<span class="photo-badge">📎 Upload-${idx+1} <span onclick="selectedPhotoBlobs.splice(${idx},1); window.renderPhotoStrip('${containerSel}', selectedPhotoBlobs)">&times;</span></span>`);
+    container.insertAdjacentHTML('beforeend', `<span class="photo-badge">📎 Upload-${idx+1} <span onclick="window.selectedPhotoBlobs.splice(${idx},1); window.renderPhotoStrip('${containerSel}', window.selectedPhotoBlobs)">&times;</span></span>`);
   });
 };
 
