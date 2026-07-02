@@ -1,13 +1,14 @@
 // --- operations.js ---
+window.hiddenMemory = JSON.parse(localStorage.getItem('swift_hidden_memory')) || [];
 
 window.banishMemory = function(inputId) {
   if(!$('#'+inputId)) return;
   const val = $('#'+inputId).value.trim();
   if(!val) return;
   if(confirm(`Remove "${val}" from autocomplete memory?`)) {
-    if(!hiddenMemory.includes(val)) {
-      hiddenMemory.push(val);
-      localStorage.setItem('swift_hidden_memory', JSON.stringify(hiddenMemory));
+    if(!window.hiddenMemory.includes(val)) {
+      window.hiddenMemory.push(val);
+      localStorage.setItem('swift_hidden_memory', JSON.stringify(window.hiddenMemory));
     }
     $('#'+inputId).value = '';
     window.loadCloudData();
@@ -25,7 +26,7 @@ window.loadCloudData = async function() {
     if (!sh.error && sh.data) appData.shipped = sh.data;
     
     const allData = [...appData.staging, ...appData.shipped];
-    const filterMem = (arr) => [...new Set(arr.filter(Boolean))].filter(x => !hiddenMemory.includes(x));
+    const filterMem = (arr) => [...new Set(arr.filter(Boolean))].filter(x => !window.hiddenMemory.includes(x));
 
     const activeEl = document.activeElement;
     const activeListId = (activeEl && activeEl.tagName === 'INPUT') ? activeEl.getAttribute('list') : null;
@@ -91,7 +92,6 @@ window.submitReturnToStock = async function() {
     window.logAction('shipped', `Added Return to Stock log for SO: ${editTargetRecord.so}`);
     if(typeof window.showNotification === 'function') window.showNotification('Returned to Stock Successfully');
 
-    // UNIFIED WEBHOOK PAYLOAD
     if(pmChecked && finalPmEmail) {
       const cachedSubject = `RETURN TO STOCK: ${editTargetRecord.so} for ${$('#e_cust').value.trim()}`;
       const cachedBody = `Your order/pick has now been Returned to Stock. Return details:<br><br><b>Reason:</b> ${reason}<br><br>----------------------------------------------------------------------<br><b>SO#</b>                   | ${editTargetRecord.so}<br><b>Customer</b>              | ${$('#e_cust').value.trim()}<br><b>Container(s)</b>          | ${window.getDynamicType('e')}<br><b>Total Weight (In lbs)</b> | ${$('#e_weight').value.trim() || '—'}<br><b>Picked by</b>             | ${pickedBy}<br><b>Returned At</b>           | ${currentTimeStamp}<br><b>Returned By</b>           | ${returnedBy}<br>----------------------------------------------------------------------<br><br>For more shipment details, visit: <a href="https://swiftoperations.github.io/staging-tracker/">Swift Staging Tracker</a><br><br>Thanks`;
@@ -106,7 +106,7 @@ window.submitReturnToStock = async function() {
           subject: cachedSubject, 
           body: cachedBody,
           attachments: attachmentUrls,
-          has_attachments: attachmentUrls.length > 0 // <-- THE TRUE/FALSE SWITCH
+          has_attachments: attachmentUrls.length > 0
         })
       }).catch(err => console.warn(err));
     }
@@ -169,7 +169,7 @@ window.submitFreightDispatch = async function() {
   const dispatcher = $('#m_by').value.trim(); 
   const pmRaw = $('#m_pm_email').value.trim(); const pmChecked = $('#m_pm_chk').checked;
   const carrierVal = $('#m_carrier').value.trim() || 'Unassigned Carrier';
-  const shipComments = $('#m_comments') ? $('#m_comments').value.trim() : (activeShipTargetItem.comments || '');
+  const shipComments = $('#m_comments') ? $('#m_comments').value.trim() : (window.activeShipTargetItem.comments || '');
   
   if(!dispatcher) return alert("Missing required dispatcher input.");
   
@@ -181,12 +181,12 @@ window.submitFreightDispatch = async function() {
   
   if($('#modalConfirmBtn')) $('#modalConfirmBtn').disabled = true;
   try {
-    let photoUrls = (activeShipTargetItem && activeShipTargetItem.photo_urls) ? [...activeShipTargetItem.photo_urls] : [];
+    let photoUrls = (window.activeShipTargetItem && window.activeShipTargetItem.photo_urls) ? [...window.activeShipTargetItem.photo_urls] : [];
     
-    for (let i = 0; i < selectedPhotoBlobs.length; i++) {
-      const file = selectedPhotoBlobs[i]; 
+    for (let i = 0; i < window.selectedPhotoBlobs.length; i++) {
+      const file = window.selectedPhotoBlobs[i]; 
       const cleanFileName = file.name.replace(/[^a-zA-Z0-9.]/g, '');
-      const path = `${activeShipTargetItem.so}-${Date.now()}-${i}-${cleanFileName}`;
+      const path = `${window.activeShipTargetItem.so}-${Date.now()}-${i}-${cleanFileName}`;
       await supabaseClient.storage.from('freight-photos').upload(path, file); photoUrls.push(path);
     }
     
@@ -194,9 +194,9 @@ window.submitFreightDispatch = async function() {
     if(pmName) pmName = pmName.charAt(0).toUpperCase() + pmName.slice(1);
 
     const { error: insertError } = await supabaseClient.from('shipped').insert([{
-      so: activeShipTargetItem.so, customer: activeShipTargetItem.customer, type: activeShipTargetItem.type,
-      qty: activeShipTargetItem.qty, carrier: carrierVal, location: activeShipTargetItem.location, coords: activeShipTargetItem.coords,
-      weight: activeShipTargetItem.weight, comments: activeShipTargetItem.comments, shipped_by: dispatcher, pmd_email: pmName, photo_urls: photoUrls
+      so: window.activeShipTargetItem.so, customer: window.activeShipTargetItem.customer, type: window.activeShipTargetItem.type,
+      qty: window.activeShipTargetItem.qty, carrier: carrierVal, location: window.activeShipTargetItem.location, coords: window.activeShipTargetItem.coords,
+      weight: window.activeShipTargetItem.weight, comments: window.activeShipTargetItem.comments, shipped_by: dispatcher, pmd_email: pmName, photo_urls: photoUrls
     }]);
     
     if (insertError) {
@@ -204,16 +204,15 @@ window.submitFreightDispatch = async function() {
       if($('#modalConfirmBtn')) $('#modalConfirmBtn').disabled = false; return;
     }
 
-    await supabaseClient.from('staging').delete().eq('id', activeShipTargetItem.id);
-    window.logAction('staging', `Ship Confirmed SO: ${activeShipTargetItem.so}`);
-    window.logAction('shipped', `Added via Ship Confirm: SO: ${activeShipTargetItem.so}`);
+    await supabaseClient.from('staging').delete().eq('id', window.activeShipTargetItem.id);
+    window.logAction('staging', `Ship Confirmed SO: ${window.activeShipTargetItem.so}`);
+    window.logAction('shipped', `Added via Ship Confirm: SO: ${window.activeShipTargetItem.so}`);
     if(typeof window.showNotification === 'function') window.showNotification('Freight Dispatched Successfully');
 
-    // UNIFIED WEBHOOK PAYLOAD
     if(pmChecked && finalPmEmail) {
       const currentTimeStamp = new Date().toLocaleString();
-      const cachedSubject = `CONFIRMATION OF SHIPOUT: ${activeShipTargetItem.customer} ${activeShipTargetItem.so} @ ${activeShipTargetItem.type} via ${carrierVal}`;
-      const cachedBody = `Your order has now been shipped! Order details:<br><br>----------------------------------------------------------------------<br><b>SO#</b>                   | ${activeShipTargetItem.so}<br><b>Customer</b>              | ${activeShipTargetItem.customer}<br><b>Container(s)</b>          | ${activeShipTargetItem.type}<br><b>Total Weight (In lbs)</b> | ${activeShipTargetItem.weight || '—'}<br><b>Carrier</b>               | ${carrierVal}<br><b>Shipped At</b>            | ${currentTimeStamp}<br><b>Shipped By</b>            | ${dispatcher}<br><b>Comments</b>              | ${shipComments || 'None'}<br>----------------------------------------------------------------------<br><br>For more shipment details, visit: <a href="https://swiftoperations.github.io/staging-tracker/">Swift Staging Tracker</a><br><br>Thanks`;
+      const cachedSubject = `CONFIRMATION OF SHIPOUT: ${window.activeShipTargetItem.customer} ${window.activeShipTargetItem.so} @ ${window.activeShipTargetItem.type} via ${carrierVal}`;
+      const cachedBody = `Your order has now been shipped! Order details:<br><br>----------------------------------------------------------------------<br><b>SO#</b>                   | ${window.activeShipTargetItem.so}<br><b>Customer</b>              | ${window.activeShipTargetItem.customer}<br><b>Container(s)</b>          | ${window.activeShipTargetItem.type}<br><b>Total Weight (In lbs)</b> | ${window.activeShipTargetItem.weight || '—'}<br><b>Carrier</b>               | ${carrierVal}<br><b>Shipped At</b>            | ${currentTimeStamp}<br><b>Shipped By</b>            | ${dispatcher}<br><b>Comments</b>              | ${shipComments || 'None'}<br>----------------------------------------------------------------------<br><br>For more shipment details, visit: <a href="https://swiftoperations.github.io/staging-tracker/">Swift Staging Tracker</a><br><br>Thanks`;
 
       const attachmentUrls = photoUrls.map(p => `https://gdrpdiwykmnybmkadlrv.supabase.co/storage/v1/object/public/freight-photos/${p}`);
 
@@ -225,7 +224,7 @@ window.submitFreightDispatch = async function() {
           subject: cachedSubject, 
           body: cachedBody,
           attachments: attachmentUrls,
-          has_attachments: attachmentUrls.length > 0 // <-- THE TRUE/FALSE SWITCH
+          has_attachments: attachmentUrls.length > 0
         })
       }).catch(err => console.warn(err));
     }
@@ -257,12 +256,15 @@ window.submitStagingEntry = async function() {
   
   try {
     let photoUrls = []; 
-    for (let i = 0; i < mainPhotoBlobs.length; i++) {
-      const file = mainPhotoBlobs[i]; 
-      const cleanFileName = file.name.replace(/[^a-zA-Z0-9.]/g, '');
-      const path = `${soVal}-staging-${Date.now()}-${i}-${cleanFileName}`;
-      const { error: uploadError } = await supabaseClient.storage.from('freight-photos').upload(path, file);
-      if(!uploadError) photoUrls.push(path);
+    // FIXED: Corrected reference to window.mainPhotoBlobs
+    if (window.mainPhotoBlobs) {
+        for (let i = 0; i < window.mainPhotoBlobs.length; i++) {
+          const file = window.mainPhotoBlobs[i]; 
+          const cleanFileName = file.name.replace(/[^a-zA-Z0-9.]/g, '');
+          const path = `${soVal}-staging-${Date.now()}-${i}-${cleanFileName}`;
+          const { error: uploadError } = await supabaseClient.storage.from('freight-photos').upload(path, file);
+          if(!uploadError) photoUrls.push(path);
+        }
     }
   
     const { error } = await supabaseClient.from('staging').insert([{ so: soVal, customer: $('#customer').value.trim(), status: window.getDbStatus($('#status').value), location: locValue, coords: $('#coords').value.trim(), weight: $('#weight').value.trim(), comments: $('#comments').value.trim(), staged_by: $('#staged_by').value.trim(), type: type.join(', '), qty: totalQty, photo_urls: photoUrls }]);
@@ -273,7 +275,7 @@ window.submitStagingEntry = async function() {
     
     $('#so').value=''; $('#customer').value=''; $('#loc').value=''; $('#coords').value=''; $('#staged_by').value=''; $('#weight').value=''; $('#c_skid').value=0; $('#c_box').value=0; $('#c_crate').value=0; $('#c_pipe').value=0; $('#c_other').value=0; 
     if($('#comments')) $('#comments').value='';
-    mainPhotoBlobs = []; window.renderMainPhotoStrip();
+    window.mainPhotoBlobs = []; window.renderMainPhotoStrip();
     window.loadCloudData();
   } catch(e) { alert("System Error: " + e.message); }
   
@@ -289,8 +291,6 @@ window.saveQuickComment = async function() {
   if(typeof window.showNotification === 'function') window.showNotification('Comment Saved');
   if($('#commentModal')) $('#commentModal').style.display = 'none'; window.loadCloudData();
 };
-
-// --- NOTIFY OF RETURNS LOGIC ---
 
 window.nrPhotoBlobs = [];
 
@@ -368,7 +368,6 @@ window.submitNotifyReturn = async function() {
     
     emailBody += `For more details, visit: <a href="https://swiftoperations.github.io/staging-tracker/">Swift Staging Tracker</a>`;
 
-    // UNIFIED WEBHOOK PAYLOAD
     fetch('https://hook.us2.make.com/xouhxvxi22q9b3gdwnthe4bre7z2jgu9', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
@@ -377,7 +376,7 @@ window.submitNotifyReturn = async function() {
         subject: emailSubject, 
         body: emailBody,
         attachments: attachmentUrls,
-        has_attachments: attachmentUrls.length > 0 // <-- THE TRUE/FALSE SWITCH
+        has_attachments: attachmentUrls.length > 0
       })
     }).catch(e => console.warn('Webhook silently caught error:', e));
 
@@ -390,13 +389,12 @@ window.submitNotifyReturn = async function() {
   $('#nr_submitBtn').disabled = false; $('#nr_submitBtn').textContent = 'Submit Return Notification';
 };
 
-// NEW: Email Auto-Corrector. Safely converts typed names into valid emails.
 window.resolveEmail = function(inputVal) {
   if (!inputVal) return null;
   let val = inputVal.trim();
   if (val.includes('@') && val.includes('.')) return val; 
-  if (typeof rawContactsData !== 'undefined') {
-    const match = rawContactsData.find(c => c.name.toLowerCase() === val.toLowerCase() || c.name.toLowerCase().includes(val.toLowerCase()));
+  if (typeof rawContactsData !== 'undefined' && window.rawContactsData) {
+    const match = window.rawContactsData.find(c => c.name.toLowerCase() === val.toLowerCase() || c.name.toLowerCase().includes(val.toLowerCase()));
     if (match && match.email && match.email !== 'N/A') return match.email;
   }
   return null; 
