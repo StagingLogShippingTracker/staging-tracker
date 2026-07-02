@@ -136,4 +136,285 @@ window.saveEditedRecord = async function() {
   const basePayload = { so: soVal, customer: $('#e_cust').value.trim(), location: locValue, coords: $('#e_coords').value.trim(), weight: $('#e_weight').value.trim(), comments: $('#e_comments').value.trim(), type: dynamicType, qty: dynamicQty };
 
   if (window.editTargetRecord.table === 'staging') {
-    const newStatus = window.getDbStatus($('#e_status
+    const newStatus = window.getDbStatus($('#e_status').value.trim());
+    const { error } = await supabaseClient.from('staging').update({ ...basePayload, status: newStatus, staged_by: $('#e_staged_by').value.trim(), photo_urls: window.editTargetRecord.photo_urls }).eq('id', window.currentEditId);
+    if(error) { alert("Database Error: " + error.message); return; }
+  } else {
+    const newCarrier = $('#e_carrier').value.trim();
+    const { error } = await supabaseClient.from('shipped').update({ ...basePayload, carrier: newCarrier, shipped_by: $('#e_shipped_by').value.trim(), pmd_email: $('#e_pm').value.trim() || null, photo_urls: window.editTargetRecord.photo_urls }).eq('id', window.currentEditId);
+    if(error) { alert("Database Error: " + error.message); return; }
+  }
+  
+  window.logAction(window.editTargetRecord.table, `Edited SO ${basePayload.so}`);
+  if($('#editModal')) $('#editModal').style.display = 'none'; 
+  if(typeof window.showNotification === 'function') window.showNotification('Record Updated Successfully');
+  window.loadCloudData();
+};
+
+window.executeShippedUndo = async function() {
+  if(!confirm("Are you sure you want to undo this action and return it to Staging?")) return;
+  try {
+    const { data: currentRecord, error: fetchErr } = await supabaseClient.from('shipped').select('*').eq('id', window.editTargetRecord.id).single();
+    
+    if (fetchErr || !currentRecord) throw new Error("Could not find the original record in the database.");
+    
+    const proceed = await window.checkSoConflict(currentRecord.so, null);
+    if(!proceed) return;
+    
+    const { error } = await supabaseClient.from('staging').insert([{ 
+        so: currentRecord.so, 
+        customer: currentRecord.customer, 
+        type: currentRecord.type, 
+        qty: currentRecord.qty, 
+        location: currentRecord.location, 
+        coords: currentRecord.coords, 
+        weight: currentRecord.weight, 
+        comments: currentRecord.comments, 
+        status: 'Partial', 
+        photo_urls: currentRecord.photo_urls 
+    }]);
+    
+    if (error) return alert("Undo Database Error: " + error.message); 
+    
+    await supabaseClient.from('shipped').delete().eq('id', window.editTargetRecord.id);
+    window.logAction('shipped', `Undo Shipment Action for SO: ${currentRecord.so}`);
+    window.logAction('staging', `Restored to Staging via Undo for SO: ${currentRecord.so}`);
+    if(typeof window.showNotification === 'function') window.showNotification('Shipment Action Undone');
+    if($('#editModal')) $('#editModal').style.display = 'none'; 
+    window.loadCloudData();
+  } catch(e) { alert("Undo error: " + e.message); }
+};
+
+window.submitFreightDispatch = async function() {
+  const dispatcher = $('#m_by').value.trim(); 
+  const pmRaw = $('#m_pm_email').value.trim(); const pmChecked = $('#m_pm_chk').checked;
+  const carrierVal = $('#m_carrier').value.trim() || 'Unassigned Carrier';
+  const shipComments = $('#m_comments') ? $('#m_comments').value.trim() : (window.activeShipTargetItem.comments || '');
+  
+  if(!dispatcher) return alert("Missing required dispatcher input.");
+  
+  let finalPmEmail = null;
+  if (pmChecked) {
+    finalPmEmail = window.resolveEmail(pmRaw);
+    if (!finalPmEmail) return alert("Invalid PM Entry. Please select a valid PM from the list or type a valid email address.");
+  }
+  
+  if($('#modalConfirmBtn')) $('#modalConfirmBtn').disabled = true;
+  try {
+    let photoUrls = (window.activeShipTargetItem && window.activeShipTargetItem.photo_urls) ? [...window.activeShipTargetItem.photo_urls] : [];
+    
+    for (let i = 0; i < window.selectedPhotoBlobs.length; i++) {
+      const file = window.selectedPhotoBlobs[i]; 
+      const cleanFileName = file.name.replace(/[^a-zA-Z0-9.]/g, '');
+      const path = `${window.activeShipTargetItem.so}-${Date.now()}-${i}-${cleanFileName}`;
+      await supabaseClient.storage.from('freight-photos').upload(path, file); photoUrls.push(path);
+    }
+    
+    let pmName = finalPmEmail ? finalPmEmail.split('@')[0].split('.')[0] : null;
+    if(pmName) pmName = pmName.charAt(0).toUpperCase() + pmName.slice(1);
+
+    const { error: insertError } = await supabaseClient.from('shipped').insert([{
+      so: window.activeShipTargetItem.so, customer: window.activeShipTargetItem.customer, type: window.activeShipTargetItem.type,
+      qty: window.activeShipTargetItem.qty, carrier: carrierVal, location: window.activeShipTargetItem.location, coords: window.activeShipTargetItem.coords,
+      weight: window.activeShipTargetItem.weight, comments: window.activeShipTargetItem.comments, shipped_by: dispatcher, pmd_email: pmName, photo_urls: photoUrls
+    }]);
+    
+    if (insertError) {
+      alert("Database Error: " + insertError.message);
+      if($('#modalConfirmBtn')) $('#modalConfirmBtn').disabled = false; return;
+    }
+
+    await supabaseClient.from('staging').delete().eq('id', window.activeShipTargetItem.id);
+    window.logAction('staging', `Ship Confirmed SO: ${window.activeShipTargetItem.so}`);
+    window.logAction('shipped', `Added via Ship Confirm: SO: ${window.activeShipTargetItem.so}`);
+    if(typeof window.showNotification === 'function') window.showNotification('Freight Dispatched Successfully');
+
+    if(pmChecked && finalPmEmail) {
+      const currentTimeStamp = new Date().toLocaleString();
+      const cachedSubject = `CONFIRMATION OF SHIPOUT: ${window.activeShipTargetItem.customer} ${window.activeShipTargetItem.so} @ ${window.activeShipTargetItem.type} via ${carrierVal}`;
+      const cachedBody = `Your order has now been shipped! Order details:<br><br>----------------------------------------------------------------------<br><b>SO#</b>                   | ${window.activeShipTargetItem.so}<br><b>Customer</b>              | ${window.activeShipTargetItem.customer}<br><b>Container(s)</b>          | ${window.activeShipTargetItem.type}<br><b>Total Weight (In lbs)</b> | ${window.activeShipTargetItem.weight || '—'}<br><b>Carrier</b>               | ${carrierVal}<br><b>Shipped At</b>            | ${currentTimeStamp}<br><b>Shipped By</b>            | ${dispatcher}<br><b>Comments</b>              | ${shipComments || 'None'}<br>----------------------------------------------------------------------<br><br>For more shipment details, visit: <a href="https://swiftoperations.github.io/staging-tracker/">Swift Staging Tracker</a><br><br>Thanks`;
+
+      const attachmentUrls = photoUrls.map(p => `https://gdrpdiwykmnybmkadlrv.supabase.co/storage/v1/object/public/freight-photos/${p}`);
+
+      fetch('https://hook.us2.make.com/iykii8i5j1vssv6d8qkqest78iphjw7i', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          to: finalPmEmail, 
+          cc: "warehouse1@swiftsupply.ca", 
+          subject: cachedSubject, 
+          body: cachedBody,
+          attachments: attachmentUrls,
+          has_attachments: attachmentUrls.length > 0
+        })
+      }).catch(err => console.warn(err));
+    }
+
+    window.closeShipModal();
+    if(window.activeReportMode) { window.reportRecordAction('Fixed via Shipped Out'); }
+
+  } catch(e) { alert("Data dispatch error."); } 
+  finally { if($('#modalConfirmBtn')) $('#modalConfirmBtn').disabled = false; }
+};
+
+window.submitStagingEntry = async function() {
+  const sk = parseInt($('#c_skid').value)||0, bx = parseInt($('#c_box').value)||0, cr = parseInt($('#c_crate').value)||0, pi = parseInt($('#c_pipe').value)||0, ot = parseInt($('#c_other').value)||0;
+  if(!$('#so').value || !$('#customer').value || !$('#loc').value) return alert("Fields Missing.");
+  const totalQty = sk + bx + cr + pi + ot;
+  if (totalQty === 0) return alert("Error: You must add at least 1 container to confirm this entry.");
+  const soVal = $('#so').value.trim(); const locValue = $('#loc').value.trim();
+
+  const proceed = await window.checkSoConflict(soVal, null); if(!proceed) return;
+
+  let type = []; 
+  if(sk) type.push(window.formatContainer(sk, 'Skid'));
+  if(bx) type.push(window.formatContainer(bx, 'Box'));
+  if(cr) type.push(window.formatContainer(cr, 'Crate'));
+  if(pi) type.push(window.formatContainer(pi, 'Pipe/Rod'));
+  if(ot) type.push(window.formatContainer(ot, 'Other'));
+  
+  $('#add').disabled = true; $('#add').textContent = 'Saving...';
+  
+  try {
+    let photoUrls = []; 
+    if (window.mainPhotoBlobs) {
+        for (let i = 0; i < window.mainPhotoBlobs.length; i++) {
+          const file = window.mainPhotoBlobs[i]; 
+          const cleanFileName = file.name.replace(/[^a-zA-Z0-9.]/g, '');
+          const path = `${soVal}-staging-${Date.now()}-${i}-${cleanFileName}`;
+          const { error: uploadError } = await supabaseClient.storage.from('freight-photos').upload(path, file);
+          if(!uploadError) photoUrls.push(path);
+        }
+    }
+  
+    const { error } = await supabaseClient.from('staging').insert([{ so: soVal, customer: $('#customer').value.trim(), status: window.getDbStatus($('#status').value), location: locValue, coords: $('#coords').value.trim(), weight: $('#weight').value.trim(), comments: $('#comments').value.trim(), staged_by: $('#staged_by').value.trim(), type: type.join(', '), qty: totalQty, photo_urls: photoUrls }]);
+    if (error) { alert("Database Error: " + error.message); $('#add').disabled = false; $('#add').textContent = 'Add'; return; }
+    
+    window.logAction('staging', `Added new entry for SO: ${soVal}`);
+    if(typeof window.showNotification === 'function') window.showNotification('Staging Entry Added');
+    
+    $('#so').value=''; $('#customer').value=''; $('#loc').value=''; $('#coords').value=''; $('#staged_by').value=''; $('#weight').value=''; $('#c_skid').value=0; $('#c_box').value=0; $('#c_crate').value=0; $('#c_pipe').value=0; $('#c_other').value=0; 
+    if($('#comments')) $('#comments').value='';
+    window.mainPhotoBlobs = []; window.renderMainPhotoStrip();
+    window.loadCloudData();
+  } catch(e) { alert("System Error: " + e.message); }
+  
+  $('#add').disabled = false; $('#add').textContent = 'Add';
+};
+
+window.saveQuickComment = async function() {
+  const newComment = $('#quick_comments').value.trim();
+  const { error } = await supabaseClient.from(window.currentCommentTarget.table).update({ comments: newComment }).eq('id', window.currentCommentTarget.id);
+  if(error) return alert("Error saving comment: " + error.message);
+  const o = window.appData[window.currentCommentTarget.table].find(x => x.id === window.currentCommentTarget.id);
+  if(o) window.logAction(window.currentCommentTarget.table, `Added/Edited comment for SO: ${o.so}`);
+  if(typeof window.showNotification === 'function') window.showNotification('Comment Saved');
+  if($('#commentModal')) $('#commentModal').style.display = 'none'; window.loadCloudData();
+};
+
+window.nrPhotoBlobs = [];
+
+window.addNRPhotoBlob = function(inputEl) {
+  if(!inputEl.files || inputEl.files.length === 0) return;
+  Array.from(inputEl.files).forEach(f => { if(window.nrPhotoBlobs.length < 10) window.nrPhotoBlobs.push(f); });
+  window.renderNRPhotoStrip();
+};
+
+window.renderNRPhotoStrip = function() {
+  const container = $('#nr_photoPreviewStrip'); if(!container) return; container.innerHTML = '';
+  window.nrPhotoBlobs.forEach((f, idx) => {
+    container.insertAdjacentHTML('beforeend', `<span class="photo-badge">📎 Img-${idx+1} <span onclick="window.nrPhotoBlobs.splice(${idx},1); window.renderNRPhotoStrip()">&times;</span></span>`);
+  });
+};
+
+window.openNotifyReturnModal = function() {
+  $('#nr_so').value=''; $('#nr_cust').value=''; $('#nr_skid').value=0; $('#nr_box').value=0; $('#nr_crate').value=0; $('#nr_pipe').value=0; $('#nr_other').value=0; 
+  $('#nr_loc').value=''; $('#nr_coords').value=''; $('#nr_weight').value=''; $('#nr_comments').value=''; 
+  $('#nr_received_by').value = window.currentUser ? window.currentUser.email.split('@')[0] : '';
+  if($('#nr_cc_pm')) $('#nr_cc_pm').value = ''; 
+  window.nrPhotoBlobs = []; window.renderNRPhotoStrip();
+  $('#notifyReturnModal').style.display = 'flex';
+};
+
+window.submitNotifyReturn = async function() {
+  const soVal = $('#nr_so').value.trim();
+  const custVal = $('#nr_cust').value.trim();
+  const locVal = $('#nr_loc').value.trim();
+  const receivedByVal = $('#nr_received_by').value.trim();
+  const pmInputEl = $('#nr_pm_email') || $('#nr_cc_pm');
+  const pmRaw = pmInputEl ? pmInputEl.value.trim() : ''; 
+  
+  if(!soVal || !custVal || !locVal || !receivedByVal) return alert("Please fill out all required fields (*).");
+  if(!pmRaw) return alert("Please specify a PM to notify of this return.");
+  
+  const finalPmEmail = window.resolveEmail(pmRaw);
+  if (!finalPmEmail) return alert("Invalid PM Entry. Please select a valid PM from the list or type a full email address (e.g., name@domain.com).");
+
+  $('#nr_submitBtn').disabled = true; $('#nr_submitBtn').textContent = 'Sending Notification...';
+  
+  try {
+    const dynamicType = window.getDynamicType('nr');
+    const weightVal = $('#nr_weight').value.trim();
+    const coordsVal = $('#nr_coords').value.trim();
+    const commentsVal = $('#nr_comments').value.trim();
+    
+    let attachmentUrls = []; 
+    
+    for (let i = 0; i < window.nrPhotoBlobs.length; i++) {
+      const file = window.nrPhotoBlobs[i]; 
+      const cleanFileName = file.name.replace(/[^a-zA-Z0-9.]/g, '');
+      const path = `${soVal}-return-${Date.now()}-${i}-${cleanFileName}`;
+      const { error: uploadError } = await supabaseClient.storage.from('freight-photos').upload(path, file);
+      if(!uploadError) {
+        const publicUrl = `https://gdrpdiwykmnybmkadlrv.supabase.co/storage/v1/object/public/freight-photos/${path}`;
+        attachmentUrls.push(publicUrl); 
+      }
+    }
+
+    const currentTimeStamp = new Date().toLocaleString();
+    const emailSubject = `WAREHOUSE RETURN NOTIFICATION: SO ${soVal} - ${custVal}`;
+    let emailBody = `A new return has been received at the warehouse. Details below:<br><br>
+    ----------------------------------------------------------------------<br>
+    <b>SO#</b>                   | ${soVal}<br>
+    <b>Customer</b>              | ${custVal}<br>
+    <b>Container(s)</b>          | ${dynamicType || 'None specified'}<br>
+    <b>Location</b>              | ${locVal}<br>
+    <b>Total Weight (In lbs)</b> | ${weightVal || '—'}<br>
+    <b>Coords</b>                | ${coordsVal || '—'}<br>
+    <b>Received By</b>           | ${receivedByVal}<br>
+    <b>Received At</b>           | ${currentTimeStamp}<br>
+    <b>Comments</b>              | ${commentsVal || 'None'}<br>
+    ----------------------------------------------------------------------<br><br>`;
+    
+    emailBody += `For more details, visit: <a href="https://swiftoperations.github.io/staging-tracker/">Swift Staging Tracker</a>`;
+
+    fetch('https://hook.us2.make.com/iykii8i5j1vssv6d8qkqest78iphjw7i', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        to: finalPmEmail, 
+        cc: "warehouse1@swiftsupply.ca", 
+        subject: emailSubject, 
+        body: emailBody,
+        attachments: attachmentUrls,
+        has_attachments: attachmentUrls.length > 0
+      })
+    }).catch(e => console.warn('Webhook silently caught error:', e));
+
+    window.logAction('staging', `Sent Automated Return Notification for SO: ${soVal}`);
+    if(typeof window.showNotification === 'function') window.showNotification('Return Notification Sent Successfully');
+    $('#notifyReturnModal').style.display = 'none';
+
+  } catch(e) { alert("System Error: " + e.message); }
+  
+  $('#nr_submitBtn').disabled = false; $('#nr_submitBtn').textContent = 'Submit Return Notification';
+};
+
+window.resolveEmail = function(inputVal) {
+  if (!inputVal) return null;
+  let val = inputVal.trim();
+  if (val.includes('@') && val.includes('.')) return val; 
+  if (typeof rawContactsData !== 'undefined' && window.rawContactsData) {
+    const match = window.rawContactsData.find(c => c.name.toLowerCase() === val.toLowerCase() || c.name.toLowerCase().includes(val.toLowerCase()));
+    if (match && match.email && match.email !== 'N/A') return match.email;
+  }
+  return null; 
+};
