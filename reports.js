@@ -1,9 +1,11 @@
+// --- reports.js ---
 window.activeReportMode = false;
-window.currentReportFilter = 'all'; // Tracks 'all', 'aisle', 'non_aisle', etc.
+window.currentReportFilter = 'all'; 
 window.reportQueue = [];
 window.reportIndex = 0;
 window.reportResults = [];
 window.reportPhotoBlobs = [];
+window.discrepancyList = JSON.parse(localStorage.getItem('swift_discrepancies')) || [];
 
 function locSortKey(loc) {
   const match = (loc||'').toUpperCase().match(/^([A-Z])-(\d{2})-([A-Z])-(1|2|1\+2)$/);
@@ -35,7 +37,7 @@ window.resumeStagingReport = function() {
   window.reportQueue = state.queue;
   window.reportIndex = state.index;
   window.reportResults = state.results || [];
-  window.currentReportFilter = state.filter || 'all'; // <-- Restores the filter tracking
+  window.currentReportFilter = state.filter || 'all';
   window.activeReportMode = true;
   if($('#reportResumeModal')) $('#reportResumeModal').style.display = 'none';
   window.renderNextReportItem();
@@ -43,14 +45,13 @@ window.resumeStagingReport = function() {
 
 window.initStagingReport = function(mode = 'all') {
   if(!mode && window.pendingReportMode) mode = window.pendingReportMode;
-  window.currentReportFilter = mode; // <-- Added to track current report type
+  window.currentReportFilter = mode; 
   const aisleRegex = /^([A-Z])-\d{2}-([A-Z])-(1|2|1\+2)$/i;
-// ... rest of the existing code remains the same
   
   let sourceData = appData.staging;
   if (mode === 'aisle') sourceData = sourceData.filter(x => aisleRegex.test(x.location||''));
   else if (mode === 'non_aisle') sourceData = sourceData.filter(x => !aisleRegex.test(x.location||''));
-  else if (mode === 'discrepancies') sourceData = sourceData.filter(x => discrepancyList && discrepancyList.includes(x.id));
+  else if (mode === 'discrepancies') sourceData = sourceData.filter(x => window.discrepancyList.includes(x.id));
 
   let sorted = [...sourceData].sort((a, b) => {
     const keyA = locSortKey(a.location), keyB = locSortKey(b.location);
@@ -132,9 +133,9 @@ window.reportRecordAction = function(resultStr) {
   const item = appData.staging.find(x => x.id === window.reportQueue[window.reportIndex]);
   if(item) {
     window.reportResults.push({ so: item.so, customer: item.customer, location: item.location, date: new Date(item.entry_date).toLocaleString(), result: resultStr });
-    discrepancyList = discrepancyList.filter(id => id !== item.id);
-    if(resultStr !== 'Verified') discrepancyList.push(item.id);
-    localStorage.setItem('swift_discrepancies', JSON.stringify(discrepancyList));
+    window.discrepancyList = window.discrepancyList.filter(id => id !== item.id);
+    if(resultStr !== 'Verified') window.discrepancyList.push(item.id);
+    localStorage.setItem('swift_discrepancies', JSON.stringify(window.discrepancyList));
   }
   window.reportIndex++;
   window.saveReportState();
@@ -208,8 +209,6 @@ window.reportSubmitNewLocation = async function() {
   } catch(e) { alert("Error updating location: " + e.message); window.renderNextReportItem(); }
 };
 
-// --- NEW REPORT ADD ENTRY LOGIC ---
-
 window.addReportPhotoBlob = function(inputEl) {
   if(!inputEl.files || inputEl.files.length === 0) return;
   Array.from(inputEl.files).forEach(f => { if(window.reportPhotoBlobs.length < 10) window.reportPhotoBlobs.push(f); });
@@ -265,7 +264,6 @@ window.submitReportAddEntry = async function() {
   
     const newEntry = { so: soVal, customer: $('#ra_cust').value.trim(), status: window.getDbStatus($('#ra_status').value), location: locValue, coords: $('#ra_coords').value.trim(), weight: $('#ra_weight').value.trim(), comments: $('#ra_comments').value.trim(), staged_by: $('#ra_staged_by').value.trim(), type: type.join(', '), qty: totalQty, photo_urls: photoUrls };
     
-    // Select the returned data so we can get its ID immediately
     const { data: insertedData, error } = await supabaseClient.from('staging').insert([newEntry]).select();
     
     if (error) { alert("Database Error: " + error.message); $('#ra_submitBtn').disabled = false; $('#ra_submitBtn').textContent = 'Add Entry'; return; }
@@ -273,7 +271,6 @@ window.submitReportAddEntry = async function() {
     window.logAction('staging', `Added new entry via Report module for SO: ${soVal}`);
     if(typeof window.showNotification === 'function') window.showNotification('Staging Entry Added');
     
-    // Inject the new item directly into our appData and the Report Queue
     appData.staging.push(insertedData[0]); 
     window.injectIntoReportQueue(insertedData[0]);
     
@@ -290,12 +287,10 @@ window.injectIntoReportQueue = function(item) {
   const aisleRegex = /^([A-Z])-\d{2}-([A-Z])-(1|2|1\+2)$/i;
   const isAisle = aisleRegex.test(item.location||'');
   
-  // Abort if the new entry doesn't match the current report's filter constraints
   if (window.currentReportFilter === 'aisle' && !isAisle) return;
   if (window.currentReportFilter === 'non_aisle' && isAisle) return;
   if (window.currentReportFilter === 'discrepancies') return; 
   
-  // Create an array of actual objects, add the new item, and re-sort
   const currentQueueItems = window.reportQueue.map(id => appData.staging.find(x => x.id === id)).filter(Boolean);
   currentQueueItems.push(item);
   
@@ -312,7 +307,6 @@ window.injectIntoReportQueue = function(item) {
   const newQueue = currentQueueItems.map(x => x.id);
   const newIndexOfItem = newQueue.indexOf(item.id);
   
-  // If the new item sorts BEFORE the item we are currently looking at, shift the index forward by 1 so the user stays on their current screen
   if (newIndexOfItem <= window.reportIndex) {
     window.reportIndex++; 
   }
