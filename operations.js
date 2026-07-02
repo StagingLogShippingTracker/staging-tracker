@@ -1,14 +1,14 @@
 // --- operations.js ---
-window.hiddenMemory = JSON.parse(localStorage.getItem('swift_hidden_memory')) || [];
+hiddenMemory = JSON.parse(localStorage.getItem('swift_hidden_memory')) || [];
 
 window.banishMemory = function(inputId) {
   if(!$('#'+inputId)) return;
   const val = $('#'+inputId).value.trim();
   if(!val) return;
   if(confirm(`Remove "${val}" from autocomplete memory?`)) {
-    if(!window.hiddenMemory.includes(val)) {
-      window.hiddenMemory.push(val);
-      localStorage.setItem('swift_hidden_memory', JSON.stringify(window.hiddenMemory));
+    if(!hiddenMemory.includes(val)) {
+      hiddenMemory.push(val);
+      localStorage.setItem('swift_hidden_memory', JSON.stringify(hiddenMemory));
     }
     $('#'+inputId).value = '';
     window.loadCloudData();
@@ -22,11 +22,11 @@ window.loadCloudData = async function() {
       supabaseClient.from('shipped').select('*').order('shipped_at', { ascending: false })
     ]);
     
-    if (!st.error && st.data) window.appData.staging = st.data; 
-    if (!sh.error && sh.data) window.appData.shipped = sh.data;
+    if (!st.error && st.data) appData.staging = st.data; 
+    if (!sh.error && sh.data) appData.shipped = sh.data;
     
-    const allData = [...window.appData.staging, ...window.appData.shipped];
-    const filterMem = (arr) => [...new Set(arr.filter(Boolean))].filter(x => !window.hiddenMemory.includes(x));
+    const allData = [...appData.staging, ...appData.shipped];
+    const filterMem = (arr) => [...new Set(arr.filter(Boolean))].filter(x => !hiddenMemory.includes(x));
 
     const activeEl = document.activeElement;
     const activeListId = (activeEl && activeEl.tagName === 'INPUT') ? activeEl.getAttribute('list') : null;
@@ -43,7 +43,7 @@ window.loadCloudData = async function() {
     safeUpdateDatalist('dl_customers', filterMem(allData.map(x=>x.customer)).map(c=>`<option value="${c}">`).join(''));
     safeUpdateDatalist('dl_locations', filterMem(allData.map(x=>x.location)).map(l=>`<option value="${l}">`).join(''));
     safeUpdateDatalist('dl_stagers', filterMem(allData.map(x=>(x.staged_by || x.shipped_by))).map(s=>`<option value="${s}">`).join(''));
-    safeUpdateDatalist('dl_pastEmails', filterMem(window.appData.shipped.map(x=>x.pmd_email)).map(em=>`<option value="${em}@swiftsupply.ca">`).join(''));
+    safeUpdateDatalist('dl_pastEmails', filterMem(appData.shipped.map(x=>x.pmd_email)).map(em=>`<option value="${em}@swiftsupply.ca">`).join(''));
     
     window.renderTables(); 
     if(typeof window.syncMapPins === 'function') window.syncMapPins();
@@ -53,8 +53,8 @@ window.loadCloudData = async function() {
 window.deleteCurrentRecord = async function() {
   if(confirm("Are you sure you want to PERMANENTLY delete this record?")) {
     try {
-      await supabaseClient.from(window.editTargetRecord.table).delete().eq('id', window.currentEditId);
-      window.logAction(window.editTargetRecord.table, `Deleted entry for SO: ${window.editTargetRecord.so}`);
+      await supabaseClient.from(editTargetRecord.table).delete().eq('id', currentEditId);
+      window.logAction(editTargetRecord.table, `Deleted entry for SO: ${editTargetRecord.so}`);
       if($('#editModal')) $('#editModal').style.display = 'none';
       if(typeof window.showNotification === 'function') window.showNotification('Record Deleted Permanently');
       window.loadCloudData();
@@ -79,28 +79,28 @@ window.submitReturnToStock = async function() {
   }
   
   try {
-    const e = window.appData.staging.find(x => x.id === window.currentEditId);
+    const e = appData.staging.find(x => x.id === currentEditId);
     const currentTimeStamp = new Date().toLocaleString();
     let pmName = finalPmEmail ? finalPmEmail.split('@')[0].split('.')[0] : null;
     if(pmName) pmName = pmName.charAt(0).toUpperCase() + pmName.slice(1);
     
     const { error: insertError } = await supabaseClient.from('shipped').insert([{
-      so: window.editTargetRecord.so, customer: $('#e_cust').value.trim(), type: window.getDynamicType('e'), qty: window.getDynamicQty('e'),
+      so: editTargetRecord.so, customer: $('#e_cust').value.trim(), type: window.getDynamicType('e'), qty: window.getDynamicQty('e'),
       carrier: 'RETURNED TO STOCK', location: $('#e_loc').value.trim(), coords: $('#e_coords').value.trim(),
-      weight: $('#e_weight').value.trim(), comments: e ? e.comments : '', shipped_by: returnedBy, pmd_email: pmName || pickedBy, photo_urls: window.editTargetRecord.photo_urls
+      weight: $('#e_weight').value.trim(), comments: e ? e.comments : '', shipped_by: returnedBy, pmd_email: pmName || pickedBy, photo_urls: editTargetRecord.photo_urls
     }]); 
     if(insertError) throw insertError;
     
-    await supabaseClient.from('staging').delete().eq('id', window.currentEditId);
-    window.logAction('staging', `Returned to Stock SO: ${window.editTargetRecord.so}`);
-    window.logAction('shipped', `Added Return to Stock log for SO: ${window.editTargetRecord.so}`);
+    await supabaseClient.from('staging').delete().eq('id', currentEditId);
+    window.logAction('staging', `Returned to Stock SO: ${editTargetRecord.so}`);
+    window.logAction('shipped', `Added Return to Stock log for SO: ${editTargetRecord.so}`);
     if(typeof window.showNotification === 'function') window.showNotification('Returned to Stock Successfully');
 
     if(pmChecked && finalPmEmail) {
-      const cachedSubject = `RETURN TO STOCK: ${window.editTargetRecord.so} for ${$('#e_cust').value.trim()}`;
-      const cachedBody = `Your order/pick has now been Returned to Stock. Return details:<br><br><b>Reason:</b> ${reason}<br><br>----------------------------------------------------------------------<br><b>SO#</b>                   | ${window.editTargetRecord.so}<br><b>Customer</b>              | ${$('#e_cust').value.trim()}<br><b>Container(s)</b>          | ${window.getDynamicType('e')}<br><b>Total Weight (In lbs)</b> | ${$('#e_weight').value.trim() || '—'}<br><b>Picked by</b>             | ${pickedBy}<br><b>Returned At</b>           | ${currentTimeStamp}<br><b>Returned By</b>           | ${returnedBy}<br>----------------------------------------------------------------------<br><br>For more shipment details, visit: <a href="https://swiftoperations.github.io/staging-tracker/">Swift Staging Tracker</a><br><br>Thanks`;
+      const cachedSubject = `RETURN TO STOCK: ${editTargetRecord.so} for ${$('#e_cust').value.trim()}`;
+      const cachedBody = `Your order/pick has now been Returned to Stock. Return details:<br><br><b>Reason:</b> ${reason}<br><br>----------------------------------------------------------------------<br><b>SO#</b>                   | ${editTargetRecord.so}<br><b>Customer</b>              | ${$('#e_cust').value.trim()}<br><b>Container(s)</b>          | ${window.getDynamicType('e')}<br><b>Total Weight (In lbs)</b> | ${$('#e_weight').value.trim() || '—'}<br><b>Picked by</b>             | ${pickedBy}<br><b>Returned At</b>           | ${currentTimeStamp}<br><b>Returned By</b>           | ${returnedBy}<br>----------------------------------------------------------------------<br><br>For more shipment details, visit: <a href="https://swiftoperations.github.io/staging-tracker/">Swift Staging Tracker</a><br><br>Thanks`;
 
-      const attachmentUrls = window.editTargetRecord.photo_urls ? window.editTargetRecord.photo_urls.map(p => `https://gdrpdiwykmnybmkadlrv.supabase.co/storage/v1/object/public/freight-photos/${p}`) : [];
+      const attachmentUrls = editTargetRecord.photo_urls ? editTargetRecord.photo_urls.map(p => `https://gdrpdiwykmnybmkadlrv.supabase.co/storage/v1/object/public/freight-photos/${p}`) : [];
 
       fetch('https://hook.us2.make.com/iykii8i5j1vssv6d8qkqest78iphjw7i', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -127,25 +127,25 @@ window.saveEditedRecord = async function() {
   if (dynamicQty === 0) return alert("Error: You must have at least 1 container to save this record.");
   const locValue = $('#e_loc').value.trim(); const soVal = $('#e_so').value.trim();
 
-  if (window.editTargetRecord.table === 'staging') {
-    const proceed = await window.checkSoConflict(soVal, window.currentEditId);
+  if (editTargetRecord.table === 'staging') {
+    const proceed = await window.checkSoConflict(soVal, currentEditId);
     if(!proceed) return;
   }
   
   const dynamicType = window.getDynamicType('e');
   const basePayload = { so: soVal, customer: $('#e_cust').value.trim(), location: locValue, coords: $('#e_coords').value.trim(), weight: $('#e_weight').value.trim(), comments: $('#e_comments').value.trim(), type: dynamicType, qty: dynamicQty };
 
-  if (window.editTargetRecord.table === 'staging') {
+  if (editTargetRecord.table === 'staging') {
     const newStatus = window.getDbStatus($('#e_status').value.trim());
-    const { error } = await supabaseClient.from('staging').update({ ...basePayload, status: newStatus, staged_by: $('#e_staged_by').value.trim(), photo_urls: window.editTargetRecord.photo_urls }).eq('id', window.currentEditId);
+    const { error } = await supabaseClient.from('staging').update({ ...basePayload, status: newStatus, staged_by: $('#e_staged_by').value.trim(), photo_urls: editTargetRecord.photo_urls }).eq('id', currentEditId);
     if(error) { alert("Database Error: " + error.message); return; }
   } else {
     const newCarrier = $('#e_carrier').value.trim();
-    const { error } = await supabaseClient.from('shipped').update({ ...basePayload, carrier: newCarrier, shipped_by: $('#e_shipped_by').value.trim(), pmd_email: $('#e_pm').value.trim() || null, photo_urls: window.editTargetRecord.photo_urls }).eq('id', window.currentEditId);
+    const { error } = await supabaseClient.from('shipped').update({ ...basePayload, carrier: newCarrier, shipped_by: $('#e_shipped_by').value.trim(), pmd_email: $('#e_pm').value.trim() || null, photo_urls: editTargetRecord.photo_urls }).eq('id', currentEditId);
     if(error) { alert("Database Error: " + error.message); return; }
   }
   
-  window.logAction(window.editTargetRecord.table, `Edited SO ${basePayload.so}`);
+  window.logAction(editTargetRecord.table, `Edited SO ${basePayload.so}`);
   if($('#editModal')) $('#editModal').style.display = 'none'; 
   if(typeof window.showNotification === 'function') window.showNotification('Record Updated Successfully');
   window.loadCloudData();
@@ -154,7 +154,7 @@ window.saveEditedRecord = async function() {
 window.executeShippedUndo = async function() {
   if(!confirm("Are you sure you want to undo this action and return it to Staging?")) return;
   try {
-    const { data: currentRecord, error: fetchErr } = await supabaseClient.from('shipped').select('*').eq('id', window.editTargetRecord.id).single();
+    const { data: currentRecord, error: fetchErr } = await supabaseClient.from('shipped').select('*').eq('id', editTargetRecord.id).single();
     
     if (fetchErr || !currentRecord) throw new Error("Could not find the original record in the database.");
     
@@ -176,7 +176,7 @@ window.executeShippedUndo = async function() {
     
     if (error) return alert("Undo Database Error: " + error.message); 
     
-    await supabaseClient.from('shipped').delete().eq('id', window.editTargetRecord.id);
+    await supabaseClient.from('shipped').delete().eq('id', editTargetRecord.id);
     window.logAction('shipped', `Undo Shipment Action for SO: ${currentRecord.so}`);
     window.logAction('staging', `Restored to Staging via Undo for SO: ${currentRecord.so}`);
     if(typeof window.showNotification === 'function') window.showNotification('Shipment Action Undone');
@@ -189,7 +189,7 @@ window.submitFreightDispatch = async function() {
   const dispatcher = $('#m_by').value.trim(); 
   const pmRaw = $('#m_pm_email').value.trim(); const pmChecked = $('#m_pm_chk').checked;
   const carrierVal = $('#m_carrier').value.trim() || 'Unassigned Carrier';
-  const shipComments = $('#m_comments') ? $('#m_comments').value.trim() : (window.activeShipTargetItem.comments || '');
+  const shipComments = $('#m_comments') ? $('#m_comments').value.trim() : (activeShipTargetItem.comments || '');
   
   if(!dispatcher) return alert("Missing required dispatcher input.");
   
@@ -201,12 +201,12 @@ window.submitFreightDispatch = async function() {
   
   if($('#modalConfirmBtn')) $('#modalConfirmBtn').disabled = true;
   try {
-    let photoUrls = (window.activeShipTargetItem && window.activeShipTargetItem.photo_urls) ? [...window.activeShipTargetItem.photo_urls] : [];
+    let photoUrls = (activeShipTargetItem && activeShipTargetItem.photo_urls) ? [...activeShipTargetItem.photo_urls] : [];
     
     for (let i = 0; i < window.selectedPhotoBlobs.length; i++) {
       const file = window.selectedPhotoBlobs[i]; 
       const cleanFileName = file.name.replace(/[^a-zA-Z0-9.]/g, '');
-      const path = `${window.activeShipTargetItem.so}-${Date.now()}-${i}-${cleanFileName}`;
+      const path = `${activeShipTargetItem.so}-${Date.now()}-${i}-${cleanFileName}`;
       await supabaseClient.storage.from('freight-photos').upload(path, file); photoUrls.push(path);
     }
     
@@ -214,9 +214,9 @@ window.submitFreightDispatch = async function() {
     if(pmName) pmName = pmName.charAt(0).toUpperCase() + pmName.slice(1);
 
     const { error: insertError } = await supabaseClient.from('shipped').insert([{
-      so: window.activeShipTargetItem.so, customer: window.activeShipTargetItem.customer, type: window.activeShipTargetItem.type,
-      qty: window.activeShipTargetItem.qty, carrier: carrierVal, location: window.activeShipTargetItem.location, coords: window.activeShipTargetItem.coords,
-      weight: window.activeShipTargetItem.weight, comments: window.activeShipTargetItem.comments, shipped_by: dispatcher, pmd_email: pmName, photo_urls: photoUrls
+      so: activeShipTargetItem.so, customer: activeShipTargetItem.customer, type: activeShipTargetItem.type,
+      qty: activeShipTargetItem.qty, carrier: carrierVal, location: activeShipTargetItem.location, coords: activeShipTargetItem.coords,
+      weight: activeShipTargetItem.weight, comments: activeShipTargetItem.comments, shipped_by: dispatcher, pmd_email: pmName, photo_urls: photoUrls
     }]);
     
     if (insertError) {
@@ -224,15 +224,15 @@ window.submitFreightDispatch = async function() {
       if($('#modalConfirmBtn')) $('#modalConfirmBtn').disabled = false; return;
     }
 
-    await supabaseClient.from('staging').delete().eq('id', window.activeShipTargetItem.id);
-    window.logAction('staging', `Ship Confirmed SO: ${window.activeShipTargetItem.so}`);
-    window.logAction('shipped', `Added via Ship Confirm: SO: ${window.activeShipTargetItem.so}`);
+    await supabaseClient.from('staging').delete().eq('id', activeShipTargetItem.id);
+    window.logAction('staging', `Ship Confirmed SO: ${activeShipTargetItem.so}`);
+    window.logAction('shipped', `Added via Ship Confirm: SO: ${activeShipTargetItem.so}`);
     if(typeof window.showNotification === 'function') window.showNotification('Freight Dispatched Successfully');
 
     if(pmChecked && finalPmEmail) {
       const currentTimeStamp = new Date().toLocaleString();
-      const cachedSubject = `CONFIRMATION OF SHIPOUT: ${window.activeShipTargetItem.customer} ${window.activeShipTargetItem.so} @ ${window.activeShipTargetItem.type} via ${carrierVal}`;
-      const cachedBody = `Your order has now been shipped! Order details:<br><br>----------------------------------------------------------------------<br><b>SO#</b>                   | ${window.activeShipTargetItem.so}<br><b>Customer</b>              | ${window.activeShipTargetItem.customer}<br><b>Container(s)</b>          | ${window.activeShipTargetItem.type}<br><b>Total Weight (In lbs)</b> | ${window.activeShipTargetItem.weight || '—'}<br><b>Carrier</b>               | ${carrierVal}<br><b>Shipped At</b>            | ${currentTimeStamp}<br><b>Shipped By</b>            | ${dispatcher}<br><b>Comments</b>              | ${shipComments || 'None'}<br>----------------------------------------------------------------------<br><br>For more shipment details, visit: <a href="https://swiftoperations.github.io/staging-tracker/">Swift Staging Tracker</a><br><br>Thanks`;
+      const cachedSubject = `CONFIRMATION OF SHIPOUT: ${activeShipTargetItem.customer} ${activeShipTargetItem.so} @ ${activeShipTargetItem.type} via ${carrierVal}`;
+      const cachedBody = `Your order has now been shipped! Order details:<br><br>----------------------------------------------------------------------<br><b>SO#</b>                   | ${activeShipTargetItem.so}<br><b>Customer</b>              | ${activeShipTargetItem.customer}<br><b>Container(s)</b>          | ${activeShipTargetItem.type}<br><b>Total Weight (In lbs)</b> | ${activeShipTargetItem.weight || '—'}<br><b>Carrier</b>               | ${carrierVal}<br><b>Shipped At</b>            | ${currentTimeStamp}<br><b>Shipped By</b>            | ${dispatcher}<br><b>Comments</b>              | ${shipComments || 'None'}<br>----------------------------------------------------------------------<br><br>For more shipment details, visit: <a href="https://swiftoperations.github.io/staging-tracker/">Swift Staging Tracker</a><br><br>Thanks`;
 
       const attachmentUrls = photoUrls.map(p => `https://gdrpdiwykmnybmkadlrv.supabase.co/storage/v1/object/public/freight-photos/${p}`);
 
@@ -303,10 +303,10 @@ window.submitStagingEntry = async function() {
 
 window.saveQuickComment = async function() {
   const newComment = $('#quick_comments').value.trim();
-  const { error } = await supabaseClient.from(window.currentCommentTarget.table).update({ comments: newComment }).eq('id', window.currentCommentTarget.id);
+  const { error } = await supabaseClient.from(currentCommentTarget.table).update({ comments: newComment }).eq('id', currentCommentTarget.id);
   if(error) return alert("Error saving comment: " + error.message);
-  const o = window.appData[window.currentCommentTarget.table].find(x => x.id === window.currentCommentTarget.id);
-  if(o) window.logAction(window.currentCommentTarget.table, `Added/Edited comment for SO: ${o.so}`);
+  const o = appData[currentCommentTarget.table].find(x => x.id === currentCommentTarget.id);
+  if(o) window.logAction(currentCommentTarget.table, `Added/Edited comment for SO: ${o.so}`);
   if(typeof window.showNotification === 'function') window.showNotification('Comment Saved');
   if($('#commentModal')) $('#commentModal').style.display = 'none'; window.loadCloudData();
 };
@@ -329,7 +329,7 @@ window.renderNRPhotoStrip = function() {
 window.openNotifyReturnModal = function() {
   $('#nr_so').value=''; $('#nr_cust').value=''; $('#nr_skid').value=0; $('#nr_box').value=0; $('#nr_crate').value=0; $('#nr_pipe').value=0; $('#nr_other').value=0; 
   $('#nr_loc').value=''; $('#nr_coords').value=''; $('#nr_weight').value=''; $('#nr_comments').value=''; 
-  $('#nr_received_by').value = window.currentUser ? window.currentUser.email.split('@')[0] : '';
+  $('#nr_received_by').value = currentUser ? currentUser.email.split('@')[0] : '';
   if($('#nr_cc_pm')) $('#nr_cc_pm').value = ''; 
   window.nrPhotoBlobs = []; window.renderNRPhotoStrip();
   $('#notifyReturnModal').style.display = 'flex';
@@ -412,8 +412,8 @@ window.resolveEmail = function(inputVal) {
   if (!inputVal) return null;
   let val = inputVal.trim();
   if (val.includes('@') && val.includes('.')) return val; 
-  if (typeof rawContactsData !== 'undefined' && window.rawContactsData) {
-    const match = window.rawContactsData.find(c => c.name.toLowerCase() === val.toLowerCase() || c.name.toLowerCase().includes(val.toLowerCase()));
+  if (typeof rawContactsData !== 'undefined' && rawContactsData) {
+    const match = rawContactsData.find(c => c.name.toLowerCase() === val.toLowerCase() || c.name.toLowerCase().includes(val.toLowerCase()));
     if (match && match.email && match.email !== 'N/A') return match.email;
   }
   return null; 
