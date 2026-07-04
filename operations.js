@@ -224,6 +224,10 @@ window.submitFreightDispatch = async function() {
     await supabaseClient.from('staging').delete().eq('id', activeShipTargetItem.id);
     window.logAction('staging', `Ship Confirmed SO: ${activeShipTargetItem.so}`);
     window.logAction('shipped', `Added via Ship Confirm: SO: ${activeShipTargetItem.so}`);
+    
+    // -> ADD THIS ONE LINE HERE <-
+    if(typeof window.playSuccessChime === 'function') window.playSuccessChime();
+    
     if(typeof window.showNotification === 'function') window.showNotification('Freight Dispatched Successfully');
 
     if(pmChecked && finalPmEmail) {
