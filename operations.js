@@ -98,7 +98,7 @@ window.submitReturnToStock = async function() {
 
       const attachmentUrls = editTargetRecord.photo_urls ? editTargetRecord.photo_urls.map(p => `https://gdrpdiwykmnybmkadlrv.supabase.co/storage/v1/object/public/freight-photos/${p}`) : [];
 
-      fetch('https://hook.us2.make.com/xouhxvxi22q9b3gdwnthe4bre7z2jgu9', {
+      fetch('https://hook.us2.make.com/cxvgao3s4lwnrmntk762j25qct6bkkft', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           to: finalPmEmail, 
@@ -233,7 +233,7 @@ window.submitFreightDispatch = async function() {
 
       const attachmentUrls = photoUrls.map(p => `https://gdrpdiwykmnybmkadlrv.supabase.co/storage/v1/object/public/freight-photos/${p}`);
 
-      fetch('https://hook.us2.make.com/xouhxvxi22q9b3gdwnthe4bre7z2jgu9', {
+      fetch('https://hook.us2.make.com/cxvgao3s4lwnrmntk762j25qct6bkkft', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           to: finalPmEmail, 
@@ -409,7 +409,7 @@ window.submitNotifyReturn = async function() {
     if (photoLinksHTML !== "") emailBody += `<b>Photos:</b><br>${photoLinksHTML}<br><br>`;
     emailBody += `For more details, visit: <a href="https://swiftoperations.github.io/staging-tracker/">Swift Staging Tracker</a>`;
 
-    fetch('https://hook.us2.make.com/xouhxvxi22q9b3gdwnthe4bre7z2jgu9', {
+    fetch('https://hook.us2.make.com/cxvgao3s4lwnrmntk762j25qct6bkkft', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
         to: finalPmEmail, 
