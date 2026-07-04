@@ -269,6 +269,25 @@ window.showNotification = function(message) {
   setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 3000);
 };
 
+// NEW: Audio Synthesizer Chime
+window.playSuccessChime = function() {
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(1046.50, ctx.currentTime); // High C
+    gain.gain.setValueAtTime(0.1, ctx.currentTime); // Soft volume
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.5);
+  } catch(e) { console.warn("Audio chime disabled or unsupported:", e); }
+};
+
 window.toggleMenu = function(e) {
   e.stopPropagation(); const content = e.currentTarget.nextElementSibling; content.classList.toggle('show-menu');
 };
