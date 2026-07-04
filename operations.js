@@ -1,5 +1,4 @@
 // --- operations.js ---
-hiddenMemory = JSON.parse(localStorage.getItem('swift_hidden_memory')) || [];
 
 window.banishMemory = function(inputId) {
   if(!$('#'+inputId)) return;
@@ -52,16 +51,13 @@ window.loadCloudData = async function() {
 
 window.deleteCurrentRecord = async function() {
   if(confirm("Are you sure you want to PERMANENTLY delete this record?")) {
-    try {
-      await supabaseClient.from(editTargetRecord.table).delete().eq('id', currentEditId);
-      window.logAction(editTargetRecord.table, `Deleted entry for SO: ${editTargetRecord.so}`);
-      if($('#editModal')) $('#editModal').style.display = 'none';
-      if(typeof window.showNotification === 'function') window.showNotification('Record Deleted Permanently');
-      window.loadCloudData();
-      if(window.activeReportMode) { window.reportRecordAction('Fixed via Deletion'); }
-    } catch (e) {
-      alert("Delete failed: " + e.message);
-    }
+    await supabaseClient.from(editTargetRecord.table).delete().eq('id', currentEditId);
+    window.logAction(editTargetRecord.table, `Deleted entry for SO: ${editTargetRecord.so}`);
+    if($('#editModal')) $('#editModal').style.display = 'none';
+    if(typeof window.showNotification === 'function') window.showNotification('Record Deleted Permanently');
+    window.loadCloudData();
+    
+    if(window.activeReportMode) { window.reportRecordAction('Fixed via Deletion'); }
   }
 };
 
@@ -87,7 +83,7 @@ window.submitReturnToStock = async function() {
     const { error: insertError } = await supabaseClient.from('shipped').insert([{
       so: editTargetRecord.so, customer: $('#e_cust').value.trim(), type: window.getDynamicType('e'), qty: window.getDynamicQty('e'),
       carrier: 'RETURNED TO STOCK', location: $('#e_loc').value.trim(), coords: $('#e_coords').value.trim(),
-      weight: $('#e_weight').value.trim(), comments: e ? e.comments : '', shipped_by: returnedBy, pmd_email: pmName || pickedBy, photo_urls: editTargetRecord.photo_urls
+      weight: $('#e_weight').value.trim(), comments: e.comments, shipped_by: returnedBy, pmd_email: pmName || pickedBy, photo_urls: editTargetRecord.photo_urls
     }]); 
     if(insertError) throw insertError;
     
@@ -102,7 +98,7 @@ window.submitReturnToStock = async function() {
 
       const attachmentUrls = editTargetRecord.photo_urls ? editTargetRecord.photo_urls.map(p => `https://gdrpdiwykmnybmkadlrv.supabase.co/storage/v1/object/public/freight-photos/${p}`) : [];
 
-      fetch('https://hook.us2.make.com/iykii8i5j1vssv6d8qkqest78iphjw7i', {
+      fetch('https://hook.us2.make.com/xouhxvxi22q9b3gdwnthe4bre7z2jgu9', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           to: finalPmEmail, 
@@ -125,13 +121,23 @@ window.submitReturnToStock = async function() {
 window.saveEditedRecord = async function() {
   const dynamicQty = window.getDynamicQty('e');
   if (dynamicQty === 0) return alert("Error: You must have at least 1 container to save this record.");
-  const locValue = $('#e_loc').value.trim(); const soVal = $('#e_so').value.trim();
+  
+  const locValue = $('#e_loc').value.trim();
+  const soVal = $('#e_so').value.trim();
 
   if (editTargetRecord.table === 'staging') {
     const proceed = await window.checkSoConflict(soVal, currentEditId);
     if(!proceed) return;
   }
   
+  const aisleRegex = /^[A-Z]-\d{2}-[A-F]-[12]$/i;
+  if (editTargetRecord.table === 'staging' && aisleRegex.test(locValue)) {
+    const isOccupied = appData.staging.some(x => x.id !== currentEditId && (x.location || '').toLowerCase() === locValue.toLowerCase());
+    if (isOccupied) {
+      if (!confirm(`Conflict Warning: Aisle location ${locValue.toUpperCase()} is already occupied. Do you want to proceed and place them together?`)) return;
+    }
+  }
+
   const dynamicType = window.getDynamicType('e');
   const basePayload = { so: soVal, customer: $('#e_cust').value.trim(), location: locValue, coords: $('#e_coords').value.trim(), weight: $('#e_weight').value.trim(), comments: $('#e_comments').value.trim(), type: dynamicType, qty: dynamicQty };
 
@@ -146,35 +152,25 @@ window.saveEditedRecord = async function() {
   }
   
   window.logAction(editTargetRecord.table, `Edited SO ${basePayload.so}`);
+  
   if($('#editModal')) $('#editModal').style.display = 'none'; 
   if(typeof window.showNotification === 'function') window.showNotification('Record Updated Successfully');
   window.loadCloudData();
+  
+  if(window.activeReportMode) { window.reportRecordAction('Fixed via Manual Edit'); }
 };
 
 window.executeShippedUndo = async function() {
   if(!confirm("Are you sure you want to undo this action and return it to Staging?")) return;
   try {
-    const { data: currentRecord, error: fetchErr } = await supabaseClient.from('shipped').select('*').eq('id', editTargetRecord.id).single();
-    
-    if (fetchErr || !currentRecord) throw new Error("Could not find the original record in the database.");
+    const { data: currentRecord } = await supabaseClient.from('shipped').select('*').eq('id', editTargetRecord.id).single();
     
     const proceed = await window.checkSoConflict(currentRecord.so, null);
     if(!proceed) return;
-    
-    const { error } = await supabaseClient.from('staging').insert([{ 
-        so: currentRecord.so, 
-        customer: currentRecord.customer, 
-        type: currentRecord.type, 
-        qty: currentRecord.qty, 
-        location: currentRecord.location, 
-        coords: currentRecord.coords, 
-        weight: currentRecord.weight, 
-        comments: currentRecord.comments, 
-        status: 'Partial', 
-        photo_urls: currentRecord.photo_urls 
-    }]);
-    
-    if (error) return alert("Undo Database Error: " + error.message); 
+
+    // Fixed: 'status' is now 'Partial' to conform to database check constraint
+    const { error } = await supabaseClient.from('staging').insert([{ so: currentRecord.so, customer: currentRecord.customer, type: currentRecord.type, qty: currentRecord.qty, location: currentRecord.location, coords: currentRecord.coords, weight: currentRecord.weight, comments: currentRecord.comments, status: 'Partial', photo_urls: currentRecord.photo_urls }]);
+    if (error) { alert("Undo Database Error: " + error.message); return; }
     
     await supabaseClient.from('shipped').delete().eq('id', editTargetRecord.id);
     window.logAction('shipped', `Undo Shipment Action for SO: ${currentRecord.so}`);
@@ -203,8 +199,8 @@ window.submitFreightDispatch = async function() {
   try {
     let photoUrls = (activeShipTargetItem && activeShipTargetItem.photo_urls) ? [...activeShipTargetItem.photo_urls] : [];
     
-    for (let i = 0; i < window.selectedPhotoBlobs.length; i++) {
-      const file = window.selectedPhotoBlobs[i]; 
+    for (let i = 0; i < selectedPhotoBlobs.length; i++) {
+      const file = selectedPhotoBlobs[i]; 
       const cleanFileName = file.name.replace(/[^a-zA-Z0-9.]/g, '');
       const path = `${activeShipTargetItem.so}-${Date.now()}-${i}-${cleanFileName}`;
       await supabaseClient.storage.from('freight-photos').upload(path, file); photoUrls.push(path);
@@ -221,7 +217,8 @@ window.submitFreightDispatch = async function() {
     
     if (insertError) {
       alert("Database Error: " + insertError.message);
-      if($('#modalConfirmBtn')) $('#modalConfirmBtn').disabled = false; return;
+      if($('#modalConfirmBtn')) $('#modalConfirmBtn').disabled = false;
+      return;
     }
 
     await supabaseClient.from('staging').delete().eq('id', activeShipTargetItem.id);
@@ -236,7 +233,7 @@ window.submitFreightDispatch = async function() {
 
       const attachmentUrls = photoUrls.map(p => `https://gdrpdiwykmnybmkadlrv.supabase.co/storage/v1/object/public/freight-photos/${p}`);
 
-      fetch('https://hook.us2.make.com/iykii8i5j1vssv6d8qkqest78iphjw7i', {
+      fetch('https://hook.us2.make.com/xouhxvxi22q9b3gdwnthe4bre7z2jgu9', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           to: finalPmEmail, 
@@ -252,19 +249,34 @@ window.submitFreightDispatch = async function() {
     window.closeShipModal();
     if(window.activeReportMode) { window.reportRecordAction('Fixed via Shipped Out'); }
 
-  } catch(e) { alert("Data dispatch error."); } 
-  finally { if($('#modalConfirmBtn')) $('#modalConfirmBtn').disabled = false; }
+  } catch(e) { 
+    alert("Data dispatch error."); 
+  } finally { 
+    if($('#modalConfirmBtn')) $('#modalConfirmBtn').disabled = false; 
+  }
 };
 
 window.submitStagingEntry = async function() {
   const sk = parseInt($('#c_skid').value)||0, bx = parseInt($('#c_box').value)||0, cr = parseInt($('#c_crate').value)||0, pi = parseInt($('#c_pipe').value)||0, ot = parseInt($('#c_other').value)||0;
   if(!$('#so').value || !$('#customer').value || !$('#loc').value) return alert("Fields Missing.");
+  
   const totalQty = sk + bx + cr + pi + ot;
   if (totalQty === 0) return alert("Error: You must add at least 1 container to confirm this entry.");
-  const soVal = $('#so').value.trim(); const locValue = $('#loc').value.trim();
+  
+  const soVal = $('#so').value.trim();
+  const locValue = $('#loc').value.trim();
 
-  const proceed = await window.checkSoConflict(soVal, null); if(!proceed) return;
+  const proceed = await window.checkSoConflict(soVal, null);
+  if(!proceed) return;
 
+  const aisleRegex = /^[A-Z]-\d{2}-[A-F]-[12]$/i;
+  if (aisleRegex.test(locValue)) {
+    const isOccupied = appData.staging.some(x => (x.location || '').toLowerCase() === locValue.toLowerCase());
+    if (isOccupied) {
+      if (!confirm(`Conflict Warning: Aisle location ${locValue.toUpperCase()} is already occupied. Do you want to proceed and place them together?`)) return;
+    }
+  }
+  
   let type = []; 
   if(sk) type.push(window.formatContainer(sk, 'Skid'));
   if(bx) type.push(window.formatContainer(bx, 'Box'));
@@ -272,43 +284,49 @@ window.submitStagingEntry = async function() {
   if(pi) type.push(window.formatContainer(pi, 'Pipe/Rod'));
   if(ot) type.push(window.formatContainer(ot, 'Other'));
   
-  $('#add').disabled = true; $('#add').textContent = 'Saving...';
+  $('#add').disabled = true;
+  $('#add').textContent = 'Saving...';
   
   try {
     let photoUrls = []; 
-    if (window.mainPhotoBlobs) {
-        for (let i = 0; i < window.mainPhotoBlobs.length; i++) {
-          const file = window.mainPhotoBlobs[i]; 
-          const cleanFileName = file.name.replace(/[^a-zA-Z0-9.]/g, '');
-          const path = `${soVal}-staging-${Date.now()}-${i}-${cleanFileName}`;
-          const { error: uploadError } = await supabaseClient.storage.from('freight-photos').upload(path, file);
-          if(!uploadError) photoUrls.push(path);
-        }
+    for (let i = 0; i < mainPhotoBlobs.length; i++) {
+      const file = mainPhotoBlobs[i]; 
+      const cleanFileName = file.name.replace(/[^a-zA-Z0-9.]/g, '');
+      const path = `${soVal}-staging-${Date.now()}-${i}-${cleanFileName}`;
+      const { error: uploadError } = await supabaseClient.storage.from('freight-photos').upload(path, file);
+      if(!uploadError) photoUrls.push(path);
     }
   
     const { error } = await supabaseClient.from('staging').insert([{ so: soVal, customer: $('#customer').value.trim(), status: window.getDbStatus($('#status').value), location: locValue, coords: $('#coords').value.trim(), weight: $('#weight').value.trim(), comments: $('#comments').value.trim(), staged_by: $('#staged_by').value.trim(), type: type.join(', '), qty: totalQty, photo_urls: photoUrls }]);
-    if (error) { alert("Database Error: " + error.message); $('#add').disabled = false; $('#add').textContent = 'Add'; return; }
+    
+    if (error) {
+      alert("Database Error: " + error.message);
+      $('#add').disabled = false; $('#add').textContent = 'Add'; return;
+    }
     
     window.logAction('staging', `Added new entry for SO: ${soVal}`);
     if(typeof window.showNotification === 'function') window.showNotification('Staging Entry Added');
     
     $('#so').value=''; $('#customer').value=''; $('#loc').value=''; $('#coords').value=''; $('#staged_by').value=''; $('#weight').value=''; $('#c_skid').value=0; $('#c_box').value=0; $('#c_crate').value=0; $('#c_pipe').value=0; $('#c_other').value=0; 
     if($('#comments')) $('#comments').value='';
-    window.mainPhotoBlobs = []; window.renderMainPhotoStrip();
+    mainPhotoBlobs = []; window.renderMainPhotoStrip();
     window.loadCloudData();
   } catch(e) { alert("System Error: " + e.message); }
   
-  $('#add').disabled = false; $('#add').textContent = 'Add';
+  $('#add').disabled = false;
+  $('#add').textContent = 'Add';
 };
 
 window.saveQuickComment = async function() {
   const newComment = $('#quick_comments').value.trim();
-  const { error } = await supabaseClient.from(currentCommentTarget.table).update({ comments: newComment }).eq('id', currentCommentTarget.id);
+  const { error } = await supabaseClient.from(currentCommentTarget.table)
+    .update({ comments: newComment }).eq('id', currentCommentTarget.id);
   if(error) return alert("Error saving comment: " + error.message);
   const o = appData[currentCommentTarget.table].find(x => x.id === currentCommentTarget.id);
   if(o) window.logAction(currentCommentTarget.table, `Added/Edited comment for SO: ${o.so}`);
   if(typeof window.showNotification === 'function') window.showNotification('Comment Saved');
-  if($('#commentModal')) $('#commentModal').style.display = 'none'; window.loadCloudData();
+  if($('#commentModal')) $('#commentModal').style.display = 'none';
+  window.loadCloudData();
 };
 
 window.nrPhotoBlobs = [];
@@ -340,6 +358,7 @@ window.submitNotifyReturn = async function() {
   const custVal = $('#nr_cust').value.trim();
   const locVal = $('#nr_loc').value.trim();
   const receivedByVal = $('#nr_received_by').value.trim();
+  
   const pmInputEl = $('#nr_pm_email') || $('#nr_cc_pm');
   const pmRaw = pmInputEl ? pmInputEl.value.trim() : ''; 
   
@@ -357,6 +376,7 @@ window.submitNotifyReturn = async function() {
     const coordsVal = $('#nr_coords').value.trim();
     const commentsVal = $('#nr_comments').value.trim();
     
+    let photoLinksHTML = "";
     let attachmentUrls = []; 
     
     for (let i = 0; i < window.nrPhotoBlobs.length; i++) {
@@ -366,7 +386,8 @@ window.submitNotifyReturn = async function() {
       const { error: uploadError } = await supabaseClient.storage.from('freight-photos').upload(path, file);
       if(!uploadError) {
         const publicUrl = `https://gdrpdiwykmnybmkadlrv.supabase.co/storage/v1/object/public/freight-photos/${path}`;
-        attachmentUrls.push(publicUrl); 
+        photoLinksHTML += `<a href="${publicUrl}">View Attached Photo ${i+1}</a><br>`;
+        attachmentUrls.push(publicUrl);
       }
     }
 
@@ -385,9 +406,10 @@ window.submitNotifyReturn = async function() {
     <b>Comments</b>              | ${commentsVal || 'None'}<br>
     ----------------------------------------------------------------------<br><br>`;
     
+    if (photoLinksHTML !== "") emailBody += `<b>Photos:</b><br>${photoLinksHTML}<br><br>`;
     emailBody += `For more details, visit: <a href="https://swiftoperations.github.io/staging-tracker/">Swift Staging Tracker</a>`;
 
-    fetch('https://hook.us2.make.com/iykii8i5j1vssv6d8qkqest78iphjw7i', {
+    fetch('https://hook.us2.make.com/xouhxvxi22q9b3gdwnthe4bre7z2jgu9', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
         to: finalPmEmail, 
@@ -412,7 +434,7 @@ window.resolveEmail = function(inputVal) {
   if (!inputVal) return null;
   let val = inputVal.trim();
   if (val.includes('@') && val.includes('.')) return val; 
-  if (typeof rawContactsData !== 'undefined' && rawContactsData) {
+  if (typeof rawContactsData !== 'undefined') {
     const match = rawContactsData.find(c => c.name.toLowerCase() === val.toLowerCase() || c.name.toLowerCase().includes(val.toLowerCase()));
     if (match && match.email && match.email !== 'N/A') return match.email;
   }
