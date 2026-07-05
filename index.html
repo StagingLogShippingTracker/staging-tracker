@@ -55,7 +55,7 @@
     </div>
     
     <label style="display:block; margin-top:14px; font-weight:600; font-size:12px; color:#475569;">Containers <span style="color:#ef4444;">*</span></label>
-    <div class="grid" style="grid-template-columns: repeat(5, 1fr); gap:8px;">
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap:8px;">
       <div><label>Skid</label><div style="display:flex;"><button class="counter-btn" onclick="window.adjustCount('c_skid', -1)">-</button><input id="c_skid" type="number" class="counter-input" value="0"><button class="counter-btn" onclick="window.adjustCount('c_skid', 1)">+</button></div></div>
       <div><label>Box</label><div style="display:flex;"><button class="counter-btn" onclick="window.adjustCount('c_box', -1)">-</button><input id="c_box" type="number" class="counter-input" value="0"><button class="counter-btn" onclick="window.adjustCount('c_box', 1)">+</button></div></div>
       <div><label>Crate</label><div style="display:flex;"><button class="counter-btn" onclick="window.adjustCount('c_crate', -1)">-</button><input id="c_crate" type="number" class="counter-input" value="0"><button class="counter-btn" onclick="window.adjustCount('c_crate', 1)">+</button></div></div>
@@ -88,12 +88,12 @@
     <button id="add" class="btn" style="margin-top:16px; width:100%;" onclick="window.submitStagingEntry()">Add</button>
   </div>
 
-  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-    <h3 style="margin:0;">Staging Entries</h3>
-    <div style="display:flex; gap:8px;">
-      <button class="btn" style="background:#475569;" onclick="window.toggleBatchMode()">Batch Mode</button>
-      <input type="text" id="q" placeholder="Search SO, Customer, or Location..." oninput="window.renderTables()" style="width: 250px;" />
+  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-top:24px; margin-bottom:10px;">
+    <div style="display:flex; align-items:center; gap:12px;">
+      <h3 style="margin:0;">Staging Entries</h3>
+      <button class="btn" style="background:#475569; padding:0 12px; height:34px;" onclick="window.toggleBatchMode()">Batch Mode</button>
     </div>
+    <button class="btn" style="background:#6366f1; padding:0 12px; height:34px;" onclick="window.location.href='stage.html'">Expand Full Log ↗</button>
   </div>
   
   <div class="batch-mode-only" style="margin-top:14px; margin-bottom:14px; padding:10px; background:#e2e8f0; border-radius:8px; display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
@@ -130,10 +130,11 @@
   </div>
 
   <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-top:24px; margin-bottom:10px;">
-    <h3 style="margin:0;">Shipped Log</h3>
-    <div style="display:flex; gap:8px;">
-      <button class="btn" style="background:#475569;" onclick="window.toggleBatchMode()">Batch Mode</button>
+    <div style="display:flex; align-items:center; gap:12px;">
+      <h3 style="margin:0;">Shipped Log</h3>
+      <button class="btn" style="background:#475569; padding:0 12px; height:34px;" onclick="window.toggleBatchMode()">Batch Mode</button>
     </div>
+    <button class="btn" style="background:#6366f1; padding:0 12px; height:34px;" onclick="window.location.href='ship.html'">Expand Full Log ↗</button>
   </div>
   
   <div class="batch-mode-only" style="margin-bottom:14px; padding:10px; background:#e2e8f0; border-radius:8px; display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
@@ -217,7 +218,7 @@
     
     <div id="editStagingFields" style="display:none;">
         <label style="display:block; margin-top:10px; font-weight:600; font-size:12px; color:#475569;">Containers</label>
-        <div class="grid" style="grid-template-columns: repeat(5, 1fr); gap:8px;">
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap:8px;">
           <div class="modal-field"><label>Skid</label><div style="display:flex;"><button class="counter-btn" onclick="window.adjustEditCount('e_skid', -1)">-</button><input id="e_skid" type="number" class="counter-input" value="0"><button class="counter-btn" onclick="window.adjustEditCount('e_skid', 1)">+</button></div></div>
           <div class="modal-field"><label>Box</label><div style="display:flex;"><button class="counter-btn" onclick="window.adjustEditCount('e_box', -1)">-</button><input id="e_box" type="number" class="counter-input" value="0"><button class="counter-btn" onclick="window.adjustEditCount('e_box', 1)">+</button></div></div>
           <div class="modal-field"><label>Crate</label><div style="display:flex;"><button class="counter-btn" onclick="window.adjustEditCount('e_crate', -1)">-</button><input id="e_crate" type="number" class="counter-input" value="0"><button class="counter-btn" onclick="window.adjustEditCount('e_crate', 1)">+</button></div></div>
@@ -362,7 +363,7 @@
     </div>
     
     <label style="display:block; margin-top:10px; font-weight:600; font-size:12px; color:#475569;">Combined Containers</label>
-    <div class="grid" style="grid-template-columns: repeat(5, 1fr); gap:8px;">
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap:8px;">
       <div class="modal-field"><label>Skid</label><div style="display:flex;"><button class="counter-btn" onclick="window.adjustEditCount('bc_skid', -1)">-</button><input id="bc_skid" type="number" class="counter-input" value="0"><button class="counter-btn" onclick="window.adjustEditCount('bc_skid', 1)">+</button></div></div>
       <div class="modal-field"><label>Box</label><div style="display:flex;"><button class="counter-btn" onclick="window.adjustEditCount('bc_box', -1)">-</button><input id="bc_box" type="number" class="counter-input" value="0"><button class="counter-btn" onclick="window.adjustEditCount('bc_box', 1)">+</button></div></div>
       <div class="modal-field"><label>Crate</label><div style="display:flex;"><button class="counter-btn" onclick="window.adjustEditCount('bc_crate', -1)">-</button><input id="bc_crate" type="number" class="counter-input" value="0"><button class="counter-btn" onclick="window.adjustEditCount('bc_crate', 1)">+</button></div></div>
@@ -475,7 +476,7 @@
     </div>
     
     <label style="display:block; margin-top:10px; font-weight:600; font-size:12px; color:#475569;">Split Containers</label>
-    <div class="grid" style="grid-template-columns: repeat(5, 1fr); gap:8px;">
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap:8px;">
       <div class="modal-field"><label>Skid</label><div style="display:flex;"><button class="counter-btn" onclick="window.adjustEditCount('sp_skid', -1)">-</button><input id="sp_skid" type="number" class="counter-input" value="0"><button class="counter-btn" onclick="window.adjustEditCount('sp_skid', 1)">+</button></div></div>
       <div class="modal-field"><label>Box</label><div style="display:flex;"><button class="counter-btn" onclick="window.adjustEditCount('sp_box', -1)">-</button><input id="sp_box" type="number" class="counter-input" value="0"><button class="counter-btn" onclick="window.adjustEditCount('sp_box', 1)">+</button></div></div>
       <div class="modal-field"><label>Crate</label><div style="display:flex;"><button class="counter-btn" onclick="window.adjustEditCount('sp_crate', -1)">-</button><input id="sp_crate" type="number" class="counter-input" value="0"><button class="counter-btn" onclick="window.adjustEditCount('sp_crate', 1)">+</button></div></div>
@@ -511,16 +512,16 @@
 <div id="overduePromptModal" class="modal-overlay"><div class="modal-window" style="max-width: 400px; text-align:center;"><h3 style="margin:0 0 10px 0; color:#dc2626;">Overdue Shipment Detected</h3><p style="margin-top:0; font-size:14px;">Order <b id="od_prompt_so" style="color:var(--brand);"></b> was scheduled to ship on <b id="od_prompt_date"></b>. Has it been shipped?</p><div style="display:flex; gap:8px; margin-top:15px;"><button class="btn" style="flex:1; background:#10b981;" onclick="window.overdueHandleYes()">Yes</button><button class="btn" style="flex:1; background:#dc2626;" onclick="window.overdueHandleNo()">No</button></div></div></div>
 <div id="overdueResolveModal" class="modal-overlay"><div class="modal-window" style="max-width: 400px;"><h3 style="margin:0 0 10px 0;">Resolve Overdue Shipment</h3><p style="margin-top:0; font-size:14px;">Update status for Order <b id="od_res_so" style="color:var(--brand);"></b>:</p><div style="display:flex; flex-direction:column; gap:8px;"><button class="btn" style="background:#f59e0b;" onclick="window.overdueUpdateStatus('Ship Today')">Ship Today</button><button class="btn" style="background:#3b82f6;" onclick="window.overdueUpdateStatus('Ship Tomorrow')">Ship Tomorrow</button><button class="btn" style="background:#8b5cf6;" onclick="window.overdueUpdateStatus('Ship On Future Date')">Ship On Future Date</button><button class="btn" style="background:#dc2626;" onclick="window.overdueDelete()">Delete</button></div></div></div>
  
-<script src="employees.js?v=3.3"></script>
-<script src="config.js?v=3.3"></script>
-<script src="auth.js?v=3.3"></script>
-<script src="ui.js?v=3.3"></script>
-<script src="media.js?v=3.3"></script>
-<script src="history.js?v=3.3"></script>
-<script src="batch.js?v=3.3"></script>
-<script src="split.js?v=3.3"></script>
-<script src="operations.js?v=3.3"></script>
-<script src="app.js?v=3.3"></script>
+<script src="employees.js?v=3.4"></script>
+<script src="config.js?v=3.4"></script>
+<script src="auth.js?v=3.4"></script>
+<script src="ui.js?v=3.4"></script>
+<script src="media.js?v=3.4"></script>
+<script src="history.js?v=3.4"></script>
+<script src="batch.js?v=3.4"></script>
+<script src="split.js?v=3.4"></script>
+<script src="operations.js?v=3.4"></script>
+<script src="app.js?v=3.4"></script>
 
 <script>
   document.addEventListener('DOMContentLoaded', () => { window.initApp(); });
