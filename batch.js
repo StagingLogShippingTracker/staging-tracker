@@ -113,3 +113,51 @@ window.executeBatchConsolidate = async function() {
   
   $('#btnConfirmBc').disabled = false; $('#btnConfirmBc').textContent = 'Confirm Consolidation';
 };
+
+window.batchSelectAllShipped = function() {
+  const q = $('#q') ? $('#q').value.toLowerCase() : '';
+  const fShipped = appData.shipped.filter(o => (o.so||'').toLowerCase().includes(q) || (o.customer||'').toLowerCase().includes(q) || (o.location||'').toLowerCase().includes(q));
+  fShipped.forEach(o => batchSelectedIds.add(o.id)); window.renderTables();
+};
+
+window.batchDeleteShipped = async function() {
+  if (batchSelectedIds.size === 0) return alert("Select at least one shipped entry to delete.");
+  if (!confirm(`Are you sure you want to PERMANENTLY delete ${batchSelectedIds.size} shipped entries?`)) return;
+  try {
+    for (let id of batchSelectedIds) {
+      const target = appData.shipped.find(x => x.id === id);
+      if (target) window.logAction('shipped', `Batch Deleted shipped entry for SO: ${target.so}`);
+      await supabaseClient.from('shipped').delete().eq('id', id);
+    }
+    if (typeof window.showNotification === 'function') window.showNotification(`Successfully deleted ${batchSelectedIds.size} shipped entries.`);
+    window.batchCancel(); window.loadCloudData();
+  } catch(e) { alert("Batch delete error: " + e.message); }
+};
+
+window.batchUndoShipped = async function() {
+  if (batchSelectedIds.size === 0) return alert("Select at least one shipped entry to undo.");
+  if (!confirm(`Are you sure you want to undo ${batchSelectedIds.size} shipped entries back to Staging?`)) return;
+  try {
+    for (let id of batchSelectedIds) {
+      const currentRecord = appData.shipped.find(x => x.id === id);
+      if (!currentRecord) continue;
+      
+      const exists = appData.staging.some(x => x.so === currentRecord.so);
+      if (exists) {
+        alert(`SO Conflict: ${currentRecord.so} already exists in Staging. Skipping.`);
+        continue;
+      }
+      
+      const { error } = await supabaseClient.from('staging').insert([{ 
+        so: currentRecord.so, customer: currentRecord.customer, type: currentRecord.type, qty: currentRecord.qty, location: currentRecord.location, coords: currentRecord.coords, weight: currentRecord.weight, comments: currentRecord.comments, status: 'Partial', photo_urls: currentRecord.photo_urls 
+      }]);
+      if(error) throw error;
+      
+      await supabaseClient.from('shipped').delete().eq('id', id);
+      window.logAction('shipped', `Batch Undo Shipment Action for SO: ${currentRecord.so}`);
+      window.logAction('staging', `Restored to Staging via Batch Undo for SO: ${currentRecord.so}`);
+    }
+    if(typeof window.showNotification === 'function') window.showNotification('Batch Undo Successful');
+    window.batchCancel(); window.loadCloudData();
+  } catch(e) { alert("Batch Undo Error: " + e.message); }
+};
