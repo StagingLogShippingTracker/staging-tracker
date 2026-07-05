@@ -86,10 +86,13 @@
 
   <div class="card" id="shippedCard">
     <div class="split"><h3>Shipped Log</h3>
-      <div style="display:flex; gap:8px; margin-left:auto;"><button class="btn" style="background:#0ea5e9; padding:6px 12px;" onclick="window.openChangelogModal('shipped')">Changelog</button><button id="expandShipped" class="btn" onclick="window.open('ship.html', '_blank')" style="padding:6px 12px;">Expand</button></div>
+      <div style="display:flex; gap:8px; margin-left:auto;"><button class="btn" style="background:#8b5cf6; padding:6px 12px;" onclick="window.open('ship.html?batch=true', '_blank')">Batch Mode</button><button class="btn" style="background:#0ea5e9; padding:6px 12px;" onclick="window.openChangelogModal('shipped')">Changelog</button><button id="expandShipped" class="btn" onclick="window.open('ship.html', '_blank')" style="padding:6px 12px;">Expand</button></div>
     </div>
     <div class="tblwrap"><div class="tbl-scroller"><table id="tblShipped">
-      <thead><tr><th>Edit</th><th>Photo(s)</th><th>SO</th><th>Customer</th><th>Containers</th><th>Carrier</th><th>Location</th><th>Coords</th><th>Weight</th><th>Comments</th><th>Shipped At</th><th>Shipped By</th><th>PM'd Email</th></tr></thead><tbody></tbody>
+      <thead><tr>
+        <th class="show-in-batch" style="width:70px; background:#fafafa; padding:4px;"><div class="batch-header-btns" style="display:flex; flex-direction:column; gap:4px; text-align:center;"><button onclick="window.batchSelectAllShipped()" style="font-size:10px; background:#fff; color:#4b5563;">Select All</button><button onclick="window.batchUnselectAll()" style="font-size:10px; background:#fff; color:#4b5563;">Unselect</button><button onclick="window.batchUndoShipped()" style="font-size:10px; background:#f59e0b; color:#fff; border-color:#f59e0b;">Undo</button><button onclick="window.batchDeleteShipped()" style="font-size:10px; background:#dc2626; color:#fff; border-color:#dc2626;">Delete</button><button onclick="window.batchCancel()" style="font-size:10px; background:#e5e7eb; color:#4b5563; border-color:#cbd5e1;">Cancel</button></div></th>
+        <th class="hide-in-batch">Edit</th><th class="hide-in-batch">Photo(s)</th><th>SO</th><th>Customer</th><th>Containers</th><th>Carrier</th><th>Location</th><th>Coords</th><th>Weight</th><th>Comments</th><th>Shipped At</th><th>Shipped By</th><th>PM'd Email</th>
+      </tr></thead><tbody></tbody>
     </table></div><div id="shippedLimitNotice" class="log-limit-notice">Showing first 20. Expand for full log.</div></div>
   </div>
   <div class="card" id="mapCard"><h3>Staged Inventory Location Mapping</h3><div id="openFreightMap" style="width:100%; height:420px; background:#e5e7eb; border-radius:10px; border:1px solid #cbd5e1; z-index:1;"></div></div>
