@@ -7,26 +7,30 @@ window.toggleBatchSelect = function(id, isChecked) {
   if (isChecked) batchSelectedIds.add(id); else batchSelectedIds.delete(id);
 };
 
-window.batchSelectAll = function() {
+// Upgraded to dynamically target 'staging' OR 'shipped'
+window.batchSelectAll = function(table = 'staging') {
   const q = $('#q') ? $('#q').value.toLowerCase() : '';
-  const fStaging = appData.staging.filter(o => (o.so||'').toLowerCase().includes(q) || (o.customer||'').toLowerCase().includes(q) || (o.location||'').toLowerCase().includes(q));
-  fStaging.forEach(o => batchSelectedIds.add(o.id)); window.renderTables();
+  const targetData = appData[table] || appData.staging;
+  const fData = targetData.filter(o => (o.so||'').toLowerCase().includes(q) || (o.customer||'').toLowerCase().includes(q) || (o.location||'').toLowerCase().includes(q));
+  fData.forEach(o => batchSelectedIds.add(o.id)); window.renderTables();
 };
 
 window.batchUnselectAll = function() { batchSelectedIds.clear(); window.renderTables(); };
 
-window.batchDelete = async function() {
+window.batchDelete = async function(table = 'staging') {
   if (batchSelectedIds.size === 0) return alert("Select at least one entry to delete.");
   if (!confirm(`Are you sure you want to PERMANENTLY delete ${batchSelectedIds.size} selected entries?`)) return;
   try {
     for (let id of batchSelectedIds) {
-      const target = appData.staging.find(x => x.id === id);
-      if (target) window.logAction('staging', `Batch Deleted entry for SO: ${target.so}`);
-      await supabaseClient.from('staging').delete().eq('id', id);
+      const target = appData[table].find(x => x.id === id);
+      if (target) window.logAction(table, `Batch Deleted entry for SO: ${target.so}`);
+      await supabaseClient.from(table).delete().eq('id', id);
     }
-    if (typeof window.showNotification === 'function') window.showNotification(`Successfully deleted ${batchSelectedIds.size} entries.`);
-    window.batchCancel(); window.loadCloudData();
-  } catch(e) { alert("Batch delete error: " + e.message); }
+    if (typeof window.showNotification === 'function') window.showNotification('Batch Deletion Successful');
+    window.batchUnselectAll();
+    window.loadCloudData();
+    if(window.activeReportMode) { window.reportRecordAction('Fixed via Deletion'); }
+  } catch(e) { alert("Batch Delete Error: " + e.message); }
 };
 
 window.batchCancel = function() {
@@ -112,4 +116,31 @@ window.executeBatchConsolidate = async function() {
   } catch(e) { alert("Consolidation error: " + e.message); }
   
   $('#btnConfirmBc').disabled = false; $('#btnConfirmBc').textContent = 'Confirm Consolidation';
+};
+
+// NEW: Batch Undo for Shipped Logs
+window.batchUndo = async function() {
+  if (batchSelectedIds.size === 0) return alert("Select at least one shipped entry to undo.");
+  if (!confirm(`Are you sure you want to undo ${batchSelectedIds.size} shipped entries back to Staging?`)) return;
+  try {
+    for (let id of batchSelectedIds) {
+      const currentRecord = appData.shipped.find(x => x.id === id);
+      if (!currentRecord) continue;
+      
+      const proceed = await window.checkSoConflict(currentRecord.so, null);
+      if(!proceed) return; 
+      
+      const { error } = await supabaseClient.from('staging').insert([{ 
+        so: currentRecord.so, customer: currentRecord.customer, type: currentRecord.type, qty: currentRecord.qty, location: currentRecord.location, coords: currentRecord.coords, weight: currentRecord.weight, comments: currentRecord.comments, status: 'Partial', photo_urls: currentRecord.photo_urls 
+      }]);
+      if(error) throw error;
+      
+      await supabaseClient.from('shipped').delete().eq('id', id);
+      window.logAction('shipped', `Batch Undo Shipment Action for SO: ${currentRecord.so}`);
+      window.logAction('staging', `Restored to Staging via Batch Undo for SO: ${currentRecord.so}`);
+    }
+    if(typeof window.showNotification === 'function') window.showNotification('Batch Undo Successful');
+    window.batchUnselectAll();
+    window.loadCloudData();
+  } catch(e) { alert("Batch Undo Error: " + e.message); }
 };
