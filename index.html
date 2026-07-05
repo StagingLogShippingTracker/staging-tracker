@@ -14,23 +14,31 @@
 <datalist id="dl_customers"></datalist><datalist id="dl_locations"></datalist><datalist id="dl_stagers"></datalist><datalist id="dl_pastEmails"></datalist>
 
  <div class="wrap"> 
-  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:12px;">
-    <div class="dropdown">
-      <button class="hamburger-btn" onclick="window.toggleMenu(event)">☰</button>
-      <div class="dropdown-content">
-        <a href="index.html"><b>Index</b> (Dashboard)</a>
-        <a href="stage.html" class="indented">↳ Staging Entries Log</a>
-        <a href="ship.html" class="indented">↳ Shipped Log</a>
-        <a href="reports.html"><b>Reports</b></a>
-        <a href="notifications.html"><b>Notifications</b></a>
-        <a href="contacts.html"><b>Contacts</b></a>
+  <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:18px;">
+    
+    <div style="flex: 1; display: flex; justify-content: flex-start;">
+      <div class="dropdown">
+        <button class="hamburger-btn" onclick="window.toggleMenu(event)">☰</button>
+        <div class="dropdown-content">
+          <a href="index.html"><b>Index</b> (Dashboard)</a>
+          <a href="stage.html" class="indented">↳ Staging Entries Log</a>
+          <a href="ship.html" class="indented">↳ Shipped Log</a>
+          <a href="reports.html"><b>Reports</b></a>
+          <a href="notifications.html"><b>Notifications</b></a>
+          <a href="contacts.html"><b>Contacts</b></a>
+        </div>
       </div>
     </div>
-    <div style="flex: 1 1 auto; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+    
+    <div style="flex: 0 1 auto; text-align: center; padding: 0 10px;">
       <img src="Swift+Supply+logo.webp" alt="Swift Supply Logo" style="max-height: 55px; margin-bottom: 5px;" />
-      <h2 style="margin: 0; font-size: 20px; font-weight: 500; color: #475569;">Staging & Shipping Tracker</h2>
+      <h2 style="margin: 0; font-size: clamp(16px, 4.5vw, 20px); font-weight: 500; color: #475569; line-height: 1.2;">Staging & Shipping Tracker</h2>
     </div>
-    <div id="authStatus"></div>
+
+    <div style="flex: 1; display: flex; justify-content: flex-end;">
+      <div id="authStatus" style="display:flex; gap:8px; align-items:flex-start; justify-content:flex-end; flex-wrap:wrap;"></div>
+    </div>
+
   </div>
 
   <div id="err" style="display:none; background:#fee2e2; color:#991b1b; padding:10px; border-radius:10px; margin-bottom:10px"></div>
