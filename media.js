@@ -49,10 +49,41 @@ window.viewMapDetails = function(id) {
   $('#mapViewModal').style.display = 'flex';
 };
 
-window.addMainPhotoBlob = function(inputEl) {
-  if(!inputEl.files || inputEl.files.length === 0) return;
-  Array.from(inputEl.files).forEach(f => { if(mainPhotoBlobs.length < 10) mainPhotoBlobs.push(f); });
-  window.renderMainPhotoStrip();
+// --- Unified Photo Upload Engine ---
+window.handlePhotoUpload = function(inputEl, context = 'main') {
+  if (!inputEl.files || inputEl.files.length === 0) return;
+
+  // FIX: The Null-Safety Check. Instantly builds an empty container if the order has 0 photos.
+  if (context === 'edit' && !editTargetRecord.photo_urls) {
+     editTargetRecord.photo_urls = [];
+  }
+
+  Array.from(inputEl.files).forEach(f => {
+    if (context === 'edit') {
+      // Edit Mode: Uploads immediately to cloud and binds to the target record
+      const cleanFileName = f.name.replace(/[^a-zA-Z0-9.]/g, ''); 
+      const path = `edit-${Date.now()}-${cleanFileName}`;
+      
+      supabaseClient.storage.from('freight-photos').upload(path, f).then(({error}) => {
+        if(!error) { 
+          editTargetRecord.photo_urls.push(path); 
+          window.renderEditPhotoStrip(); 
+        } else {
+          alert("Photo upload failed: " + error.message);
+        }
+      });
+    } else if (context === 'dispatch') {
+      // Dispatch Mode: Queues in dispatch blobs
+      if (selectedPhotoBlobs.length < 10) selectedPhotoBlobs.push(f);
+    } else {
+      // Main Entry Mode: Queues in main blobs
+      if (mainPhotoBlobs.length < 10) mainPhotoBlobs.push(f);
+    }
+  });
+
+  // Re-render the appropriate visual photo strip based on context
+  if (context === 'main') window.renderMainPhotoStrip();
+  else if (context === 'dispatch') window.renderPhotoStrip('#photoPreviewStrip', selectedPhotoBlobs);
 };
 
 window.renderMainPhotoStrip = function() {
@@ -60,12 +91,6 @@ window.renderMainPhotoStrip = function() {
   mainPhotoBlobs.forEach((f, idx) => {
     container.insertAdjacentHTML('beforeend', `<span class="photo-badge">📎 Img-${idx+1} <span onclick="mainPhotoBlobs.splice(${idx},1); window.renderMainPhotoStrip()">&times;</span></span>`);
   });
-};
-
-window.addPhotoBlob = function(inputEl) {
-  if(!inputEl.files || inputEl.files.length === 0) return;
-  Array.from(inputEl.files).forEach(f => { if(selectedPhotoBlobs.length < 10) selectedPhotoBlobs.push(f); });
-  window.renderPhotoStrip('#photoPreviewStrip', selectedPhotoBlobs);
 };
 
 window.renderPhotoStrip = function(containerSel, blobArray) {
@@ -77,16 +102,6 @@ window.renderPhotoStrip = function(containerSel, blobArray) {
   }
   blobArray.forEach((f, idx) => {
     container.insertAdjacentHTML('beforeend', `<span class="photo-badge">📎 Upload-${idx+1} <span onclick="selectedPhotoBlobs.splice(${idx},1); window.renderPhotoStrip('${containerSel}', selectedPhotoBlobs)">&times;</span></span>`);
-  });
-};
-
-window.addEditPhotoBlob = function(inputEl) {
-  if(!inputEl.files || inputEl.files.length === 0) return;
-  Array.from(inputEl.files).forEach(f => {
-    const cleanFileName = f.name.replace(/[^a-zA-Z0-9.]/g, ''); const path = `edit-${Date.now()}-${cleanFileName}`;
-    supabaseClient.storage.from('freight-photos').upload(path, f).then(({error}) => {
-      if(!error) { editTargetRecord.photo_urls.push(path); window.renderEditPhotoStrip(); } else alert("Photo upload failed: " + error.message);
-    });
   });
 };
 
