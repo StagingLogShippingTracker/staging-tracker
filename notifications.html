@@ -50,8 +50,8 @@
     <h3 style="margin-top:0; color:#3b82f6;">Notify of Returns</h3>
     
     <div class="photo-options-grid" style="margin-bottom:8px;">
-      <div class="photo-uploader" onclick="document.querySelector('#nr_cameraFile').click()">📷 Live Photo</div><input type="file" id="nr_cameraFile" accept="image/*" capture="environment" style="display:none" onchange="window.addNRPhotoBlob(this)" />
-      <div class="photo-uploader" onclick="document.querySelector('#nr_uploadFile').click()">📁 File Upload</div><input type="file" id="nr_uploadFile" multiple accept="image/*" style="display:none" onchange="window.addNRPhotoBlob(this)" />
+      <div class="photo-uploader" onclick="document.querySelector('#nr_cameraFile').click()">📷 Live Photo</div><input type="file" id="nr_cameraFile" accept="image/*" capture="environment" style="display:none" onchange="window.handlePhotoUpload(this, 'notify')" />
+      <div class="photo-uploader" onclick="document.querySelector('#nr_uploadFile').click()">📁 File Upload</div><input type="file" id="nr_uploadFile" multiple accept="image/*" style="display:none" onchange="window.handlePhotoUpload(this, 'notify')" />
     </div>
     <div id="nr_photoPreviewStrip" class="photo-strip" style="margin-bottom:8px;"></div>
     
