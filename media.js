@@ -3,14 +3,14 @@
 window.fetchBrowserGPS = function(targetInputId) {
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(
-      (position) => { if($('#'+targetInputId)) $('#'+targetInputId).value = position.coords.latitude.toFixed(6) + ", " + position.coords.longitude.toFixed(6); },
+      (position) => { if(document.querySelector('#'+targetInputId)) document.querySelector('#'+targetInputId).value = position.coords.latitude.toFixed(6) + ", " + position.coords.longitude.toFixed(6); },
       (error) => { alert("GPS Tracking Denied: " + error.message); }
     );
   }
 };
 
 window.initOpenStreetMapEngine = function() {
-  if(!$('#openFreightMap')) return;
+  if(!document.querySelector('#openFreightMap')) return;
   openMapInstance = L.map('openFreightMap').setView([53.5461, -113.4938], 11);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(openMapInstance);
   window.syncMapPins();
@@ -38,33 +38,36 @@ window.syncMapPins = function() {
 window.viewMapDetails = function(id) {
   const item = appData.staging.find(x => x.id === id);
   if(!item) return;
-  $('#v_so').value = item.so; $('#v_cust').value = item.customer; $('#v_date').value = new Date(item.entry_date).toLocaleString();
-  $('#v_type').value = item.type; $('#v_loc').value = item.location; $('#v_coords').value = item.coords;
-  $('#v_weight').value = item.weight || '—'; $('#v_status').value = item.status; $('#v_staged_by').value = item.staged_by || '—';
+  document.querySelector('#v_so').value = item.so; document.querySelector('#v_cust').value = item.customer; document.querySelector('#v_date').value = new Date(item.entry_date).toLocaleString();
+  document.querySelector('#v_type').value = item.type; document.querySelector('#v_loc').value = item.location; document.querySelector('#v_coords').value = item.coords;
+  document.querySelector('#v_weight').value = item.weight || '—'; document.querySelector('#v_status').value = item.status; document.querySelector('#v_staged_by').value = item.staged_by || '—';
   
   if(item.photo_urls && item.photo_urls.length > 0) {
-    $('#mapViewPhotoSection').style.display = 'flex';
-    $('#mapViewGalleryStrip').innerHTML = item.photo_urls.map((p,i) => `<span class="photo-badge" onclick="window.openPhotoViewer('${item.id}', ${i})">📎 View Image ${i+1}</span>`).join('');
-  } else { $('#mapViewPhotoSection').style.display = 'none'; }
-  $('#mapViewModal').style.display = 'flex';
+    document.querySelector('#mapViewPhotoSection').style.display = 'flex';
+    document.querySelector('#mapViewGalleryStrip').innerHTML = item.photo_urls.map((p,i) => `<span class="photo-badge" onclick="window.openPhotoViewer('${item.id}', ${i})">📎 View Image ${i+1}</span>`).join('');
+  } else { document.querySelector('#mapViewPhotoSection').style.display = 'none'; }
+  document.querySelector('#mapViewModal').style.display = 'flex';
 };
 
-// --- Unified Photo Upload Engine ---
+// --- UNIFIED PHOTO UPLOAD ENGINE ---
 window.handlePhotoUpload = function(inputEl, context = 'main') {
   if (!inputEl.files || inputEl.files.length === 0) return;
 
-  // FIX: The Null-Safety Check. Instantly builds an empty container if the order has 0 photos.
-  if (context === 'edit' && !editTargetRecord.photo_urls) {
+  // FIX: The Null-Safety Check. Instantly builds an empty container if the order has 0 photos[cite: 22].
+  if (context === 'edit' && (!editTargetRecord.photo_urls || editTargetRecord.photo_urls === null)) {
      editTargetRecord.photo_urls = [];
   }
 
   Array.from(inputEl.files).forEach(f => {
     if (context === 'edit') {
-      // Edit Mode: Uploads immediately to cloud and binds to the target record
       const cleanFileName = f.name.replace(/[^a-zA-Z0-9.]/g, ''); 
       const path = `edit-${Date.now()}-${cleanFileName}`;
       
+      const saveBtn = document.querySelector('#editSaveBtn');
+      if(saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Uploading...'; }
+
       supabaseClient.storage.from('freight-photos').upload(path, f).then(({error}) => {
+        if(saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save'; }
         if(!error) { 
           editTargetRecord.photo_urls.push(path); 
           window.renderEditPhotoStrip(); 
@@ -73,49 +76,74 @@ window.handlePhotoUpload = function(inputEl, context = 'main') {
         }
       });
     } else if (context === 'dispatch') {
-      // Dispatch Mode: Queues in dispatch blobs
-      if (selectedPhotoBlobs.length < 10) selectedPhotoBlobs.push(f);
+      if (typeof selectedPhotoBlobs !== 'undefined' && selectedPhotoBlobs.length < 10) selectedPhotoBlobs.push(f);
+    } else if (context === 'notify') {
+      if (typeof window.nrPhotoBlobs !== 'undefined' && window.nrPhotoBlobs.length < 10) window.nrPhotoBlobs.push(f);
+    } else if (context === 'report') {
+      if (typeof window.reportPhotoBlobs !== 'undefined' && window.reportPhotoBlobs.length < 10) window.reportPhotoBlobs.push(f);
     } else {
-      // Main Entry Mode: Queues in main blobs
-      if (mainPhotoBlobs.length < 10) mainPhotoBlobs.push(f);
+      if (typeof mainPhotoBlobs !== 'undefined' && mainPhotoBlobs.length < 10) mainPhotoBlobs.push(f);
     }
   });
 
-  // Re-render the appropriate visual photo strip based on context
   if (context === 'main') window.renderMainPhotoStrip();
   else if (context === 'dispatch') window.renderPhotoStrip('#photoPreviewStrip', selectedPhotoBlobs);
+  else if (context === 'notify' && typeof window.renderNRPhotoStrip === 'function') window.renderNRPhotoStrip();
+  else if (context === 'report' && typeof window.renderReportPhotoStrip === 'function') window.renderReportPhotoStrip();
+};
+
+window.deleteEditPhoto = async function(index) {
+  if (!confirm("Remove this photo permanently?")) return;
+  const path = editTargetRecord.photo_urls[index];
+  try {
+    await supabaseClient.storage.from('freight-photos').remove([path]);
+    editTargetRecord.photo_urls.splice(index, 1);
+    
+    const payload = { photo_urls: editTargetRecord.photo_urls };
+    const { error } = await supabaseClient.from(editTargetRecord.table).update(payload).eq('id', editTargetRecord.id);
+    
+    if (error) throw error;
+    
+    window.renderEditPhotoStrip();
+    window.loadCloudData();
+    if (typeof window.showNotification === 'function') window.showNotification('Photo Removed');
+  } catch(e) {
+    alert("Error removing photo: " + e.message);
+  }
+};
+
+window.renderPhotoStrip = function(selector, blobsArray) {
+  const container = document.querySelector(selector); if(!container) return; container.innerHTML = '';
+  if (selector === '#photoPreviewStrip' && activeShipTargetItem && activeShipTargetItem.photo_urls) {
+    activeShipTargetItem.photo_urls.forEach((url, idx) => {
+      container.insertAdjacentHTML('beforeend', `<span class="photo-badge">📎 Staged-${idx+1} <span onclick="activeShipTargetItem.photo_urls.splice(${idx},1); window.renderPhotoStrip('${selector}', selectedPhotoBlobs)">&times;</span></span>`);
+    });
+  }
+  blobsArray.forEach((f, idx) => {
+    container.insertAdjacentHTML('beforeend', `<span class="photo-badge">📎 Upload-${idx+1} <span onclick="selectedPhotoBlobs.splice(${idx},1); window.renderPhotoStrip('${selector}', selectedPhotoBlobs)">&times;</span></span>`);
+  });
 };
 
 window.renderMainPhotoStrip = function() {
-  const container = $('#mainPhotoPreviewStrip'); if(!container) return; container.innerHTML = '';
+  const container = document.querySelector('#mainPhotoPreviewStrip'); if(!container) return; container.innerHTML = '';
+  if (typeof mainPhotoBlobs === 'undefined') return;
   mainPhotoBlobs.forEach((f, idx) => {
     container.insertAdjacentHTML('beforeend', `<span class="photo-badge">📎 Img-${idx+1} <span onclick="mainPhotoBlobs.splice(${idx},1); window.renderMainPhotoStrip()">&times;</span></span>`);
   });
 };
 
-window.renderPhotoStrip = function(containerSel, blobArray) {
-  const container = $(containerSel); if(!container) return; container.innerHTML = '';
-  if (containerSel === '#photoPreviewStrip' && activeShipTargetItem && activeShipTargetItem.photo_urls) {
-    activeShipTargetItem.photo_urls.forEach((url, idx) => {
-      container.insertAdjacentHTML('beforeend', `<span class="photo-badge">📎 Staged-${idx+1} <span onclick="activeShipTargetItem.photo_urls.splice(${idx},1); window.renderPhotoStrip('${containerSel}', selectedPhotoBlobs)">&times;</span></span>`);
-    });
-  }
-  blobArray.forEach((f, idx) => {
-    container.insertAdjacentHTML('beforeend', `<span class="photo-badge">📎 Upload-${idx+1} <span onclick="selectedPhotoBlobs.splice(${idx},1); window.renderPhotoStrip('${containerSel}', selectedPhotoBlobs)">&times;</span></span>`);
-  });
-};
-
 window.renderEditPhotoStrip = function() {
-  const container = $('#editPhotoPreviewStrip'); if(!container) return; container.innerHTML = '';
+  const container = document.querySelector('#editPhotoPreviewStrip'); if(!container) return; container.innerHTML = '';
+  if (!editTargetRecord.photo_urls || editTargetRecord.photo_urls.length === 0) return;
   editTargetRecord.photo_urls.forEach((url, idx) => {
-    container.insertAdjacentHTML('beforeend', `<span class="photo-badge">📎 Image-${idx+1} <span onclick="editTargetRecord.photo_urls.splice(${idx},1); window.renderEditPhotoStrip()">&times;</span></span>`);
+    container.insertAdjacentHTML('beforeend', `<span class="photo-badge" style="background:#e0f2fe; color:#0369a1;">🖼️ Saved-${idx+1} <span onclick="window.deleteEditPhoto(${idx})" style="color:#dc2626; margin-left:4px;">&times;</span></span>`);
   });
 };
 
 window.openPhotoViewer = function(id, indexToOpen = 0) {
   const o = appData.staging.find(x => x.id === id) || appData.shipped.find(x => x.id === id);
   if(!o || !o.photo_urls || o.photo_urls.length === 0) return;
-  const gal = $('#modalPhotoGallery');
+  const gal = document.querySelector('#modalPhotoGallery');
   gal.innerHTML = o.photo_urls.map(p => `<a href="${SUPABASE_URL}/storage/v1/object/public/freight-photos/${p}" target="_blank" style="display:block; text-decoration:none;"><img src="${SUPABASE_URL}/storage/v1/object/public/freight-photos/${p}" style="width:100%; height:140px; object-fit:cover; border-radius:10px; border:1px solid #cbd5e1; box-shadow:0 2px 4px rgba(0,0,0,0.1);"><div style="text-align:center; font-size:11px; margin-top:6px; font-weight:700; color:#4b5563;">TAP TO ENLARGE</div></a>`).join('');
-  $('#viewModal').style.display = 'flex';
+  document.querySelector('#viewModal').style.display = 'flex';
 };
