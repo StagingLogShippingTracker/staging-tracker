@@ -25,8 +25,8 @@ window.initEmployeeEmailDropdown = function() {
   // Populate it with emails (The user will see the Name & Branch, but it will output the Email)
   dl.innerHTML = validContacts.map(c => `<option value="${c.email}">${c.name} (${c.branch})</option>`).join('');
   
-  // Find all PM Email input fields across the app and attach this new list to them
-  const targetIds = ['m_pm_email', 'r_pm_email', 'e_pm'];
+// Find all PM Email input fields across the app and attach this new list to them
+  const targetIds = ['m_pm_email', 'r_pm_email', 'e_pm', 'nr_pm_email'];
   targetIds.forEach(id => {
     const input = document.getElementById(id);
     if (input) {
