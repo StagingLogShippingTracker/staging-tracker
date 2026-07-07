@@ -209,12 +209,6 @@ window.reportSubmitNewLocation = async function() {
   } catch(e) { alert("Error updating location: " + e.message); window.renderNextReportItem(); }
 };
 
-window.addReportPhotoBlob = function(inputEl) {
-  if(!inputEl.files || inputEl.files.length === 0) return;
-  Array.from(inputEl.files).forEach(f => { if(window.reportPhotoBlobs.length < 10) window.reportPhotoBlobs.push(f); });
-  window.renderReportPhotoStrip();
-};
-
 window.renderReportPhotoStrip = function() {
   const container = $('#ra_photoPreviewStrip'); if(!container) return; container.innerHTML = '';
   window.reportPhotoBlobs.forEach((f, idx) => {
