@@ -439,3 +439,113 @@ window.resolveEmail = function(inputVal) {
   }
   return null; 
 };
+
+window.triggerQuickConsolidate = function() {
+  const so = prompt("Enter exact SO# to consolidate:");
+  if (!so) return;
+  const target = so.trim();
+  const matches = appData.staging.filter(x => x.so.toLowerCase() === target.toLowerCase());
+  if(matches.length === 0) return alert("No active staging entries found for SO: " + target);
+  
+  window.editTargetRecord = { so: matches[0].so };
+  if(typeof window.openSameSoModal === 'function') window.openSameSoModal();
+};
+
+window.openUniversalAddModal = function(so) {
+  if($('#orderHistoryModal')) $('#orderHistoryModal').style.display = 'none';
+  const existing = appData.staging.find(x => x.so === so) || appData.shipped.find(x => x.so === so);
+  
+  if($('#ra_so')) { $('#ra_so').value = so; $('#ra_so').disabled = true; }
+  if($('#ra_cust')) { $('#ra_cust').value = existing ? existing.customer : ''; $('#ra_cust').disabled = true; }
+  
+  if($('#ra_skid')) $('#ra_skid').value=0; if($('#ra_box')) $('#ra_box').value=0; if($('#ra_crate')) $('#ra_crate').value=0; if($('#ra_pipe')) $('#ra_pipe').value=0; if($('#ra_other')) $('#ra_other').value=0; 
+  if($('#ra_loc')) $('#ra_loc').value=''; if($('#ra_coords')) $('#ra_coords').value=''; if($('#ra_weight')) $('#ra_weight').value=''; if($('#ra_comments')) $('#ra_comments').value=''; 
+  if($('#ra_staged_by')) $('#ra_staged_by').value = currentUser ? currentUser.email.split('@')[0] : '';
+  
+  if($('#reportAddModal')) $('#reportAddModal').style.display = 'flex';
+};
+
+window.qsPhotoBlobs = [];
+window.handleQsPhotoUpload = function(inputEl) {
+  if(!inputEl.files || inputEl.files.length === 0) return;
+  Array.from(inputEl.files).forEach(f => { if(window.qsPhotoBlobs.length < 10) window.qsPhotoBlobs.push(f); });
+  window.renderQsPhotoStrip();
+};
+window.renderQsPhotoStrip = function() {
+  const container = document.getElementById('qs_photoPreviewStrip');
+  if(!container) return; container.innerHTML = '';
+  window.qsPhotoBlobs.forEach((f, idx) => {
+    container.insertAdjacentHTML('beforeend', `<span class="photo-badge">📎 Img-${idx+1} <span onclick="window.qsPhotoBlobs.splice(${idx},1); window.renderQsPhotoStrip();">&times;</span></span>`);
+  });
+};
+
+window.openQuickShipModal = function() {
+  $('#qs_so').value = ''; $('#qs_cust').value = '';
+  $('#qs_skid').value = 0; $('#qs_box').value = 0; $('#qs_crate').value = 0; $('#qs_pipe').value = 0; $('#qs_other').value = 0;
+  $('#qs_carrier').value = ''; $('#qs_loc').value = ''; $('#qs_weight').value = ''; $('#qs_comments').value = '';
+  $('#qs_by').value = currentUser ? currentUser.email.split('@')[0] : '';
+  if($('#qs_pm_chk')) $('#qs_pm_chk').checked = false; window.togglePMEmail(false, 'qs_pm_email', 'qs_pm_email_btn');
+  window.qsPhotoBlobs = [];
+  if($('#qs_photoPreviewStrip')) $('#qs_photoPreviewStrip').innerHTML = '';
+  $('#quickShipModal').style.display = 'flex';
+};
+
+window.submitQuickShip = async function() {
+  const soVal = $('#qs_so').value.trim(); const custVal = $('#qs_cust').value.trim();
+  const carrierVal = $('#qs_carrier').value.trim() || 'Unassigned Carrier';
+  const dispatcher = $('#qs_by').value.trim();
+  const pmRaw = $('#qs_pm_email').value.trim(); const pmChecked = $('#qs_pm_chk').checked;
+
+  if(!soVal || !custVal || !dispatcher) return alert("Missing required inputs.");
+  const dynamicQty = window.getDynamicQty('qs');
+  if(dynamicQty === 0) return alert("Must have at least 1 container.");
+
+  let finalPmEmail = null;
+  if (pmChecked) {
+    finalPmEmail = window.resolveEmail(pmRaw);
+    if (!finalPmEmail) return alert("Invalid PM Entry.");
+  }
+
+  $('#qsConfirmBtn').disabled = true; $('#qsConfirmBtn').textContent = 'Shipping...';
+
+  try {
+    let photoUrls = [];
+    for (let i = 0; i < window.qsPhotoBlobs.length; i++) {
+      const file = window.qsPhotoBlobs[i]; 
+      const cleanFileName = file.name.replace(/[^a-zA-Z0-9.]/g, '');
+      const path = `${soVal}-quickship-${Date.now()}-${i}-${cleanFileName}`;
+      await supabaseClient.storage.from('freight-photos').upload(path, file); 
+      photoUrls.push(path);
+    }
+
+    let pmName = finalPmEmail ? finalPmEmail.split('@')[0].split('.')[0] : null;
+    if(pmName) pmName = pmName.charAt(0).toUpperCase() + pmName.slice(1);
+
+    const dynamicType = window.getDynamicType('qs');
+    const { error: insertError } = await supabaseClient.from('shipped').insert([{
+      so: soVal, customer: custVal, type: dynamicType, qty: dynamicQty, carrier: carrierVal, location: $('#qs_loc').value.trim(), coords: '', 
+      weight: $('#qs_weight').value.trim(), comments: $('#qs_comments').value.trim(), shipped_by: dispatcher, pmd_email: pmName, photo_urls: photoUrls
+    }]);
+
+    if (insertError) throw insertError;
+
+    window.logAction('shipped', `Added via Quick Ship: SO: ${soVal}`);
+    if(typeof window.playSuccessChime === 'function') window.playSuccessChime();
+    if(typeof window.showNotification === 'function') window.showNotification('Quick Ship Successful');
+
+    if(pmChecked && finalPmEmail) {
+      const currentTimeStamp = new Date().toLocaleString();
+      const cachedSubject = `CONFIRMATION OF SHIPOUT: ${custVal} ${soVal} @ ${dynamicType} via ${carrierVal}`;
+      const cachedBody = `Your order has now been shipped! Order details:<br><br>----------------------------------------------------------------------<br><b>SO#</b>                   | ${soVal}<br><b>Customer</b>              | ${custVal}<br><b>Container(s)</b>          | ${dynamicType}<br><b>Total Weight (In lbs)</b> | ${$('#qs_weight').value.trim() || '—'}<br><b>Carrier</b>               | ${carrierVal}<br><b>Shipped At</b>            | ${currentTimeStamp}<br><b>Shipped By</b>            | ${dispatcher}<br><b>Comments</b>              | ${$('#qs_comments').value.trim() || 'None'}<br>----------------------------------------------------------------------<br><br>For more shipment details, visit: <a href="https://swiftoperations.github.io/staging-tracker/">Swift Staging Tracker</a><br><br>Thanks`;
+
+      const attachmentUrls = photoUrls.map(p => `https://gdrpdiwykmnybmkadlrv.supabase.co/storage/v1/object/public/freight-photos/${p}`);
+
+      fetch('https://hook.us2.make.com/cxvgao3s4lwnrmntk762j25qct6bkkft', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ to: finalPmEmail, cc: "warehouse1@swiftsupply.ca", subject: cachedSubject, body: cachedBody, attachments: attachmentUrls, has_attachments: attachmentUrls.length > 0 }) }).catch(err => console.warn(err));
+    }
+
+    $('#quickShipModal').style.display = 'none';
+    window.loadCloudData();
+  } catch(e) { alert("Quick Ship Error: " + e.message); } finally {
+    $('#qsConfirmBtn').disabled = false; $('#qsConfirmBtn').textContent = 'Quick Ship Dispatch';
+  }
+};
