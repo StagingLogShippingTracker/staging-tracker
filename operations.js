@@ -335,12 +335,6 @@ window.saveQuickComment = async function() {
 
 window.nrPhotoBlobs = [];
 
-window.addNRPhotoBlob = function(inputEl) {
-  if(!inputEl.files || inputEl.files.length === 0) return;
-  Array.from(inputEl.files).forEach(f => { if(window.nrPhotoBlobs.length < 10) window.nrPhotoBlobs.push(f); });
-  window.renderNRPhotoStrip();
-};
-
 window.renderNRPhotoStrip = function() {
   const container = $('#nr_photoPreviewStrip'); if(!container) return; container.innerHTML = '';
   window.nrPhotoBlobs.forEach((f, idx) => {
