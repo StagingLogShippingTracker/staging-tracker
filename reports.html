@@ -211,8 +211,8 @@
     <h3 style="margin-top:0;">Add Staging Entry</h3>
     
     <div class="photo-options-grid" style="margin-bottom:8px;">
-      <div class="photo-uploader" onclick="document.querySelector('#ra_cameraFile').click()">📷 Live Photo</div><input type="file" id="ra_cameraFile" accept="image/*" capture="environment" style="display:none" onchange="window.addReportPhotoBlob(this)" />
-      <div class="photo-uploader" onclick="document.querySelector('#ra_uploadFile').click()">📁 File Upload</div><input type="file" id="ra_uploadFile" multiple accept="image/*" style="display:none" onchange="window.addReportPhotoBlob(this)" />
+      <div class="photo-uploader" onclick="document.querySelector('#ra_cameraFile').click()">📷 Live Photo</div><input type="file" id="ra_cameraFile" accept="image/*" capture="environment" style="display:none" onchange="window.handlePhotoUpload(this, 'report')" />
+      <div class="photo-uploader" onclick="document.querySelector('#ra_uploadFile').click()">📁 File Upload</div><input type="file" id="ra_uploadFile" multiple accept="image/*" style="display:none" onchange="window.handlePhotoUpload(this, 'report')" />
     </div>
     <div id="ra_photoPreviewStrip" class="photo-strip" style="margin-bottom:8px;"></div>
     
