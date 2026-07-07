@@ -50,6 +50,16 @@ window.getDynamicQty = function(prefix) {
   return sk+bx+cr+pi+ot;
 };
 
+window.getStatusColor = function(dbStatus) {
+  const s = window.getFormattedStatus(dbStatus).toLowerCase();
+  if (s.includes('today')) return '#dc2626'; 
+  if (s.includes('tomorrow')) return '#f59e0b'; 
+  if (s.includes('future')) return '#8b5cf6'; 
+  if (s.includes('pick')) return '#10b981'; 
+  if (s.includes('awaiting')) return '#64748b'; 
+  return '#0ea5e9'; 
+};
+
 window.renderTables = function() {
   const q = $('#q') ? $('#q').value.toLowerCase() : ''; const canEdit = !!currentUser;
   const fStaging = appData.staging.filter(o => (o.so||'').toLowerCase().includes(q) || (o.customer||'').toLowerCase().includes(q) || (o.location||'').toLowerCase().includes(q));
