@@ -8,13 +8,35 @@ window.reportPhotoBlobs = [];
 window.discrepancyList = JSON.parse(localStorage.getItem('swift_discrepancies')) || [];
 
 function locSortKey(loc) {
-  const match = (loc||'').toUpperCase().match(/^([A-Z])-(\d{2})-([A-Z])-(1|2|1\+2)$/);
-  if (!match) return [1, loc||'']; 
-  let suffixWeight = 0;
-  if (match[4] === '1') suffixWeight = 1;
-  else if (match[4] === '2') suffixWeight = 2;
-  else if (match[4] === '1+2') suffixWeight = 3;
-  return [0, match[1], parseInt(match[2], 10), match[3], suffixWeight];
+  const l = (loc || '').toUpperCase();
+  if (l.includes('BOX SHELF') && !l.includes('PARTIAL') && !l.includes('SHIPPING')) return [1, l];
+  if (l.includes('PARTIAL BOX SHELF')) return [2, l];
+  
+  const aisleMatch = l.match(/^([A-Z])-(\d{2})-([A-Z])-(1|2|1\+2)$/);
+  if (aisleMatch) {
+    let suffix = aisleMatch[4] === '1' ? 1 : (aisleMatch[4] === '2' ? 2 : 3);
+    return [3, aisleMatch[1], parseInt(aisleMatch[2], 10), aisleMatch[3], suffix];
+  }
+  
+  if (l.includes('SOUTH WALL')) return [4, l];
+  if (l.match(/^W-\d+/) || l.includes('SHIPPING')) return [5, l];
+  if (l.includes('CORP DROP')) return [6, l];
+  return [7, l];
+}function locSortKey(loc) {
+  const l = (loc || '').toUpperCase();
+  if (l.includes('BOX SHELF') && !l.includes('PARTIAL') && !l.includes('SHIPPING')) return [1, l];
+  if (l.includes('PARTIAL BOX SHELF')) return [2, l];
+  
+  const aisleMatch = l.match(/^([A-Z])-(\d{2})-([A-Z])-(1|2|1\+2)$/);
+  if (aisleMatch) {
+    let suffix = aisleMatch[4] === '1' ? 1 : (aisleMatch[4] === '2' ? 2 : 3);
+    return [3, aisleMatch[1], parseInt(aisleMatch[2], 10), aisleMatch[3], suffix];
+  }
+  
+  if (l.includes('SOUTH WALL')) return [4, l];
+  if (l.match(/^W-\d+/) || l.includes('SHIPPING')) return [5, l];
+  if (l.includes('CORP DROP')) return [6, l];
+  return [7, l];
 }
 
 window.startStagingReport = function(mode) {
