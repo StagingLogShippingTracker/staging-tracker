@@ -441,13 +441,20 @@ window.resolveEmail = function(inputVal) {
 };
 
 window.triggerUniversalConsolidate = function(targetSo) {
-  // Hide overlapping modals to prevent z-index boxing
+  let so = typeof targetSo === 'string' ? targetSo : null;
+  
+  // Intelligent Context Detection: 
+  // If no SO was provided, only pull from memory if the Edit Modal is actively open.
+  if (!so && $('#editModal') && window.getComputedStyle($('#editModal')).display !== 'none') {
+    if (window.editTargetRecord && window.editTargetRecord.so) so = window.editTargetRecord.so;
+  }
+
+  // Hide overlapping modals to prevent z-index boxing conflicts
   if($('#editModal')) $('#editModal').style.display = 'none';
   if($('#orderHistoryModal')) $('#orderHistoryModal').style.display = 'none';
   if($('#reportNoModal')) $('#reportNoModal').style.display = 'none';
   
-  let so = targetSo;
-  if (!so && window.editTargetRecord && window.editTargetRecord.so) so = window.editTargetRecord.so;
+  // If we still don't have an SO, prompt for one (Quick Consolidate behavior)
   if (!so) {
     so = prompt("Enter exact SO# to consolidate:");
     if (!so) return;
@@ -459,19 +466,19 @@ window.triggerUniversalConsolidate = function(targetSo) {
   if (matches.length === 0) return alert("No active staging entries found for SO: " + so);
   if (matches.length === 1) return alert("There is only 1 active entry for SO: " + so + ". Nothing to consolidate.");
 
-  // Sync state for batch.js logic
-  window.editTargetRecord = { so: matches[0].so };
+  // CRITICAL FIX: Sync BOTH global memory variables so batch.js doesn't abort the launch
+  window.currentEditId = matches[0].id;
+  window.editTargetRecord = matches[0];
   
   if(typeof window.openSameSoModal === 'function') {
     window.openSameSoModal();
-    // Force z-index correction dynamically
+    // Force the z-index to 3500 so it physically overrides the Order History Modal (z-index: 2000)
     if($('#sameSoModal')) {
       $('#sameSoModal').style.display = 'flex';
       $('#sameSoModal').style.zIndex = '3500';
     }
   }
 };
-
 window.openUniversalAddModal = function(so) {
   if($('#orderHistoryModal')) $('#orderHistoryModal').style.display = 'none';
   const existing = appData.staging.find(x => x.so === so) || appData.shipped.find(x => x.so === so);
