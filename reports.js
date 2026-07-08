@@ -7,6 +7,19 @@ window.reportResults = [];
 window.reportPhotoBlobs = [];
 window.discrepancyList = JSON.parse(localStorage.getItem('swift_discrepancies')) || [];
 
+window.startStagingReport = function(filter) {
+  window.currentReportFilter = filter;
+  const savedQueue = localStorage.getItem('swift_reportQueue');
+  const savedIndex = localStorage.getItem('swift_reportIndex');
+  
+  // If they have an unfinished report, prompt to resume. Otherwise, start fresh.
+  if (savedQueue && savedIndex && parseInt(savedIndex) > 0) {
+    if ($('#reportResumeModal')) $('#reportResumeModal').style.display = 'flex';
+  } else {
+    if (typeof window.initStagingReport === 'function') window.initStagingReport();
+  }
+};
+
 function locSortKey(loc) {
   const l = (loc || '').toUpperCase();
   
