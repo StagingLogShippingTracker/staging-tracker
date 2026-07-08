@@ -50,14 +50,14 @@ window.getDynamicQty = function(prefix) {
   return sk+bx+cr+pi+ot;
 };
 
-window.getStatusColor = function(dbStatus) {
+window.getRowColor = function(dbStatus) {
   const s = window.getFormattedStatus(dbStatus).toLowerCase();
-  if (s.includes('today')) return '#dc2626'; 
-  if (s.includes('tomorrow')) return '#f59e0b'; 
-  if (s.includes('future')) return '#8b5cf6'; 
-  if (s.includes('pick')) return '#10b981'; 
-  if (s.includes('awaiting')) return '#64748b'; 
-  return '#0ea5e9'; 
+  if (s.includes('partial')) return '#ffedd5'; // Faint Orange
+  if (s.includes('today')) return '#fee2e2'; // Faint Red
+  if (s.includes('tomorrow')) return '#fefce8'; // Faint Yellow
+  if (s.includes('future')) return '#eff6ff'; // Faint Blue
+  if (s.includes('corp pick')) return '#f0fdf4'; // Faint Green
+  return ''; // Default (Awaiting Instructions)
 };
 
 window.renderTables = function() {
