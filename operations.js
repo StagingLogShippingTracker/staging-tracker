@@ -440,31 +440,55 @@ window.resolveEmail = function(inputVal) {
   return null; 
 };
 
-window.triggerQuickConsolidate = function() {
-  const so = prompt("Enter exact SO# to consolidate:");
-  if (!so) return;
-  const target = so.trim();
-  const matches = appData.staging.filter(x => x.so.toLowerCase() === target.toLowerCase());
-  if(matches.length === 0) return alert("No active staging entries found for SO: " + target);
+window.triggerUniversalConsolidate = function(targetSo) {
+  // Hide overlapping modals to prevent z-index boxing
+  if($('#editModal')) $('#editModal').style.display = 'none';
+  if($('#orderHistoryModal')) $('#orderHistoryModal').style.display = 'none';
+  if($('#reportNoModal')) $('#reportNoModal').style.display = 'none';
   
+  let so = targetSo;
+  if (!so && window.editTargetRecord && window.editTargetRecord.so) so = window.editTargetRecord.so;
+  if (!so) {
+    so = prompt("Enter exact SO# to consolidate:");
+    if (!so) return;
+  }
+  
+  so = so.trim();
+  const matches = appData.staging.filter(x => x.so.toLowerCase() === so.toLowerCase());
+  
+  if (matches.length === 0) return alert("No active staging entries found for SO: " + so);
+  if (matches.length === 1) return alert("There is only 1 active entry for SO: " + so + ". Nothing to consolidate.");
+
+  // Sync state for batch.js logic
   window.editTargetRecord = { so: matches[0].so };
-  if(typeof window.openSameSoModal === 'function') window.openSameSoModal();
+  
+  if(typeof window.openSameSoModal === 'function') {
+    window.openSameSoModal();
+    // Force z-index correction dynamically
+    if($('#sameSoModal')) {
+      $('#sameSoModal').style.display = 'flex';
+      $('#sameSoModal').style.zIndex = '3500';
+    }
+  }
 };
 
 window.openUniversalAddModal = function(so) {
   if($('#orderHistoryModal')) $('#orderHistoryModal').style.display = 'none';
   const existing = appData.staging.find(x => x.so === so) || appData.shipped.find(x => x.so === so);
   
-  if($('#ra_so')) { $('#ra_so').value = so; $('#ra_so').disabled = true; }
-  if($('#ra_cust')) { $('#ra_cust').value = existing ? existing.customer : ''; $('#ra_cust').disabled = true; }
+  if($('#ra_so')) { $('#ra_so').value = so; $('#ra_so').disabled = true; $('#ra_so').style.background = '#f1f5f9'; }
+  if($('#ra_cust')) { $('#ra_cust').value = existing ? existing.customer : ''; $('#ra_cust').disabled = true; $('#ra_cust').style.background = '#f1f5f9'; }
+  if($('#ra_status')) { $('#ra_status').disabled = true; $('#ra_status').style.background = '#f1f5f9'; }
   
   if($('#ra_skid')) $('#ra_skid').value=0; if($('#ra_box')) $('#ra_box').value=0; if($('#ra_crate')) $('#ra_crate').value=0; if($('#ra_pipe')) $('#ra_pipe').value=0; if($('#ra_other')) $('#ra_other').value=0; 
   if($('#ra_loc')) $('#ra_loc').value=''; if($('#ra_coords')) $('#ra_coords').value=''; if($('#ra_weight')) $('#ra_weight').value=''; if($('#ra_comments')) $('#ra_comments').value=''; 
-  if($('#ra_staged_by')) $('#ra_staged_by').value = currentUser ? currentUser.email.split('@')[0] : '';
+  if($('#ra_staged_by')) { $('#ra_staged_by').value = currentUser ? currentUser.email.split('@')[0] : ''; $('#ra_staged_by').disabled = true; $('#ra_staged_by').style.background = '#f1f5f9'; }
   
-  if($('#reportAddModal')) $('#reportAddModal').style.display = 'flex';
+  if($('#reportAddModal')) {
+    $('#reportAddModal').style.display = 'flex';
+    $('#reportAddModal').style.zIndex = '3600';
+  }
 };
-
 window.qsPhotoBlobs = [];
 window.handleQsPhotoUpload = function(inputEl) {
   if(!inputEl.files || inputEl.files.length === 0) return;
