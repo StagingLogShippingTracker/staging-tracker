@@ -215,11 +215,11 @@
     <div id="history_content" style="min-height:100px;"></div>
   </div>
 </div>
-<div id="soConflictModal" class="modal-overlay" style="z-index: 2500;">
+<div id="soConflictModal" class="modal-overlay" style="z-index: 4000 !important;">
   <div class="modal-window" style="max-width: 550px;">
     <button class="modal-close-x" onclick="document.querySelector('#soConflictModal').style.display='none'">&times;</button>
     <h3 style="margin:0 0 10px 0; color:#f59e0b;">Multiple Locations Detected</h3>
-    <p style="font-size:13px; color:#4b5563; margin-top:0;">SO <b><span id="conflict_so_title"></span></b> already exists in active Staging in another location. Review other locations below:</p>
+    <p style="font-size:13px; color:#4b5563; margin-top:0;">SO <b><span id="conflict_so_title"></span></b> is already active in Staging at another location. Review prior locations below:</p>
     <div id="conflict_content" style="background:#fcfcfc; border:1px solid #cbd5e1; border-radius:8px; padding:12px; min-height:100px; margin-bottom:12px;"></div>
     <div class="modal-actions" style="display:flex; gap:8px; justify-content:flex-end;">
       <button id="conflictCancelBtn" class="btn" style="background:#64748b;">Cancel Action</button>
