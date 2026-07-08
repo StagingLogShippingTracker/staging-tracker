@@ -228,7 +228,7 @@ window.triggerShipModal = function(id) {
   
   if($('#m_comments')) $('#m_comments').value = item.comments || ''; 
   
-  if($('#m_pm_chk')) $('#m_pm_chk').checked = false; window.togglePMEmail(false, 'm_pm_email', 'm_pm_email_btn');
+  if($('#m_pm_chk')) $('#m_pm_chk').checked = false; window.togglePMEmail(false, 'm_pm_email', 'm_pm_email_btn'); if($('#m_pm_email')) $('#m_pm_email').value = '';
   if($('#shipModal')) $('#shipModal').style.display = 'flex';
   window.renderPhotoStrip('#photoPreviewStrip', selectedPhotoBlobs);
 };
