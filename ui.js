@@ -69,6 +69,15 @@ window.renderTables = function() {
     const sBody = $('#tblStaging').querySelector('tbody'); 
     if(sBody) {
       sBody.innerHTML = ''; const limitStaging = $('#stageLimitNotice') ? 20 : 999999;
+      // Inject dynamic CSS to ensure cell backgrounds don't hide the row color, 
+      // while safely preserving the hover-darken effect using a CSS overlay gradient
+      if (!document.getElementById('status-row-styles')) {
+        document.head.insertAdjacentHTML('beforeend', `<style id="status-row-styles">
+          tr.status-row td { background-color: inherit !important; }
+          tr.status-row:hover td { background-image: linear-gradient(rgba(0,0,0,0.04), rgba(0,0,0,0.04)) !important; }
+        </style>`);
+      }
+
       fStaging.slice(0, limitStaging).forEach(o => {
         const geoLink = o.coords ? `<a class="coord-link" href="geo:0,0?q=${encodeURIComponent(o.coords)}" target="_blank">${o.coords}</a>` : '—';
         const picBtn = (o.photo_urls && o.photo_urls.length > 0) ? `<button class="btn" style="padding:4px 8px; font-size:12px; margin-right:4px; height:auto;" onclick="window.openPhotoViewer('${o.id}')">View</button>` : '';
@@ -78,29 +87,16 @@ window.renderTables = function() {
         const batchChk = `<input type="checkbox" style="width:18px;height:18px;" onchange="window.toggleBatchSelect('${o.id}', this.checked)" ${batchSelectedIds.has(o.id) ? 'checked' : ''}>`;
 
         const rowBg = window.getRowColor(o.status);
+        const trClass = rowBg ? `class="status-row"` : '';
         const trStyle = rowBg ? `style="background-color: ${rowBg};"` : '';
+        // If colored, make the sticky column inherit the row color; otherwise keep default grey
+        const stickyStyle = rowBg ? `background-color: inherit;` : `background:#f8fafc;`;
 
-        sBody.insertAdjacentHTML('beforeend', `<tr ${trStyle}>
+        sBody.insertAdjacentHTML('beforeend', `<tr ${trClass} ${trStyle}>
           <td class="show-in-batch" style="text-align:center;">${batchChk}</td>
           <td class="hide-in-batch">${editBtn}</td><td class="hide-in-batch">${picBtn}</td><td><a class="so-link" onclick="event.stopPropagation(); window.openOrderHistory('${o.so}')">${o.so}</a></td><td>${o.customer}</td><td>${new Date(o.entry_date).toLocaleString()}</td><td>${o.type}</td><td><b>${o.location}</b></td><td><small>${geoLink}</small></td>
           <td>${o.weight || '—'}</td><td class="hide-in-batch">${commentBtn}</td><td style="font-weight:bold; color:#475569;">${window.getFormattedStatus(o.status)}</td><td>${o.staged_by||'—'}</td>
-          <td class="hide-in-batch" style="position:sticky;right:0;text-align:center; background:#f8fafc; border-left:1px solid #e2e8f0;">${chkBox}</td></tr>`);
-      });fStaging.slice(0, limitStaging).forEach(o => {
-        const geoLink = o.coords ? `<a class="coord-link" href="geo:0,0?q=${encodeURIComponent(o.coords)}" target="_blank">${o.coords}</a>` : '—';
-        const picBtn = (o.photo_urls && o.photo_urls.length > 0) ? `<button class="btn" style="padding:4px 8px; font-size:12px; margin-right:4px; height:auto;" onclick="window.openPhotoViewer('${o.id}')">View</button>` : '';
-        const editBtn = canEdit ? `<button class="btn-edit" onclick="window.openUniversalEditor('staging', '${o.id}')">Edit</button>` : `<span style="color:#94a3b8; font-size:11px;">Read-Only</span>`;
-        const chkBox = canEdit ? `<input type="checkbox" onchange="if(this.checked){ window.triggerShipModal('${o.id}'); this.checked=false; }">` : `<span style="color:#9ca3af;">—</span>`;
-        const commentBtn = o.comments ? `<button class="btn" style="padding:4px 8px; font-size:12px; background:#8b5cf6; color:#fff; height:auto;" onclick="window.openCommentModal('staging', '${o.id}')">See</button>` : (canEdit ? `<button class="btn" style="padding:4px 8px; font-size:12px; background:#e2e8f0; color:#475569; height:auto;" onclick="window.openCommentModal('staging', '${o.id}')">Add</button>` : `<span style="color:#9ca3af;">—</span>`);
-        const batchChk = `<input type="checkbox" style="width:18px;height:18px;" onchange="window.toggleBatchSelect('${o.id}', this.checked)" ${batchSelectedIds.has(o.id) ? 'checked' : ''}>`;
-
-        const rowBg = window.getRowColor(o.status);
-        const trStyle = rowBg ? `style="background-color: ${rowBg};"` : '';
-
-        sBody.insertAdjacentHTML('beforeend', `<tr ${trStyle}>
-          <td class="show-in-batch" style="text-align:center;">${batchChk}</td>
-          <td class="hide-in-batch">${editBtn}</td><td class="hide-in-batch">${picBtn}</td><td><a class="so-link" onclick="event.stopPropagation(); window.openOrderHistory('${o.so}')">${o.so}</a></td><td>${o.customer}</td><td>${new Date(o.entry_date).toLocaleString()}</td><td>${o.type}</td><td><b>${o.location}</b></td><td><small>${geoLink}</small></td>
-          <td>${o.weight || '—'}</td><td class="hide-in-batch">${commentBtn}</td><td style="font-weight:bold; color:#475569;">${window.getFormattedStatus(o.status)}</td><td>${o.staged_by||'—'}</td>
-          <td class="hide-in-batch" style="position:sticky;right:0;text-align:center; background:#f8fafc; border-left:1px solid #e2e8f0;">${chkBox}</td></tr>`);
+          <td class="hide-in-batch" style="position:sticky;right:0;text-align:center; ${stickyStyle} border-left:1px solid #e2e8f0;">${chkBox}</td></tr>`);
       });
     }
   }
