@@ -214,7 +214,7 @@ window.reportAction = function(action) {
     
     if (action === 'delete') window.deleteCurrentRecord();
     else if (action === 'return') window.triggerReturnModal();
-    else if (action === 'consolidate') window.openSameSoModal();
+    else if (action === 'consolidate') window.triggerUniversalConsolidate(appData.staging.find(x => x.id === itemId).so);
   }
 };
 
