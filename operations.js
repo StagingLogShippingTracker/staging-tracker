@@ -520,7 +520,7 @@ window.openQuickShipModal = function() {
   $('#qs_skid').value = 0; $('#qs_box').value = 0; $('#qs_crate').value = 0; $('#qs_pipe').value = 0; $('#qs_other').value = 0;
   $('#qs_carrier').value = ''; $('#qs_loc').value = ''; $('#qs_weight').value = ''; $('#qs_comments').value = '';
   $('#qs_by').value = currentUser ? currentUser.email.split('@')[0] : '';
-  if($('#qs_pm_chk')) $('#qs_pm_chk').checked = false; window.togglePMEmail(false, 'qs_pm_email', 'qs_pm_email_btn');
+  if($('#qs_pm_chk')) $('#qs_pm_chk').checked = false; window.togglePMEmail(false, 'qs_pm_email', 'qs_pm_email_btn'); if($('#qs_pm_email')) $('#qs_pm_email').value = '';
   window.qsPhotoBlobs = [];
   if($('#qs_photoPreviewStrip')) $('#qs_photoPreviewStrip').innerHTML = '';
   $('#quickShipModal').style.display = 'flex';
