@@ -309,7 +309,7 @@ window.playSuccessChime = function() {
     gain.connect(ctx.destination);
     osc.type = 'sine';
     osc.frequency.setValueAtTime(1046.50, ctx.currentTime); // High C
-    gain.gain.setValueAtTime(0.1, ctx.currentTime); // Soft volume
+    gain.gain.setValueAtTime(0.4, ctx.currentTime); // Increased volume
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
     osc.start();
     osc.stop(ctx.currentTime + 0.5);
