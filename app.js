@@ -45,13 +45,20 @@ function initApp() {
   
   // Trigger the new dropdown setup on boot
   window.initEmployeeEmailDropdown(); 
-  // --- GLOBAL DOM ENFORCEMENT ---
-  // Fix datalist cutoff bug & disable native browser memory on all fields
+  // --- GLOBAL DOM ENFORCEMENT (Automated Memory & Autocomplete Fix) ---
+  
+  // 1. Inject the missing dl_sos datalist into the page so you don't have to edit HTML files
+  if (!document.getElementById('dl_sos')) {
+    document.body.insertAdjacentHTML('beforeend', '<datalist id="dl_sos"></datalist>');
+  }
+
+  // 2. Disable native browser memory (autocomplete) on all inputs/textareas to fix the cutoff bug
   document.querySelectorAll('input:not([type="password"]):not([type="email"]), textarea').forEach(el => {
     el.setAttribute('autocomplete', 'off');
     el.setAttribute('spellcheck', 'false');
   });
-  // Auto-attach SO datalist memory to all SO fields across the app
+
+  // 3. Auto-attach the SO memory datalist to ALL SO fields across the entire app
   document.querySelectorAll('input[id*="_so"], input[id="so"]').forEach(el => {
     if(!el.id.includes('search')) el.setAttribute('list', 'dl_sos');
   });
