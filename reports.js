@@ -9,14 +9,21 @@ window.discrepancyList = JSON.parse(localStorage.getItem('swift_discrepancies'))
 
 function locSortKey(loc) {
   const l = (loc || '').toUpperCase();
-  if (l.includes('BOX SHELF') && !l.includes('PARTIAL') && !l.includes('SHIPPING')) return [1, l];
+  
   if (l.includes('PARTIAL BOX SHELF')) return [2, l];
+  if (l.includes('BOX SHELF') && !l.includes('SHIPPING')) return [1, l];
   
   const aisleMatch = l.match(/^([A-Z])-(\d{2})-([A-Z])-(1|2|1\+2)$/);
   if (aisleMatch) {
     let suffix = aisleMatch[4] === '1' ? 1 : (aisleMatch[4] === '2' ? 2 : 3);
     return [3, aisleMatch[1], parseInt(aisleMatch[2], 10), aisleMatch[3], suffix];
   }
+  
+  if (l.includes('SOUTH WALL')) return [4, l];
+  if (l.match(/^W-\d+/) || l.includes('SHIPPING')) return [5, l];
+  if (l.includes('CORP DROP')) return [6, l];
+  return [7, l];
+}
   
   if (l.includes('SOUTH WALL')) return [4, l];
   if (l.match(/^W-\d+/) || l.includes('SHIPPING')) return [5, l];
