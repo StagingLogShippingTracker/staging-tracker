@@ -54,9 +54,9 @@ window.getRowColor = function(dbStatus) {
   const s = window.getFormattedStatus(dbStatus).toLowerCase();
   if (s.includes('partial')) return '#ffedd5'; // Faint Orange
   if (s.includes('today')) return '#fee2e2'; // Faint Red
-  if (s.includes('tomorrow')) return '#fefce8'; // Faint Yellow
-  if (s.includes('future')) return '#eff6ff'; // Faint Blue
-  if (s.includes('corp pick')) return '#f0fdf4'; // Faint Green
+  if (s.includes('tomorrow')) return '#fef9c3'; // Faint Yellow
+  if (s.includes('future')) return '#dbeafe'; // Faint Blue
+  if (s.includes('corp pick')) return '#dcfce7'; // Faint Green
   return ''; // Default (Awaiting Instructions)
 };
 
