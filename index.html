@@ -202,14 +202,14 @@
 <div id="ordersModal" class="modal-overlay"><div class="modal-window" style="max-width: 600px;"><button class="modal-close-x" onclick="document.querySelector('#ordersModal').style.display='none'">&times;</button><h3 style="margin:0 0 10px 0;">Active Staging Orders</h3><input id="searchOrdersModal" autocomplete="off" spellcheck="false" placeholder="Quick Search SO or Customer..." style="margin-bottom:12px;" oninput="window.filterOrdersModal()"/><div class="table-wrap" style="max-height: 400px; overflow-y: auto;"><table id="tblOrders" style="min-width: 480px; width: 100%;"><thead><tr><th>SO</th><th colspan="3">Details</th></tr></thead><tbody></tbody></table></div></div></div>
 <div id="loginModal" class="modal-overlay"><div class="modal-window" style="max-width: 350px;"><button class="modal-close-x" onclick="document.querySelector('#loginModal').style.display='none'">&times;</button><h3 style="margin:0 0 10px 0;">Sign In</h3><div class="modal-field"><label>E-mail</label><input type="email" id="login_email" autocomplete="username" placeholder="warehouse@swiftsupply.ca" /></div><div class="modal-field"><label>Password</label><input type="password" id="login_password" autocomplete="current-password" placeholder="••••••••" /></div><button id="loginBtn" class="btn" style="margin-top:12px; width:100%;" onclick="window.submitLogin()">Sign In</button></div></div>
 
-<div id="orderHistoryModal" class="modal-overlay">
+<div id="orderHistoryModal" class="modal-overlay" style="z-index: 2000;">
   <div class="modal-window" style="max-width: 550px;">
     <button class="modal-close-x" onclick="document.querySelector('#orderHistoryModal').style.display='none'">&times;</button>
     <h3 style="margin:0 0 10px 0; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
       Order History: <span id="history_so_title" style="color:var(--brand);"></span>
       <div style="margin-left:auto; display:flex; gap:6px;">
-        <button class="btn" style="padding:4px 8px; font-size:12px; height:auto;" onclick="window.openUniversalAddModal(document.getElementById('history_so_title').textContent)">+ Add Entry</button>
-        <button class="btn" style="padding:4px 8px; font-size:12px; height:auto; background:#8b5cf6;" onclick="window.openSameSoModal(document.getElementById('history_so_title').textContent)">Consolidate</button>
+        <button class="btn" style="padding:4px 8px; font-size:12px; height:auto; background:#10b981;" onclick="window.openUniversalAddModal(document.getElementById('history_so_title').textContent)">+ Add Entry</button>
+        <button class="btn" style="padding:4px 8px; font-size:12px; height:auto; background:#8b5cf6;" onclick="window.triggerUniversalConsolidate(document.getElementById('history_so_title').textContent)">Consolidate</button>
       </div>
     </h3>
     <div id="history_content" style="min-height:100px;"></div>
