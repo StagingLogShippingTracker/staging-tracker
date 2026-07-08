@@ -444,9 +444,11 @@ window.triggerUniversalConsolidate = function(targetSo) {
   let so = typeof targetSo === 'string' ? targetSo : null;
   
   // Intelligent Context Detection: 
-  // If no SO was provided, only pull from memory if the Edit Modal is actively open.
+  // If no SO was provided via button click, pull from memory ONLY if the Edit Modal is actively open.
   if (!so && $('#editModal') && window.getComputedStyle($('#editModal')).display !== 'none') {
-    if (window.editTargetRecord && window.editTargetRecord.so) so = window.editTargetRecord.so;
+    if (typeof editTargetRecord !== 'undefined' && editTargetRecord && editTargetRecord.so) {
+      so = editTargetRecord.so;
+    }
   }
 
   // Hide overlapping modals to prevent z-index boxing conflicts
@@ -454,7 +456,7 @@ window.triggerUniversalConsolidate = function(targetSo) {
   if($('#orderHistoryModal')) $('#orderHistoryModal').style.display = 'none';
   if($('#reportNoModal')) $('#reportNoModal').style.display = 'none';
   
-  // If we still don't have an SO, prompt for one (Quick Consolidate behavior)
+  // If we STILL don't have an SO, prompt the user for one (Quick Consolidate route)
   if (!so) {
     so = prompt("Enter exact SO# to consolidate:");
     if (!so) return;
@@ -466,19 +468,22 @@ window.triggerUniversalConsolidate = function(targetSo) {
   if (matches.length === 0) return alert("No active staging entries found for SO: " + so);
   if (matches.length === 1) return alert("There is only 1 active entry for SO: " + so + ". Nothing to consolidate.");
 
-  // CRITICAL FIX: Sync BOTH global memory variables so batch.js doesn't abort the launch
-  window.currentEditId = matches[0].id;
-  window.editTargetRecord = matches[0];
+  // CRITICAL FIX: Direct variable assignment (NO 'window.' prefix)
+  // This ensures batch.js actually receives the target and builds the table.
+  currentEditId = matches[0].id;
+  editTargetRecord = matches[0];
+  editTargetRecord.table = 'staging'; 
   
   if(typeof window.openSameSoModal === 'function') {
     window.openSameSoModal();
-    // Force the z-index to 3500 so it physically overrides the Order History Modal (z-index: 2000)
+    // Force the z-index dynamically so it stays on top
     if($('#sameSoModal')) {
       $('#sameSoModal').style.display = 'flex';
       $('#sameSoModal').style.zIndex = '3500';
     }
   }
 };
+
 window.openUniversalAddModal = function(so) {
   if($('#orderHistoryModal')) $('#orderHistoryModal').style.display = 'none';
   const existing = appData.staging.find(x => x.so === so) || appData.shipped.find(x => x.so === so);
