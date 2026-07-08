@@ -7,17 +7,19 @@ window.reportResults = [];
 window.reportPhotoBlobs = [];
 window.discrepancyList = JSON.parse(localStorage.getItem('swift_discrepancies')) || [];
 
-window.startStagingReport = function(filter) {
-  window.currentReportFilter = filter;
-  const savedQueue = localStorage.getItem('swift_reportQueue');
-  const savedIndex = localStorage.getItem('swift_reportIndex');
-  
-  // If they have an unfinished report, prompt to resume. Otherwise, start fresh.
-  if (savedQueue && savedIndex && parseInt(savedIndex) > 0) {
-    if ($('#reportResumeModal')) $('#reportResumeModal').style.display = 'flex';
-  } else {
-    if (typeof window.initStagingReport === 'function') window.initStagingReport();
+window.startStagingReport = function(mode) {
+  const saved = localStorage.getItem('swift_report_state');
+  if(saved) {
+    try {
+      const state = JSON.parse(saved);
+      if(state.queue && state.queue.length > 0 && state.index < state.queue.length) {
+        window.pendingReportMode = mode;
+        if($('#reportResumeModal')) $('#reportResumeModal').style.display = 'flex';
+        return;
+      }
+    } catch(e) {}
   }
+  window.initStagingReport(mode);
 };
 
 function locSortKey(loc) {
@@ -37,42 +39,6 @@ function locSortKey(loc) {
   if (l.includes('CORP DROP')) return [6, l];
   return [7, l];
 }
-  
-  if (l.includes('SOUTH WALL')) return [4, l];
-  if (l.match(/^W-\d+/) || l.includes('SHIPPING')) return [5, l];
-  if (l.includes('CORP DROP')) return [6, l];
-  return [7, l];
-}function locSortKey(loc) {
-  const l = (loc || '').toUpperCase();
-  if (l.includes('BOX SHELF') && !l.includes('PARTIAL') && !l.includes('SHIPPING')) return [1, l];
-  if (l.includes('PARTIAL BOX SHELF')) return [2, l];
-  
-  const aisleMatch = l.match(/^([A-Z])-(\d{2})-([A-Z])-(1|2|1\+2)$/);
-  if (aisleMatch) {
-    let suffix = aisleMatch[4] === '1' ? 1 : (aisleMatch[4] === '2' ? 2 : 3);
-    return [3, aisleMatch[1], parseInt(aisleMatch[2], 10), aisleMatch[3], suffix];
-  }
-  
-  if (l.includes('SOUTH WALL')) return [4, l];
-  if (l.match(/^W-\d+/) || l.includes('SHIPPING')) return [5, l];
-  if (l.includes('CORP DROP')) return [6, l];
-  return [7, l];
-}
-
-window.startStagingReport = function(mode) {
-  const saved = localStorage.getItem('swift_report_state');
-  if(saved) {
-    try {
-      const state = JSON.parse(saved);
-      if(state.queue && state.queue.length > 0 && state.index < state.queue.length) {
-        window.pendingReportMode = mode;
-        if($('#reportResumeModal')) $('#reportResumeModal').style.display = 'flex';
-        return;
-      }
-    } catch(e) {}
-  }
-  window.initStagingReport(mode);
-};
 
 window.resumeStagingReport = function() {
   const state = JSON.parse(localStorage.getItem('swift_report_state'));
