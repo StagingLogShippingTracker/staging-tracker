@@ -47,6 +47,7 @@ window.loadCloudData = async function() {
     
     window.renderTables(); 
     if(typeof window.syncMapPins === 'function') window.syncMapPins();
+    if(typeof window.initUniversalDropdowns === 'function') window.initUniversalDropdowns();
   } catch(e) { console.error("Data load failed:", e); }
 };
 
@@ -584,4 +585,93 @@ window.submitQuickShip = async function() {
   } catch(e) { alert("Quick Ship Error: " + e.message); } finally {
     $('#qsConfirmBtn').disabled = false; $('#qsConfirmBtn').textContent = 'Quick Ship Dispatch';
   }
+};
+
+window.checkSoConflict = async function(so, excludeId) {
+  if (!so) return true;
+  const conflicts = appData.staging.filter(x => x.so.toLowerCase() === so.toLowerCase() && x.id !== excludeId);
+  if (conflicts.length > 0) {
+    return new Promise(resolve => {
+      $('#conflict_so_title').textContent = so;
+      let html = '<div style="background:#fff; border:1px solid #e2e8f0; border-radius:6px; overflow:hidden;"><table style="width:100%; text-align:left; border-collapse:collapse; font-size:13px;">';
+      html += '<tr style="background:#f1f5f9; border-bottom:1px solid #cbd5e1;"><th style="padding:8px;">Location</th><th style="padding:8px;">Containers</th><th style="padding:8px;">Status</th><th style="padding:8px;">Date</th></tr>';
+      conflicts.forEach(c => {
+        html += `<tr style="border-bottom:1px solid #e2e8f0;"><td style="padding:8px;"><b>${c.location}</b></td><td style="padding:8px;">${c.type}</td><td style="padding:8px;"><span style="color:${window.getStatusColor ? window.getStatusColor(c.status) : '#475569'}; font-weight:bold;">${window.getFormattedStatus(c.status)}</span></td><td style="padding:8px;">${new Date(c.entry_date).toLocaleDateString()}</td></tr>`;
+      });
+      html += '</table></div>';
+      $('#conflict_content').innerHTML = html;
+      $('#soConflictModal').style.display = 'flex';
+      $('#soConflictModal').style.zIndex = '4000';
+
+      $('#conflictCancelBtn').onclick = () => { $('#soConflictModal').style.display = 'none'; resolve(false); };
+      $('#conflictProceedBtn').onclick = () => { $('#soConflictModal').style.display = 'none'; resolve(true); };
+    });
+  }
+  return true;
+};
+
+window.initUniversalDropdowns = function() {
+  const byFields = ['e_staged_by', 'ra_staged_by', 'qs_by', 'm_by', 'r_picked_by', 'r_returned_by', 'bc_by', 'sp_by', 'nr_by'];
+  const carrierFields = ['qs_carrier', 'm_carrier', 'e_carrier'];
+
+  let customBys = JSON.parse(localStorage.getItem('swift_custom_bys') || '[]');
+  let customCarriers = JSON.parse(localStorage.getItem('swift_custom_carriers') || '[]');
+
+  function syncSelect(id, type) {
+    let el = document.getElementById(id);
+    if (!el) return;
+
+    // Convert Native Inputs into Select Dropdowns dynamically
+    if (el.tagName === 'INPUT') {
+        const select = document.createElement('select');
+        select.id = id; select.className = el.className;
+        if(el.style.cssText) select.style.cssText = el.style.cssText;
+        select.dataset.ddType = type;
+        el.parentNode.replaceChild(select, el);
+        el = select;
+
+        // Auto-remove the obsolete 'x' delete button
+        const btn = el.nextElementSibling;
+        if(btn && btn.tagName === 'BUTTON' && btn.getAttribute('onclick') && btn.getAttribute('onclick').includes('banishMemory')) {
+            btn.remove();
+            el.style.borderRight = '1px solid #cbd5e1';
+            el.style.borderTopRightRadius = '8px';
+            el.style.borderBottomRightRadius = '8px';
+        }
+
+        el.onchange = function() {
+           if (el.value === 'OTHER_NEW') {
+              const newVal = prompt(`Enter new ${type === 'by' ? 'Name' : 'Carrier'}:`);
+              if (newVal && newVal.trim() !== '') {
+                 const cleanVal = newVal.trim();
+                 if (type === 'by' && !customBys.includes(cleanVal)) {
+                     customBys.push(cleanVal); localStorage.setItem('swift_custom_bys', JSON.stringify(customBys));
+                 } else if (type === 'carrier' && !customCarriers.includes(cleanVal)) {
+                     customCarriers.push(cleanVal); localStorage.setItem('swift_custom_carriers', JSON.stringify(customCarriers));
+                 }
+                 window.initUniversalDropdowns(); // Re-sync all lists
+                 el.value = cleanVal;
+              } else { el.value = ''; }
+           }
+        };
+    }
+
+    const currentVal = el.value;
+    let optionsHTML = '<option value="">-- Select --</option>';
+    let dataList = type === 'by'
+       ? [...new Set([...appData.staging.map(x=>x.staged_by), ...appData.shipped.map(x=>x.shipped_by), ...customBys])].filter(Boolean)
+       : [...new Set([...appData.shipped.map(x=>x.carrier), ...customCarriers])].filter(Boolean);
+
+    dataList.sort((a,b) => a.localeCompare(b)).forEach(val => { optionsHTML += `<option value="${val}">${val}</option>`; });
+    optionsHTML += `<option value="OTHER_NEW" style="font-weight:bold; color:var(--brand);">+ Add Other / New</option>`;
+
+    // Only update if options changed and user isn't actively selecting, to prevent dropdown closure
+    if (el.innerHTML !== optionsHTML && document.activeElement !== el) {
+        el.innerHTML = optionsHTML;
+        if(dataList.includes(currentVal) || currentVal === 'OTHER_NEW') el.value = currentVal;
+    }
+  }
+
+  byFields.forEach(id => syncSelect(id, 'by'));
+  carrierFields.forEach(id => syncSelect(id, 'carrier'));
 };
