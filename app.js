@@ -78,12 +78,13 @@ function initApp() {
       mWeight.setAttribute('oninput', 'window.formatWeight(this)');
   }
 
-  const qBox = document.getElementById('q');
-  if (qBox && !document.getElementById('sortToggle')) {
-      const searchCard = qBox.closest('.card');
-      if (searchCard) {
-          searchCard.insertAdjacentHTML('afterend', `
-            <div style="display:flex; justify-content:flex-end; margin-top:-6px; margin-bottom:12px; padding-right:4px;">
+  const tblStaging = document.getElementById('tblStaging');
+  if (tblStaging && !document.getElementById('sortToggle')) {
+      const tableWrap = tblStaging.closest('.table-wrap');
+      if (tableWrap) {
+          // This injects the dropdown directly between the header buttons and the top of the table
+          tableWrap.insertAdjacentHTML('beforebegin', `
+            <div style="display:flex; justify-content:flex-end; margin-top:4px; margin-bottom:12px; padding-right:4px;">
               <select id="sortToggle" class="btn" style="height:36px; background:#fff; border:1px solid #cbd5e1; color:#475569; font-size:13px; padding:0 12px; cursor:pointer;" onchange="window.renderTables()">
                 <option value="urgency">Sort: Urgency (Default)</option>
                 <option value="date_desc">Sort: Newest First</option>
