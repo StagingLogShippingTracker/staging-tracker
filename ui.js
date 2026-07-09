@@ -72,6 +72,18 @@ window.getRowColor = function(dbStatus) {
 window.renderTables = function() {
   const q = $('#q') ? $('#q').value.toLowerCase() : ''; const canEdit = !!currentUser;
   const fStaging = appData.staging.filter(o => (o.so||'').toLowerCase().includes(q) || (o.customer||'').toLowerCase().includes(q) || (o.location||'').toLowerCase().includes(q));
+  const sortMode = $('#sortToggle') ? $('#sortToggle').value : 'urgency';
+      fStaging.sort((a, b) => {
+        if (sortMode === 'date_desc') return new Date(b.entry_date) - new Date(a.entry_date);
+        if (sortMode === 'date_asc') return new Date(a.entry_date) - new Date(b.entry_date);
+        if (sortMode === 'customer') return (a.customer||'').localeCompare(b.customer||'');
+        
+        // Default Urgency Engine
+        const uA = window.getUrgencyWeight(a.status);
+        const uB = window.getUrgencyWeight(b.status);
+        if (uA !== uB) return uB - uA; // Push higher urgency up
+        return new Date(b.entry_date) - new Date(a.entry_date); // Tie-breaker by newest
+      });
   const fShipped = appData.shipped.filter(o => (o.so||'').toLowerCase().includes(q) || (o.customer||'').toLowerCase().includes(q) || (o.location||'').toLowerCase().includes(q));
 
   if($('#tblStaging')) {
