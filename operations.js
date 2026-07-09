@@ -675,3 +675,22 @@ window.initUniversalDropdowns = function() {
   byFields.forEach(id => syncSelect(id, 'by'));
   carrierFields.forEach(id => syncSelect(id, 'carrier'));
 };
+
+window.openReportAddModal = function() {
+  let targetSo = '';
+  
+  // Safely check if the report audit loop is actively running to grab the current SO#
+  if (typeof window.reportQueue !== 'undefined' && window.reportQueue.length > 0 && typeof window.reportIndex !== 'undefined') {
+      const currentItem = appData.staging.find(x => x.id === window.reportQueue[window.reportIndex]);
+      if (currentItem && currentItem.so) {
+          targetSo = currentItem.so;
+      }
+  }
+  
+  // Bridge to the Universal Engine
+  if (typeof window.openUniversalAddModal === 'function') {
+      window.openUniversalAddModal(targetSo);
+  } else {
+      console.error("Error: Universal Add Modal engine is missing.");
+  }
+};
