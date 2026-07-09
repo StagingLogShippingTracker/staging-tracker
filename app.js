@@ -80,14 +80,19 @@ function initApp() {
 
   const qBox = document.getElementById('q');
   if (qBox && !document.getElementById('sortToggle')) {
-      qBox.insertAdjacentHTML('afterend', `
-        <select id="sortToggle" class="btn" style="flex:0 0 auto; height:42px; background:#fff; border:1px solid #cbd5e1; color:#475569; font-size:13px; padding:0 12px; margin-left:8px;" onchange="window.renderTables()">
-          <option value="urgency">Sort: Urgency (Default)</option>
-          <option value="date_desc">Sort: Newest First</option>
-          <option value="date_asc">Sort: Oldest First</option>
-          <option value="customer">Sort: Customer A-Z</option>
-        </select>
-      `);
+      const searchCard = qBox.closest('.card');
+      if (searchCard) {
+          searchCard.insertAdjacentHTML('afterend', `
+            <div style="display:flex; justify-content:flex-end; margin-top:-6px; margin-bottom:12px; padding-right:4px;">
+              <select id="sortToggle" class="btn" style="height:36px; background:#fff; border:1px solid #cbd5e1; color:#475569; font-size:13px; padding:0 12px; cursor:pointer;" onchange="window.renderTables()">
+                <option value="urgency">Sort: Urgency (Default)</option>
+                <option value="date_desc">Sort: Newest First</option>
+                <option value="date_asc">Sort: Oldest First</option>
+                <option value="customer">Sort: Customer A-Z</option>
+              </select>
+            </div>
+          `);
+      }
   }
   
   if($('#add')) $('#add').addEventListener('click', window.submitStagingEntry);
