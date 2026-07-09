@@ -74,11 +74,12 @@
   <div class="modal-window" style="max-width: 480px; text-align:center;"><button class="modal-close-x" onclick="window.renderNextReportItem()">&times;</button>
     <h3 style="margin-top:0;">Resolve Discrepancy</h3><p style="color:#475569; font-size:13px; font-weight:600;">Select an action for this missing entry:</p>
     <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:8px; margin-top:16px;">
+      <button class="btn" style="background:#f59e0b; padding:12px 4px; font-size:12px;" onclick="window.reportAction('edit')">Edit Entry</button>
       <button class="btn" style="background:#0284c7; padding:12px 4px; font-size:12px;" onclick="window.reportAction('change')">Change Loc</button>
       <button class="btn" style="background:#8b5cf6; padding:12px 4px; font-size:12px;" onclick="window.reportAction('consolidate')">Consolidate</button>
       <button class="btn" style="background:#0ea5e9; padding:12px 4px; font-size:12px;" onclick="window.reportAction('split')">Split</button>
       <button class="btn" style="background:#10b981; padding:12px 4px; font-size:12px;" onclick="window.reportAction('ship')">Shipped</button>
-      <button class="btn" style="background:#f59e0b; padding:12px 4px; font-size:12px;" onclick="window.reportAction('return')">Return</button>
+      <button class="btn" style="background:#eab308; padding:12px 4px; font-size:12px;" onclick="window.reportAction('return')">Return</button>
       <button class="btn" style="background:#ef4444; padding:12px 4px; font-size:12px;" onclick="window.reportAction('delete')">Delete</button>
       <button class="btn" style="background:#64748b; padding:12px 4px; font-size:12px;" onclick="window.reportAction('settle')">Settle Later</button>
     </div>
