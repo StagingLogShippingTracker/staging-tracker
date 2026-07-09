@@ -336,3 +336,13 @@ window.injectIntoReportQueue = function(item) {
   window.saveReportState();
   if($('#rep_progress')) $('#rep_progress').textContent = `${window.reportIndex + 1} of ${window.reportQueue.length}`;
 };
+
+window.openReportAddModal = function() {
+  // If the user is actively auditing, automatically grab the current SO# and load it into the Universal prompt
+  if (window.reportQueue && window.reportQueue.length > 0) {
+      const currentItem = appData.staging.find(x => x.id === window.reportQueue[window.reportIndex]);
+      if (currentItem) return window.openUniversalAddModal(currentItem.so);
+  }
+  // Otherwise, open a blank Universal prompt
+  window.openUniversalAddModal('');
+};
