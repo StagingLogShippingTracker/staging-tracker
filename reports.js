@@ -187,11 +187,6 @@ window.reportAction = function(action) {
   else if (action === 'ship') {
     window.triggerShipModal(itemId);
   }
-  else if (action === 'edit') {
-    window.openUniversalEditor('staging', itemId);
-    if($('#reportNoModal')) $('#reportNoModal').style.display = 'none';
-    if($('#reportMainModal')) $('#reportMainModal').style.display = 'none';
-  }
   else {
     window.openUniversalEditor('staging', itemId);
     if($('#editModal')) $('#editModal').style.display = 'none'; 
@@ -229,26 +224,12 @@ window.renderReportPhotoStrip = function() {
   });
 };
 
-window.openUniversalAddModal = function(so) {
-  if($('#orderHistoryModal')) $('#orderHistoryModal').style.display = 'none';
-  const existing = appData.staging.find(x => x.so === so) || appData.shipped.find(x => x.so === so);
-  
-  if($('#ra_so')) { $('#ra_so').value = so; $('#ra_so').disabled = true; $('#ra_so').style.background = '#f1f5f9'; }
-  if($('#ra_cust')) { $('#ra_cust').value = existing ? existing.customer : ''; $('#ra_cust').disabled = true; $('#ra_cust').style.background = '#f1f5f9'; }
-  if($('#ra_status')) { $('#ra_status').disabled = false; $('#ra_status').style.background = ''; }
-  
-  if($('#ra_skid')) $('#ra_skid').value=0; if($('#ra_box')) $('#ra_box').value=0; if($('#ra_crate')) $('#ra_crate').value=0; if($('#ra_pipe')) $('#ra_pipe').value=0; if($('#ra_other')) $('#ra_other').value=0; 
-  if($('#ra_loc')) $('#ra_loc').value=''; if($('#ra_coords')) $('#ra_coords').value=''; if($('#ra_weight')) $('#ra_weight').value=''; if($('#ra_comments')) $('#ra_comments').value=''; 
-  if($('#ra_staged_by')) { $('#ra_staged_by').value = currentUser ? currentUser.email.split('@')[0] : ''; $('#ra_staged_by').disabled = false; $('#ra_staged_by').style.background = ''; }
-  
-  // FIXED: Clear photo array & DOM strip universally so prior photos never bleed over
-  window.reportPhotoBlobs = []; 
-  if(typeof window.renderReportPhotoStrip === 'function') window.renderReportPhotoStrip();
-  
-  if($('#reportAddModal')) {
-    $('#reportAddModal').style.display = 'flex';
-    $('#reportAddModal').style.zIndex = '3600';
-  }
+window.openReportAddModal = function() {
+  $('#ra_so').value=''; $('#ra_cust').value=''; $('#ra_skid').value=0; $('#ra_box').value=0; $('#ra_crate').value=0; $('#ra_pipe').value=0; $('#ra_other').value=0; 
+  $('#ra_loc').value=''; $('#ra_coords').value=''; $('#ra_weight').value=''; $('#ra_comments').value=''; 
+  $('#ra_staged_by').value = currentUser ? currentUser.email.split('@')[0] : '';
+  window.reportPhotoBlobs = []; window.renderReportPhotoStrip();
+  $('#reportAddModal').style.display = 'flex';
 };
 
 window.submitReportAddEntry = async function() {

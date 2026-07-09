@@ -64,36 +64,7 @@ function initApp() {
   });
   
   window.loadCloudData(); 
-  setInterval(window.loadCloudData, 5000);
-
-  // --- V5.1 AUTOMATED DOM FIXES ---
-  document.querySelectorAll('option').forEach(opt => {
-      if (opt.textContent.trim() === 'Awaiting Instructions') opt.textContent = 'Awaiting Shipping Instructions';
-  });
-
-  const mWeight = document.getElementById('m_weight');
-  if (mWeight) {
-      mWeight.removeAttribute('readonly');
-      mWeight.style.background = '';
-      mWeight.setAttribute('oninput', 'window.formatWeight(this)');
-  }
-
-  const tblStaging = document.getElementById('tblStaging');
-  if (tblStaging && !document.getElementById('sortToggle')) {
-      // Intelligently target the wrap, or fallback to the table itself if on index.html
-      const referenceNode = tblStaging.closest('.table-wrap') || tblStaging;
-      referenceNode.insertAdjacentHTML('beforebegin', `
-        <div style="display:flex; justify-content:flex-end; margin-top:4px; margin-bottom:12px; padding-right:4px;">
-          <select id="sortToggle" class="btn" style="height:36px; background:#fff; border:1px solid #cbd5e1; color:#475569; font-size:13px; padding:0 12px; cursor:pointer;" onchange="window.renderTables()">
-            <option value="urgency">Sort: Urgency (Default)</option>
-            <option value="date_desc">Sort: Newest First</option>
-            <option value="date_asc">Sort: Oldest First</option>
-            <option value="customer">Sort: Customer A-Z</option>
-          </select>
-        </div>
-      `);
-  }
-  }
+  setInterval(window.loadCloudData, 5000); 
   
   if($('#add')) $('#add').addEventListener('click', window.submitStagingEntry);
 }
