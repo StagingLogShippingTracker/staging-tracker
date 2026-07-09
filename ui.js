@@ -1,4 +1,13 @@
-// --- ui.js ---
+window.getUrgencyWeight = function(dbStatus) {
+  const s = window.getFormattedStatus(dbStatus).toLowerCase();
+  if (s.includes('today')) return 50;
+  if (s.includes('tomorrow')) return 40;
+  if (s.includes('partial')) return 30;
+  if (s.includes('future')) return 20;
+  if (s.includes('corp pick')) return 10;
+  return 0; // Awaiting Instructions
+};
+
 window.adjustCount = function(id, amt) { if($('#'+id)) $('#'+id).value = Math.max(0, (parseInt($('#'+id).value)||0) + amt); };
 window.adjustEditCount = function(id, amt) { if($('#'+id)) $('#'+id).value = Math.max(0, (parseInt($('#'+id).value)||0) + amt); };
 
