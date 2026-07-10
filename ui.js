@@ -9,7 +9,7 @@ window.getUrgencyWeight = function(dbStatus) {
 };
 
 window.adjustCount = function(id, amt) { if($('#'+id)) $('#'+id).value = Math.max(0, (parseInt($('#'+id).value)||0) + amt); };
-window.adjustEditCount = function(id, amt) { if($('#'+id)) $('#'+id).value = Math.max(0, (parseInt($('#'+id).value)||0) + amt); };
+window.adjustEditCount = function(id, amt) { window.adjustCount(id, amt); };
 
 window.formatWeight = function(input) {
   let value = input.value.replace(/[^0-9.]/g, ''); let parts = value.split('.');
@@ -59,6 +59,23 @@ window.getDynamicQty = function(prefix) {
   return sk+bx+cr+pi+ot;
 };
 
+window.sortStagingEntries = function(entries, sortMode) {
+  const sorted = [...entries];
+  sorted.sort((a, b) => {
+    if (sortMode === 'date_desc') return new Date(b.entry_date) - new Date(a.entry_date);
+    if (sortMode === 'date_asc') return new Date(a.entry_date) - new Date(b.entry_date);
+    if (sortMode === 'customer') return (a.customer||'').localeCompare(b.customer||'');
+    if (sortMode === 'location') return (a.location||'').localeCompare(b.location||'');
+    if (sortMode === 'status') return window.getFormattedStatus(a.status).localeCompare(window.getFormattedStatus(b.status));
+    if (sortMode === 'so') return (a.so||'').localeCompare(b.so||'');
+    const uA = window.getUrgencyWeight(a.status);
+    const uB = window.getUrgencyWeight(b.status);
+    if (uA !== uB) return uB - uA;
+    return new Date(b.entry_date) - new Date(a.entry_date);
+  });
+  return sorted;
+};
+
 window.getRowColor = function(dbStatus) {
   const s = window.getFormattedStatus(dbStatus).toLowerCase();
   if (s.includes('partial')) return '#ffedd5'; // Faint Orange
@@ -72,35 +89,8 @@ window.getRowColor = function(dbStatus) {
 window.renderTables = function() {
   const q = $('#q') ? $('#q').value.toLowerCase() : ''; const canEdit = !!currentUser;
   const fStaging = appData.staging.filter(o => (o.so||'').toLowerCase().includes(q) || (o.customer||'').toLowerCase().includes(q) || (o.location||'').toLowerCase().includes(q));
-  // Inject dropdown strictly into the table container so it works uniformly on all HTML pages
-      const sBody = document.getElementById('stagingBody');
-      if (sBody) {
-          const tableWrap = sBody.closest('.table-wrap');
-          if (tableWrap && !document.getElementById('sortToggle')) {
-              tableWrap.insertAdjacentHTML('beforebegin', `
-                <div style="display:flex; justify-content:flex-end; margin-bottom:8px; padding-right:4px;">
-                  <select id="sortToggle" class="btn" style="height:34px; background:#fff; border:1px solid #cbd5e1; color:#475569; font-size:13px; padding:0 12px; cursor:pointer;" onchange="window.renderTables()">
-                    <option value="urgency">Sort: Urgency (Default)</option>
-                    <option value="date_desc">Sort: Newest First</option>
-                    <option value="date_asc">Sort: Oldest First</option>
-                    <option value="customer">Sort: Customer A-Z</option>
-                  </select>
-                </div>
-              `);
-          }
-      }
-
-      const sortMode = $('#sortToggle') ? $('#sortToggle').value : 'urgency';
-      fStaging.sort((a, b) => {
-        if (sortMode === 'date_desc') return new Date(b.entry_date) - new Date(a.entry_date);
-        if (sortMode === 'date_asc') return new Date(a.entry_date) - new Date(b.entry_date);
-        if (sortMode === 'customer') return (a.customer||'').localeCompare(b.customer||'');
-        
-        const uA = window.getUrgencyWeight(a.status);
-        const uB = window.getUrgencyWeight(b.status);
-        if (uA !== uB) return uB - uA; // Push higher urgency up
-        return new Date(b.entry_date) - new Date(a.entry_date); // Tie-breaker by newest
-      });
+  const sortMode = $('#sortToggle') ? $('#sortToggle').value : 'urgency';
+  const sortedStaging = window.sortStagingEntries(fStaging, sortMode);
   const fShipped = appData.shipped.filter(o => (o.so||'').toLowerCase().includes(q) || (o.customer||'').toLowerCase().includes(q) || (o.location||'').toLowerCase().includes(q));
 
   if($('#tblStaging')) {
@@ -116,8 +106,7 @@ window.renderTables = function() {
         </style>`);
       }
 
-      fStaging.slice(0, limitStaging).forEach(o => {
-        const geoLink = o.coords ? `<a class="coord-link" href="geo:0,0?q=${encodeURIComponent(o.coords)}" target="_blank">${o.coords}</a>` : '—';
+      sortedStaging.slice(0, limitStaging).forEach(o => {
         const picBtn = (o.photo_urls && o.photo_urls.length > 0) ? `<button class="btn" style="padding:4px 8px; font-size:12px; margin-right:4px; height:auto;" onclick="window.openPhotoViewer('${o.id}')">View</button>` : '';
         const editBtn = canEdit ? `<button class="btn-edit" onclick="window.openUniversalEditor('staging', '${o.id}')">Edit</button>` : `<span style="color:#94a3b8; font-size:11px;">Read-Only</span>`;
         const chkBox = canEdit ? `<input type="checkbox" onchange="if(this.checked){ window.triggerShipModal('${o.id}'); this.checked=false; }">` : `<span style="color:#9ca3af;">—</span>`;
@@ -127,12 +116,11 @@ window.renderTables = function() {
         const rowBg = window.getRowColor(o.status);
         const trClass = rowBg ? `class="status-row"` : '';
         const trStyle = rowBg ? `style="background-color: ${rowBg};"` : '';
-        // If colored, make the sticky column inherit the row color; otherwise keep default grey
         const stickyStyle = rowBg ? `background-color: inherit;` : `background:#f8fafc;`;
 
         sBody.insertAdjacentHTML('beforeend', `<tr ${trClass} ${trStyle}>
           <td class="show-in-batch" style="text-align:center;">${batchChk}</td>
-          <td class="hide-in-batch">${editBtn}</td><td class="hide-in-batch">${picBtn}</td><td><a class="so-link" onclick="event.stopPropagation(); window.openOrderHistory('${o.so}')">${o.so}</a></td><td>${o.customer}</td><td>${new Date(o.entry_date).toLocaleString()}</td><td>${o.type}</td><td><b>${o.location}</b></td><td><small>${geoLink}</small></td>
+          <td class="hide-in-batch">${editBtn}</td><td class="hide-in-batch">${picBtn}</td><td><a class="so-link" onclick="event.stopPropagation(); window.openOrderHistory('${o.so}')">${o.so}</a></td><td>${o.customer}</td><td>${new Date(o.entry_date).toLocaleString()}</td><td>${o.type}</td><td><b>${o.location}</b></td>
           <td>${o.weight || '—'}</td><td class="hide-in-batch">${commentBtn}</td><td style="font-weight:bold; color:#475569;">${window.getFormattedStatus(o.status)}</td><td>${o.staged_by||'—'}</td>
           <td class="hide-in-batch" style="position:sticky;right:0;text-align:center; ${stickyStyle} border-left:1px solid #e2e8f0;">${chkBox}</td></tr>`);
       });
@@ -144,7 +132,6 @@ window.renderTables = function() {
     if(shBody) {
       shBody.innerHTML = ''; const limitShipped = $('#shippedLimitNotice') ? 20 : 999999;
       fShipped.slice(0, limitShipped).forEach(o => {
-        const geoLink = o.coords ? `<a class="coord-link" href="geo:0,0?q=${encodeURIComponent(o.coords)}" target="_blank">${o.coords}</a>` : '—';
         const isRet = (o.carrier === 'RETURNED TO STOCK' || o.carrier === 'CONSOLIDATED'); const rowClass = isRet ? 'class="grey-strike"' : '';
         const picBtn = (o.photo_urls && o.photo_urls.length > 0) ? `<button class="btn" style="padding:4px 8px; font-size:12px; margin-right:4px; height:auto;" onclick="window.openPhotoViewer('${o.id}')">View</button>` : '';
         const editBtn = canEdit ? `<button class="btn-edit" onclick="window.openUniversalEditor('shipped', '${o.id}')">Edit</button>` : `<span style="color:#94a3b8; font-size:11px;">Read-Only</span>`;
@@ -154,13 +141,17 @@ window.renderTables = function() {
 
         shBody.insertAdjacentHTML('beforeend', `<tr ${rowClass}>
           <td class="show-in-batch" style="text-align:center;">${batchChk}</td>
-          <td class="hide-in-batch">${editBtn}</td><td class="hide-in-batch">${picBtn}</td><td><a class="so-link" onclick="event.stopPropagation(); window.openOrderHistory('${o.so}')">${o.so}</a></td><td>${o.customer}</td><td>${o.type}</td><td><b>${o.carrier || '—'}</b></td><td>${o.location}</td><td><small>${geoLink}</small></td>
+          <td class="hide-in-batch">${editBtn}</td><td class="hide-in-batch">${picBtn}</td><td><a class="so-link" onclick="event.stopPropagation(); window.openOrderHistory('${o.so}')">${o.so}</a></td><td>${o.customer}</td><td>${o.type}</td><td><b>${o.carrier || '—'}</b></td><td>${o.location}</td>
           <td>${o.weight || '—'}</td><td>${commentBtn}</td><td>${new Date(o.shipped_at).toLocaleString()}</td><td>${o.shipped_by || '—'}</td><td>${o.pmd_email ? o.pmd_email+(isRet?'':'<span class="green-check"> ✓</span>') : '—'}</td></tr>`);
       });
     }
   }
 
-  const sumByType = t => appData.staging.reduce((acc, c) => c.type?.includes(t) ? acc + (parseInt(c.type.match(new RegExp(`(\\d+)\\s*${t}`))) || 0) : acc, 0);
+  const sumByType = t => appData.staging.reduce((acc, c) => {
+    if (!c.type?.includes(t)) return acc;
+    const m = c.type.match(new RegExp(`(\\d+)\\s*${t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
+    return acc + (parseInt(m?.[1], 10) || 0);
+  }, 0);
   const uniqueSOs = new Set(appData.staging.map(o => o.so).filter(x => x !== null && x !== ''));
   
   if($('#kOrders')) $('#kOrders').textContent = uniqueSOs.size; 
@@ -182,8 +173,8 @@ window.openUniversalEditor = function(table, id) {
   
   const isRet = (table === 'shipped' && (o.carrier === 'RETURNED TO STOCK' || o.carrier === 'CONSOLIDATED'));
   
-  if($('#e_so')) $('#e_so').value = o.so; if($('#e_cust')) $('#e_cust').value = o.customer; if($('#e_loc')) $('#e_loc').value = o.location || ''; 
-  if($('#e_coords')) $('#e_coords').value = o.coords || ''; if($('#e_weight')) $('#e_weight').value = o.weight || ''; if($('#e_comments')) $('#e_comments').value = o.comments || '';
+  if($('#e_so')) $('#e_so').value = o.so; if($('#e_cust')) $('#e_cust').value = o.customer;   if($('#e_loc')) $('#e_loc').value = o.location || ''; 
+  if($('#e_weight')) $('#e_weight').value = o.weight || ''; if($('#e_comments')) $('#e_comments').value = o.comments || '';
   
   const counts = window.parseContainerString(o.type);
   if($('#e_skid')) $('#e_skid').value = counts.sk; if($('#e_box')) $('#e_box').value = counts.bx; if($('#e_crate')) $('#e_crate').value = counts.cr;

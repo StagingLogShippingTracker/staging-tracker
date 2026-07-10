@@ -9,8 +9,6 @@ let currentEditId = null;
 let editTargetRecord = { table: null, id: null, photo_urls: [] };
 let selectedPhotoBlobs = [];
 let mainPhotoBlobs = [];
-let openMapInstance = null;
-let openMapMarkers = [];
 let hiddenMemory = [];
 let currentCommentTarget = { table: null, id: null };
 let currentUser = null;
@@ -19,7 +17,7 @@ let isBatchMode = new URLSearchParams(window.location.search).get('batch') === '
 let batchSelectedIds = new Set();
 let isSameSoMode = false;
 let sameSoSelectedIds = new Set();
-let discrepancyList = [];
+window.discrepancyList = [];
 
 try { hiddenMemory = JSON.parse(localStorage.getItem('swift_hidden_memory')) || []; } catch(e) {}
-try { discrepancyList = JSON.parse(localStorage.getItem('swift_discrepancies')) || []; } catch(e) {}
+try { window.discrepancyList = JSON.parse(localStorage.getItem('swift_discrepancies')) || []; } catch(e) {}

@@ -17,6 +17,7 @@ window.submitSplitCount = function() {
   window.splitEngine.current = 1;
   window.splitEngine.dataArray = [];
   window.splitEngine.sourceItem = appData.staging.find(x => x.id === window.splitEngine.targetId);
+  if (!window.splitEngine.sourceItem) return alert("Source entry not found.");
   
   $('#splitPromptModal').style.display = 'none';
   window.renderSplitConfig();
@@ -29,7 +30,7 @@ window.renderSplitConfig = function() {
   $('#sp_cust').value = item.customer;
   
   $('#sp_skid').value = 0; $('#sp_box').value = 0; $('#sp_crate').value = 0; $('#sp_pipe').value = 0; $('#sp_other').value = 0;
-  $('#sp_loc').value = ''; $('#sp_coords').value = ''; $('#sp_weight').value = ''; $('#sp_comments').value = '';
+  $('#sp_loc').value = ''; $('#sp_weight').value = ''; $('#sp_comments').value = '';
   $('#sp_status').value = 'Partial';
   $('#sp_staged_by').value = currentUser ? currentUser.email.split('@')[0] : '';
   
@@ -43,7 +44,7 @@ window.saveConfigureSplit = async function() {
   
   const payload = {
     so: $('#sp_so').value.trim(), customer: $('#sp_cust').value.trim(), location: $('#sp_loc').value.trim(),
-    coords: $('#sp_coords').value.trim(), weight: $('#sp_weight').value.trim(), status: window.getDbStatus($('#sp_status').value.trim()),
+    weight: $('#sp_weight').value.trim(), status: window.getDbStatus($('#sp_status').value.trim()),
     comments: $('#sp_comments').value.trim(), staged_by: $('#sp_staged_by').value.trim() + ' (Split)',
     type: window.getDynamicType('sp'), qty: dynamicQty, photo_urls: window.splitEngine.sourceItem.photo_urls || []
   };

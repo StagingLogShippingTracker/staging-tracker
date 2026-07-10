@@ -38,7 +38,6 @@ window.initEmployeeEmailDropdown = function() {
 
 function initApp() {
   window.bootstrapStandalonePWA(); 
-  window.initOpenStreetMapEngine(); 
   window.initAuth();
   
   if (isBatchMode) document.body.classList.add('batch-mode');
