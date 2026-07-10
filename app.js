@@ -64,7 +64,18 @@ function initApp() {
   });
   
   window.loadCloudData(); 
-  setInterval(window.loadCloudData, 5000); 
+  setInterval(window.loadCloudData, 5000);
+  // --- V5.1 AUTOMATED DOM FIXES ---
+  document.querySelectorAll('option').forEach(opt => {
+      if (opt.textContent.trim() === 'Awaiting Instructions') opt.textContent = 'Awaiting Shipping Instructions';
+  });
+
+  const mWeight = document.getElementById('m_weight');
+  if (mWeight) {
+      mWeight.removeAttribute('readonly');
+      mWeight.style.background = '';
+      mWeight.setAttribute('oninput', 'window.formatWeight(this)');
+  }
   
   if($('#add')) $('#add').addEventListener('click', window.submitStagingEntry);
 }
