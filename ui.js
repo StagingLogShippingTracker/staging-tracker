@@ -1,4 +1,13 @@
-// --- ui.js ---
+window.getUrgencyWeight = function(dbStatus) {
+  const s = window.getFormattedStatus(dbStatus).toLowerCase();
+  if (s.includes('today')) return 50;
+  if (s.includes('tomorrow')) return 40;
+  if (s.includes('partial')) return 30;
+  if (s.includes('future')) return 20;
+  if (s.includes('corp pick')) return 10;
+  return 0; // Awaiting Instructions
+};
+
 window.adjustCount = function(id, amt) { if($('#'+id)) $('#'+id).value = Math.max(0, (parseInt($('#'+id).value)||0) + amt); };
 window.adjustEditCount = function(id, amt) { if($('#'+id)) $('#'+id).value = Math.max(0, (parseInt($('#'+id).value)||0) + amt); };
 
@@ -63,6 +72,35 @@ window.getRowColor = function(dbStatus) {
 window.renderTables = function() {
   const q = $('#q') ? $('#q').value.toLowerCase() : ''; const canEdit = !!currentUser;
   const fStaging = appData.staging.filter(o => (o.so||'').toLowerCase().includes(q) || (o.customer||'').toLowerCase().includes(q) || (o.location||'').toLowerCase().includes(q));
+  // Inject dropdown strictly into the table container so it works uniformly on all HTML pages
+      const sBody = document.getElementById('stagingBody');
+      if (sBody) {
+          const tableWrap = sBody.closest('.table-wrap');
+          if (tableWrap && !document.getElementById('sortToggle')) {
+              tableWrap.insertAdjacentHTML('beforebegin', `
+                <div style="display:flex; justify-content:flex-end; margin-bottom:8px; padding-right:4px;">
+                  <select id="sortToggle" class="btn" style="height:34px; background:#fff; border:1px solid #cbd5e1; color:#475569; font-size:13px; padding:0 12px; cursor:pointer;" onchange="window.renderTables()">
+                    <option value="urgency">Sort: Urgency (Default)</option>
+                    <option value="date_desc">Sort: Newest First</option>
+                    <option value="date_asc">Sort: Oldest First</option>
+                    <option value="customer">Sort: Customer A-Z</option>
+                  </select>
+                </div>
+              `);
+          }
+      }
+
+      const sortMode = $('#sortToggle') ? $('#sortToggle').value : 'urgency';
+      fStaging.sort((a, b) => {
+        if (sortMode === 'date_desc') return new Date(b.entry_date) - new Date(a.entry_date);
+        if (sortMode === 'date_asc') return new Date(a.entry_date) - new Date(b.entry_date);
+        if (sortMode === 'customer') return (a.customer||'').localeCompare(b.customer||'');
+        
+        const uA = window.getUrgencyWeight(a.status);
+        const uB = window.getUrgencyWeight(b.status);
+        if (uA !== uB) return uB - uA; // Push higher urgency up
+        return new Date(b.entry_date) - new Date(a.entry_date); // Tie-breaker by newest
+      });
   const fShipped = appData.shipped.filter(o => (o.so||'').toLowerCase().includes(q) || (o.customer||'').toLowerCase().includes(q) || (o.location||'').toLowerCase().includes(q));
 
   if($('#tblStaging')) {
