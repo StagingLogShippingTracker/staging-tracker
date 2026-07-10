@@ -42,7 +42,9 @@ window.loadCloudData = async function() {
     // Stripping inner text forces Chrome/Safari to respect the full input string
     safeUpdateDatalist('dl_customers', filterMem(allData.map(x=>x.customer)).map(c=>`<option value="${c}"></option>`).join(''));
     safeUpdateDatalist('dl_locations', filterMem(allData.map(x=>x.location)).map(l=>`<option value="${l}"></option>`).join(''));
-    safeUpdateDatalist('dl_stagers', filterMem(allData.map(x=>(x.staged_by || x.shipped_by))).map(s=>`<option value="${s}"></option>`).join(''));
+    safeUpdateDatalist('dl_stagers', filterMem(
+      typeof window.getPersonDropdownValues === 'function' ? window.getPersonDropdownValues() : []
+    ).map(s => `<option value="${s}"></option>`).join(''));
     safeUpdateDatalist('dl_pastEmails', filterMem(appData.shipped.map(x=>x.pmd_email)).map(em=>`<option value="${em}@swiftsupply.ca"></option>`).join(''));
     safeUpdateDatalist('dl_sos', filterMem(allData.map(x=>x.so)).map(s=>`<option value="${s}"></option>`).join(''));
     
@@ -93,6 +95,7 @@ window.submitReturnToStock = async function() {
     window.logAction('staging', `Returned to Stock SO: ${editTargetRecord.so}`);
     window.logAction('shipped', `Added Return to Stock log for SO: ${editTargetRecord.so}`);
     if(typeof window.showNotification === 'function') window.showNotification('Returned to Stock Successfully');
+    if (typeof window.rememberPersonBy === 'function') window.rememberPersonBy(pickedBy, returnedBy);
 
     if(pmChecked && finalPmEmail) {
       const cachedSubject = `RETURN TO STOCK: ${editTargetRecord.so} for ${$('#e_cust').value.trim()}`;
@@ -147,10 +150,19 @@ window.saveEditedRecord = async function() {
     const newStatus = window.getDbStatus($('#e_status').value.trim());
     const { error } = await supabaseClient.from('staging').update({ ...basePayload, status: newStatus, staged_by: $('#e_staged_by').value.trim(), photo_urls: editTargetRecord.photo_urls }).eq('id', currentEditId);
     if(error) { alert("Database Error: " + error.message); return; }
+    if (typeof window.rememberPersonBy === 'function') {
+      window.rememberPersonBy($('#e_staged_by').value.trim());
+    }
   } else {
     const newCarrier = $('#e_carrier').value.trim();
     const { error } = await supabaseClient.from('shipped').update({ ...basePayload, carrier: newCarrier, shipped_by: $('#e_shipped_by').value.trim(), pmd_email: $('#e_pm').value.trim() || null, photo_urls: editTargetRecord.photo_urls }).eq('id', currentEditId);
     if(error) { alert("Database Error: " + error.message); return; }
+    if (typeof window.rememberPersonBy === 'function') {
+      window.rememberPersonBy($('#e_shipped_by').value.trim());
+    }
+    if (typeof window.rememberCarrier === 'function') {
+      window.rememberCarrier(newCarrier);
+    }
   }
   
   window.logAction(editTargetRecord.table, `Edited SO ${basePayload.so}`);
@@ -231,6 +243,8 @@ window.submitFreightDispatch = async function() {
     if(typeof window.playSuccessChime === 'function') window.playSuccessChime();
     
     if(typeof window.showNotification === 'function') window.showNotification('Freight Dispatched Successfully');
+    if (typeof window.rememberPersonBy === 'function') window.rememberPersonBy(dispatcher);
+    if (typeof window.rememberCarrier === 'function') window.rememberCarrier($('#m_carrier').value.trim());
 
     if(pmChecked && finalPmEmail) {
       const currentTimeStamp = new Date().toLocaleString();
@@ -312,6 +326,10 @@ window.submitStagingEntry = async function() {
     
     window.logAction('staging', `Added new entry for SO: ${soVal}`);
     if(typeof window.showNotification === 'function') window.showNotification('Staging Entry Added');
+    if (typeof window.rememberPersonBy === 'function') {
+      const stagedBy = ($('#staged_by').value || '').trim();
+      window.rememberPersonBy(stagedBy);
+    }
     
     $('#so').value=''; $('#customer').value=''; $('#loc').value=''; $('#staged_by').value=''; $('#weight').value=''; $('#c_skid').value=0; $('#c_box').value=0; $('#c_crate').value=0; $('#c_pipe').value=0; $('#c_other').value=0; 
     if($('#comments')) $('#comments').value='';
@@ -413,6 +431,7 @@ window.submitNotifyReturn = async function() {
 
     window.logAction('staging', `Sent Automated Return Notification for SO: ${soVal}`);
     if(typeof window.showNotification === 'function') window.showNotification('Return Notification Sent Successfully');
+    if (typeof window.rememberPersonBy === 'function') window.rememberPersonBy(receivedByVal);
     $('#notifyReturnModal').style.display = 'none';
 
   } catch(e) { alert("System Error: " + e.message); }
@@ -556,6 +575,8 @@ window.submitQuickShip = async function() {
     window.logAction('shipped', `Added via Quick Ship: SO: ${soVal}`);
     if(typeof window.playSuccessChime === 'function') window.playSuccessChime();
     if(typeof window.showNotification === 'function') window.showNotification('Quick Ship Successful');
+    if (typeof window.rememberPersonBy === 'function') window.rememberPersonBy(dispatcher);
+    if (typeof window.rememberCarrier === 'function') window.rememberCarrier($('#qs_carrier').value.trim());
 
     if(pmChecked && finalPmEmail) {
       const currentTimeStamp = new Date().toLocaleString();
@@ -602,21 +623,113 @@ window.PERSON_BY_FIELD_IDS = [
   'r_picked_by', 'r_returned_by', 'bc_staged_by', 'sp_staged_by', 'nr_received_by'
 ];
 
-window.getPersonDropdownValues = function() {
-  const customBys = JSON.parse(localStorage.getItem('swift_custom_bys') || '[]');
-  const historical = [
-    ...(typeof appData !== 'undefined' ? appData.staging.map(x => x.staged_by) : []),
-    ...(typeof appData !== 'undefined' ? appData.shipped.map(x => x.shipped_by) : [])
-  ].filter(Boolean);
-  const fromContacts = (typeof rawContactsData !== 'undefined' ? rawContactsData : [])
-    .map(c => {
-      if (c.email && c.email.includes('@') && c.email.toLowerCase() !== 'n/a') return c.email.split('@')[0];
-      if (c.name && c.name.trim()) return c.name.trim();
-      return null;
-    }).filter(Boolean);
+const BY_ROSTER_KEY = 'swift_by_roster';
+const BY_ROSTER_VERSION_KEY = 'swift_by_roster_version';
+const BY_ROSTER_RESET_VERSION = '2';
+
+window.initPersonByRoster = function() {
+  const storedVersion = localStorage.getItem(BY_ROSTER_VERSION_KEY);
+  if (storedVersion !== BY_ROSTER_RESET_VERSION) {
+    localStorage.setItem(BY_ROSTER_KEY, JSON.stringify([]));
+    localStorage.removeItem('swift_custom_bys');
+    localStorage.setItem(BY_ROSTER_VERSION_KEY, BY_ROSTER_RESET_VERSION);
+  }
+};
+
+window.getPersonByRoster = function() {
+  window.initPersonByRoster();
+  try {
+    const list = JSON.parse(localStorage.getItem(BY_ROSTER_KEY) || '[]');
+    return Array.isArray(list) ? list : [];
+  } catch (e) {
+    return [];
+  }
+};
+
+window.rememberPersonBy = function(...names) {
+  window.initPersonByRoster();
   const hidden = typeof hiddenMemory !== 'undefined' ? hiddenMemory : [];
-  return [...new Set([...historical, ...fromContacts, ...customBys])]
+  const roster = window.getPersonByRoster();
+  let changed = false;
+  names.forEach(raw => {
+    const name = (raw || '').trim();
+    if (!name || hidden.includes(name)) return;
+    if (!roster.some(r => r.toLowerCase() === name.toLowerCase())) {
+      roster.push(name);
+      changed = true;
+    }
+  });
+  if (changed) {
+    roster.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+    localStorage.setItem(BY_ROSTER_KEY, JSON.stringify(roster));
+    if (typeof window.initUniversalDropdowns === 'function') window.initUniversalDropdowns();
+    const dl = document.getElementById('dl_stagers');
+    if (dl && typeof filterMem === 'function') {
+      dl.innerHTML = filterMem(roster).map(s => `<option value="${s}"></option>`).join('');
+    }
+  }
+};
+
+window.getPersonDropdownValues = function() {
+  const hidden = typeof hiddenMemory !== 'undefined' ? hiddenMemory : [];
+  return window.getPersonByRoster()
     .filter(v => v && !hidden.includes(v))
+    .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+};
+
+const CARRIER_ROSTER_KEY = 'swift_carrier_roster';
+const CARRIER_ROSTER_VERSION_KEY = 'swift_carrier_roster_version';
+const CARRIER_ROSTER_RESET_VERSION = '1';
+const CARRIER_SKIP_VALUES = new Set(['RETURNED TO STOCK', 'CONSOLIDATED', 'Unassigned Carrier']);
+
+window.initCarrierRoster = function() {
+  const storedVersion = localStorage.getItem(CARRIER_ROSTER_VERSION_KEY);
+  if (storedVersion !== CARRIER_ROSTER_RESET_VERSION) {
+    localStorage.setItem(CARRIER_ROSTER_KEY, JSON.stringify([]));
+    localStorage.removeItem('swift_custom_carriers');
+    localStorage.setItem(CARRIER_ROSTER_VERSION_KEY, CARRIER_ROSTER_RESET_VERSION);
+  }
+};
+
+window.getCarrierRoster = function() {
+  window.initCarrierRoster();
+  try {
+    const list = JSON.parse(localStorage.getItem(CARRIER_ROSTER_KEY) || '[]');
+    return Array.isArray(list) ? list : [];
+  } catch (e) {
+    return [];
+  }
+};
+
+window.isRememberableCarrier = function(raw) {
+  const name = (raw || '').trim();
+  if (!name || CARRIER_SKIP_VALUES.has(name)) return false;
+  const hidden = typeof hiddenMemory !== 'undefined' ? hiddenMemory : [];
+  return !hidden.includes(name);
+};
+
+window.rememberCarrier = function(...names) {
+  window.initCarrierRoster();
+  const roster = window.getCarrierRoster();
+  let changed = false;
+  names.forEach(raw => {
+    const name = (raw || '').trim();
+    if (!window.isRememberableCarrier(name)) return;
+    if (!roster.some(r => r.toLowerCase() === name.toLowerCase())) {
+      roster.push(name);
+      changed = true;
+    }
+  });
+  if (changed) {
+    roster.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+    localStorage.setItem(CARRIER_ROSTER_KEY, JSON.stringify(roster));
+    if (typeof window.initUniversalDropdowns === 'function') window.initUniversalDropdowns();
+  }
+};
+
+window.getCarrierDropdownValues = function() {
+  return window.getCarrierRoster()
+    .filter(v => window.isRememberableCarrier(v))
     .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
 };
 
@@ -643,8 +756,6 @@ window.ensureByFieldWrapper = function(el) {
 
 window.initUniversalDropdowns = function() {
   const carrierFields = ['qs_carrier', 'm_carrier', 'e_carrier'];
-  let customBys = JSON.parse(localStorage.getItem('swift_custom_bys') || '[]');
-  let customCarriers = JSON.parse(localStorage.getItem('swift_custom_carriers') || '[]');
 
   const discovered = [...new Set([
     ...(window.PERSON_BY_FIELD_IDS || []),
@@ -673,10 +784,7 @@ window.initUniversalDropdowns = function() {
           const newVal = prompt('Enter name:');
           if (newVal && newVal.trim()) {
             const cleanVal = newVal.trim();
-            if (!customBys.includes(cleanVal)) {
-              customBys.push(cleanVal);
-              localStorage.setItem('swift_custom_bys', JSON.stringify(customBys));
-            }
+            window.rememberPersonBy(cleanVal);
             window.initUniversalDropdowns();
             const refreshed = document.getElementById(id);
             if (refreshed) refreshed.value = cleanVal;
@@ -734,28 +842,34 @@ window.initUniversalDropdowns = function() {
           const newVal = prompt('Enter new Carrier:');
           if (newVal && newVal.trim()) {
             const cleanVal = newVal.trim();
-            if (!customCarriers.includes(cleanVal)) {
-              customCarriers.push(cleanVal);
-              localStorage.setItem('swift_custom_carriers', JSON.stringify(customCarriers));
-            }
+            window.rememberCarrier(cleanVal);
             window.initUniversalDropdowns();
-            el.value = cleanVal;
+            const refreshed = document.getElementById(id);
+            if (refreshed) refreshed.value = cleanVal;
           } else { el.value = ''; }
         }
       });
     }
 
     const currentVal = el.value;
+    const carrierOptions = window.getCarrierDropdownValues();
     let optionsHTML = '<option value="">-- Select --</option>';
-    const dataList = [...new Set([
-      ...(typeof appData !== 'undefined' ? appData.shipped.map(x => x.carrier) : []),
-      ...customCarriers
-    ])].filter(Boolean);
-    dataList.sort((a, b) => a.localeCompare(b)).forEach(val => { optionsHTML += `<option value="${val}">${val}</option>`; });
+    carrierOptions.forEach(val => {
+      const safe = val.replace(/"/g, '&quot;');
+      optionsHTML += `<option value="${safe}">${val}</option>`;
+    });
     optionsHTML += '<option value="OTHER_NEW" style="font-weight:bold; color:var(--brand);">+ Add Other / New</option>';
-    if (el.innerHTML !== optionsHTML && document.activeElement !== el) {
+    if (document.activeElement !== el) {
       el.innerHTML = optionsHTML;
-      if (dataList.includes(currentVal) || currentVal === 'OTHER_NEW') el.value = currentVal;
+      if (carrierOptions.includes(currentVal) || currentVal === 'OTHER_NEW') {
+        el.value = currentVal;
+      } else if (currentVal) {
+        const opt = document.createElement('option');
+        opt.value = currentVal;
+        opt.textContent = currentVal;
+        el.insertBefore(opt, el.lastElementChild);
+        el.value = currentVal;
+      }
     }
   }
 

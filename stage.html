@@ -4,7 +4,7 @@
 <meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Swift Staging Tracker - Staging Entries Expanded Log</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<link rel="stylesheet" href="style.css?v=1.9" />
+<link rel="stylesheet" href="style.css?v=6.0" />
 </head>
 <body>
 <datalist id="dl_customers"></datalist><datalist id="dl_locations"></datalist><datalist id="dl_stagers"></datalist><datalist id="dl_pastEmails"></datalist><datalist id="dl_sos"></datalist>
@@ -47,10 +47,10 @@
       </div>
     </div>
     <div id="stagingStatusLegend" class="staging-status-legend" aria-label="Shipping status color legend"></div>
-    <div class="tblwrap"><div class="tbl-scroller" style="max-height: calc(100vh - 250px);"><table id="tblStaging">
+    <div class="tblwrap"><div class="tbl-scroller" style="max-height: calc(100vh - 250px);"><table id="tblStaging" class="responsive-log-table">
       <thead><tr>
         <th class="show-in-batch" style="width:70px; background:#fafafa; padding:4px;"><div class="batch-header-btns" style="display:flex; flex-direction:column; gap:4px; text-align:center;"><button onclick="window.batchSelectAll()" style="font-size:10px; background:#fff; color:#4b5563;">Select All</button><button onclick="window.batchUnselectAll()" style="font-size:10px; background:#fff; color:#4b5563;">Unselect</button><button onclick="window.openBatchConsolidateModal(false)" style="font-size:10px; background:#8b5cf6; color:#fff; border-color:#8b5cf6;">Consolidate</button><button onclick="window.batchDelete()" style="font-size:10px; background:#dc2626; color:#fff; border-color:#dc2626;">Delete</button><button onclick="window.batchCancel()" style="font-size:10px; background:#e5e7eb; color:#4b5563; border-color:#cbd5e1;">Cancel</button></div></th>
-        <th class="hide-in-batch">Edit</th><th class="hide-in-batch">Photo(s)</th><th>SO</th><th>Customer</th><th>Entry Date</th><th>Containers</th><th>Location</th><th>Weight</th><th class="hide-in-batch">Comments</th><th>Status</th><th>Staged By</th><th class="hide-in-batch" style="position:sticky;right:0;width:70px;text-align:center;">Shipped</th>
+        <th class="hide-in-batch">Edit</th><th class="hide-in-batch">Photo(s)</th><th>SO</th><th>Customer</th><th class="col-low-priority">Entry Date</th><th>Containers</th><th>Location</th><th>Weight</th><th class="hide-in-batch">Comments</th><th>Status</th><th class="col-low-priority">Staged By</th><th class="hide-in-batch" style="position:sticky;right:0;width:70px;text-align:center;">Shipped</th>
       </tr></thead><tbody></tbody>
     </table></div></div>
   </div>
@@ -112,7 +112,7 @@
 <div id="viewModal" class="modal-overlay"><div class="modal-window" style="max-width: 500px;"><button class="modal-close-x" onclick="document.querySelector('#viewModal').style.display='none'">&times;</button><h3 style="margin:0 0 10px 0;">Staged Photos</h3><div id="modalPhotoGallery" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:12px; padding: 4px 0;"></div></div></div>
 
 <div id="sameSoModal" class="modal-overlay">
-  <div class="modal-window" style="max-width: 950px;"><button class="modal-close-x" onclick="window.sameSoCancel()">&times;</button><h3 style="margin:0 0 10px 0;">Consolidate Matching SOs</h3><div class="table-wrap" style="max-height: 300px; overflow-y: auto;"><table id="tblSameSo"><thead><tr><th style="width:70px; background:#fafafa; padding:4px;"><div class="batch-header-btns" style="display:flex; flex-direction:column; gap:4px; text-align:center;"><button onclick="window.sameSoSelectAll()" style="font-size:10px; background:#fff; color:#4b5563;">Select All</button><button onclick="window.sameSoCancel()" style="font-size:10px; background:#fee2e2; color:#dc2626; border-color:#fca5a5;">Cancel</button></div></th><th>SO</th><th>Customer</th><th>Entry Date</th><th>Containers</th><th>Location</th><th>Weight</th><th>Status</th><th>Staged By</th></tr></thead><tbody></tbody></table></div><div style="display:flex; justify-content:flex-end; gap:8px; margin-top:8px;"><button class="btn" style="background:#8b5cf6;" onclick="window.openBatchConsolidateModal(true)">Consolidate</button></div></div>
+  <div class="modal-window" style="max-width: 950px;"><button class="modal-close-x" onclick="window.sameSoCancel()">&times;</button><h3 style="margin:0 0 10px 0;">Consolidate Matching SOs</h3><div class="table-wrap" style="max-height: 300px; overflow-y: auto;"><table id="tblSameSo" class="responsive-log-table"><thead><tr><th style="width:70px; background:#fafafa; padding:4px;"><div class="batch-header-btns" style="display:flex; flex-direction:column; gap:4px; text-align:center;"><button onclick="window.sameSoSelectAll()" style="font-size:10px; background:#fff; color:#4b5563;">Select All</button><button onclick="window.sameSoCancel()" style="font-size:10px; background:#fee2e2; color:#dc2626; border-color:#fca5a5;">Cancel</button></div></th><th>SO</th><th>Customer</th><th>Entry Date</th><th>Containers</th><th>Location</th><th>Weight</th><th>Status</th><th>Staged By</th></tr></thead><tbody></tbody></table></div><div style="display:flex; justify-content:flex-end; gap:8px; margin-top:8px;"><button class="btn" style="background:#8b5cf6;" onclick="window.openBatchConsolidateModal(true)">Consolidate</button></div></div>
 </div>
 
 <div id="batchConsolidateModal" class="modal-overlay">
@@ -258,14 +258,14 @@
 <script src="employees.js?v=1.5"></script>
 <script src="config.js?v=1.5"></script>
 <script src="auth.js?v=1.5"></script>
-<script src="ui.js?v=3.9"></script>
+<script src="ui.js?v=6.0"></script>
 <script src="history.js?v=1.6"></script>
-<script src="split.js?v=1.5"></script>
-<script src="reports.js?v=1.5"></script>
-<script src="operations.js?v=3.6"></script>
-<script src="batch.js?v=1.5"></script>
+<script src="split.js?v=3.7"></script>
+<script src="reports.js?v=3.7"></script>
+<script src="operations.js?v=3.8"></script>
+<script src="batch.js?v=6.0"></script>
 <script src="media.js?v=5.1"></script>
 <script src="autoscan.js?v=1.1"></script>
-<script src="app.js?v=1.6"></script>
+<script src="app.js?v=3.8"></script>
 </body>
 </html>

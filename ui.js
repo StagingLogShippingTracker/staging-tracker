@@ -93,6 +93,19 @@ window.getRowColor = function(dbStatus) {
   return '';
 };
 
+window.labeledCell = function(label, content, className = '', style = '') {
+  const cls = className ? ` class="${className}"` : '';
+  const sty = style ? ` style="${style}"` : '';
+  return `<td data-label="${label}"${cls}${sty}>${content}</td>`;
+};
+
+window.toggleQuickActions = function(btn) {
+  const panel = document.querySelector('.quick-search-actions');
+  if (!panel) return;
+  const open = panel.classList.toggle('is-open');
+  if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+};
+
 window.renderStagingStatusLegend = function() {
   const el = document.getElementById('stagingStatusLegend');
   if (!el) return;
@@ -138,10 +151,20 @@ window.renderTables = function() {
         const stickyStyle = rowBg ? `background-color: inherit;` : `background:#f8fafc;`;
 
         sBody.insertAdjacentHTML('beforeend', `<tr ${trClass} ${trStyle}>
-          <td class="show-in-batch" style="text-align:center;">${batchChk}</td>
-          <td class="hide-in-batch">${editBtn}</td><td class="hide-in-batch">${picBtn}</td><td><a class="so-link" onclick="event.stopPropagation(); window.openOrderHistory('${o.so}')">${o.so}</a></td><td>${o.customer}</td><td>${new Date(o.entry_date).toLocaleString()}</td><td>${o.type}</td><td><b>${o.location}</b></td>
-          <td>${o.weight || '—'}</td><td class="hide-in-batch">${commentBtn}</td><td style="font-weight:bold; color:#475569;">${window.getFormattedStatus(o.status)}</td><td>${o.staged_by||'—'}</td>
-          <td class="hide-in-batch" style="position:sticky;right:0;text-align:center; ${stickyStyle} border-left:1px solid #e2e8f0;">${chkBox}</td></tr>`);
+          ${window.labeledCell('Select', batchChk, 'show-in-batch', 'text-align:center;')}
+          ${window.labeledCell('Edit', editBtn, 'hide-in-batch')}
+          ${window.labeledCell('Photo(s)', picBtn, 'hide-in-batch')}
+          ${window.labeledCell('SO', `<a class="so-link" onclick="event.stopPropagation(); window.openOrderHistory('${o.so}')">${o.so}</a>`)}
+          ${window.labeledCell('Customer', o.customer)}
+          ${window.labeledCell('Entry Date', new Date(o.entry_date).toLocaleString(), 'col-low-priority')}
+          ${window.labeledCell('Containers', o.type)}
+          ${window.labeledCell('Location', `<b>${o.location}</b>`)}
+          ${window.labeledCell('Weight', o.weight || '—')}
+          ${window.labeledCell('Comments', commentBtn, 'hide-in-batch')}
+          ${window.labeledCell('Status', `<span style="font-weight:bold; color:#475569;">${window.getFormattedStatus(o.status)}</span>`)}
+          ${window.labeledCell('Staged By', o.staged_by || '—', 'col-low-priority')}
+          ${window.labeledCell('Ship', chkBox, 'hide-in-batch', `text-align:center; ${stickyStyle} border-left:1px solid #e2e8f0;`)}
+        </tr>`);
       });
     }
   }
@@ -159,9 +182,20 @@ window.renderTables = function() {
         const batchChk = `<input type="checkbox" style="width:18px;height:18px;" onchange="window.toggleBatchSelect('${o.id}', this.checked)" ${batchSelectedIds.has(o.id) ? 'checked' : ''}>`;
 
         shBody.insertAdjacentHTML('beforeend', `<tr ${rowClass}>
-          <td class="show-in-batch" style="text-align:center;">${batchChk}</td>
-          <td class="hide-in-batch">${editBtn}</td><td class="hide-in-batch">${picBtn}</td><td><a class="so-link" onclick="event.stopPropagation(); window.openOrderHistory('${o.so}')">${o.so}</a></td><td>${o.customer}</td><td>${o.type}</td><td><b>${o.carrier || '—'}</b></td><td>${o.location}</td>
-          <td>${o.weight || '—'}</td><td>${commentBtn}</td><td>${new Date(o.shipped_at).toLocaleString()}</td><td>${o.shipped_by || '—'}</td><td>${o.pmd_email ? o.pmd_email+(isRet?'':'<span class="green-check"> ✓</span>') : '—'}</td></tr>`);
+          ${window.labeledCell('Select', batchChk, 'show-in-batch', 'text-align:center;')}
+          ${window.labeledCell('Edit', editBtn, 'hide-in-batch')}
+          ${window.labeledCell('Photo(s)', picBtn, 'hide-in-batch')}
+          ${window.labeledCell('SO', `<a class="so-link" onclick="event.stopPropagation(); window.openOrderHistory('${o.so}')">${o.so}</a>`)}
+          ${window.labeledCell('Customer', o.customer)}
+          ${window.labeledCell('Containers', o.type)}
+          ${window.labeledCell('Carrier', `<b>${o.carrier || '—'}</b>`)}
+          ${window.labeledCell('Location', o.location)}
+          ${window.labeledCell('Weight', o.weight || '—')}
+          ${window.labeledCell('Comments', commentBtn)}
+          ${window.labeledCell('Shipped At', new Date(o.shipped_at).toLocaleString(), 'col-low-priority')}
+          ${window.labeledCell('Shipped By', o.shipped_by || '—', 'col-low-priority')}
+          ${window.labeledCell("PM'd Email", o.pmd_email ? o.pmd_email + (isRet ? '' : '<span class="green-check"> ✓</span>') : '—', 'col-low-priority')}
+        </tr>`);
       });
     }
   }

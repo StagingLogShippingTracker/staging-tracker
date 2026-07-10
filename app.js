@@ -45,6 +45,8 @@ function initApp() {
   // Trigger the new dropdown setup on boot
   window.initEmployeeEmailDropdown(); 
   window.renderStagingStatusLegend();
+  if (typeof window.initPersonByRoster === 'function') window.initPersonByRoster();
+  if (typeof window.initCarrierRoster === 'function') window.initCarrierRoster();
   if (typeof window.initPhotoFields === 'function') window.initPhotoFields();
   if (typeof window.initUniversalDropdowns === 'function') window.initUniversalDropdowns();
   // --- GLOBAL DOM ENFORCEMENT (Automated Memory & Autocomplete Fix) ---

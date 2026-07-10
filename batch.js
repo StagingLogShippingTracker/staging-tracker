@@ -42,10 +42,17 @@ window.openSameSoModal = function() {
   
   const tBody = $('#tblSameSo tbody'); tBody.innerHTML = '';
   matchingItems.forEach(o => {
-    tBody.insertAdjacentHTML('beforeend', `<tr style="color:#64748b; border-bottom:1px solid #f1f5f9;">
-      <td style="text-align:center;"><input type="checkbox" style="width:18px;height:18px;" onchange="window.toggleSameSoSelect('${o.id}', this.checked)" checked></td>
-      <td><b>${o.so}</b></td><td>${o.customer}</td><td>${new Date(o.entry_date).toLocaleString()}</td><td>${o.type}</td><td><b>${o.location}</b></td>
-      <td>${o.weight || '—'}</td><td>${o.status}</td><td>${o.staged_by||'—'}</td></tr>`);
+    tBody.insertAdjacentHTML('beforeend', `<tr style="color:#64748b;">
+      ${window.labeledCell('Select', `<input type="checkbox" style="width:18px;height:18px;" onchange="window.toggleSameSoSelect('${o.id}', this.checked)" checked>`, '', 'text-align:center;')}
+      ${window.labeledCell('SO', `<b>${o.so}</b>`)}
+      ${window.labeledCell('Customer', o.customer)}
+      ${window.labeledCell('Entry Date', new Date(o.entry_date).toLocaleString())}
+      ${window.labeledCell('Containers', o.type)}
+      ${window.labeledCell('Location', `<b>${o.location}</b>`)}
+      ${window.labeledCell('Weight', o.weight || '—')}
+      ${window.labeledCell('Status', o.status)}
+      ${window.labeledCell('Staged By', o.staged_by || '—')}
+    </tr>`);
   });
   $('#sameSoModal').style.display = 'flex';
 };
@@ -104,6 +111,7 @@ window.executeBatchConsolidate = async function() {
     for(let id of selectedSet) { await supabaseClient.from('staging').delete().eq('id', id); }
     window.logAction('staging', `Batch Consolidated ${selectedSet.size} entries into new SO: ${$('#bc_so').value.trim()}`);
     if(typeof window.showNotification === 'function') window.showNotification('Batch Consolidation Successful');
+    if (typeof window.rememberPersonBy === 'function') window.rememberPersonBy($('#bc_staged_by').value.trim());
     
     $('#batchConsolidateModal').style.display = 'none';
     if(fromSameSo) window.sameSoCancel(); else window.batchCancel();
