@@ -597,67 +597,170 @@ window.checkSoConflict = async function(so, excludeId) {
   return true;
 };
 
-window.initUniversalDropdowns = function() {
-  const byFields = ['e_staged_by', 'e_shipped_by', 'ra_staged_by', 'qs_by', 'm_by', 'r_picked_by', 'r_returned_by', 'bc_staged_by', 'sp_staged_by', 'nr_received_by'];
-  const carrierFields = ['qs_carrier', 'm_carrier', 'e_carrier'];
+window.PERSON_BY_FIELD_IDS = [
+  'staged_by', 'e_staged_by', 'e_shipped_by', 'ra_staged_by', 'qs_by', 'm_by',
+  'r_picked_by', 'r_returned_by', 'bc_staged_by', 'sp_staged_by', 'nr_received_by'
+];
 
+window.getPersonDropdownValues = function() {
+  const customBys = JSON.parse(localStorage.getItem('swift_custom_bys') || '[]');
+  const historical = [
+    ...(typeof appData !== 'undefined' ? appData.staging.map(x => x.staged_by) : []),
+    ...(typeof appData !== 'undefined' ? appData.shipped.map(x => x.shipped_by) : [])
+  ].filter(Boolean);
+  const fromContacts = (typeof rawContactsData !== 'undefined' ? rawContactsData : [])
+    .map(c => {
+      if (c.email && c.email.includes('@') && c.email.toLowerCase() !== 'n/a') return c.email.split('@')[0];
+      if (c.name && c.name.trim()) return c.name.trim();
+      return null;
+    }).filter(Boolean);
+  const hidden = typeof hiddenMemory !== 'undefined' ? hiddenMemory : [];
+  return [...new Set([...historical, ...fromContacts, ...customBys])]
+    .filter(v => v && !hidden.includes(v))
+    .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+};
+
+window.ensureByFieldWrapper = function(el) {
+  if (!el || el.closest('.by-field-row')) return el;
+  const parent = el.parentElement;
+  if (!parent) return el;
+  const btn = el.nextElementSibling;
+  if (btn && btn.tagName === 'BUTTON') btn.style.display = 'none';
+  if (!el.closest('.by-field-row')) {
+    if (parent.classList.contains('by-field-row')) return el;
+    const wrap = document.createElement('div');
+    wrap.className = 'by-field-row';
+    wrap.style.cssText = 'display:flex; width:100%;';
+    parent.insertBefore(wrap, el);
+    wrap.appendChild(el);
+  }
+  el.style.width = '100%';
+  el.style.borderTopRightRadius = '8px';
+  el.style.borderBottomRightRadius = '8px';
+  el.style.borderRight = '1px solid #cbd5e1';
+  return el;
+};
+
+window.initUniversalDropdowns = function() {
+  const carrierFields = ['qs_carrier', 'm_carrier', 'e_carrier'];
   let customBys = JSON.parse(localStorage.getItem('swift_custom_bys') || '[]');
   let customCarriers = JSON.parse(localStorage.getItem('swift_custom_carriers') || '[]');
 
-  function syncSelect(id, type) {
+  const discovered = [...new Set([
+    ...(window.PERSON_BY_FIELD_IDS || []),
+    ...Array.from(document.querySelectorAll('input[id$="_by"], select[id$="_by"], input#staged_by, select#staged_by')).map(e => e.id)
+  ])];
+
+  const personOptions = window.getPersonDropdownValues();
+
+  function syncPersonSelect(id) {
     let el = document.getElementById(id);
     if (!el) return;
 
+    window.ensureByFieldWrapper(el);
+    el = document.getElementById(id);
+
     if (el.tagName === 'INPUT') {
-        const select = document.createElement('select');
-        select.id = id; select.className = el.className;
-        if(el.style.cssText) select.style.cssText = el.style.cssText;
-        el.parentNode.replaceChild(select, el);
-        el = select;
-
-        // Hide obsolete 'x' delete button
-        const btn = el.nextElementSibling;
-        if(btn && btn.tagName === 'BUTTON') {
-            btn.style.display = 'none';
-            el.style.borderRight = '1px solid #cbd5e1';
-            el.style.borderTopRightRadius = '8px';
-            el.style.borderBottomRightRadius = '8px';
+      const select = document.createElement('select');
+      select.id = id;
+      select.className = 'by-person-select';
+      if (el.required) select.required = true;
+      select.style.cssText = 'width:100%;';
+      el.parentNode.replaceChild(select, el);
+      el = select;
+      el.addEventListener('change', function() {
+        if (el.value === 'OTHER_NEW') {
+          const newVal = prompt('Enter name:');
+          if (newVal && newVal.trim()) {
+            const cleanVal = newVal.trim();
+            if (!customBys.includes(cleanVal)) {
+              customBys.push(cleanVal);
+              localStorage.setItem('swift_custom_bys', JSON.stringify(customBys));
+            }
+            window.initUniversalDropdowns();
+            const refreshed = document.getElementById(id);
+            if (refreshed) refreshed.value = cleanVal;
+          } else {
+            el.value = '';
+          }
         }
-
-        el.onchange = function() {
-           if (el.value === 'OTHER_NEW') {
-              const newVal = prompt(`Enter new ${type === 'by' ? 'Name' : 'Carrier'}:`);
-              if (newVal && newVal.trim() !== '') {
-                 const cleanVal = newVal.trim();
-                 if (type === 'by' && !customBys.includes(cleanVal)) {
-                     customBys.push(cleanVal); localStorage.setItem('swift_custom_bys', JSON.stringify(customBys));
-                 } else if (type === 'carrier' && !customCarriers.includes(cleanVal)) {
-                     customCarriers.push(cleanVal); localStorage.setItem('swift_custom_carriers', JSON.stringify(customCarriers));
-                 }
-                 window.initUniversalDropdowns(); 
-                 el.value = cleanVal;
-              } else { el.value = ''; }
-           }
-        };
+      });
+    } else if (!el.classList.contains('by-person-select')) {
+      el.classList.add('by-person-select');
     }
 
     const currentVal = el.value;
     let optionsHTML = '<option value="">-- Select --</option>';
-    let dataList = type === 'by'
-       ? [...new Set([...appData.staging.map(x=>x.staged_by), ...appData.shipped.map(x=>x.shipped_by), ...customBys])].filter(Boolean)
-       : [...new Set([...appData.shipped.map(x=>x.carrier), ...customCarriers])].filter(Boolean);
+    personOptions.forEach(val => {
+      const safe = val.replace(/"/g, '&quot;');
+      optionsHTML += `<option value="${safe}">${val}</option>`;
+    });
+    optionsHTML += '<option value="OTHER_NEW">+ Add Other / New</option>';
 
-    dataList.sort((a,b) => a.localeCompare(b)).forEach(val => { optionsHTML += `<option value="${val}">${val}</option>`; });
-    optionsHTML += `<option value="OTHER_NEW" style="font-weight:bold; color:var(--brand);">+ Add Other / New</option>`;
-
-    if (el.innerHTML !== optionsHTML && document.activeElement !== el) {
-        el.innerHTML = optionsHTML;
-        if(dataList.includes(currentVal) || currentVal === 'OTHER_NEW') el.value = currentVal;
+    if (document.activeElement !== el) {
+      el.innerHTML = optionsHTML;
+      if (personOptions.includes(currentVal) || currentVal === 'OTHER_NEW') {
+        el.value = currentVal;
+      } else if (currentVal) {
+        const opt = document.createElement('option');
+        opt.value = currentVal;
+        opt.textContent = currentVal;
+        el.insertBefore(opt, el.lastElementChild);
+        el.value = currentVal;
+      }
     }
   }
 
-  byFields.forEach(id => syncSelect(id, 'by'));
-  carrierFields.forEach(id => syncSelect(id, 'carrier'));
+  function syncCarrierSelect(id) {
+    let el = document.getElementById(id);
+    if (!el) return;
+
+    if (el.tagName === 'INPUT') {
+      const select = document.createElement('select');
+      select.id = id;
+      select.className = el.className;
+      if (el.style.cssText) select.style.cssText = el.style.cssText;
+      el.parentNode.replaceChild(select, el);
+      el = select;
+      const btn = el.nextElementSibling;
+      if (btn && btn.tagName === 'BUTTON') {
+        btn.style.display = 'none';
+        el.style.borderRight = '1px solid #cbd5e1';
+        el.style.borderTopRightRadius = '8px';
+        el.style.borderBottomRightRadius = '8px';
+      }
+      el.addEventListener('change', function() {
+        if (el.value === 'OTHER_NEW') {
+          const newVal = prompt('Enter new Carrier:');
+          if (newVal && newVal.trim()) {
+            const cleanVal = newVal.trim();
+            if (!customCarriers.includes(cleanVal)) {
+              customCarriers.push(cleanVal);
+              localStorage.setItem('swift_custom_carriers', JSON.stringify(customCarriers));
+            }
+            window.initUniversalDropdowns();
+            el.value = cleanVal;
+          } else { el.value = ''; }
+        }
+      });
+    }
+
+    const currentVal = el.value;
+    let optionsHTML = '<option value="">-- Select --</option>';
+    const dataList = [...new Set([
+      ...(typeof appData !== 'undefined' ? appData.shipped.map(x => x.carrier) : []),
+      ...customCarriers
+    ])].filter(Boolean);
+    dataList.sort((a, b) => a.localeCompare(b)).forEach(val => { optionsHTML += `<option value="${val}">${val}</option>`; });
+    optionsHTML += '<option value="OTHER_NEW" style="font-weight:bold; color:var(--brand);">+ Add Other / New</option>';
+    if (el.innerHTML !== optionsHTML && document.activeElement !== el) {
+      el.innerHTML = optionsHTML;
+      if (dataList.includes(currentVal) || currentVal === 'OTHER_NEW') el.value = currentVal;
+    }
+  }
+
+  discovered.forEach(syncPersonSelect);
+  carrierFields.forEach(syncCarrierSelect);
 };
 
 window.openReportAddModal = function() {

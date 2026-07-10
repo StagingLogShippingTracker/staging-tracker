@@ -59,7 +59,11 @@ input:disabled, select:disabled, button:disabled, textarea:disabled { background
 .auto-scan-status.is-ready { background: rgba(22,163,74,0.75); }
 .auto-scan-status.is-searching { background: rgba(0,0,0,0.45); }
 .auto-scan-hint { position: absolute; top: 16px; left: 16px; right: 56px; color: #fff; font-size: 13px; font-weight: 700; text-shadow: 0 1px 3px rgba(0,0,0,0.8); }
+.by-person-select { width: 100%; }
+.by-field-row { display: flex; width: 100%; }
 #autoScanModal .modal-close-x { z-index: 2; color: #fff; background: rgba(0,0,0,0.35); border-radius: 50%; width: 36px; height: 36px; line-height: 36px; }
+.auto-scan-torch-btn { position: absolute; top: 16px; right: 56px; z-index: 2; background: rgba(250,204,21,0.9); color: #1f2937; border: none; border-radius: 20px; padding: 8px 14px; font-size: 12px; font-weight: 800; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.35); }
+.auto-scan-torch-btn.is-off { background: rgba(255,255,255,0.25); color: #fff; }
 .auto-scan-flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; transition: opacity 0.12s ease-out; }
 .auto-scan-flash.active { opacity: 0.85; }
 @media (max-width: 520px) {

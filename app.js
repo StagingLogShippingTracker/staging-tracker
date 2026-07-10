@@ -46,6 +46,7 @@ function initApp() {
   window.initEmployeeEmailDropdown(); 
   window.renderStagingStatusLegend();
   if (typeof window.initPhotoFields === 'function') window.initPhotoFields();
+  if (typeof window.initUniversalDropdowns === 'function') window.initUniversalDropdowns();
   // --- GLOBAL DOM ENFORCEMENT (Automated Memory & Autocomplete Fix) ---
   
   // 1. Inject the missing dl_sos datalist into the page so you don't have to edit HTML files
