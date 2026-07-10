@@ -49,6 +49,8 @@ function initApp() {
   if (typeof window.initCarrierRoster === 'function') window.initCarrierRoster();
   if (typeof window.initPhotoFields === 'function') window.initPhotoFields();
   if (typeof window.initUniversalDropdowns === 'function') window.initUniversalDropdowns();
+  if (typeof window.initSoCustomerAutofill === 'function') window.initSoCustomerAutofill();
+  if (typeof window.initSearchClearButtons === 'function') window.initSearchClearButtons();
   // --- GLOBAL DOM ENFORCEMENT (Automated Memory & Autocomplete Fix) ---
   
   // 1. Inject the missing dl_sos datalist into the page so you don't have to edit HTML files
