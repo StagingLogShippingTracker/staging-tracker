@@ -262,6 +262,7 @@ window.submitReportAddEntry = async function() {
     
     window.logAction('staging', `Added new entry via Report module for SO: ${soVal}`);
     if(typeof window.showNotification === 'function') window.showNotification('Staging Entry Added');
+    if (typeof window.rememberPersonBy === 'function') window.rememberPersonBy($('#ra_staged_by').value.trim());
     
     appData.staging.push(insertedData[0]); 
     window.injectIntoReportQueue(insertedData[0]);

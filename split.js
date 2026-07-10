@@ -61,6 +61,7 @@ window.saveConfigureSplit = async function() {
       
       window.logAction('staging', `Split Order SO ${payload.so} into ${window.splitEngine.total} separate entries.`);
       if(typeof window.showNotification === 'function') window.showNotification(`Order Split Successfully`);
+      if (typeof window.rememberPersonBy === 'function') window.rememberPersonBy($('#sp_staged_by').value.trim());
       window.loadCloudData();
       
       if(window.activeReportMode) { window.reportRecordAction('Fixed via Split'); }
