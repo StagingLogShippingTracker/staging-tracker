@@ -187,6 +187,11 @@ window.reportAction = function(action) {
   else if (action === 'ship') {
     window.triggerShipModal(itemId);
   }
+  else if (action === 'edit') {
+    window.openUniversalEditor('staging', itemId);
+    if($('#reportNoModal')) $('#reportNoModal').style.display = 'none';
+    if($('#reportMainModal')) $('#reportMainModal').style.display = 'none';
+  }
   else {
     window.openUniversalEditor('staging', itemId);
     if($('#editModal')) $('#editModal').style.display = 'none'; 
