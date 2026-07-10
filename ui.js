@@ -106,6 +106,59 @@ window.toggleQuickActions = function(btn) {
   if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
 };
 
+window.SEARCH_CLEAR_CONFIG = [
+  { id: 'q', onClear: () => { if (typeof window.renderTables === 'function') window.renderTables(); } },
+  { id: 'searchOrdersModal', onClear: () => { if (typeof window.filterOrdersModal === 'function') window.filterOrdersModal(); } },
+  { id: 'contactSearch', onClear: () => { if (typeof renderContactsTable === 'function') renderContactsTable(); } }
+];
+
+window.updateSearchClearButton = function(input) {
+  const wrap = input.closest('.search-with-clear');
+  if (!wrap) return;
+  const btn = wrap.querySelector('.search-clear-btn');
+  if (btn) btn.style.display = input.value.trim() ? '' : 'none';
+};
+
+window.clearSearchField = function(inputId) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  input.value = '';
+  window.updateSearchClearButton(input);
+  const cfg = (window.SEARCH_CLEAR_CONFIG || []).find(c => c.id === inputId);
+  if (cfg && cfg.onClear) cfg.onClear();
+  input.focus();
+};
+
+window.initSearchClearButtons = function() {
+  (window.SEARCH_CLEAR_CONFIG || []).forEach(({ id, onClear }) => {
+    const input = document.getElementById(id);
+    if (!input || input.dataset.clearBtnBound) return;
+    input.dataset.clearBtnBound = '1';
+
+    let wrap = input.closest('.search-with-clear');
+    if (!wrap) {
+      wrap = document.createElement('div');
+      wrap.className = 'search-with-clear';
+      input.parentNode.insertBefore(wrap, input);
+      wrap.appendChild(input);
+    }
+
+    let btn = wrap.querySelector('.search-clear-btn');
+    if (!btn) {
+      btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'search-clear-btn';
+      btn.textContent = 'Clear';
+      btn.setAttribute('aria-label', 'Clear search');
+      btn.addEventListener('click', () => window.clearSearchField(id));
+      wrap.appendChild(btn);
+    }
+
+    input.addEventListener('input', () => window.updateSearchClearButton(input));
+    window.updateSearchClearButton(input);
+  });
+};
+
 window.renderStagingStatusLegend = function() {
   const el = document.getElementById('stagingStatusLegend');
   if (!el) return;

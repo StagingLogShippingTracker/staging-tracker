@@ -497,7 +497,7 @@ window.triggerUniversalConsolidate = function(targetSo) {
 window.openUniversalAddModal = function(so) {
   if($('#orderHistoryModal')) $('#orderHistoryModal').style.display = 'none';
   const lockFields = !!(so && so.trim());
-  const existing = lockFields ? (appData.staging.find(x => x.so === so) || appData.shipped.find(x => x.so === so)) : null;
+  const existingCustomer = lockFields ? window.lookupCustomerBySo(so) : null;
   
   if($('#ra_so')) {
     $('#ra_so').value = so || '';
@@ -505,7 +505,7 @@ window.openUniversalAddModal = function(so) {
     $('#ra_so').style.background = lockFields ? '#f1f5f9' : '';
   }
   if($('#ra_cust')) {
-    $('#ra_cust').value = existing ? existing.customer : '';
+    $('#ra_cust').value = existingCustomer || '';
     $('#ra_cust').disabled = lockFields;
     $('#ra_cust').style.background = lockFields ? '#f1f5f9' : '';
   }
@@ -646,12 +646,17 @@ window.getPersonByRoster = function() {
   }
 };
 
-window.rememberPersonBy = function(...names) {
+window.rememberPersonBy = function(...args) {
+  let opts = {};
+  const last = args[args.length - 1];
+  if (last && typeof last === 'object' && !Array.isArray(last) && ('skipRefresh' in last || 'selectId' in last)) {
+    opts = args.pop();
+  }
   window.initPersonByRoster();
   const hidden = typeof hiddenMemory !== 'undefined' ? hiddenMemory : [];
   const roster = window.getPersonByRoster();
   let changed = false;
-  names.forEach(raw => {
+  args.forEach(raw => {
     const name = (raw || '').trim();
     if (!name || hidden.includes(name)) return;
     if (!roster.some(r => r.toLowerCase() === name.toLowerCase())) {
@@ -662,12 +667,19 @@ window.rememberPersonBy = function(...names) {
   if (changed) {
     roster.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
     localStorage.setItem(BY_ROSTER_KEY, JSON.stringify(roster));
-    if (typeof window.initUniversalDropdowns === 'function') window.initUniversalDropdowns();
     const dl = document.getElementById('dl_stagers');
     if (dl && typeof filterMem === 'function') {
       dl.innerHTML = filterMem(roster).map(s => `<option value="${s}"></option>`).join('');
     }
+    if (opts.selectId) {
+      window.refreshPersonSelect(opts.selectId, opts.selectedValue || args[args.length - 1]);
+    } else if (changed && !opts.skipRefresh && typeof window.initUniversalDropdowns === 'function') {
+      window.initUniversalDropdowns();
+    }
+  } else if (opts.selectId) {
+    window.refreshPersonSelect(opts.selectId, opts.selectedValue || args[args.length - 1]);
   }
+  return changed;
 };
 
 window.getPersonDropdownValues = function() {
@@ -708,11 +720,16 @@ window.isRememberableCarrier = function(raw) {
   return !hidden.includes(name);
 };
 
-window.rememberCarrier = function(...names) {
+window.rememberCarrier = function(...args) {
+  let opts = {};
+  const last = args[args.length - 1];
+  if (last && typeof last === 'object' && !Array.isArray(last) && ('skipRefresh' in last || 'selectId' in last)) {
+    opts = args.pop();
+  }
   window.initCarrierRoster();
   const roster = window.getCarrierRoster();
   let changed = false;
-  names.forEach(raw => {
+  args.forEach(raw => {
     const name = (raw || '').trim();
     if (!window.isRememberableCarrier(name)) return;
     if (!roster.some(r => r.toLowerCase() === name.toLowerCase())) {
@@ -723,14 +740,123 @@ window.rememberCarrier = function(...names) {
   if (changed) {
     roster.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
     localStorage.setItem(CARRIER_ROSTER_KEY, JSON.stringify(roster));
-    if (typeof window.initUniversalDropdowns === 'function') window.initUniversalDropdowns();
+    if (opts.selectId) {
+      window.refreshCarrierSelect(opts.selectId, opts.selectedValue || args[args.length - 1]);
+    } else if (changed && !opts.skipRefresh && typeof window.initUniversalDropdowns === 'function') {
+      window.initUniversalDropdowns();
+    }
+  } else if (opts.selectId) {
+    window.refreshCarrierSelect(opts.selectId, opts.selectedValue || args[args.length - 1]);
   }
+  return changed;
 };
 
 window.getCarrierDropdownValues = function() {
   return window.getCarrierRoster()
     .filter(v => window.isRememberableCarrier(v))
     .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+};
+
+window.buildSelectOptionsHtml = function(values, otherNewExtra = '') {
+  let html = '<option value="">-- Select --</option>';
+  values.forEach(val => {
+    const safe = val.replace(/"/g, '&quot;');
+    html += `<option value="${safe}">${val}</option>`;
+  });
+  html += `<option value="OTHER_NEW"${otherNewExtra}>+ Add Other / New</option>`;
+  return html;
+};
+
+window.applySelectOptions = function(el, values, selectedValue, forceUpdate, otherNewExtra = '') {
+  if (!el || el.tagName !== 'SELECT') return;
+  if (!forceUpdate && document.activeElement === el) return;
+  const currentVal = selectedValue !== undefined ? selectedValue : el.value;
+  el.innerHTML = window.buildSelectOptionsHtml(values, otherNewExtra);
+  if (values.includes(currentVal) || currentVal === 'OTHER_NEW') {
+    el.value = currentVal;
+  } else if (currentVal) {
+    const opt = document.createElement('option');
+    opt.value = currentVal;
+    opt.textContent = currentVal;
+    el.insertBefore(opt, el.lastElementChild);
+    el.value = currentVal;
+  } else {
+    el.value = '';
+  }
+};
+
+window.refreshPersonSelect = function(id, selectedValue) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  window.applySelectOptions(el, window.getPersonDropdownValues(), selectedValue, true);
+};
+
+window.refreshCarrierSelect = function(id, selectedValue) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  window.applySelectOptions(el, window.getCarrierDropdownValues(), selectedValue, true, ' style="font-weight:bold; color:var(--brand);"');
+};
+
+window.normalizeSoKey = function(so) {
+  return (so || '').trim().toLowerCase();
+};
+
+window.lookupCustomerBySo = function(so) {
+  const key = window.normalizeSoKey(so);
+  if (!key || typeof appData === 'undefined') return null;
+  let customer = null;
+  let bestTime = 0;
+  const consider = (record, dateField) => {
+    if (!record || window.normalizeSoKey(record.so) !== key || !record.customer) return;
+    const t = new Date(record[dateField] || 0).getTime() || 0;
+    if (t >= bestTime) {
+      bestTime = t;
+      customer = record.customer;
+    }
+  };
+  (appData.staging || []).forEach(r => consider(r, 'entry_date'));
+  (appData.shipped || []).forEach(r => consider(r, 'shipped_at'));
+  return customer;
+};
+
+window.autofillCustomerFromSo = function(soInputId, customerInputId) {
+  const soEl = document.getElementById(soInputId);
+  const custEl = document.getElementById(customerInputId);
+  if (!soEl || !custEl || custEl.disabled) return;
+  const soVal = soEl.value.trim();
+  if (!soVal) return;
+  if (custEl.value.trim() && custEl.dataset.manualCustomer === '1') return;
+  const customer = window.lookupCustomerBySo(soVal);
+  if (customer) {
+    custEl.value = customer;
+    custEl.dataset.autoFilled = '1';
+    delete custEl.dataset.manualCustomer;
+  }
+};
+
+window.initSoCustomerAutofill = function() {
+  const pairs = [
+    { so: 'so', cust: 'customer' },
+    { so: 'ra_so', cust: 'ra_cust' },
+    { so: 'qs_so', cust: 'qs_cust' }
+  ];
+  pairs.forEach(({ so, cust }) => {
+    const soEl = document.getElementById(so);
+    const custEl = document.getElementById(cust);
+    if (!soEl || soEl.dataset.soAutofillBound) return;
+    soEl.dataset.soAutofillBound = '1';
+    const run = () => window.autofillCustomerFromSo(so, cust);
+    soEl.addEventListener('input', run);
+    soEl.addEventListener('change', run);
+    soEl.addEventListener('blur', run);
+    if (custEl && !custEl.dataset.customerManualBound) {
+      custEl.dataset.customerManualBound = '1';
+      custEl.addEventListener('input', () => {
+        if (custEl.value.trim()) custEl.dataset.manualCustomer = '1';
+        else delete custEl.dataset.manualCustomer;
+      });
+    }
+  });
 };
 
 window.ensureByFieldWrapper = function(el) {
@@ -779,15 +905,12 @@ window.initUniversalDropdowns = function() {
       select.style.cssText = 'width:100%;';
       el.parentNode.replaceChild(select, el);
       el = select;
-      el.addEventListener('change', function() {
+      el.addEventListener('change', function onPersonSelectChange() {
         if (el.value === 'OTHER_NEW') {
           const newVal = prompt('Enter name:');
           if (newVal && newVal.trim()) {
             const cleanVal = newVal.trim();
-            window.rememberPersonBy(cleanVal);
-            window.initUniversalDropdowns();
-            const refreshed = document.getElementById(id);
-            if (refreshed) refreshed.value = cleanVal;
+            window.rememberPersonBy(cleanVal, { selectId: id, selectedValue: cleanVal });
           } else {
             el.value = '';
           }
@@ -798,25 +921,7 @@ window.initUniversalDropdowns = function() {
     }
 
     const currentVal = el.value;
-    let optionsHTML = '<option value="">-- Select --</option>';
-    personOptions.forEach(val => {
-      const safe = val.replace(/"/g, '&quot;');
-      optionsHTML += `<option value="${safe}">${val}</option>`;
-    });
-    optionsHTML += '<option value="OTHER_NEW">+ Add Other / New</option>';
-
-    if (document.activeElement !== el) {
-      el.innerHTML = optionsHTML;
-      if (personOptions.includes(currentVal) || currentVal === 'OTHER_NEW') {
-        el.value = currentVal;
-      } else if (currentVal) {
-        const opt = document.createElement('option');
-        opt.value = currentVal;
-        opt.textContent = currentVal;
-        el.insertBefore(opt, el.lastElementChild);
-        el.value = currentVal;
-      }
-    }
+    window.applySelectOptions(el, personOptions, currentVal, false);
   }
 
   function syncCarrierSelect(id) {
@@ -837,40 +942,18 @@ window.initUniversalDropdowns = function() {
         el.style.borderTopRightRadius = '8px';
         el.style.borderBottomRightRadius = '8px';
       }
-      el.addEventListener('change', function() {
+      el.addEventListener('change', function onCarrierSelectChange() {
         if (el.value === 'OTHER_NEW') {
           const newVal = prompt('Enter new Carrier:');
           if (newVal && newVal.trim()) {
             const cleanVal = newVal.trim();
-            window.rememberCarrier(cleanVal);
-            window.initUniversalDropdowns();
-            const refreshed = document.getElementById(id);
-            if (refreshed) refreshed.value = cleanVal;
+            window.rememberCarrier(cleanVal, { selectId: id, selectedValue: cleanVal });
           } else { el.value = ''; }
         }
       });
     }
 
-    const currentVal = el.value;
-    const carrierOptions = window.getCarrierDropdownValues();
-    let optionsHTML = '<option value="">-- Select --</option>';
-    carrierOptions.forEach(val => {
-      const safe = val.replace(/"/g, '&quot;');
-      optionsHTML += `<option value="${safe}">${val}</option>`;
-    });
-    optionsHTML += '<option value="OTHER_NEW" style="font-weight:bold; color:var(--brand);">+ Add Other / New</option>';
-    if (document.activeElement !== el) {
-      el.innerHTML = optionsHTML;
-      if (carrierOptions.includes(currentVal) || currentVal === 'OTHER_NEW') {
-        el.value = currentVal;
-      } else if (currentVal) {
-        const opt = document.createElement('option');
-        opt.value = currentVal;
-        opt.textContent = currentVal;
-        el.insertBefore(opt, el.lastElementChild);
-        el.value = currentVal;
-      }
-    }
+    window.applySelectOptions(el, window.getCarrierDropdownValues(), el.value, false, ' style="font-weight:bold; color:var(--brand);"');
   }
 
   discovered.forEach(syncPersonSelect);

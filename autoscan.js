@@ -391,12 +391,16 @@ function autoScanWarpPerspective(srcCanvas, corners, outW, outH) {
 
 function autoScanEnhance(canvas) {
   const ctx = canvas.getContext('2d');
-  const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const w = canvas.width;
+  const h = canvas.height;
+  const img = ctx.getImageData(0, 0, w, h);
+  const gray = autoScanToGray(img);
+  const blurred = autoScanBlurGray(gray, w, h);
+  const threshold = autoScanOtsu(blurred);
   const d = img.data;
-  for (let i = 0; i < d.length; i += 4) {
-    const g = d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114;
-    const c = Math.max(0, Math.min(255, (g - 128) * 1.28 + 128 + 8));
-    d[i] = d[i + 1] = d[i + 2] = c;
+  for (let i = 0, p = 0; i < d.length; i += 4, p++) {
+    const v = blurred[p] >= threshold ? 255 : 0;
+    d[i] = d[i + 1] = d[i + 2] = v;
   }
   ctx.putImageData(img, 0, 0);
   return canvas;
@@ -541,9 +545,9 @@ async function autoScanCapture(bounds, corners) {
   src.height = vh;
   src.getContext('2d').drawImage(video, 0, 0);
 
-  const c = corners || autoScanBoundsToCorners(bounds || autoScanDefaultGuide());
-  const outW = Math.max(320, Math.round(Math.hypot(c[1].x - c[0].x, c[1].y - c[0].y) * vw));
-  const outH = Math.max(320, Math.round(Math.hypot(c[3].x - c[0].x, c[3].y - c[0].y) * vh));
+  const c = corners || autoScanState.corners || autoScanBoundsToCorners(bounds || autoScanDefaultGuide());
+  const outW = Math.max(400, Math.round(Math.hypot(c[1].x - c[0].x, c[1].y - c[0].y) * vw));
+  const outH = Math.max(400, Math.round(Math.hypot(c[3].x - c[0].x, c[3].y - c[0].y) * vh));
   let result = autoScanWarpPerspective(src, c, outW, outH);
   result = autoScanEnhance(result);
 
