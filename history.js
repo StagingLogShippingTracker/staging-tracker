@@ -42,6 +42,15 @@ window.openChangelogModal = async function(table) {
   }
 };
 
+window.formatActiveStagingList = function(entries) {
+  if (!entries || entries.length === 0) return '<p style="font-size:12px; color:#6b7280;">No active staging entries found.</p>';
+  let html = '<ul style="margin:0; padding-left:20px; font-size:13px; color:#334155;">';
+  entries.forEach(e => {
+    html += `<li style="margin-bottom:6px;"><b>${e.type}</b> @ <b>${e.location}</b> <br><span style="font-size:11px; color:#64748b;">(Staged by ${e.staged_by || 'Unknown'} on ${new Date(e.entry_date).toLocaleString()})</span></li>`;
+  });
+  return html + '</ul>';
+};
+
 window.openOrderHistory = async function(so) {
   if(!$('#orderHistoryModal')) return;
   $('#history_so_title').textContent = so;
@@ -54,14 +63,7 @@ window.openOrderHistory = async function(so) {
     let html = `<div class="history-section" style="background:#fff; border-radius:8px; padding:12px; border:1px solid #cbd5e1;">`;
 
     html += `<h4 style="margin:0 0 8px 0; color:#0ea5e9; border-bottom:2px solid #e0f2fe; padding-bottom:6px; font-size:14px;">Current Active Staging</h4>`;
-    if(activeEntries.length === 0) html += `<p style="font-size:12px; color:#6b7280;">No active staging entries found.</p>`;
-    else {
-      html += `<ul style="margin:0 0 12px 0; padding-left:20px; font-size:13px; color:#334155;">`;
-      activeEntries.forEach(e => {
-        html += `<li style="margin-bottom:6px;"><b>${e.type}</b> @ <b>${e.location}</b> <br><span style="font-size:11px; color:#64748b;">(Staged by ${e.staged_by || 'Unknown'} on ${new Date(e.entry_date).toLocaleString()})</span></li>`;
-      });
-      html += `</ul>`;
-    }
+    html += window.formatActiveStagingList(activeEntries);
 
     html += `<h4 style="margin:0 0 8px 0; color:#10b981; border-bottom:2px solid #d1fae5; padding-bottom:6px; font-size:14px;">Past Shipments</h4>`;
     if(shippedEntries.length === 0) html += `<p style="font-size:12px; color:#6b7280;">No past shipments found.</p>`;
@@ -88,29 +90,4 @@ window.openOrderHistory = async function(so) {
     html += `</div>`;
     $('#history_content').innerHTML = html;
   } catch (e) { $('#history_content').innerHTML = `<span style="color:red;">Error: ${e.message}</span>`; }
-};
-
-window.checkSoConflict = function(so, currentId = null) {
-  return new Promise(resolve => {
-    const exists = appData.staging.some(x => x.so === so && x.id !== currentId);
-    if (!exists) return resolve(true);
-
-    $('#conflict_so_title').textContent = so;
-    $('#conflict_content').innerHTML = '<div style="text-align:center; padding:10px; color:#6b7280;">Loading history...</div>';
-    $('#soConflictModal').style.display = 'flex';
-
-    supabaseClient.from('changelog').select('*').ilike('action', `%${so}%`).order('created_at', { ascending: false }).then(({data, error}) => {
-      if(error || !data || data.length === 0) {
-        $('#conflict_content').innerHTML = '<span style="color:#6b7280; padding:10px;">No previous history found.</span>';
-      } else {
-        let html = '<ul style="text-align:left; padding-left:20px; margin:0; font-size:13px; color:#4b5563; max-height:200px; overflow-y:auto;">';
-        data.forEach(log => { html += `<li style="margin-bottom:8px;"><b>${new Date(log.created_at).toLocaleString()}</b> [${log.user_email}]<br/>${log.action}</li>`; });
-        html += '</ul>';
-        $('#conflict_content').innerHTML = html;
-      }
-    });
-
-    $('#conflictCancelBtn').onclick = () => { $('#soConflictModal').style.display = 'none'; resolve(false); };
-    $('#conflictProceedBtn').onclick = () => { $('#soConflictModal').style.display = 'none'; resolve(true); };
-  });
 };

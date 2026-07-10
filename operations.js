@@ -44,15 +44,9 @@ window.loadCloudData = async function() {
     safeUpdateDatalist('dl_locations', filterMem(allData.map(x=>x.location)).map(l=>`<option value="${l}"></option>`).join(''));
     safeUpdateDatalist('dl_stagers', filterMem(allData.map(x=>(x.staged_by || x.shipped_by))).map(s=>`<option value="${s}"></option>`).join(''));
     safeUpdateDatalist('dl_pastEmails', filterMem(appData.shipped.map(x=>x.pmd_email)).map(em=>`<option value="${em}@swiftsupply.ca"></option>`).join(''));
-    safeUpdateDatalist('dl_sos', filterMem(allData.map(x=>x.so)).map(s=>`<option value="${s}"></option>`).join(''));// Stripping inner text forces Chrome/Safari to respect the full input string
-    safeUpdateDatalist('dl_customers', filterMem(allData.map(x=>x.customer)).map(c=>`<option value="${c}"></option>`).join(''));
-    safeUpdateDatalist('dl_locations', filterMem(allData.map(x=>x.location)).map(l=>`<option value="${l}"></option>`).join(''));
-    safeUpdateDatalist('dl_stagers', filterMem(allData.map(x=>(x.staged_by || x.shipped_by))).map(s=>`<option value="${s}"></option>`).join(''));
-    safeUpdateDatalist('dl_pastEmails', filterMem(appData.shipped.map(x=>x.pmd_email)).map(em=>`<option value="${em}@swiftsupply.ca"></option>`).join(''));
     safeUpdateDatalist('dl_sos', filterMem(allData.map(x=>x.so)).map(s=>`<option value="${s}"></option>`).join(''));
     
     window.renderTables(); 
-    if(typeof window.syncMapPins === 'function') window.syncMapPins();
     if(typeof window.initUniversalDropdowns === 'function') window.initUniversalDropdowns();
   } catch(e) { console.error("Data load failed:", e); }
 };
@@ -90,7 +84,7 @@ window.submitReturnToStock = async function() {
     
     const { error: insertError } = await supabaseClient.from('shipped').insert([{
       so: editTargetRecord.so, customer: $('#e_cust').value.trim(), type: window.getDynamicType('e'), qty: window.getDynamicQty('e'),
-      carrier: 'RETURNED TO STOCK', location: $('#e_loc').value.trim(), coords: $('#e_coords').value.trim(),
+      carrier: 'RETURNED TO STOCK', location: $('#e_loc').value.trim(),
       weight: $('#e_weight').value.trim(), comments: e.comments, shipped_by: returnedBy, pmd_email: pmName || pickedBy, photo_urls: editTargetRecord.photo_urls
     }]); 
     if(insertError) throw insertError;
@@ -147,7 +141,7 @@ window.saveEditedRecord = async function() {
   }
 
   const dynamicType = window.getDynamicType('e');
-  const basePayload = { so: soVal, customer: $('#e_cust').value.trim(), location: locValue, coords: $('#e_coords').value.trim(), weight: $('#e_weight').value.trim(), comments: $('#e_comments').value.trim(), type: dynamicType, qty: dynamicQty };
+  const basePayload = { so: soVal, customer: $('#e_cust').value.trim(), location: locValue, weight: $('#e_weight').value.trim(), comments: $('#e_comments').value.trim(), type: dynamicType, qty: dynamicQty };
 
   if (editTargetRecord.table === 'staging') {
     const newStatus = window.getDbStatus($('#e_status').value.trim());
@@ -177,7 +171,7 @@ window.executeShippedUndo = async function() {
     if(!proceed) return;
 
     // Fixed: 'status' is now 'Partial' to conform to database check constraint
-    const { error } = await supabaseClient.from('staging').insert([{ so: currentRecord.so, customer: currentRecord.customer, type: currentRecord.type, qty: currentRecord.qty, location: currentRecord.location, coords: currentRecord.coords, weight: currentRecord.weight, comments: currentRecord.comments, status: 'Partial', photo_urls: currentRecord.photo_urls }]);
+    const { error } = await supabaseClient.from('staging').insert([{ so: currentRecord.so, customer: currentRecord.customer, type: currentRecord.type, qty: currentRecord.qty, location: currentRecord.location, weight: currentRecord.weight, comments: currentRecord.comments, status: 'Partial', photo_urls: currentRecord.photo_urls }]);
     if (error) { alert("Undo Database Error: " + error.message); return; }
     
     await supabaseClient.from('shipped').delete().eq('id', editTargetRecord.id);
@@ -219,7 +213,7 @@ window.submitFreightDispatch = async function() {
 
     const { error: insertError } = await supabaseClient.from('shipped').insert([{
       so: activeShipTargetItem.so, customer: activeShipTargetItem.customer, type: activeShipTargetItem.type,
-      qty: activeShipTargetItem.qty, carrier: carrierVal, location: activeShipTargetItem.location, coords: activeShipTargetItem.coords,
+      qty: activeShipTargetItem.qty, carrier: carrierVal, location: activeShipTargetItem.location,
       weight: activeShipTargetItem.weight, comments: activeShipTargetItem.comments, shipped_by: dispatcher, pmd_email: pmName, photo_urls: photoUrls
     }]);
     
@@ -309,7 +303,7 @@ window.submitStagingEntry = async function() {
       if(!uploadError) photoUrls.push(path);
     }
   
-    const { error } = await supabaseClient.from('staging').insert([{ so: soVal, customer: $('#customer').value.trim(), status: window.getDbStatus($('#status').value), location: locValue, coords: $('#coords').value.trim(), weight: $('#weight').value.trim(), comments: $('#comments').value.trim(), staged_by: $('#staged_by').value.trim(), type: type.join(', '), qty: totalQty, photo_urls: photoUrls }]);
+    const { error } = await supabaseClient.from('staging').insert([{ so: soVal, customer: $('#customer').value.trim(), status: window.getDbStatus($('#status').value), location: locValue, weight: $('#weight').value.trim(), comments: $('#comments').value.trim(), staged_by: $('#staged_by').value.trim(), type: type.join(', '), qty: totalQty, photo_urls: photoUrls }]);
     
     if (error) {
       alert("Database Error: " + error.message);
@@ -319,7 +313,7 @@ window.submitStagingEntry = async function() {
     window.logAction('staging', `Added new entry for SO: ${soVal}`);
     if(typeof window.showNotification === 'function') window.showNotification('Staging Entry Added');
     
-    $('#so').value=''; $('#customer').value=''; $('#loc').value=''; $('#coords').value=''; $('#staged_by').value=''; $('#weight').value=''; $('#c_skid').value=0; $('#c_box').value=0; $('#c_crate').value=0; $('#c_pipe').value=0; $('#c_other').value=0; 
+    $('#so').value=''; $('#customer').value=''; $('#loc').value=''; $('#staged_by').value=''; $('#weight').value=''; $('#c_skid').value=0; $('#c_box').value=0; $('#c_crate').value=0; $('#c_pipe').value=0; $('#c_other').value=0; 
     if($('#comments')) $('#comments').value='';
     mainPhotoBlobs = []; window.renderMainPhotoStrip();
     window.loadCloudData();
@@ -352,9 +346,8 @@ window.renderNRPhotoStrip = function() {
 
 window.openNotifyReturnModal = function() {
   $('#nr_so').value=''; $('#nr_cust').value=''; $('#nr_skid').value=0; $('#nr_box').value=0; $('#nr_crate').value=0; $('#nr_pipe').value=0; $('#nr_other').value=0; 
-  $('#nr_loc').value=''; $('#nr_coords').value=''; $('#nr_weight').value=''; $('#nr_comments').value=''; 
+  $('#nr_loc').value=''; $('#nr_weight').value=''; $('#nr_comments').value=''; 
   $('#nr_received_by').value = currentUser ? currentUser.email.split('@')[0] : '';
-  if($('#nr_cc_pm')) $('#nr_cc_pm').value = ''; 
   window.nrPhotoBlobs = []; window.renderNRPhotoStrip();
   $('#notifyReturnModal').style.display = 'flex';
 };
@@ -379,7 +372,6 @@ window.submitNotifyReturn = async function() {
   try {
     const dynamicType = window.getDynamicType('nr');
     const weightVal = $('#nr_weight').value.trim();
-    const coordsVal = $('#nr_coords').value.trim();
     const commentsVal = $('#nr_comments').value.trim();
     
     let photoLinksHTML = "";
@@ -406,7 +398,6 @@ window.submitNotifyReturn = async function() {
     <b>Container(s)</b>          | ${dynamicType || 'None specified'}<br>
     <b>Location</b>              | ${locVal}<br>
     <b>Total Weight (In lbs)</b> | ${weightVal || '—'}<br>
-    <b>Coords</b>                | ${coordsVal || '—'}<br>
     <b>Received By</b>           | ${receivedByVal}<br>
     <b>Received At</b>           | ${currentTimeStamp}<br>
     <b>Comments</b>              | ${commentsVal || 'None'}<br>
@@ -493,14 +484,23 @@ window.triggerUniversalConsolidate = function(targetSo) {
 
 window.openUniversalAddModal = function(so) {
   if($('#orderHistoryModal')) $('#orderHistoryModal').style.display = 'none';
-  const existing = appData.staging.find(x => x.so === so) || appData.shipped.find(x => x.so === so);
+  const lockFields = !!(so && so.trim());
+  const existing = lockFields ? (appData.staging.find(x => x.so === so) || appData.shipped.find(x => x.so === so)) : null;
   
-  if($('#ra_so')) { $('#ra_so').value = so; $('#ra_so').disabled = true; $('#ra_so').style.background = '#f1f5f9'; }
-  if($('#ra_cust')) { $('#ra_cust').value = existing ? existing.customer : ''; $('#ra_cust').disabled = true; $('#ra_cust').style.background = '#f1f5f9'; }
+  if($('#ra_so')) {
+    $('#ra_so').value = so || '';
+    $('#ra_so').disabled = lockFields;
+    $('#ra_so').style.background = lockFields ? '#f1f5f9' : '';
+  }
+  if($('#ra_cust')) {
+    $('#ra_cust').value = existing ? existing.customer : '';
+    $('#ra_cust').disabled = lockFields;
+    $('#ra_cust').style.background = lockFields ? '#f1f5f9' : '';
+  }
   if($('#ra_status')) { $('#ra_status').disabled = false; $('#ra_status').style.background = ''; }
   
   if($('#ra_skid')) $('#ra_skid').value=0; if($('#ra_box')) $('#ra_box').value=0; if($('#ra_crate')) $('#ra_crate').value=0; if($('#ra_pipe')) $('#ra_pipe').value=0; if($('#ra_other')) $('#ra_other').value=0; 
-  if($('#ra_loc')) $('#ra_loc').value=''; if($('#ra_coords')) $('#ra_coords').value=''; if($('#ra_weight')) $('#ra_weight').value=''; if($('#ra_comments')) $('#ra_comments').value=''; 
+  if($('#ra_loc')) $('#ra_loc').value=''; if($('#ra_weight')) $('#ra_weight').value=''; if($('#ra_comments')) $('#ra_comments').value=''; 
   if($('#ra_staged_by')) { $('#ra_staged_by').value = currentUser ? currentUser.email.split('@')[0] : ''; $('#ra_staged_by').disabled = false; $('#ra_staged_by').style.background = ''; }
   
   if($('#reportAddModal')) {
@@ -566,7 +566,7 @@ window.submitQuickShip = async function() {
 
     const dynamicType = window.getDynamicType('qs');
     const { error: insertError } = await supabaseClient.from('shipped').insert([{
-      so: soVal, customer: custVal, type: dynamicType, qty: dynamicQty, carrier: carrierVal, location: $('#qs_loc').value.trim(), coords: '', 
+      so: soVal, customer: custVal, type: dynamicType, qty: dynamicQty, carrier: carrierVal, location: $('#qs_loc').value.trim(),
       weight: $('#qs_weight').value.trim(), comments: $('#qs_comments').value.trim(), shipped_by: dispatcher, pmd_email: pmName, photo_urls: photoUrls
     }]);
 
@@ -599,13 +599,12 @@ window.checkSoConflict = async function(so, excludeId) {
   if (conflicts.length > 0) {
     return new Promise(resolve => {
       $('#conflict_so_title').textContent = so;
-      // Show Active Staging Table instead of Changelog
-      let html = '<div style="background:#fff; border:1px solid #e2e8f0; border-radius:6px; overflow:hidden;"><table style="width:100%; text-align:left; border-collapse:collapse; font-size:13px;">';
-      html += '<tr style="background:#f1f5f9; border-bottom:1px solid #cbd5e1;"><th style="padding:8px;">Location</th><th style="padding:8px;">Containers</th><th style="padding:8px;">Status</th><th style="padding:8px;">Date</th></tr>';
-      conflicts.forEach(c => {
-        html += `<tr style="border-bottom:1px solid #e2e8f0;"><td style="padding:8px;"><b>${c.location}</b></td><td style="padding:8px;">${c.type}</td><td style="padding:8px;"><span style="color:${window.getStatusColor ? window.getStatusColor(c.status) : '#475569'}; font-weight:bold;">${window.getFormattedStatus(c.status)}</span></td><td style="padding:8px;">${new Date(c.entry_date).toLocaleDateString()}</td></tr>`;
-      });
-      html += '</table></div>';
+      let html = `<div style="background:#fff; border-radius:8px; padding:12px; border:1px solid #cbd5e1;">`;
+      html += `<h4 style="margin:0 0 8px 0; color:#0ea5e9; border-bottom:2px solid #e0f2fe; padding-bottom:6px; font-size:14px;">Current Active Staging</h4>`;
+      html += typeof window.formatActiveStagingList === 'function'
+        ? window.formatActiveStagingList(conflicts)
+        : '';
+      html += `</div>`;
       $('#conflict_content').innerHTML = html;
       $('#soConflictModal').style.display = 'flex';
       $('#soConflictModal').style.zIndex = '4000';
@@ -618,7 +617,7 @@ window.checkSoConflict = async function(so, excludeId) {
 };
 
 window.initUniversalDropdowns = function() {
-  const byFields = ['e_staged_by', 'e_shipped_by', 'ra_staged_by', 'qs_by', 'm_by', 'r_picked_by', 'r_returned_by', 'bc_staged_by', 'sp_staged_by', 'nr_by'];
+  const byFields = ['e_staged_by', 'e_shipped_by', 'ra_staged_by', 'qs_by', 'm_by', 'r_picked_by', 'r_returned_by', 'bc_staged_by', 'sp_staged_by', 'nr_received_by'];
   const carrierFields = ['qs_carrier', 'm_carrier', 'e_carrier'];
 
   let customBys = JSON.parse(localStorage.getItem('swift_custom_bys') || '[]');
@@ -682,10 +681,19 @@ window.initUniversalDropdowns = function() {
 
 window.openReportAddModal = function() {
   let targetSo = '';
-  // Check if audit loop is active to grab the current SO#
-  if (typeof window.reportQueue !== 'undefined' && window.reportQueue.length > 0 && typeof window.reportIndex !== 'undefined') {
-      const currentItem = appData.staging.find(x => x.id === window.reportQueue[window.reportIndex]);
-      if (currentItem && currentItem.so) targetSo = currentItem.so;
+  let auditItem = null;
+  if (window.activeReportMode && window.reportQueue?.length > 0 && typeof window.reportIndex === 'number') {
+    auditItem = appData.staging.find(x => x.id === window.reportQueue[window.reportIndex]);
+    if (auditItem?.so) targetSo = auditItem.so;
   }
+  window.reportPhotoBlobs = [];
+  if (typeof window.renderReportPhotoStrip === 'function') window.renderReportPhotoStrip();
+  if ($('#reportMainModal')) $('#reportMainModal').style.display = 'none';
   if (typeof window.openUniversalAddModal === 'function') window.openUniversalAddModal(targetSo);
+  if (auditItem?.location && $('#ra_loc')) $('#ra_loc').value = auditItem.location;
+};
+
+window.closeReportAddModal = function() {
+  if ($('#reportAddModal')) $('#reportAddModal').style.display = 'none';
+  if (window.activeReportMode && $('#reportMainModal')) $('#reportMainModal').style.display = 'flex';
 };

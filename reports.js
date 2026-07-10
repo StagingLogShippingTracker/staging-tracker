@@ -5,7 +5,6 @@ window.reportQueue = [];
 window.reportIndex = 0;
 window.reportResults = [];
 window.reportPhotoBlobs = [];
-window.discrepancyList = JSON.parse(localStorage.getItem('swift_discrepancies')) || [];
 
 window.startStagingReport = function(mode) {
   const saved = localStorage.getItem('swift_report_state');
@@ -229,14 +228,6 @@ window.renderReportPhotoStrip = function() {
   });
 };
 
-window.openReportAddModal = function() {
-  $('#ra_so').value=''; $('#ra_cust').value=''; $('#ra_skid').value=0; $('#ra_box').value=0; $('#ra_crate').value=0; $('#ra_pipe').value=0; $('#ra_other').value=0; 
-  $('#ra_loc').value=''; $('#ra_coords').value=''; $('#ra_weight').value=''; $('#ra_comments').value=''; 
-  $('#ra_staged_by').value = currentUser ? currentUser.email.split('@')[0] : '';
-  window.reportPhotoBlobs = []; window.renderReportPhotoStrip();
-  $('#reportAddModal').style.display = 'flex';
-};
-
 window.submitReportAddEntry = async function() {
   const sk = parseInt($('#ra_skid').value)||0, bx = parseInt($('#ra_box').value)||0, cr = parseInt($('#ra_crate').value)||0, pi = parseInt($('#ra_pipe').value)||0, ot = parseInt($('#ra_other').value)||0;
   if(!$('#ra_so').value || !$('#ra_cust').value || !$('#ra_loc').value) return alert("Fields Missing.");
@@ -269,7 +260,7 @@ window.submitReportAddEntry = async function() {
       if(!uploadError) photoUrls.push(path);
     }
   
-    const newEntry = { so: soVal, customer: $('#ra_cust').value.trim(), status: window.getDbStatus($('#ra_status').value), location: locValue, coords: $('#ra_coords').value.trim(), weight: $('#ra_weight').value.trim(), comments: $('#ra_comments').value.trim(), staged_by: $('#ra_staged_by').value.trim(), type: type.join(', '), qty: totalQty, photo_urls: photoUrls };
+    const newEntry = { so: soVal, customer: $('#ra_cust').value.trim(), status: window.getDbStatus($('#ra_status').value), location: locValue, weight: $('#ra_weight').value.trim(), comments: $('#ra_comments').value.trim(), staged_by: $('#ra_staged_by').value.trim(), type: type.join(', '), qty: totalQty, photo_urls: photoUrls };
     
     const { data: insertedData, error } = await supabaseClient.from('staging').insert([newEntry]).select();
     
@@ -283,6 +274,7 @@ window.submitReportAddEntry = async function() {
     
     $('#reportAddModal').style.display = 'none';
     window.loadCloudData();
+    if (window.activeReportMode && typeof window.renderNextReportItem === 'function') window.renderNextReportItem();
   } catch(e) { alert("System Error: " + e.message); }
   
   $('#ra_submitBtn').disabled = false; $('#ra_submitBtn').textContent = 'Add Entry';

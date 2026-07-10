@@ -44,7 +44,7 @@ window.openSameSoModal = function() {
   matchingItems.forEach(o => {
     tBody.insertAdjacentHTML('beforeend', `<tr style="color:#64748b; border-bottom:1px solid #f1f5f9;">
       <td style="text-align:center;"><input type="checkbox" style="width:18px;height:18px;" onchange="window.toggleSameSoSelect('${o.id}', this.checked)" checked></td>
-      <td><b>${o.so}</b></td><td>${o.customer}</td><td>${new Date(o.entry_date).toLocaleString()}</td><td>${o.type}</td><td><b>${o.location}</b></td><td><small>${o.coords||'—'}</small></td>
+      <td><b>${o.so}</b></td><td>${o.customer}</td><td>${new Date(o.entry_date).toLocaleString()}</td><td>${o.type}</td><td><b>${o.location}</b></td>
       <td>${o.weight || '—'}</td><td>${o.status}</td><td>${o.staged_by||'—'}</td></tr>`);
   });
   $('#sameSoModal').style.display = 'flex';
@@ -79,7 +79,7 @@ window.openBatchConsolidateModal = function(fromSameSo = false) {
   $('#bc_so').value = firstItem.so || ''; $('#bc_cust').value = firstItem.customer || '';
   $('#bc_skid').value = totalSk; $('#bc_box').value = totalBx; $('#bc_crate').value = totalCr; $('#bc_pipe').value = totalPi; $('#bc_other').value = totalOt;
   $('#bc_weight').value = totalWeight > 0 ? totalWeight.toLocaleString('en-US') : '';
-  $('#bc_loc').value = ''; $('#bc_coords').value = ''; $('#bc_comments').value = ''; $('#bc_status').value = 'Partial';
+  $('#bc_loc').value = ''; $('#bc_comments').value = ''; $('#bc_status').value = 'Partial';
   $('#bc_staged_by').value = currentUser ? (currentUser.email.split('@')[0]) : '';
   $('#bc_photo_urls').value = JSON.stringify(photoUrls); $('#bc_source').value = fromSameSo ? 'sameso' : 'batch';
   
@@ -95,8 +95,8 @@ window.executeBatchConsolidate = async function() {
 
   try {
     const { error: insErr } = await supabaseClient.from('staging').insert([{
-      so: $('#bc_so').value.trim(), customer: $('#bc_cust').value.trim(), status: $('#bc_status').value, 
-      location: $('#bc_loc').value.trim(), coords: $('#bc_coords').value.trim(), weight: $('#bc_weight').value.trim(), comments: $('#bc_comments').value.trim(), 
+      so: $('#bc_so').value.trim(), customer: $('#bc_cust').value.trim(), status: window.getDbStatus($('#bc_status').value),
+      location: $('#bc_loc').value.trim(), weight: $('#bc_weight').value.trim(), comments: $('#bc_comments').value.trim(), 
       staged_by: $('#bc_staged_by').value.trim() + ' (Consolidated)', type: dynamicType, qty: dynamicQty, photo_urls: photoUrls
     }]);
     if(insErr) throw insErr;
@@ -149,7 +149,7 @@ window.batchUndoShipped = async function() {
       }
       
       const { error } = await supabaseClient.from('staging').insert([{ 
-        so: currentRecord.so, customer: currentRecord.customer, type: currentRecord.type, qty: currentRecord.qty, location: currentRecord.location, coords: currentRecord.coords, weight: currentRecord.weight, comments: currentRecord.comments, status: 'Partial', photo_urls: currentRecord.photo_urls 
+        so: currentRecord.so, customer: currentRecord.customer, type: currentRecord.type, qty: currentRecord.qty, location: currentRecord.location, weight: currentRecord.weight, comments: currentRecord.comments, status: 'Partial', photo_urls: currentRecord.photo_urls 
       }]);
       if(error) throw error;
       
