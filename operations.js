@@ -16,9 +16,13 @@ window.banishMemory = function(inputId) {
 
 window.loadCloudData = async function() {
   try {
+    const rosterPromise = typeof window.loadCloudRosters === 'function'
+      ? window.loadCloudRosters()
+      : Promise.resolve();
     const [st, sh] = await Promise.all([
       supabaseClient.from('staging').select('*').order('entry_date', { ascending: false }),
-      supabaseClient.from('shipped').select('*').order('shipped_at', { ascending: false })
+      supabaseClient.from('shipped').select('*').order('shipped_at', { ascending: false }),
+      rosterPromise
     ]);
     
     if (!st.error && st.data) appData.staging = st.data; 
@@ -439,6 +443,86 @@ window.submitNotifyReturn = async function() {
   $('#nr_submitBtn').disabled = false; $('#nr_submitBtn').textContent = 'Submit Return Notification';
 };
 
+window.pnPhotoBlobs = [];
+
+window.openPoNotifyModal = function() {
+  $('#pn_po').value = ''; $('#pn_cust').value = ''; $('#pn_skid').value = 0; $('#pn_box').value = 0;
+  $('#pn_crate').value = 0; $('#pn_pipe').value = 0; $('#pn_other').value = 0;
+  $('#pn_loc').value = ''; $('#pn_weight').value = ''; $('#pn_comments').value = '';
+  $('#pn_received_by').value = currentUser ? currentUser.email.split('@')[0] : '';
+  if ($('#pn_pm_email')) $('#pn_pm_email').value = '';
+  window.pnPhotoBlobs = []; window.renderPNPhotoStrip();
+  $('#poNotifyModal').style.display = 'flex';
+};
+
+window.submitPoNotification = async function() {
+  const poVal = $('#pn_po').value.trim();
+  const custVal = $('#pn_cust').value.trim();
+  const locVal = $('#pn_loc').value.trim();
+  const receivedByVal = $('#pn_received_by').value.trim();
+
+  if (!poVal || !custVal || !locVal || !receivedByVal) return alert('Please fill out all required fields (*).');
+
+  $('#pn_submitBtn').disabled = true; $('#pn_submitBtn').textContent = 'Sending Notification...';
+
+  try {
+    const dynamicType = window.getDynamicType('pn');
+    const weightVal = $('#pn_weight').value.trim();
+    const commentsVal = $('#pn_comments').value.trim();
+
+    let photoLinksHTML = '';
+    let attachmentUrls = [];
+
+    for (let i = 0; i < window.pnPhotoBlobs.length; i++) {
+      const file = window.pnPhotoBlobs[i];
+      const cleanFileName = file.name.replace(/[^a-zA-Z0-9.]/g, '');
+      const path = `${poVal}-po-${Date.now()}-${i}-${cleanFileName}`;
+      const { error: uploadError } = await supabaseClient.storage.from('freight-photos').upload(path, file);
+      if (!uploadError) {
+        const publicUrl = `https://gdrpdiwykmnybmkadlrv.supabase.co/storage/v1/object/public/freight-photos/${path}`;
+        photoLinksHTML += `<a href="${publicUrl}">View Attached Photo ${i + 1}</a><br>`;
+        attachmentUrls.push(publicUrl);
+      }
+    }
+
+    const currentTimeStamp = new Date().toLocaleString();
+    const emailSubject = `WAREHOUSE PO NOTIFICATION: PO ${poVal} - ${custVal}`;
+    let emailBody = `A new PO has been received at the warehouse. Details below:<br><br>
+    ----------------------------------------------------------------------<br>
+    <b>PO#</b>                    | ${poVal}<br>
+    <b>Customer</b>              | ${custVal}<br>
+    <b>Container(s)</b>          | ${dynamicType || 'None specified'}<br>
+    <b>Location</b>              | ${locVal}<br>
+    <b>Total Weight (In lbs)</b> | ${weightVal || '—'}<br>
+    <b>Received By</b>           | ${receivedByVal}<br>
+    <b>Received At</b>           | ${currentTimeStamp}<br>
+    <b>Comments</b>              | ${commentsVal || 'None'}<br>
+    ----------------------------------------------------------------------<br><br>`;
+
+    if (photoLinksHTML !== '') emailBody += `<b>Photos:</b><br>${photoLinksHTML}<br><br>`;
+    emailBody += `For more details, visit: <a href="https://swiftoperations.github.io/staging-tracker/">Swift Staging Tracker</a>`;
+
+    fetch('https://hook.us2.make.com/cxvgao3s4lwnrmntk762j25qct6bkkft', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        to: 'warehouse1@swiftsupply.ca',
+        cc: 'warehouse1@swiftsupply.ca',
+        subject: emailSubject,
+        body: emailBody,
+        attachments: attachmentUrls,
+        has_attachments: attachmentUrls.length > 0
+      })
+    }).catch(e => console.warn('Webhook silently caught error:', e));
+
+    window.logAction('staging', `Sent Automated PO Notification for PO: ${poVal}`);
+    if (typeof window.showNotification === 'function') window.showNotification('PO Notification Sent Successfully');
+    if (typeof window.rememberPersonBy === 'function') window.rememberPersonBy(receivedByVal);
+    $('#poNotifyModal').style.display = 'none';
+  } catch (e) { alert('System Error: ' + e.message); }
+
+  $('#pn_submitBtn').disabled = false; $('#pn_submitBtn').textContent = 'Submit PO Notification';
+};
+
 window.resolveEmail = function(inputVal) {
   if (!inputVal) return null;
   let val = inputVal.trim();
@@ -620,17 +704,65 @@ window.checkSoConflict = async function(so, excludeId) {
 
 window.PERSON_BY_FIELD_IDS = [
   'staged_by', 'e_staged_by', 'e_shipped_by', 'ra_staged_by', 'qs_by', 'm_by',
-  'r_picked_by', 'r_returned_by', 'bc_staged_by', 'sp_staged_by', 'nr_received_by'
+  'r_picked_by', 'r_returned_by', 'bc_staged_by', 'sp_staged_by', 'nr_received_by', 'pn_received_by'
 ];
 
 const BY_ROSTER_KEY = 'swift_by_roster';
+const CARRIER_ROSTER_KEY = 'swift_carrier_roster';
+const ROSTER_TYPES = { person: 'person_by', carrier: 'carrier' };
+window.cloudRosterCache = { person_by: null, carrier: null, loaded: false };
+
+window.loadCloudRosters = async function() {
+  try {
+    const { data, error } = await supabaseClient
+      .from('dropdown_roster')
+      .select('roster_type, value')
+      .order('value', { ascending: true });
+    if (error) {
+      if (error.code === '42P01') return;
+      console.warn('Cloud roster load failed:', error.message);
+      return;
+    }
+    const person = [];
+    const carrier = [];
+    (data || []).forEach(row => {
+      const val = (row.value || '').trim();
+      if (!val) return;
+      if (row.roster_type === ROSTER_TYPES.person) person.push(val);
+      if (row.roster_type === ROSTER_TYPES.carrier) carrier.push(val);
+    });
+    person.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+    carrier.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+    window.cloudRosterCache.person_by = person;
+    window.cloudRosterCache.carrier = carrier;
+    window.cloudRosterCache.loaded = true;
+    localStorage.setItem(BY_ROSTER_KEY, JSON.stringify(person));
+    localStorage.setItem(CARRIER_ROSTER_KEY, JSON.stringify(carrier));
+  } catch (e) {
+    console.warn('Cloud roster load error:', e);
+  }
+};
+
+window.saveRosterValueToCloud = async function(rosterType, value) {
+  const name = (value || '').trim();
+  if (!name || !currentUser) return;
+  try {
+    const { error } = await supabaseClient.from('dropdown_roster').upsert(
+      { roster_type: rosterType, value: name },
+      { onConflict: 'roster_type,value' }
+    );
+    if (error) console.warn('Cloud roster save failed:', error.message);
+  } catch (e) {
+    console.warn('Cloud roster save error:', e);
+  }
+};
+
 const BY_ROSTER_VERSION_KEY = 'swift_by_roster_version';
 const BY_ROSTER_RESET_VERSION = '2';
 
 window.initPersonByRoster = function() {
   const storedVersion = localStorage.getItem(BY_ROSTER_VERSION_KEY);
   if (storedVersion !== BY_ROSTER_RESET_VERSION) {
-    localStorage.setItem(BY_ROSTER_KEY, JSON.stringify([]));
     localStorage.removeItem('swift_custom_bys');
     localStorage.setItem(BY_ROSTER_VERSION_KEY, BY_ROSTER_RESET_VERSION);
   }
@@ -638,6 +770,7 @@ window.initPersonByRoster = function() {
 
 window.getPersonByRoster = function() {
   window.initPersonByRoster();
+  if (window.cloudRosterCache.person_by) return [...window.cloudRosterCache.person_by];
   try {
     const list = JSON.parse(localStorage.getItem(BY_ROSTER_KEY) || '[]');
     return Array.isArray(list) ? list : [];
@@ -667,6 +800,11 @@ window.rememberPersonBy = function(...args) {
   if (changed) {
     roster.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
     localStorage.setItem(BY_ROSTER_KEY, JSON.stringify(roster));
+    window.cloudRosterCache.person_by = [...roster];
+    args.forEach(raw => {
+      const name = (raw || '').trim();
+      if (name) window.saveRosterValueToCloud(ROSTER_TYPES.person, name);
+    });
     const dl = document.getElementById('dl_stagers');
     if (dl && typeof filterMem === 'function') {
       dl.innerHTML = filterMem(roster).map(s => `<option value="${s}"></option>`).join('');
@@ -689,15 +827,12 @@ window.getPersonDropdownValues = function() {
     .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
 };
 
-const CARRIER_ROSTER_KEY = 'swift_carrier_roster';
 const CARRIER_ROSTER_VERSION_KEY = 'swift_carrier_roster_version';
 const CARRIER_ROSTER_RESET_VERSION = '1';
-const CARRIER_SKIP_VALUES = new Set(['RETURNED TO STOCK', 'CONSOLIDATED', 'Unassigned Carrier']);
 
 window.initCarrierRoster = function() {
   const storedVersion = localStorage.getItem(CARRIER_ROSTER_VERSION_KEY);
   if (storedVersion !== CARRIER_ROSTER_RESET_VERSION) {
-    localStorage.setItem(CARRIER_ROSTER_KEY, JSON.stringify([]));
     localStorage.removeItem('swift_custom_carriers');
     localStorage.setItem(CARRIER_ROSTER_VERSION_KEY, CARRIER_ROSTER_RESET_VERSION);
   }
@@ -705,6 +840,7 @@ window.initCarrierRoster = function() {
 
 window.getCarrierRoster = function() {
   window.initCarrierRoster();
+  if (window.cloudRosterCache.carrier) return [...window.cloudRosterCache.carrier];
   try {
     const list = JSON.parse(localStorage.getItem(CARRIER_ROSTER_KEY) || '[]');
     return Array.isArray(list) ? list : [];
@@ -712,6 +848,8 @@ window.getCarrierRoster = function() {
     return [];
   }
 };
+
+const CARRIER_SKIP_VALUES = new Set(['RETURNED TO STOCK', 'CONSOLIDATED', 'Unassigned Carrier']);
 
 window.isRememberableCarrier = function(raw) {
   const name = (raw || '').trim();
@@ -740,6 +878,11 @@ window.rememberCarrier = function(...args) {
   if (changed) {
     roster.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
     localStorage.setItem(CARRIER_ROSTER_KEY, JSON.stringify(roster));
+    window.cloudRosterCache.carrier = [...roster];
+    args.forEach(raw => {
+      const name = (raw || '').trim();
+      if (window.isRememberableCarrier(name)) window.saveRosterValueToCloud(ROSTER_TYPES.carrier, name);
+    });
     if (opts.selectId) {
       window.refreshCarrierSelect(opts.selectId, opts.selectedValue || args[args.length - 1]);
     } else if (changed && !opts.skipRefresh && typeof window.initUniversalDropdowns === 'function') {

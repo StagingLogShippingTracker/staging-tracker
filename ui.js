@@ -116,12 +116,15 @@ window.updateSearchClearButton = function(input) {
   const wrap = input.closest('.search-with-clear');
   if (!wrap) return;
   const btn = wrap.querySelector('.search-clear-btn');
-  if (btn) btn.style.display = input.value.trim() ? '' : 'none';
+  if (!btn) return;
+  const hasText = !!input.value.trim();
+  btn.disabled = !hasText;
+  btn.classList.toggle('is-empty', !hasText);
 };
 
 window.clearSearchField = function(inputId) {
   const input = document.getElementById(inputId);
-  if (!input) return;
+  if (!input || !input.value.trim()) return;
   input.value = '';
   window.updateSearchClearButton(input);
   const cfg = (window.SEARCH_CLEAR_CONFIG || []).find(c => c.id === inputId);
@@ -130,15 +133,16 @@ window.clearSearchField = function(inputId) {
 };
 
 window.initSearchClearButtons = function() {
-  (window.SEARCH_CLEAR_CONFIG || []).forEach(({ id, onClear }) => {
+  (window.SEARCH_CLEAR_CONFIG || []).forEach(({ id }) => {
     const input = document.getElementById(id);
-    if (!input || input.dataset.clearBtnBound) return;
-    input.dataset.clearBtnBound = '1';
+    if (!input) return;
 
     let wrap = input.closest('.search-with-clear');
     if (!wrap) {
       wrap = document.createElement('div');
       wrap.className = 'search-with-clear';
+      if (input.id === 'q') wrap.style.flex = '1 1 auto';
+      if (input.id === 'contactSearch') wrap.style.width = '100%';
       input.parentNode.insertBefore(wrap, input);
       wrap.appendChild(input);
     }
@@ -150,11 +154,19 @@ window.initSearchClearButtons = function() {
       btn.className = 'search-clear-btn';
       btn.textContent = 'Clear';
       btn.setAttribute('aria-label', 'Clear search');
-      btn.addEventListener('click', () => window.clearSearchField(id));
       wrap.appendChild(btn);
     }
 
-    input.addEventListener('input', () => window.updateSearchClearButton(input));
+    if (!btn.dataset.clearBound) {
+      btn.dataset.clearBound = '1';
+      btn.addEventListener('click', () => window.clearSearchField(id));
+    }
+
+    if (!input.dataset.clearInputBound) {
+      input.dataset.clearInputBound = '1';
+      input.addEventListener('input', () => window.updateSearchClearButton(input));
+    }
+
     window.updateSearchClearButton(input);
   });
 };
