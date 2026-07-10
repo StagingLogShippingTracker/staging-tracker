@@ -76,14 +76,33 @@ window.sortStagingEntries = function(entries, sortMode) {
   return sorted;
 };
 
+window.STAGING_STATUS_COLORS = [
+  { match: 'partial', label: 'Partial', color: '#ffedd5' },
+  { match: 'today', label: 'Ship Today', color: '#fee2e2' },
+  { match: 'tomorrow', label: 'Ship Tomorrow', color: '#fef9c3' },
+  { match: 'future', label: 'Ship On Future Date', color: '#dbeafe' },
+  { match: 'corp pick', label: 'Corp Pick', color: '#dcfce7' },
+  { match: 'customer pick', label: 'Customer Pick-Up', color: '#f3e8ff' },
+];
+
 window.getRowColor = function(dbStatus) {
   const s = window.getFormattedStatus(dbStatus).toLowerCase();
-  if (s.includes('partial')) return '#ffedd5'; // Faint Orange
-  if (s.includes('today')) return '#fee2e2'; // Faint Red
-  if (s.includes('tomorrow')) return '#fef9c3'; // Faint Yellow
-  if (s.includes('future')) return '#dbeafe'; // Faint Blue
-  if (s.includes('corp pick')) return '#dcfce7'; // Faint Green
-  return ''; // Default (Awaiting Instructions)
+  for (const item of window.STAGING_STATUS_COLORS) {
+    if (s.includes(item.match)) return item.color;
+  }
+  return '';
+};
+
+window.renderStagingStatusLegend = function() {
+  const el = document.getElementById('stagingStatusLegend');
+  if (!el) return;
+  const items = [
+    ...window.STAGING_STATUS_COLORS,
+    { label: 'Awaiting Instructions', color: '#ffffff' },
+  ];
+  el.innerHTML = items.map(({ label, color }) =>
+    `<span class="staging-status-legend__item"><span class="staging-status-legend__swatch" style="background:${color};"></span>${label}</span>`
+  ).join('');
 };
 
 window.renderTables = function() {
@@ -259,7 +278,7 @@ window.triggerShipModal = function(id) {
   
   if($('#m_pm_chk')) $('#m_pm_chk').checked = false; window.togglePMEmail(false, 'm_pm_email', 'm_pm_email_btn'); if($('#m_pm_email')) $('#m_pm_email').value = '';
   if($('#shipModal')) $('#shipModal').style.display = 'flex';
-  window.renderPhotoStrip('#photoPreviewStrip', selectedPhotoBlobs);
+  window.renderPhotoStrip();
 };
 
 window.closeShipModal = function() { if($('#shipModal')) $('#shipModal').style.display = 'none'; window.loadCloudData(); };

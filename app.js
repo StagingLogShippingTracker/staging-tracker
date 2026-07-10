@@ -44,6 +44,8 @@ function initApp() {
   
   // Trigger the new dropdown setup on boot
   window.initEmployeeEmailDropdown(); 
+  window.renderStagingStatusLegend();
+  if (typeof window.initPhotoFields === 'function') window.initPhotoFields();
   // --- GLOBAL DOM ENFORCEMENT (Automated Memory & Autocomplete Fix) ---
   
   // 1. Inject the missing dl_sos datalist into the page so you don't have to edit HTML files

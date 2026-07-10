@@ -33,17 +33,39 @@ input:disabled, select:disabled, button:disabled, textarea:disabled { background
 .modal-close-x { position: absolute; top: 12px; right: 16px; font-size: 22px; font-weight: 700; color: #6b7280; cursor: pointer; border: 0; background: none; z-index: 10; }
 .modal-field { display: flex; flex-direction: column; gap: 2px; text-align: left; }
 .modal-field label { font-size: 12px; font-weight: 700; color: #4b5563; margin-bottom: 2px; }
+.req-mark { color: #ef4444; font-weight: 700; }
 
 .modal-window .freight-block { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; background: #f9fafb; border: 1px solid #cbd5e1; padding: 12px; border-radius: 8px; flex: none; }
 .modal-window .counter-box { justify-content: space-between; width: 100%; padding-bottom: 4px; border-bottom: 1px solid #e5e7eb; }
 .modal-window .counter-box:nth-last-child(-n+2) { border-bottom: none; padding-bottom: 0; }
 
 .photo-options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.photo-options-grid--scan { grid-template-columns: repeat(3, 1fr); }
 .photo-uploader { border: 2px dashed #cbd5e1; border-radius: 10px; padding: 10px; text-align: center; cursor: pointer; background: #f8fafc; font-size: 12px; font-weight: 700; }
+.photo-uploader--scan { background: #eff6ff; border-color: #93c5fd; color: #1d4ed8; }
+.photo-uploader--scan:hover { border-color: #3b82f6; background: #dbeafe; }
 .photo-uploader:hover { border-color: var(--brand); }
 .photo-strip { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; width: 100%; }
 .photo-badge { background: #e2e8f0; font-size: 11px; padding: 2px 6px; border-radius: 4px; display: flex; align-items: center; gap: 4px; }
+.photo-badge-saved { background: #e0f2fe; color: #0369a1; }
 .photo-badge span { color: #dc2626; cursor: pointer; font-weight: bold; }
+.photo-section-label { font-size: 12px; font-weight: 700; }
+
+#autoScanModal { z-index: 5000; background: #000; padding: 0; }
+.auto-scan-shell { position: relative; width: 100vw; max-width: 100%; height: 100vh; height: 100dvh; overflow: hidden; background: #000; }
+#autoScanVideo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+#autoScanOverlay { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.auto-scan-status { position: absolute; left: 16px; right: 16px; bottom: 28px; text-align: center; color: #fff; font-size: 14px; font-weight: 700; text-shadow: 0 1px 4px rgba(0,0,0,0.8); padding: 10px 14px; border-radius: 10px; background: rgba(0,0,0,0.45); }
+.auto-scan-status.is-ready { background: rgba(22,163,74,0.75); }
+.auto-scan-status.is-searching { background: rgba(0,0,0,0.45); }
+.auto-scan-hint { position: absolute; top: 16px; left: 16px; right: 56px; color: #fff; font-size: 13px; font-weight: 700; text-shadow: 0 1px 3px rgba(0,0,0,0.8); }
+#autoScanModal .modal-close-x { z-index: 2; color: #fff; background: rgba(0,0,0,0.35); border-radius: 50%; width: 36px; height: 36px; line-height: 36px; }
+.auto-scan-flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; transition: opacity 0.12s ease-out; }
+.auto-scan-flash.active { opacity: 0.85; }
+@media (max-width: 520px) {
+  .photo-options-grid--scan { grid-template-columns: 1fr; }
+  .photo-options-grid--scan .photo-uploader { font-size: 11px; padding: 8px 6px; }
+}
 .chk-row { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; }
 
 .split { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
@@ -127,6 +149,31 @@ input[type="checkbox"] { width: 13px; height: 13px; cursor: pointer; transform: 
   color: #9ca3af;
   margin: 0;
   font-size: 13px;
+}
+
+.staging-status-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  align-items: center;
+  margin: 2px 0 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #f0f1f3;
+}
+.staging-status-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: #64748b;
+  white-space: nowrap;
+}
+.staging-status-legend__swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  border: 1px solid #e2e8f0;
+  flex-shrink: 0;
 }
 
 .batch-mode .hide-in-batch { display: none !important; }

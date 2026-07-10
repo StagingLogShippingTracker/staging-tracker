@@ -221,12 +221,6 @@ window.reportSubmitNewLocation = async function() {
   } catch(e) { alert("Error updating location: " + e.message); window.renderNextReportItem(); }
 };
 
-window.renderReportPhotoStrip = function() {
-  const container = $('#ra_photoPreviewStrip'); if(!container) return; container.innerHTML = '';
-  window.reportPhotoBlobs.forEach((f, idx) => {
-    container.insertAdjacentHTML('beforeend', `<span class="photo-badge">📎 Img-${idx+1} <span onclick="window.reportPhotoBlobs.splice(${idx},1); window.renderReportPhotoStrip()">&times;</span></span>`);
-  });
-};
 
 window.submitReportAddEntry = async function() {
   const sk = parseInt($('#ra_skid').value)||0, bx = parseInt($('#ra_box').value)||0, cr = parseInt($('#ra_crate').value)||0, pi = parseInt($('#ra_pipe').value)||0, ot = parseInt($('#ra_other').value)||0;

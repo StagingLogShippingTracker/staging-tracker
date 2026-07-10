@@ -337,13 +337,6 @@ window.saveQuickComment = async function() {
 
 window.nrPhotoBlobs = [];
 
-window.renderNRPhotoStrip = function() {
-  const container = $('#nr_photoPreviewStrip'); if(!container) return; container.innerHTML = '';
-  window.nrPhotoBlobs.forEach((f, idx) => {
-    container.insertAdjacentHTML('beforeend', `<span class="photo-badge">📎 Img-${idx+1} <span onclick="window.nrPhotoBlobs.splice(${idx},1); window.renderNRPhotoStrip()">&times;</span></span>`);
-  });
-};
-
 window.openNotifyReturnModal = function() {
   $('#nr_so').value=''; $('#nr_cust').value=''; $('#nr_skid').value=0; $('#nr_box').value=0; $('#nr_crate').value=0; $('#nr_pipe').value=0; $('#nr_other').value=0; 
   $('#nr_loc').value=''; $('#nr_weight').value=''; $('#nr_comments').value=''; 
@@ -509,18 +502,6 @@ window.openUniversalAddModal = function(so) {
   }
 };
 window.qsPhotoBlobs = [];
-window.handleQsPhotoUpload = function(inputEl) {
-  if(!inputEl.files || inputEl.files.length === 0) return;
-  Array.from(inputEl.files).forEach(f => { if(window.qsPhotoBlobs.length < 10) window.qsPhotoBlobs.push(f); });
-  window.renderQsPhotoStrip();
-};
-window.renderQsPhotoStrip = function() {
-  const container = document.getElementById('qs_photoPreviewStrip');
-  if(!container) return; container.innerHTML = '';
-  window.qsPhotoBlobs.forEach((f, idx) => {
-    container.insertAdjacentHTML('beforeend', `<span class="photo-badge">📎 Img-${idx+1} <span onclick="window.qsPhotoBlobs.splice(${idx},1); window.renderQsPhotoStrip();">&times;</span></span>`);
-  });
-};
 
 window.openQuickShipModal = function() {
   $('#qs_so').value = ''; $('#qs_cust').value = '';
@@ -529,7 +510,7 @@ window.openQuickShipModal = function() {
   $('#qs_by').value = currentUser ? currentUser.email.split('@')[0] : '';
   if($('#qs_pm_chk')) $('#qs_pm_chk').checked = false; window.togglePMEmail(false, 'qs_pm_email', 'qs_pm_email_btn'); if($('#qs_pm_email')) $('#qs_pm_email').value = '';
   window.qsPhotoBlobs = [];
-  if($('#qs_photoPreviewStrip')) $('#qs_photoPreviewStrip').innerHTML = '';
+  window.clearPhotoBlobs('quickship');
   $('#quickShipModal').style.display = 'flex';
 };
 
