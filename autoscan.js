@@ -434,6 +434,73 @@ function autoScanAnalyzeFrame() {
   return { bounds, corners, detected, still, boundsStable, cornersStable, motion };
 }
 
+async function autoScanApplyTorch(track, on) {
+  if (!track || track.readyState === 'ended') return false;
+  const want = !!on;
+  const attempts = [
+    () => track.applyConstraints({ advanced: [{ torch: want }] }),
+    () => track.applyConstraints({ torch: want }),
+    () => track.applyConstraints({ advanced: [{ fillLightMode: want ? 'flash' : 'off' }] }),
+    () => track.applyConstraints({ fillLightMode: want ? 'flash' : 'off' })
+  ];
+  for (const attempt of attempts) {
+    try {
+      await attempt();
+      const settings = track.getSettings ? track.getSettings() : {};
+      if (settings.torch === want) return true;
+      if (want && settings.fillLightMode === 'flash') return true;
+      if (!want && (settings.torch === false || settings.fillLightMode === 'off')) return true;
+      return true;
+    } catch (_) { /* try next format */ }
+  }
+  return false;
+}
+
+async function autoScanEnableTorchImmediate(track) {
+  if (!track) return false;
+  let ok = await autoScanApplyTorch(track, true);
+  if (!ok) {
+    for (const delay of [80, 200, 450]) {
+      await new Promise(r => setTimeout(r, delay));
+      ok = await autoScanApplyTorch(track, true);
+      if (ok) break;
+    }
+  }
+  autoScanState.torchSupported = ok;
+  const btn = document.getElementById('autoScanTorchBtn');
+  if (btn) {
+    btn.style.display = ok ? '' : 'none';
+    btn.textContent = '⚡ Flash On';
+    btn.classList.remove('is-off');
+  }
+  return ok;
+}
+
+async function autoScanOpenCameraStream() {
+  const base = {
+    facingMode: { ideal: 'environment' },
+    width: { ideal: 1920 },
+    height: { ideal: 1080 },
+    focusMode: { ideal: 'continuous' }
+  };
+  const attempts = [
+    { video: { ...base, advanced: [{ torch: true }] }, audio: false },
+    { video: { ...base, torch: true }, audio: false },
+    { video: { ...base, advanced: [{ fillLightMode: 'flash' }] }, audio: false },
+    { video: { ...base, fillLightMode: { ideal: 'flash' } }, audio: false },
+    { video: base, audio: false }
+  ];
+  let lastErr = null;
+  for (const constraints of attempts) {
+    try {
+      return await navigator.mediaDevices.getUserMedia(constraints);
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  throw lastErr || new Error('Camera unavailable');
+}
+
 async function autoScanSetTorch(on) {
   autoScanState.torchOn = !!on;
   const btn = document.getElementById('autoScanTorchBtn');
@@ -442,19 +509,9 @@ async function autoScanSetTorch(on) {
     btn.classList.toggle('is-off', !on);
   }
   const track = autoScanState.videoTrack;
-  if (!track) return;
-  try {
-    await track.applyConstraints({ advanced: [{ torch: !!on }] });
-    autoScanState.torchSupported = true;
-  } catch (_) {
-    try {
-      await track.applyConstraints({ torch: !!on });
-      autoScanState.torchSupported = true;
-    } catch (__) {
-      autoScanState.torchSupported = false;
-      if (btn) btn.style.display = 'none';
-    }
-  }
+  if (!track) return false;
+  if (on) return autoScanEnableTorchImmediate(track);
+  return autoScanApplyTorch(track, false);
 }
 
 window.toggleAutoScanTorch = function() {
@@ -545,27 +602,23 @@ window.openAutoScan = async function(context) {
   autoScanState.corners = null;
   autoScanState.capturing = false;
   autoScanState.torchOn = true;
-  autoScanSetStatus('Position document in frame', false);
+  autoScanSetStatus('Turning on camera flash…', false);
   autoScanDrawOverlay(null, null, false);
 
   document.getElementById('autoScanModal').style.display = 'flex';
 
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        facingMode: { ideal: 'environment' },
-        width: { ideal: 1920 },
-        height: { ideal: 1080 },
-        focusMode: { ideal: 'continuous' }
-      },
-      audio: false
-    });
+    const stream = await autoScanOpenCameraStream();
     autoScanState.stream = stream;
     autoScanState.videoTrack = stream.getVideoTracks()[0] || null;
     const video = document.getElementById('autoScanVideo');
     video.srcObject = stream;
     await video.play();
-    await autoScanSetTorch(true);
+    const torchOk = await autoScanEnableTorchImmediate(autoScanState.videoTrack);
+    autoScanSetStatus(
+      torchOk ? 'Flash on — center document in frame' : 'Center document in frame (flash unavailable)',
+      false
+    );
     autoScanResizeOverlay();
     if (autoScanState.timer) clearInterval(autoScanState.timer);
     autoScanState.timer = setInterval(autoScanTick, 100);
@@ -583,7 +636,7 @@ window.closeAutoScan = async function() {
   }
   window.removeEventListener('resize', autoScanResizeOverlay);
   if (autoScanState.videoTrack) {
-    try { await autoScanState.videoTrack.applyConstraints({ advanced: [{ torch: false }] }); } catch (_) {}
+    try { await autoScanApplyTorch(autoScanState.videoTrack, false); } catch (_) {}
     autoScanState.videoTrack = null;
   }
   if (autoScanState.stream) {
