@@ -4,7 +4,7 @@
 <meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Swift Staging Tracker - Notifications Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<link rel="stylesheet" href="style.css?v=6.1" />
+<link rel="stylesheet" href="style.css?v=6.2" />
 </head>
 <body>
 <datalist id="dl_customers"></datalist><datalist id="dl_locations"></datalist><datalist id="dl_stagers"></datalist><datalist id="dl_pastEmails"></datalist>
@@ -34,8 +34,8 @@
         Notify of Returns
       </button>
       
-      <button class="btn" disabled style="background:#f1f5f9; color:#94a3b8; padding:16px; font-size:16px; border: 1px dashed #cbd5e1; cursor:not-allowed;">
-        PO Notification (Coming Soon)
+      <button class="btn" style="background:#0ea5e9; color:#fff; padding:16px; font-size:16px; border: none; cursor:pointer; font-weight:bold; box-shadow:0 4px 6px rgba(14, 165, 233, 0.2);" onclick="window.openPoNotifyModal()">
+        PO Notification
       </button>
       
     </div>
@@ -79,19 +79,54 @@
     <button id="nr_submitBtn" class="btn" style="margin-top:12px; width:100%; background:var(--brand);" onclick="window.submitNotifyReturn()">Submit Return Notification</button>
   </div>
 </div>
+
+<div id="poNotifyModal" class="modal-overlay">
+  <div class="modal-window" style="max-width: 500px;">
+    <button class="modal-close-x" onclick="document.querySelector('#poNotifyModal').style.display='none'">&times;</button>
+    <h3 style="margin-top:0; color:#0ea5e9;">PO Notifications</h3>
+
+    <div class="photo-options-grid" style="margin-bottom:8px;">
+      <div class="photo-uploader" onclick="document.querySelector('#pn_cameraFile').click()">📷 Live Photo</div><input type="file" id="pn_cameraFile" accept="image/*" capture="environment" style="display:none" onchange="window.handlePhotoUpload(this, 'ponotify')" />
+      <div class="photo-uploader" onclick="document.querySelector('#pn_uploadFile').click()">📁 File Upload</div><input type="file" id="pn_uploadFile" multiple accept="image/*" style="display:none" onchange="window.handlePhotoUpload(this, 'ponotify')" />
+    </div>
+    <div id="pn_photoPreviewStrip" class="photo-strip" style="margin-bottom:8px;"></div>
+
+    <div class="modal-field"><label>PO# <span class="req-mark">*</span></label><input id="pn_po" /></div>
+    <div class="modal-field"><label>Customer <span class="req-mark">*</span></label><input id="pn_cust" list="dl_customers" /></div>
+
+    <label style="font-size:12px; font-weight:800; color:#475569; margin-top:8px; margin-bottom:-2px; text-transform:uppercase;">Quantities</label>
+    <div class="freight-block">
+      <div class="counter-box"><label>Skids</label><div class="counter-controls"><button class="counter-btn" onclick="window.adjustEditCount('pn_skid',-1)">-</button><input id="pn_skid" value="0" readonly/><button class="counter-btn" onclick="window.adjustEditCount('pn_skid',1)">+</button></div></div>
+      <div class="counter-box"><label>Boxes</label><div class="counter-controls"><button class="counter-btn" onclick="window.adjustEditCount('pn_box',-1)">-</button><input id="pn_box" value="0" readonly/><button class="counter-btn" onclick="window.adjustEditCount('pn_box',1)">+</button></div></div>
+      <div class="counter-box"><label>Crates</label><div class="counter-controls"><button class="counter-btn" onclick="window.adjustEditCount('pn_crate',-1)">-</button><input id="pn_crate" value="0" readonly/><button class="counter-btn" onclick="window.adjustEditCount('pn_crate',1)">+</button></div></div>
+      <div class="counter-box"><label>Pipe/Rod</label><div class="counter-controls"><button class="counter-btn" onclick="window.adjustEditCount('pn_pipe',-1)">-</button><input id="pn_pipe" value="0" readonly/><button class="counter-btn" onclick="window.adjustEditCount('pn_pipe',1)">+</button></div></div>
+      <div class="counter-box"><label>Other</label><div class="counter-controls"><button class="counter-btn" onclick="window.adjustEditCount('pn_other',-1)">-</button><input id="pn_other" value="0" readonly/><button class="counter-btn" onclick="window.adjustEditCount('pn_other',1)">+</button></div></div>
+    </div>
+
+    <div class="modal-field"><label>Location <span class="req-mark">*</span></label><input id="pn_loc" list="dl_locations" /></div>
+    <div class="modal-field"><label>Total Weight (In lbs)</label><input id="pn_weight" oninput="window.formatWeight(this)" /></div>
+    <div class="modal-field"><label>Received By <span class="req-mark">*</span></label><div class="by-field-row" style="display:flex;width:100%;"><input id="pn_received_by" list="dl_stagers" style="width:100%;" /></div></div>
+
+    <div class="modal-field"><label>Notify PM</label><input id="pn_pm_email" list="dl_employeeEmails" placeholder="Coming soon" disabled style="background:#f1f5f9; color:#94a3b8; cursor:not-allowed;" /></div>
+
+    <div class="modal-field" style="margin-top:4px;"><label>Comments</label><textarea id="pn_comments" rows="2" style="width:100%; border:1px solid #cbd5e1; border-radius:10px; padding:10px 14px; background:#f8fafc; font-family:inherit; resize:vertical;"></textarea></div>
+
+    <button id="pn_submitBtn" class="btn" style="margin-top:12px; width:100%; background:#0ea5e9;" onclick="window.submitPoNotification()">Submit PO Notification</button>
+  </div>
+</div>
   
 
 <script src="employees.js?v=2.5"></script>
 <script src="config.js?v=2.5"></script>
 <script src="auth.js?v=2.5"></script>
-<script src="ui.js?v=6.1"></script>
+<script src="ui.js?v=6.2"></script>
 <script src="history.js?v=2.5"></script>
 <script src="split.js?v=3.7"></script>
 <script src="reports.js?v=3.7"></script>
-<script src="operations.js?v=3.9"></script>
+<script src="operations.js?v=4.0"></script>
 <script src="batch.js?v=6.0"></script>
-<script src="media.js?v=5.1"></script>
+<script src="media.js?v=5.2"></script>
 <script src="autoscan.js?v=1.2"></script>
-<script src="app.js?v=3.9"></script>
+<script src="app.js?v=4.0"></script>
 </body>
 </html>

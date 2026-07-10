@@ -4,7 +4,7 @@
 <meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Swift Staging Tracker - Contacts Directory</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<link rel="stylesheet" href="style.css?v=6.1" />
+<link rel="stylesheet" href="style.css?v=6.2" />
 <style>
   .batch-mode-only { display: none; }
   body.batch-mode .batch-mode-only { display: inline-block; }
@@ -45,7 +45,10 @@
     <div class="split"><h3>Employee Directory</h3></div>
     <p style="color:#64748b; font-size: 13px; margin-top: 0; margin-bottom: 12px;">Browse, search, and export employee contact information across all branches.</p>
     
-    <input type="text" id="contactSearch" placeholder="Search by name, branch, or designation..." style="width: 100%; margin-bottom: 16px; border-radius: 8px;" onkeyup="renderContactsTable()" />
+    <div class="search-with-clear" style="width: 100%; margin-bottom: 16px;">
+      <input type="text" id="contactSearch" placeholder="Search by name, branch, or designation..." style="width: 100%; margin-bottom: 0; border-radius: 8px;" oninput="renderContactsTable()" />
+      <button type="button" class="search-clear-btn is-empty" aria-label="Clear search" onclick="window.clearSearchField('contactSearch')">Clear</button>
+    </div>
 
     <div class="tblwrap">
       <div class="tbl-scroller" style="max-height: calc(100vh - 250px);">
@@ -75,14 +78,14 @@
 <script src="employees.js?v=2.5"></script>
 <script src="config.js?v=2.5"></script>
 <script src="auth.js?v=2.5"></script>
-<script src="ui.js?v=6.1"></script>
+<script src="ui.js?v=6.2"></script>
 <script src="history.js?v=2.5"></script>
 <script src="split.js?v=3.7"></script>
 <script src="reports.js?v=3.7"></script>
-<script src="operations.js?v=3.9"></script>
+<script src="operations.js?v=4.0"></script>
 <script src="batch.js?v=6.0"></script>
 <script src="media.js?v=2.5"></script>
-<script src="app.js?v=3.9"></script>
+<script src="app.js?v=4.0"></script>
 
 <script>
   // Inject the parsed CSV data

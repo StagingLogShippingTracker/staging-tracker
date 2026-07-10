@@ -127,6 +127,15 @@ input[type="checkbox"] { width: 13px; height: 13px; cursor: pointer; transform: 
   cursor: pointer;
   font-family: inherit;
   z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 52px;
+}
+.search-clear-btn.is-empty,
+.search-clear-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
 }
 .search-clear-btn:hover {
   background: #cbd5e1;

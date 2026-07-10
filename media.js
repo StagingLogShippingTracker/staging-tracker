@@ -15,6 +15,7 @@ window.PHOTO_STRIPS = {
   main: { selector: '#mainPhotoPreviewStrip' },
   dispatch: { selector: '#photoPreviewStrip' },
   notify: { selector: '#nr_photoPreviewStrip' },
+  ponotify: { selector: '#pn_photoPreviewStrip' },
   report: { selector: '#ra_photoPreviewStrip' },
   quickship: { selector: '#qs_photoPreviewStrip' },
   edit: { selector: '#editPhotoPreviewStrip', editMode: true }
@@ -25,6 +26,7 @@ function getPhotoBlobArray(context) {
     case 'main': return typeof mainPhotoBlobs !== 'undefined' ? mainPhotoBlobs : null;
     case 'dispatch': return typeof selectedPhotoBlobs !== 'undefined' ? selectedPhotoBlobs : null;
     case 'notify': return window.nrPhotoBlobs;
+    case 'ponotify': return window.pnPhotoBlobs;
     case 'report': return window.reportPhotoBlobs;
     case 'quickship': return window.qsPhotoBlobs;
     default: return null;
@@ -37,6 +39,7 @@ function photoRemoveHandler(context, idx) {
     case 'main': return `mainPhotoBlobs.splice(${idx},1); window.renderContextPhotoStrip('main')`;
     case 'dispatch': return `selectedPhotoBlobs.splice(${idx},1); window.renderContextPhotoStrip('dispatch')`;
     case 'notify': return `window.nrPhotoBlobs.splice(${idx},1); window.renderContextPhotoStrip('notify')`;
+    case 'ponotify': return `window.pnPhotoBlobs.splice(${idx},1); window.renderContextPhotoStrip('ponotify')`;
     case 'report': return `window.reportPhotoBlobs.splice(${idx},1); window.renderContextPhotoStrip('report')`;
     case 'quickship': return `window.qsPhotoBlobs.splice(${idx},1); window.renderContextPhotoStrip('quickship')`;
     default: return '';
@@ -90,6 +93,7 @@ window.clearPhotoBlobs = function(context) {
 window.renderMainPhotoStrip = function() { window.renderContextPhotoStrip('main'); };
 window.renderPhotoStrip = function() { window.renderContextPhotoStrip('dispatch'); };
 window.renderNRPhotoStrip = function() { window.renderContextPhotoStrip('notify'); };
+window.renderPNPhotoStrip = function() { window.renderContextPhotoStrip('ponotify'); };
 window.renderReportPhotoStrip = function() { window.renderContextPhotoStrip('report'); };
 window.renderQsPhotoStrip = function() { window.renderContextPhotoStrip('quickship'); };
 window.renderEditPhotoStrip = function() { window.renderContextPhotoStrip('edit'); };
