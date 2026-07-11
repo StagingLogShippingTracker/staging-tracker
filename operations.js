@@ -452,8 +452,12 @@ window.submitPoNotification = async function() {
   const custVal = $('#pn_cust').value.trim();
   const locVal = $('#pn_loc').value.trim();
   const receivedByVal = $('#pn_received_by').value.trim();
+  const pmNameVal = $('#pn_pm_email') ? $('#pn_pm_email').value.trim() : '';
 
   if (!poVal || !custVal || !locVal || !receivedByVal) return alert('Please fill out all required fields (*).');
+  if (pmNameVal && !window.resolvePmSmsEmail(pmNameVal)) {
+    return alert('Please select a valid PM name from the list.');
+  }
 
   $('#pn_submitBtn').disabled = true; $('#pn_submitBtn').textContent = 'Sending Notification...';
 
@@ -503,7 +507,20 @@ window.submitPoNotification = async function() {
         has_attachments: attachmentUrls.length > 0
       });
 
-    window.logAction('staging', `Sent Automated PO Notification for PO: ${poVal}`);
+    if (pmNameVal) {
+      const pmSmsEmail = window.resolvePmSmsEmail(pmNameVal);
+      const smsBody = `PO ${poVal} received - ${custVal}. Containers: ${dynamicType || 'None'}. Location: ${locVal}. Weight: ${weightVal || '—'} lbs. Received by ${receivedByVal} at ${currentTimeStamp}.${commentsVal ? ' Notes: ' + commentsVal : ''}`;
+      window.sendPmEmailWebhook({
+        to: pmSmsEmail,
+        cc: 'warehouse1@swiftsupply.ca',
+        subject: `PO ${poVal} - ${custVal}`,
+        body: smsBody,
+        attachments: [],
+        has_attachments: false
+      });
+    }
+
+    window.logAction('staging', `Sent Automated PO Notification for PO: ${poVal}${pmNameVal ? ' (PM SMS: ' + pmNameVal + ')' : ''}`);
     if (typeof window.showNotification === 'function') window.showNotification('PO Notification Sent Successfully');
     if (typeof window.rememberPersonBy === 'function') window.rememberPersonBy(receivedByVal);
     $('#poNotifyModal').style.display = 'none';
