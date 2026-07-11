@@ -1,4 +1,4 @@
-// --- autoscan.js — document scanner with torch, crop preview, and filters ---
+// --- autoscan.js — document scanner (native camera on mobile, live scan on desktop) ---
 
 const AUTO_SCAN_FILTERS = {
   none: { label: 'Original (color)', apply: (canvas) => canvas },
@@ -28,10 +28,12 @@ const autoScanState = {
   analysisCanvas: null,
   analysisCtx: null,
   review: null,
-  cropDrag: null
+  cropDrag: null,
+  useNativeCapture: false,
+  pendingContext: null
 };
 
-const AUTO_SCAN_MODAL_VERSION = '5';
+const AUTO_SCAN_MODAL_VERSION = '6';
 const AUTO_SCAN_TORCH_DEVICE_KEY = 'autoscan_torch_device_id';
 
 function autoScanCameraErrorMessage(err) {
@@ -198,6 +200,111 @@ function autoScanIsAndroid() {
   return /Android/i.test(navigator.userAgent);
 }
 
+function autoScanIsMobileDevice() {
+  return autoScanIsAndroid() || autoScanIsIOS() ||
+    (navigator.maxTouchPoints > 0 && window.matchMedia('(max-width: 960px)').matches);
+}
+
+function autoScanEnsureNativeInput() {
+  if (document.getElementById('autoScanNativeInput')) return;
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.id = 'autoScanNativeInput';
+  input.accept = 'image/jpeg,image/png,image/webp,image/*';
+  input.setAttribute('capture', 'environment');
+  input.style.display = 'none';
+  document.body.appendChild(input);
+  input.addEventListener('change', async () => {
+    const file = input.files?.[0];
+    input.value = '';
+    const context = autoScanState.pendingContext;
+    autoScanState.pendingContext = null;
+    if (!file || !context) return;
+    try {
+      await autoScanProcessImageFile(file, context);
+    } catch (e) {
+      alert('Could not process scan: ' + (e.message || 'unknown error'));
+    }
+  });
+}
+
+function autoScanLoadImageFromFile(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Could not load photo')); };
+    img.src = url;
+  });
+}
+
+function autoScanImageToCanvas(img, maxDim = 2600) {
+  let w = img.naturalWidth || img.width;
+  let h = img.naturalHeight || img.height;
+  const scale = Math.min(1, maxDim / Math.max(w, h));
+  w = Math.round(w * scale);
+  h = Math.round(h * scale);
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+  return canvas;
+}
+
+function autoScanDetectFromCanvas(srcCanvas) {
+  const sw = srcCanvas.width;
+  const sh = srcCanvas.height;
+  const aw = Math.min(720, sw);
+  const ah = Math.max(320, Math.round(aw * sh / sw));
+  const tmp = document.createElement('canvas');
+  tmp.width = aw;
+  tmp.height = ah;
+  tmp.getContext('2d').drawImage(srcCanvas, 0, 0, aw, ah);
+  const imageData = tmp.getContext('2d').getImageData(0, 0, aw, ah);
+  const gray = autoScanToGray(imageData);
+  return autoScanDetectDocument(gray, aw, ah);
+}
+
+async function autoScanProcessImageFile(file, context) {
+  window.ensureAutoScanModal();
+  autoScanState.context = context;
+  autoScanState.useNativeCapture = true;
+  autoScanState.review = null;
+
+  const img = await autoScanLoadImageFromFile(file);
+  const srcCanvas = autoScanImageToCanvas(img);
+  const doc = autoScanDetectFromCanvas(srcCanvas);
+  const bounds = doc?.bounds || autoScanDefaultGuide();
+  const corners = doc?.corners || autoScanBoundsToCorners(bounds);
+
+  autoScanState.review = {
+    srcCanvas,
+    corners: autoScanCloneCorners(corners),
+    bounds,
+    filterId: document.getElementById('autoScanFilterSelect')?.value || 'document',
+    cropEditing: false
+  };
+
+  document.getElementById('autoScanModal').style.display = 'flex';
+  autoScanShowReviewPanel();
+  window.autoScanUpdateReviewPreview();
+  if (typeof window.showNotification === 'function') {
+    window.showNotification('Adjust crop if needed, then confirm scan');
+  }
+}
+
+window.openAutoScanNative = function(context) {
+  if (window.PHOTO_NO_SCAN && window.PHOTO_NO_SCAN.has(context)) return;
+  const blobs = window.getPhotoBlobArray ? window.getPhotoBlobArray(context) : null;
+  if (blobs && blobs.length >= (window.PHOTO_UI?.maxCount || 10)) {
+    alert(`Maximum of ${window.PHOTO_UI.maxCount} photos reached.`);
+    return;
+  }
+  autoScanEnsureNativeInput();
+  autoScanState.pendingContext = context;
+  document.getElementById('autoScanNativeInput').click();
+};
+
 function autoScanBindModalEvents() {
   const closeBtn = document.getElementById('autoScanClose');
   if (closeBtn && !closeBtn.dataset.bound) {
@@ -261,7 +368,7 @@ window.ensureAutoScanModal = function() {
     <div id="autoScanReviewPanel" class="auto-scan-review" style="display:none;">
       <div class="auto-scan-review-header">
         <h3>Review scan</h3>
-        <p class="auto-scan-review-sub">Adjust crop borders if needed, pick a filter, then confirm or retry.</p>
+        <p class="auto-scan-review-sub">Document detected — adjust crop borders if needed, pick a filter, then confirm. Tap Retry to retake with your camera (flash is controlled by your camera app).</p>
       </div>
       <div id="autoScanCropEditor" class="auto-scan-crop-editor" style="display:none;">
         <div class="auto-scan-crop-stage">
@@ -1248,6 +1355,13 @@ function autoScanCropPointerUp(e) {
 
 window.autoScanRetry = async function() {
   const context = autoScanState.context;
+  if (autoScanState.useNativeCapture || autoScanIsMobileDevice()) {
+    autoScanState.review = null;
+    const modal = document.getElementById('autoScanModal');
+    if (modal) modal.style.display = 'none';
+    if (context) window.openAutoScanNative(context);
+    return;
+  }
   autoScanState.review = null;
   autoScanState.capturing = false;
   autoScanState.stableTicks = 0;
@@ -1327,16 +1441,24 @@ window.autoScanManualCapture = function() {
   autoScanCaptureFrame(bounds, corners);
 };
 
-window.openAutoScan = async function(context, cameraPromise) {
+window.openAutoScan = function(context) {
   if (window.PHOTO_NO_SCAN && window.PHOTO_NO_SCAN.has(context)) return;
   const blobs = window.getPhotoBlobArray ? window.getPhotoBlobArray(context) : null;
   if (blobs && blobs.length >= (window.PHOTO_UI?.maxCount || 10)) {
     alert(`Maximum of ${window.PHOTO_UI.maxCount} photos reached.`);
     return;
   }
+  if (autoScanIsMobileDevice()) {
+    window.openAutoScanNative(context);
+    return;
+  }
+  const cameraPromise = window.autoScanBeginCameraRequest?.();
+  window.openAutoScanLive(context, cameraPromise);
+};
 
+window.openAutoScanLive = async function(context, cameraPromise) {
   if (!cameraPromise) {
-    alert('Tap the Auto Scan button to start the camera.');
+    alert('Camera access is not available.');
     return;
   }
 
@@ -1353,6 +1475,7 @@ window.openAutoScan = async function(context, cameraPromise) {
   autoScanState.cameraStarting = false;
   autoScanState.torchOn = true;
   autoScanState.torchSupported = false;
+  autoScanState.useNativeCapture = false;
 
   autoScanShowScanPanel();
   autoScanSetStatus('Opening camera and flash…', false);
@@ -1416,4 +1539,6 @@ window.closeAutoScan = async function() {
   autoScanState.bounds = null;
   autoScanState.mode = 'scan';
   autoScanState.cameraStarting = false;
+  autoScanState.useNativeCapture = false;
+  autoScanState.pendingContext = null;
 };
