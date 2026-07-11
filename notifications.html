@@ -4,40 +4,36 @@
 <meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Swift Staging Tracker - Notifications Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<link rel="stylesheet" href="style.css?v=6.2" />
+<link rel="stylesheet" href="style.css?v=6.3" />
 </head>
 <body>
 <datalist id="dl_customers"></datalist><datalist id="dl_locations"></datalist><datalist id="dl_stagers"></datalist><datalist id="dl_pastEmails"></datalist>
 
 <div class="wrap">
-  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:12px;">
-    <div class="dropdown">
-      <button class="hamburger-btn" onclick="window.toggleMenu(event)">☰</button>
-      <div class="dropdown-content">
-        <a href="index.html"><b>Index</b> (Dashboard)</a>
-        <a href="stage.html" class="indented">↳ Staging Entries Log</a>
-        <a href="ship.html" class="indented">↳ Shipped Log</a>
-        <a href="reports.html"><b>Reports</b></a>
-        <a href="notifications.html"><b>Notifications</b></a>
-        <a href="contacts.html"><b>Contacts</b></a>
+  <header class="site-header">
+    <div class="site-header__start">
+      <div class="dropdown">
+        <button class="hamburger-btn" onclick="window.toggleMenu(event)">☰</button>
+        <div class="dropdown-content">
+          <a href="index.html"><b>Index</b> (Dashboard)</a>
+          <a href="stage.html" class="indented">↳ Staging Entries Log</a>
+          <a href="ship.html" class="indented">↳ Shipped Log</a>
+          <a href="reports.html"><b>Reports</b></a>
+          <a href="notifications.html"><b>Notifications</b></a>
+          <a href="contacts.html"><b>Contacts</b></a>
+        </div>
       </div>
     </div>
-    <h2 style="margin:0; flex: 1 1 auto; font-size: 20px;">Notifications Dashboard</h2><div id="authStatus"></div>
-  </div>
+    <h1 class="site-header__title">Notifications Dashboard</h1>
+    <div class="site-header__end"><div id="authStatus" class="auth-status"></div></div>
+  </header>
 
   <div class="card">
     <div class="split"><h3>Automated Notifications</h3></div>
-    <p style="color:#64748b; font-size: 13px; margin-top: 0; margin-bottom: 16px;">Trigger automated alerts via E-mail and SMS to Project Managers and Operations for key warehouse events.</p>
-    <div style="display:flex; flex-direction:column; gap:12px;">
-      
-            <button class="btn" style="background:#3b82f6; color:#fff; padding:16px; font-size:16px; border: none; cursor:pointer; font-weight:bold; box-shadow:0 4px 6px rgba(59, 130, 246, 0.2);" onclick="window.openNotifyReturnModal()">
-        Notify of Returns
-      </button>
-      
-      <button class="btn" style="background:#0ea5e9; color:#fff; padding:16px; font-size:16px; border: none; cursor:pointer; font-weight:bold; box-shadow:0 4px 6px rgba(14, 165, 233, 0.2);" onclick="window.openPoNotifyModal()">
-        PO Notification
-      </button>
-      
+    <p class="card-desc">Trigger automated alerts via E-mail and SMS to Project Managers and Operations for key warehouse events.</p>
+    <div class="action-stack">
+      <button class="btn btn-action-lg btn-notify" onclick="window.openNotifyReturnModal()">Notify of Returns</button>
+      <button class="btn btn-action-lg btn-info" onclick="window.openPoNotifyModal()">PO Notification</button>
     </div>
   </div>
 </div>

@@ -83,6 +83,11 @@ window.saveReportState = function() {
   localStorage.setItem('swift_report_state', JSON.stringify({queue: window.reportQueue, index: window.reportIndex, results: window.reportResults, filter: window.currentReportFilter}));
 };
 
+window.pauseReport = function() {
+  if (!window.activeReportMode) return;
+  window.saveReportState();
+};
+
 window.downloadCSV = function(data, filename) {
   const headers = ['SO', 'Customer', 'Location', 'Entry Date', 'Result'];
   let csv = headers.join(',') + '\n';

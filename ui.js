@@ -204,11 +204,11 @@ window.renderTables = function() {
       }
 
       sortedStaging.slice(0, limitStaging).forEach(o => {
-        const picBtn = (o.photo_urls && o.photo_urls.length > 0) ? `<button class="btn" style="padding:4px 8px; font-size:12px; margin-right:4px; height:auto;" onclick="window.openPhotoViewer('${o.id}')">View</button>` : '';
-        const editBtn = canEdit ? `<button class="btn-edit" onclick="window.openUniversalEditor('staging', '${o.id}')">Edit</button>` : `<span style="color:#94a3b8; font-size:11px;">Read-Only</span>`;
-        const chkBox = canEdit ? `<input type="checkbox" onchange="if(this.checked){ window.triggerShipModal('${o.id}'); this.checked=false; }">` : `<span style="color:#9ca3af;">—</span>`;
-        const commentBtn = o.comments ? `<button class="btn" style="padding:4px 8px; font-size:12px; background:#8b5cf6; color:#fff; height:auto;" onclick="window.openCommentModal('staging', '${o.id}')">See</button>` : (canEdit ? `<button class="btn" style="padding:4px 8px; font-size:12px; background:#e2e8f0; color:#475569; height:auto;" onclick="window.openCommentModal('staging', '${o.id}')">Add</button>` : `<span style="color:#9ca3af;">—</span>`);
-        const batchChk = `<input type="checkbox" style="width:18px;height:18px;" onchange="window.toggleBatchSelect('${o.id}', this.checked)" ${batchSelectedIds.has(o.id) ? 'checked' : ''}>`;
+        const picBtn = (o.photo_urls && o.photo_urls.length > 0) ? `<button class="btn btn-table btn-table--view" onclick="window.openPhotoViewer('${o.id}')">View</button>` : '';
+        const editBtn = canEdit ? `<button class="btn-edit" onclick="window.openUniversalEditor('staging', '${o.id}')">Edit</button>` : `<span class="text-readonly">Read-Only</span>`;
+        const chkBox = canEdit ? `<input type="checkbox" onchange="if(this.checked){ window.triggerShipModal('${o.id}'); this.checked=false; }">` : `<span class="text-muted">—</span>`;
+        const commentBtn = o.comments ? `<button class="btn btn-table btn-table--comment" onclick="window.openCommentModal('staging', '${o.id}')">See</button>` : (canEdit ? `<button class="btn btn-table btn-table--comment-add" onclick="window.openCommentModal('staging', '${o.id}')">Add</button>` : `<span class="text-muted">—</span>`);
+        const batchChk = `<input type="checkbox" class="batch-checkbox" onchange="window.toggleBatchSelect('${o.id}', this.checked)" ${batchSelectedIds.has(o.id) ? 'checked' : ''}>`;
 
         const rowBg = window.getRowColor(o.status);
         const trClass = rowBg ? `class="status-row"` : '';
@@ -240,11 +240,11 @@ window.renderTables = function() {
       shBody.innerHTML = ''; const limitShipped = $('#shippedLimitNotice') ? 20 : 999999;
       fShipped.slice(0, limitShipped).forEach(o => {
         const isRet = (o.carrier === 'RETURNED TO STOCK' || o.carrier === 'CONSOLIDATED'); const rowClass = isRet ? 'class="grey-strike"' : '';
-        const picBtn = (o.photo_urls && o.photo_urls.length > 0) ? `<button class="btn" style="padding:4px 8px; font-size:12px; margin-right:4px; height:auto;" onclick="window.openPhotoViewer('${o.id}')">View</button>` : '';
-        const editBtn = canEdit ? `<button class="btn-edit" onclick="window.openUniversalEditor('shipped', '${o.id}')">Edit</button>` : `<span style="color:#94a3b8; font-size:11px;">Read-Only</span>`;
-        const commentBtn = o.comments ? `<button class="btn" style="padding:4px 8px; font-size:12px; background:#8b5cf6; color:#fff; height:auto;" onclick="window.openCommentModal('shipped', '${o.id}')">See</button>` : (canEdit ? `<button class="btn" style="padding:4px 8px; font-size:12px; background:#e2e8f0; color:#475569; height:auto;" onclick="window.openCommentModal('shipped', '${o.id}')">Add</button>` : `<span style="color:#9ca3af;">—</span>`);
+        const picBtn = (o.photo_urls && o.photo_urls.length > 0) ? `<button class="btn btn-table btn-table--view" onclick="window.openPhotoViewer('${o.id}')">View</button>` : '';
+        const editBtn = canEdit ? `<button class="btn-edit" onclick="window.openUniversalEditor('shipped', '${o.id}')">Edit</button>` : `<span class="text-readonly">Read-Only</span>`;
+        const commentBtn = o.comments ? `<button class="btn btn-table btn-table--comment" onclick="window.openCommentModal('shipped', '${o.id}')">See</button>` : (canEdit ? `<button class="btn btn-table btn-table--comment-add" onclick="window.openCommentModal('shipped', '${o.id}')">Add</button>` : `<span class="text-muted">—</span>`);
 
-        const batchChk = `<input type="checkbox" style="width:18px;height:18px;" onchange="window.toggleBatchSelect('${o.id}', this.checked)" ${batchSelectedIds.has(o.id) ? 'checked' : ''}>`;
+        const batchChk = `<input type="checkbox" class="batch-checkbox" onchange="window.toggleBatchSelect('${o.id}', this.checked)" ${batchSelectedIds.has(o.id) ? 'checked' : ''}>`;
 
         shBody.insertAdjacentHTML('beforeend', `<tr ${rowClass}>
           ${window.labeledCell('Select', batchChk, 'show-in-batch', 'text-align:center;')}
@@ -508,6 +508,11 @@ document.addEventListener('change', function(e) {
 
 window.cancelDateModal = function() {
   if($('#futureDateModal')) $('#futureDateModal').style.display = 'none';
+  if (window.overdueAwaitingDate) {
+    window.overdueAwaitingDate = null;
+    if ($('#overdueResolveModal')) $('#overdueResolveModal').style.display = 'flex';
+    return;
+  }
   if(window.activeStatusDropdownId && $('#' + window.activeStatusDropdownId)) $('#' + window.activeStatusDropdownId).value = 'Partial';
 };
 
@@ -515,10 +520,157 @@ window.confirmDateModal = function() {
   const isTbd = $('#fd_tbd').checked; const dateVal = $('#fd_datePicker').value;
   if(!isTbd && !dateVal) return alert("Please select a date or check TBD.");
   const finalVal = isTbd ? 'TBD' : dateVal;
-  const sel = $('#' + window.activeStatusDropdownId);
+  if($('#futureDateModal')) $('#futureDateModal').style.display = 'none';
+
+  if (window.overdueAwaitingDate) {
+    const entryId = window.overdueAwaitingDate;
+    window.overdueAwaitingDate = null;
+    const entry = appData.staging.find(x => x.id === entryId);
+    if (entry) window.overdueTarget = entry;
+    window.overdueApplyStatus(finalVal);
+    return;
+  }
+
+  const sel = window.activeStatusDropdownId ? $('#' + window.activeStatusDropdownId) : null;
+  if (!sel) return;
   if (!Array.from(sel.options).some(opt => opt.value === finalVal)) {
     sel.insertAdjacentHTML('beforeend', `<option value="${finalVal}">${finalVal}</option>`);
   }
   sel.value = finalVal;
-  if($('#futureDateModal')) $('#futureDateModal').style.display = 'none';
+};
+
+window.overdueTarget = null;
+window.overdueAwaitingDate = null;
+
+window.isOverdueStagingEntry = function(entry) {
+  if (!entry || !entry.status) return false;
+  const status = String(entry.status).trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(status)) return false;
+  return status < new Date().toLocaleDateString('en-CA');
+};
+
+window.getOverdueHandledIds = function() {
+  try { return new Set(JSON.parse(sessionStorage.getItem('swift_overdue_handled') || '[]')); }
+  catch (e) { return new Set(); }
+};
+
+window.markOverdueHandled = function(id) {
+  const handled = window.getOverdueHandledIds();
+  handled.add(id);
+  sessionStorage.setItem('swift_overdue_handled', JSON.stringify([...handled]));
+};
+
+window.populateOverduePrompt = function(entry) {
+  window.overdueTarget = entry;
+  if ($('#od_so')) $('#od_so').textContent = entry.so;
+  if ($('#od_date')) {
+    const scheduled = String(entry.status).trim();
+    $('#od_date').textContent = /^\d{4}-\d{2}-\d{2}$/.test(scheduled)
+      ? new Date(scheduled + 'T12:00:00').toLocaleDateString()
+      : window.getFormattedStatus(scheduled);
+  }
+  const sameSo = appData.staging.filter(x => x.so === entry.so);
+  const shipped = appData.shipped.filter(x => x.so === entry.so);
+  let historyHtml = '';
+  if (sameSo.length) historyHtml += `<div style="margin-bottom:8px;"><b>Active staging:</b>${window.formatActiveStagingList(sameSo)}</div>`;
+  if (shipped.length) {
+    historyHtml += '<div><b>Past shipments:</b><ul style="margin:4px 0 0; padding-left:18px; font-size:12px;">';
+    shipped.slice(0, 5).forEach(e => {
+      historyHtml += `<li>${e.type} via ${e.carrier || '—'} (${new Date(e.shipped_at).toLocaleDateString()})</li>`;
+    });
+    historyHtml += '</ul></div>';
+  }
+  if ($('#od_history')) {
+    $('#od_history').innerHTML = historyHtml || '<span style="color:#6b7280;">No additional history.</span>';
+  }
+};
+
+window.showNextOverduePrompt = function() {
+  if (!$('#overduePromptModal')) return;
+  if ($('#overduePromptModal').style.display === 'flex') return;
+  if ($('#overdueResolveModal') && $('#overdueResolveModal').style.display === 'flex') return;
+
+  const handled = window.getOverdueHandledIds();
+  const overdue = appData.staging
+    .filter(x => window.isOverdueStagingEntry(x) && !handled.has(x.id))
+    .sort((a, b) => String(a.status).localeCompare(String(b.status)));
+
+  if (!overdue.length) return;
+  window.populateOverduePrompt(overdue[0]);
+  $('#overduePromptModal').style.display = 'flex';
+};
+
+window.checkOverdueShipments = function() {
+  if (!currentUser || window.activeReportMode) return;
+  const openModal = document.querySelector('.modal-overlay[style*="flex"]');
+  if (openModal && openModal.id !== 'overduePromptModal' && openModal.id !== 'overdueResolveModal') return;
+  window.showNextOverduePrompt();
+};
+
+window.overdueHandleYes = function() {
+  const entry = window.overdueTarget;
+  if (!entry) return;
+  if ($('#overduePromptModal')) $('#overduePromptModal').style.display = 'none';
+  window.markOverdueHandled(entry.id);
+  window.overdueTarget = null;
+  window.triggerShipModal(entry.id);
+};
+
+window.overdueHandleNo = function() {
+  const entry = window.overdueTarget;
+  if (!entry) return;
+  if ($('#overduePromptModal')) $('#overduePromptModal').style.display = 'none';
+  if ($('#od_res_so')) $('#od_res_so').textContent = entry.so;
+  if ($('#overdueResolveModal')) $('#overdueResolveModal').style.display = 'flex';
+};
+
+window.overdueApplyStatus = async function(newDbStatus) {
+  const entry = window.overdueTarget;
+  if (!entry || !currentUser) return;
+
+  const { error } = await supabaseClient.from('staging').update({ status: newDbStatus }).eq('id', entry.id);
+  if (error) return alert('Update failed: ' + error.message);
+
+  await window.logAction('staging', `Overdue SO ${entry.so}: status updated to ${window.getFormattedStatus(newDbStatus)}`);
+  window.markOverdueHandled(entry.id);
+  window.overdueTarget = null;
+  if ($('#overdueResolveModal')) $('#overdueResolveModal').style.display = 'none';
+  if (typeof window.showNotification === 'function') window.showNotification('Status updated');
+  window.loadCloudData();
+};
+
+window.overdueUpdateStatus = function(uiStatus) {
+  if (!window.overdueTarget) return;
+
+  if (uiStatus === 'Ship On Future Date') {
+    window.overdueAwaitingDate = window.overdueTarget.id;
+    const todayStr = new Date().toLocaleDateString('en-CA');
+    if ($('#fd_datePicker')) {
+      $('#fd_datePicker').min = todayStr;
+      $('#fd_datePicker').value = todayStr;
+      $('#fd_datePicker').disabled = false;
+    }
+    if ($('#fd_tbd')) $('#fd_tbd').checked = false;
+    if ($('#overdueResolveModal')) $('#overdueResolveModal').style.display = 'none';
+    if ($('#futureDateModal')) $('#futureDateModal').style.display = 'flex';
+    return;
+  }
+
+  window.overdueApplyStatus(window.getDbStatus(uiStatus));
+};
+
+window.overdueDelete = async function() {
+  const entry = window.overdueTarget;
+  if (!entry || !currentUser) return;
+  if (!confirm(`Delete overdue staging entry for SO ${entry.so}?`)) return;
+
+  const { error } = await supabaseClient.from('staging').delete().eq('id', entry.id);
+  if (error) return alert('Delete failed: ' + error.message);
+
+  await window.logAction('staging', `Overdue SO ${entry.so}: entry deleted`);
+  window.markOverdueHandled(entry.id);
+  window.overdueTarget = null;
+  if ($('#overdueResolveModal')) $('#overdueResolveModal').style.display = 'none';
+  if (typeof window.showNotification === 'function') window.showNotification('Entry deleted');
+  window.loadCloudData();
 };

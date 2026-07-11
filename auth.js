@@ -11,10 +11,10 @@ window.initAuth = async function() {
 window.updateAuthUI = function() {
   if (currentUser) {
     const shortEmail = currentUser.email.length > 15 ? currentUser.email.split('@')[0] : currentUser.email;
-    if($('#authStatus')) $('#authStatus').innerHTML = `<span style="font-size:13px; color:#475569; margin-right:8px; font-weight:700;">${shortEmail}</span> <button class="btn" style="padding:0 12px; font-size:12px; background:#64748b; height:34px;" onclick="window.signOut()">Sign Out</button>`;
+    if($('#authStatus')) $('#authStatus').innerHTML = `<span class="auth-status__label">${shortEmail}</span><button class="btn btn-toolbar btn-muted" onclick="window.signOut()">Sign Out</button>`;
     if($('#entryFormCard')) $('#entryFormCard').style.display = 'block'; 
   } else {
-    if($('#authStatus')) $('#authStatus').innerHTML = `<button class="btn" style="padding:0 12px; font-size:12px; margin-right:4px; height:34px; background:#fff; color:#475569; border:1px solid #cbd5e1; box-shadow:none;" onclick="document.querySelector('#loginModal').style.display='flex'">Sign In</button> <button class="btn" style="padding:0 12px; font-size:12px; background:#0ea5e9; height:34px;" onclick="window.requestAccess()">Sign Up</button>`;
+    if($('#authStatus')) $('#authStatus').innerHTML = `<button class="btn btn-toolbar btn-ghost" onclick="document.querySelector('#loginModal').style.display='flex'">Sign In</button><button class="btn btn-toolbar btn-info" onclick="window.requestAccess()">Sign Up</button>`;
     if($('#entryFormCard')) $('#entryFormCard').style.display = 'none'; 
   }
 };
