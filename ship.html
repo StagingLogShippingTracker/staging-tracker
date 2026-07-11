@@ -2,11 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<script>try{var t=localStorage.getItem('swift_theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}</script>
 <title>Swift Staging Tracker - Shipped Expanded Log</title>
 <meta name="theme-color" content="#e04015" />
 <link rel="manifest" href="manifest.webmanifest" />
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<link rel="stylesheet" href="style.css?v=7.7" />
+<link rel="stylesheet" href="style.css?v=7.8" />
 </head>
 <body class="log-page">
 <datalist id="dl_customers"></datalist><datalist id="dl_locations"></datalist><datalist id="dl_stagers"></datalist><datalist id="dl_pastEmails"></datalist><datalist id="dl_sos"></datalist>
@@ -42,7 +43,7 @@
 
   <div class="card">
     <div class="split"><h3>Shipped Log</h3>
-      <div class="toolbar-row"><button class="btn btn-sm btn-purple" onclick="window.open('ship.html?batch=true', '_self')">Batch Mode</button><button class="btn btn-sm btn-info" onclick="window.openChangelogModal('shipped')">Changelog</button></div>
+      <div class="toolbar-row"><button class="btn btn-sm btn-purple batch-mode-trigger" onclick="window.open('ship.html?batch=true', '_self')">Batch Mode</button><button class="btn btn-sm btn-info" onclick="window.openChangelogModal('shipped')">Changelog</button></div>
     </div>
     <div class="tblwrap"><div class="tbl-scroller"><table id="tblShipped" class="responsive-log-table">
       <thead><tr>
@@ -263,6 +264,6 @@
 <script src="batch.js?v=6.0"></script>
 <script src="autoscan.js?v=3.0"></script>
 <script src="media.js?v=5.4"></script>
-<script src="app.js?v=4.6"></script>
+<script src="app.js?v=4.7"></script>
 </body>
 </html>
