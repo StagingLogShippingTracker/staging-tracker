@@ -509,7 +509,17 @@ window.submitPoNotification = async function() {
 
     if (pmNameVal) {
       const pmSmsEmail = window.resolvePmSmsEmail(pmNameVal);
-      const smsBody = `PO ${poVal} received - ${custVal}. Containers: ${dynamicType || 'None'}. Location: ${locVal}. Weight: ${weightVal || '—'} lbs. Received by ${receivedByVal} at ${currentTimeStamp}.${commentsVal ? ' Notes: ' + commentsVal : ''}`;
+      const smsLines = [
+        `• PO: ${poVal}`,
+        `• Customer: ${custVal}`,
+        `• Containers: ${dynamicType || 'None'}`,
+        `• Location: ${locVal}`,
+        `• Weight: ${weightVal || '—'} lbs`,
+        `• Received By: ${receivedByVal}`,
+        `• Received At: ${currentTimeStamp}`
+      ];
+      if (commentsVal) smsLines.push(`• Comments: ${commentsVal}`);
+      const smsBody = smsLines.join('\n');
       window.sendPmEmailWebhook({
         to: pmSmsEmail,
         cc: 'warehouse1@swiftsupply.ca',
