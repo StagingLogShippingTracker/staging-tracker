@@ -3,7 +3,7 @@
 window.PHOTO_UI = {
   camera: '📷 Live Photo',
   upload: '📁 File Upload',
-  autoScan: '📄 Auto Scan',
+  autoScan: '📄 Scan Document',
   section: 'Photos',
   badge: 'Photo',
   maxCount: 10
@@ -142,12 +142,7 @@ window.injectAutoScanButtons = function() {
     btn.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      if (typeof window.autoScanBeginCameraRequest !== 'function' || typeof window.openAutoScan !== 'function') {
-        alert('Auto Scan is still loading. Please try again in a moment.');
-        return;
-      }
-      const cameraPromise = window.autoScanBeginCameraRequest();
-      window.openAutoScan(context, cameraPromise);
+      window.openAutoScan(context);
     });
     grid.appendChild(btn);
   });
