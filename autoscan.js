@@ -20,6 +20,7 @@ const autoScanState = {
   prevBounds: null,
   prevCorners: null,
   corners: null,
+  bounds: null,
   capturing: false,
   torchOn: true,
   torchSupported: false,
@@ -42,6 +43,7 @@ window.ensureAutoScanModal = function() {
       <video id="autoScanVideo" autoplay playsinline muted></video>
       <canvas id="autoScanOverlay"></canvas>
       <div class="auto-scan-flash" id="autoScanFlash"></div>
+      <button type="button" id="autoScanManualBtn" class="auto-scan-manual-btn">Capture now</button>
       <div class="auto-scan-status is-searching" id="autoScanStatus">Position document in frame</div>
     </div>
 
@@ -78,6 +80,7 @@ window.ensureAutoScanModal = function() {
     if (e.target.id === 'autoScanModal') window.closeAutoScan();
   });
   document.getElementById('autoScanTorchBtn').addEventListener('click', () => window.toggleAutoScanTorch());
+  document.getElementById('autoScanManualBtn').addEventListener('click', () => window.autoScanManualCapture());
   document.getElementById('autoScanRetryBtn').addEventListener('click', () => window.autoScanRetry());
   document.getElementById('autoScanConfirmBtn').addEventListener('click', () => window.autoScanConfirm());
   document.getElementById('autoScanAdjustCropBtn').addEventListener('click', () => window.autoScanToggleCropEditor());
@@ -132,16 +135,38 @@ function autoScanResizeOverlay() {
 }
 
 function autoScanDefaultGuide() {
-  return { left: 0.08, top: 0.14, right: 0.92, bottom: 0.86 };
+  return { left: 0.14, top: 0.1, right: 0.86, bottom: 0.9 };
+}
+
+function autoScanBoundsArea(bounds) {
+  if (!bounds) return 0;
+  return Math.max(0, bounds.right - bounds.left) * Math.max(0, bounds.bottom - bounds.top);
+}
+
+function autoScanVideoDisplayRect(video) {
+  const cw = video.clientWidth || 1;
+  const ch = video.clientHeight || 1;
+  const vw = video.videoWidth || 1;
+  const vh = video.videoHeight || 1;
+  const scale = Math.min(cw / vw, ch / vh);
+  const dw = vw * scale;
+  const dh = vh * scale;
+  return { ox: (cw - dw) / 2, oy: (ch - dh) / 2, dw, dh, cw, ch };
+}
+
+function autoScanMapPointToOverlay(pt, rect) {
+  return { x: rect.ox + pt.x * rect.dw, y: rect.oy + pt.y * rect.dh };
 }
 
 function autoScanBoundsValid(bounds) {
   if (!bounds) return false;
   const bw = bounds.right - bounds.left;
   const bh = bounds.bottom - bounds.top;
-  if (bw < 0.15 || bh < 0.15 || bw > 0.98 || bh > 0.98) return false;
+  if (bw < 0.18 || bh < 0.22 || bw > 0.95 || bh > 0.95) return false;
+  const area = bw * bh;
+  if (area < 0.06 || area > 0.68) return false;
   const ratio = bw / bh;
-  return ratio >= 0.2 && ratio <= 4.5;
+  return ratio >= 0.35 && ratio <= 1.35;
 }
 
 function autoScanBoundsDelta(a, b) {
@@ -205,31 +230,64 @@ function autoScanOtsu(gray) {
 }
 
 function autoScanDetectPaperBounds(gray, w, h) {
-  const blurred = autoScanBlurGray(gray, w, h);
-  const thresh = autoScanOtsu(blurred);
-  const marginX = Math.floor(w * 0.03);
-  const marginY = Math.floor(h * 0.03);
-  let minX = w, minY = h, maxX = 0, maxY = 0, count = 0;
-  for (let y = marginY; y < h - marginY; y++) {
-    for (let x = marginX; x < w - marginX; x++) {
-      if (blurred[y * w + x] >= thresh - 8) {
-        if (x < minX) minX = x;
-        if (x > maxX) maxX = x;
-        if (y < minY) minY = y;
-        if (y > maxY) maxY = y;
-        count++;
+  const border = Math.max(3, Math.floor(Math.min(w, h) * 0.05));
+  let borderSum = 0, borderN = 0;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      if (x < border || x >= w - border || y < border || y >= h - border) {
+        borderSum += gray[y * w + x];
+        borderN++;
       }
     }
   }
-  if (count < w * h * 0.04) return null;
-  const padX = Math.floor(w * 0.008);
-  const padY = Math.floor(h * 0.008);
-  return {
-    left: Math.max(0, (minX - padX) / w),
-    top: Math.max(0, (minY - padY) / h),
-    right: Math.min(1, (maxX + 1 + padX) / w),
-    bottom: Math.min(1, (maxY + 1 + padY) / h)
+  const bg = borderN ? borderSum / borderN : 90;
+
+  const collect = (thresh) => {
+    const mx = Math.floor(w * 0.04);
+    const my = Math.floor(h * 0.04);
+    let minX = w, minY = h, maxX = 0, maxY = 0, count = 0;
+    for (let y = my; y < h - my; y++) {
+      for (let x = mx; x < w - mx; x++) {
+        if (gray[y * w + x] >= thresh) {
+          minX = Math.min(minX, x);
+          maxX = Math.max(maxX, x);
+          minY = Math.min(minY, y);
+          maxY = Math.max(maxY, y);
+          count++;
+        }
+      }
+    }
+    if (count < w * h * 0.03) return null;
+    const padX = Math.floor(w * 0.01);
+    const padY = Math.floor(h * 0.01);
+    return {
+      left: Math.max(0, (minX - padX) / w),
+      top: Math.max(0, (minY - padY) / h),
+      right: Math.min(1, (maxX + 1 + padX) / w),
+      bottom: Math.min(1, (maxY + 1 + padY) / h)
+    };
   };
+
+  let thresh = Math.min(215, bg + 26);
+  let bounds = collect(thresh);
+  if (bounds && autoScanBoundsArea(bounds) > 0.65) bounds = collect(thresh + 18);
+  if (bounds && autoScanBoundsArea(bounds) > 0.65) bounds = collect(thresh + 32);
+  return bounds;
+}
+
+function autoScanMeanBrightness(gray, w, h, bounds) {
+  const x0 = Math.floor(bounds.left * w);
+  const x1 = Math.floor(bounds.right * w);
+  const y0 = Math.floor(bounds.top * h);
+  const y1 = Math.floor(bounds.bottom * h);
+  let sum = 0, n = 0;
+  for (let y = y0; y < y1; y++) {
+    for (let x = x0; x < x1; x++) {
+      sum += gray[y * w + x];
+      n++;
+    }
+  }
+  return n ? sum / n : 0;
 }
 
 function autoScanCannyEdges(gray, w, h) {
@@ -269,19 +327,15 @@ function autoScanCannyEdges(gray, w, h) {
   return edges;
 }
 
-function autoScanPickBounds(paper, edge) {
-  if (edge && autoScanBoundsValid(edge)) return edge;
-  if (paper && autoScanBoundsValid(paper)) return paper;
-  if (paper && edge) {
-    const merged = {
-      left: Math.min(paper.left, edge.left),
-      top: Math.min(paper.top, edge.top),
-      right: Math.max(paper.right, edge.right),
-      bottom: Math.max(paper.bottom, edge.bottom)
-    };
-    if (autoScanBoundsValid(merged)) return merged;
-  }
-  return paper || edge;
+function autoScanDetectDocument(gray, w, h) {
+  const bounds = autoScanDetectPaperBounds(gray, w, h);
+  if (!bounds || !autoScanBoundsValid(bounds)) return null;
+
+  const corners = autoScanBoundsToCorners(bounds);
+  const edgeScore = autoScanEdgeDensity(gray, w, h, bounds);
+  const innerBright = autoScanMeanBrightness(gray, w, h, bounds);
+  if (innerBright < 115 && edgeScore < 6) return null;
+  return { bounds, corners, edgeScore };
 }
 
 function autoScanBoundsToCorners(bounds) {
@@ -293,74 +347,24 @@ function autoScanBoundsToCorners(bounds) {
   ];
 }
 
-function autoScanRefineCornersFromEdges(edges, w, h, bounds) {
-  const pts = [];
-  const bx0 = Math.floor(bounds.left * w);
-  const bx1 = Math.floor(bounds.right * w);
-  const by0 = Math.floor(bounds.top * h);
-  const by1 = Math.floor(bounds.bottom * h);
-  for (let y = by0; y < by1; y++) {
-    for (let x = bx0; x < bx1; x++) {
-      if (edges[y * w + x] === 2) pts.push({ x, y });
-    }
-  }
-  if (pts.length < 30) return autoScanBoundsToCorners(bounds);
-
-  const pick = (fn) => {
-    let best = pts[0];
-    let score = fn(best);
-    for (let i = 1; i < pts.length; i++) {
-      const s = fn(pts[i]);
-      if (s < score) { score = s; best = pts[i]; }
-    }
-    return { x: best.x / w, y: best.y / h };
-  };
-
-  return [
-    pick(p => p.x + p.y),
-    pick(p => -p.x + p.y),
-    pick(p => -p.x - p.y),
-    pick(p => p.x - p.y)
-  ];
+function autoScanCornersToBounds(corners) {
+  let left = 1, top = 1, right = 0, bottom = 0;
+  corners.forEach(p => {
+    left = Math.min(left, p.x);
+    top = Math.min(top, p.y);
+    right = Math.max(right, p.x);
+    bottom = Math.max(bottom, p.y);
+  });
+  return { left, top, right, bottom };
 }
 
-function autoScanDetectDocument(gray, w, h) {
-  const paper = autoScanDetectPaperBounds(gray, w, h);
-  const edges = autoScanCannyEdges(gray, w, h);
-  let edgeBounds = null;
-
-  const col = new Float32Array(w);
-  const row = new Float32Array(h);
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      if (edges[y * w + x] === 2) { col[x]++; row[y]++; }
-    }
+function autoScanCornersValid(corners) {
+  if (!corners || corners.length !== 4) return false;
+  for (const p of corners) {
+    if (p.x < 0.01 || p.x > 0.99 || p.y < 0.01 || p.y > 0.99) return false;
   }
-  const xs = Math.floor(w * 0.05), xe = Math.floor(w * 0.95);
-  const ys = Math.floor(h * 0.05), ye = Math.floor(h * 0.95);
-  const peak = (arr, start, end, forward) => {
-    let best = -1, idx = forward ? start : end;
-    for (let i = start; forward ? i <= end : i >= end; i += forward ? 1 : -1) {
-      if (arr[i] > best) { best = arr[i]; idx = i; }
-    }
-    return idx;
-  };
-  if (col.some(v => v > 0)) {
-    edgeBounds = {
-      left: peak(col, xs, xe, true) / w,
-      right: (peak(col, xs, xe, false) + 1) / w,
-      top: peak(row, ys, ye, true) / h,
-      bottom: (peak(row, ys, ye, false) + 1) / h
-    };
-  }
-
-  const bounds = autoScanPickBounds(paper, edgeBounds);
-  if (!bounds || !autoScanBoundsValid(bounds)) return null;
-
-  const corners = autoScanRefineCornersFromEdges(edges, w, h, bounds);
-  const edgeScore = autoScanEdgeDensity(gray, w, h, bounds);
-  if (edgeScore < 5) return null;
-  return { bounds, corners, edgeScore };
+  const b = autoScanCornersToBounds(corners);
+  return autoScanBoundsArea(b) >= 0.05;
 }
 
 function autoScanEdgeDensity(gray, w, h, bounds) {
@@ -390,7 +394,8 @@ function autoScanMotionScore(gray, prevGray) {
 
 function autoScanDrawOverlay(bounds, corners, ready) {
   const overlay = document.getElementById('autoScanOverlay');
-  if (!overlay) return;
+  const video = document.getElementById('autoScanVideo');
+  if (!overlay || !video) return;
   const ctx = overlay.getContext('2d');
   const w = overlay.width;
   const h = overlay.height;
@@ -398,21 +403,24 @@ function autoScanDrawOverlay(bounds, corners, ready) {
   ctx.fillStyle = 'rgba(0,0,0,0.55)';
   ctx.fillRect(0, 0, w, h);
 
-  const drawPath = (pts) => {
+  const rect = autoScanVideoDisplayRect(video);
+  const normPts = corners || autoScanBoundsToCorners(bounds || autoScanDefaultGuide());
+  const pts = normPts.map(p => autoScanMapPointToOverlay(p, rect));
+
+  const drawPath = (points) => {
     ctx.beginPath();
-    ctx.moveTo(pts[0].x * w, pts[0].y * h);
-    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x * w, pts[i].y * h);
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let i = 1; i < points.length; i++) ctx.lineTo(points[i].x, points[i].y);
     ctx.closePath();
   };
 
-  const pts = corners || autoScanBoundsToCorners(bounds || autoScanDefaultGuide());
   drawPath(pts);
   ctx.save();
   ctx.clip();
   ctx.clearRect(0, 0, w, h);
   ctx.restore();
 
-  const color = ready ? '#22c55e' : (corners ? '#facc15' : '#ffffff');
+  const color = ready ? '#22c55e' : (bounds && corners ? '#facc15' : '#ffffff');
   ctx.strokeStyle = color;
   ctx.lineWidth = 3;
   drawPath(pts);
@@ -421,7 +429,7 @@ function autoScanDrawOverlay(bounds, corners, ready) {
   const len = 22;
   ctx.fillStyle = color;
   pts.forEach((p) => {
-    const px = p.x * w, py = p.y * h;
+    const px = p.x, py = p.y;
     ctx.beginPath();
     ctx.arc(px, py, 7, 0, Math.PI * 2);
     ctx.fill();
@@ -550,9 +558,48 @@ function autoScanFilterHighContrast(canvas) {
   return out;
 }
 
-function autoScanBuildFilteredWarp(srcCanvas, corners, filterId) {
-  const { outW, outH } = autoScanOutputSize(corners, srcCanvas.width, srcCanvas.height);
-  let warped = autoScanWarpPerspective(srcCanvas, corners, outW, outH);
+function autoScanRectCrop(srcCanvas, bounds) {
+  const b = bounds || autoScanDefaultGuide();
+  const sw = srcCanvas.width;
+  const sh = srcCanvas.height;
+  const x0 = Math.max(0, Math.floor(b.left * sw));
+  const y0 = Math.max(0, Math.floor(b.top * sh));
+  const cw = Math.max(1, Math.floor((b.right - b.left) * sw));
+  const ch = Math.max(1, Math.floor((b.bottom - b.top) * sh));
+  const out = document.createElement('canvas');
+  out.width = cw;
+  out.height = ch;
+  out.getContext('2d').drawImage(srcCanvas, x0, y0, cw, ch, 0, 0, cw, ch);
+  return out;
+}
+
+function autoScanSanitizeCorners(corners, bounds) {
+  const base = autoScanBoundsToCorners(bounds || autoScanDefaultGuide());
+  if (!corners || corners.length !== 4) return base;
+  const c = autoScanCloneCorners(corners).map(p => ({
+    x: Math.max(0.02, Math.min(0.98, p.x)),
+    y: Math.max(0.02, Math.min(0.98, p.y))
+  }));
+  if (!autoScanCornersValid(c)) return base;
+  const warpedArea = autoScanBoundsArea(autoScanCornersToBounds(c));
+  if (warpedArea < 0.05) return base;
+  return c;
+}
+
+function autoScanSafeCrop(srcCanvas, corners, bounds) {
+  const b = bounds || autoScanCornersToBounds(corners || autoScanBoundsToCorners(autoScanDefaultGuide()));
+  const c = autoScanSanitizeCorners(corners, b);
+  const { outW, outH } = autoScanOutputSize(c, srcCanvas.width, srcCanvas.height);
+  const minDim = Math.min(srcCanvas.width, srcCanvas.height) * 0.18;
+  if (outW >= minDim && outH >= minDim * 0.45 && autoScanCornersValid(c)) {
+    const warped = autoScanWarpPerspective(srcCanvas, c, outW, outH);
+    if (warped.width >= minDim && warped.height >= minDim * 0.35) return warped;
+  }
+  return autoScanRectCrop(srcCanvas, b);
+}
+
+function autoScanBuildFilteredWarp(srcCanvas, corners, filterId, bounds) {
+  const warped = autoScanSafeCrop(srcCanvas, corners, bounds);
   const filter = AUTO_SCAN_FILTERS[filterId] || AUTO_SCAN_FILTERS.document;
   return filter.apply(warped);
 }
@@ -578,15 +625,18 @@ function autoScanAnalyzeFrame() {
   autoScanState.prevGray = gray;
 
   const doc = autoScanDetectDocument(gray, aw, ah);
-  const bounds = doc ? doc.bounds : autoScanDefaultGuide();
-  const corners = doc ? doc.corners : null;
   const detected = !!doc;
-  const still = motion < 8;
-  const boundsStable = autoScanBoundsDelta(bounds, autoScanState.prevBounds) < 0.028;
-  const cornersStable = !corners || autoScanCornersDelta(corners, autoScanState.prevCorners) < 0.07;
-  autoScanState.prevBounds = bounds;
-  autoScanState.prevCorners = corners;
-  autoScanState.corners = corners;
+  const bounds = detected ? doc.bounds : null;
+  const corners = detected ? doc.corners : null;
+  const still = motion < 7;
+  const boundsStable = detected && autoScanBoundsDelta(bounds, autoScanState.prevBounds) < 0.024;
+  const cornersStable = detected && (!corners || autoScanCornersDelta(corners, autoScanState.prevCorners) < 0.05);
+  autoScanState.prevBounds = detected ? bounds : null;
+  autoScanState.prevCorners = detected ? corners : null;
+  if (detected) {
+    autoScanState.bounds = bounds;
+    autoScanState.corners = corners;
+  }
 
   return { bounds, corners, detected, still, boundsStable, cornersStable, motion };
 }
@@ -742,6 +792,7 @@ async function autoScanCaptureFrame(bounds, corners) {
   autoScanState.review = {
     srcCanvas: src,
     corners: c,
+    bounds: bounds || autoScanState.bounds || autoScanDefaultGuide(),
     filterId: document.getElementById('autoScanFilterSelect')?.value || 'document',
     cropEditing: false
   };
@@ -810,7 +861,7 @@ window.autoScanUpdateReviewPreview = function() {
   const preview = document.getElementById('autoScanReviewPreview');
   if (!preview) return;
 
-  const result = autoScanBuildFilteredWarp(review.srcCanvas, review.corners, review.filterId);
+  const result = autoScanBuildFilteredWarp(review.srcCanvas, review.corners, review.filterId, review.bounds);
   const maxW = Math.min(window.innerWidth - 32, 720);
   const scale = Math.min(1, maxW / result.width);
   preview.width = Math.round(result.width * scale);
@@ -882,6 +933,7 @@ window.autoScanRetry = async function() {
   autoScanState.prevBounds = null;
   autoScanState.prevCorners = null;
   autoScanState.corners = null;
+  autoScanState.bounds = null;
   autoScanShowScanPanel();
   autoScanSetStatus(autoScanState.torchOn ? 'Flash on — center document in frame' : 'Center document in frame', false);
   autoScanDrawOverlay(null, null, false);
@@ -907,7 +959,7 @@ window.autoScanConfirm = function() {
   const context = autoScanState.context;
   if (!review || !context) return;
 
-  const result = autoScanBuildFilteredWarp(review.srcCanvas, review.corners, review.filterId);
+  const result = autoScanBuildFilteredWarp(review.srcCanvas, review.corners, review.filterId, review.bounds);
   result.toBlob((blob) => {
     if (blob) {
       window.addPhotoFromBlob(blob, context);
@@ -927,20 +979,28 @@ function autoScanTick() {
 
   if (ready) {
     autoScanState.stableTicks++;
-    autoScanSetStatus('Hold still — detecting document borders…', false);
-    autoScanDrawOverlay(bounds, corners, autoScanState.stableTicks >= 4);
-    if (autoScanState.stableTicks >= 7) {
+    autoScanSetStatus('Hold still — locking onto document…', false);
+    autoScanDrawOverlay(bounds, corners, autoScanState.stableTicks >= 5);
+    if (autoScanState.stableTicks >= 9) {
       autoScanSetStatus('Captured — review your scan', true);
       autoScanCaptureFrame(bounds, corners);
     }
   } else {
     autoScanState.stableTicks = 0;
-    if (!detected) autoScanSetStatus('Center document in frame', false);
+    if (!detected) autoScanSetStatus('Point camera at white paper on dark surface', false);
     else if (!still) autoScanSetStatus('Hold camera steady', false);
     else autoScanSetStatus('Align all document edges in frame', false);
-    autoScanDrawOverlay(bounds, corners, false);
+    autoScanDrawOverlay(detected ? bounds : null, detected ? corners : null, false);
   }
 }
+
+window.autoScanManualCapture = function() {
+  if (autoScanState.capturing || autoScanState.mode !== 'scan') return;
+  const bounds = autoScanState.bounds || autoScanDefaultGuide();
+  const corners = autoScanState.corners || autoScanBoundsToCorners(bounds);
+  autoScanSetStatus('Capturing…', false);
+  autoScanCaptureFrame(bounds, corners);
+};
 
 window.openAutoScan = async function(context) {
   if (window.PHOTO_NO_SCAN && window.PHOTO_NO_SCAN.has(context)) return;
@@ -962,10 +1022,11 @@ window.openAutoScan = async function(context) {
   autoScanState.prevBounds = null;
   autoScanState.prevCorners = null;
   autoScanState.corners = null;
+  autoScanState.bounds = null;
   autoScanState.capturing = false;
   autoScanState.torchOn = true;
   autoScanShowScanPanel();
-  autoScanSetStatus('Turning on camera flash…', false);
+  autoScanSetStatus('Starting camera…', false);
   autoScanDrawOverlay(null, null, false);
 
   document.getElementById('autoScanModal').style.display = 'flex';
@@ -977,6 +1038,7 @@ window.openAutoScan = async function(context) {
     autoScanState.videoTrack = stream.getVideoTracks()[0] || null;
     const video = document.getElementById('autoScanVideo');
     video.srcObject = stream;
+    video.onloadeddata = () => autoScanSetStatus('Camera ready — align document', false);
     await video.play();
 
     await autoScanEnableTorchImmediate(autoScanState.videoTrack);
@@ -1036,5 +1098,6 @@ window.closeAutoScan = async function() {
   autoScanState.prevBounds = null;
   autoScanState.prevCorners = null;
   autoScanState.corners = null;
+  autoScanState.bounds = null;
   autoScanState.mode = 'scan';
 };
