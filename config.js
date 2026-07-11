@@ -1,6 +1,12 @@
 const SUPABASE_URL = 'https://gdrpdiwykmnybmkadlrv.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdkcnBkaXd5a21ueWJta2FkbHJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1MjMyMTIsImV4cCI6MjA5NjA5OTIxMn0.Z7ih_vQic1GtzCyZmTEV-RWJnmuaNZQDfOV2_Fvan5g';
 const MAKE_EMAIL_WEBHOOK_URL = 'https://hook.us2.make.com/cxvgao3s4lwnrmntk762j25qct6bkkft';
+const TRACKER_SITE_URL = 'https://swiftoperations.github.io/staging-tracker/';
+const TRACKER_LOGO_URL = `${TRACKER_SITE_URL}staging-shipping-logo.png`;
+
+window.buildEmailNotificationFooter = function() {
+  return `For more details, visit: <a href="${TRACKER_SITE_URL}">Staging Log & Shipping Tracker</a><br><br><a href="${TRACKER_SITE_URL}"><img src="${TRACKER_LOGO_URL}" alt="Staging Log & Shipping Tracker" style="max-width:220px;height:auto;border:0;display:block;" /></a><br><br>Thanks`;
+};
 
 const PM_SMS_ROSTER = {
   'Amanda Sievers': '7807204487@msg.telus.com',
