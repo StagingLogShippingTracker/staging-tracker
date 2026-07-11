@@ -14,7 +14,8 @@ const PM_SMS_ROSTER = {
   'Kim Mulder': '7809530959@msg.telus.com',
   'Miranda McBrayne': '7809356267@fido.ca',
   'Renee Jean': '7808196520@msg.telus.com',
-  'Sean Fitzpatrick': '7802660362@msg.telus.com'
+  'Sean Fitzpatrick': '7802660362@msg.telus.com',
+  'Steele Hult': '3069037728@sms.sasktel.com'
 };
 
 window.resolvePmSmsEmail = function(inputVal) {
