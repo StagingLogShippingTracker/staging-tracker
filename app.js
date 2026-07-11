@@ -21,6 +21,23 @@ window.initSiteFooter = function() {
   document.body.appendChild(footer);
 };
 
+window.initPmSmsDropdown = function() {
+  let dl = document.getElementById('dl_pmSmsNames');
+  if (!dl) {
+    dl = document.createElement('datalist');
+    dl.id = 'dl_pmSmsNames';
+    document.body.appendChild(dl);
+  }
+  dl.innerHTML = Object.keys(PM_SMS_ROSTER).sort().map(name => `<option value="${name}"></option>`).join('');
+  const input = document.getElementById('pn_pm_email');
+  if (input) {
+    input.setAttribute('list', 'dl_pmSmsNames');
+    input.placeholder = 'Select PM name...';
+    input.disabled = false;
+    input.removeAttribute('style');
+  }
+};
+
 window.initEmployeeEmailDropdown = function() {
   if (typeof rawContactsData === 'undefined') return;
   const validContacts = rawContactsData.filter(c => c.email && c.email.toLowerCase() !== 'n/a');
@@ -48,6 +65,7 @@ function initApp() {
   if (isBatchMode) document.body.classList.add('batch-mode');
 
   window.initEmployeeEmailDropdown();
+  window.initPmSmsDropdown();
   window.renderStagingStatusLegend();
   if (typeof window.initPersonByRoster === 'function') window.initPersonByRoster();
   if (typeof window.initCarrierRoster === 'function') window.initCarrierRoster();

@@ -1,6 +1,29 @@
 const SUPABASE_URL = 'https://gdrpdiwykmnybmkadlrv.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdkcnBkaXd5a21ueWJta2FkbHJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1MjMyMTIsImV4cCI6MjA5NjA5OTIxMn0.Z7ih_vQic1GtzCyZmTEV-RWJnmuaNZQDfOV2_Fvan5g';
 const MAKE_EMAIL_WEBHOOK_URL = 'https://hook.us2.make.com/cxvgao3s4lwnrmntk762j25qct6bkkft';
+
+const PM_SMS_ROSTER = {
+  'Amanda Sievers': '7807204487@msg.telus.com',
+  'Amber Shuya': '7809141677@msg.telus.com',
+  'Ben Karpiak': '7802320414@txt.bell.ca',
+  'Brandon Kaminski': '7809755556@msg.telus.com',
+  'Carmen Martin': '7802385255@pcs.rogers.com',
+  'Chris Acorn': '7807253416@msg.telus.com',
+  'Dustin Strachan': '7809759387@msg.telus.com',
+  'Kim Mulder': '7809530959@msg.telus.com',
+  'Miranda McBrayne': '7809356267@fido.ca',
+  'Renee Jean': '7808196520@msg.telus.com',
+  'Sean Fitzpatrick': '7802660362@msg.telus.com'
+};
+
+window.resolvePmSmsEmail = function(inputVal) {
+  if (!inputVal) return null;
+  const val = inputVal.trim();
+  if (PM_SMS_ROSTER[val]) return PM_SMS_ROSTER[val];
+  const lower = val.toLowerCase();
+  const match = Object.keys(PM_SMS_ROSTER).find(name => name.toLowerCase() === lower);
+  return match ? PM_SMS_ROSTER[match] : null;
+};
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const $ = sel => document.querySelector(sel);
 

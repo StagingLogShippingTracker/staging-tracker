@@ -644,8 +644,10 @@ function autoScanAnalyzeFrame() {
 function autoScanTrackTorchCaps(track) {
   const caps = track.getCapabilities?.() || {};
   return {
-    torch: caps.torch === true,
-    fillFlash: Array.isArray(caps.fillLightMode) ? caps.fillLightMode.includes('flash') : caps.fillLightMode === 'flash'
+    torch: Object.prototype.hasOwnProperty.call(caps, 'torch'),
+    fillFlash: Array.isArray(caps.fillLightMode)
+      ? caps.fillLightMode.includes('flash')
+      : caps.fillLightMode === 'flash'
   };
 }
 
@@ -684,8 +686,11 @@ async function autoScanApplyTorch(track, on) {
 
 async function autoScanEnableTorchImmediate(track) {
   if (!track) return false;
+  for (let i = 0; i < 12 && track.readyState !== 'live'; i++) {
+    await new Promise(r => setTimeout(r, 50));
+  }
   let ok = await autoScanApplyTorch(track, true);
-  for (const delay of [50, 120, 250, 500, 900]) {
+  for (const delay of [80, 160, 320, 640, 1000, 1500]) {
     if (ok) break;
     await new Promise(r => setTimeout(r, delay));
     ok = await autoScanApplyTorch(track, true);
@@ -709,11 +714,9 @@ async function autoScanOpenCameraStream() {
     focusMode: { ideal: 'continuous' }
   };
   const attempts = [
-    { video: { ...base, advanced: [{ torch: true }] }, audio: false },
-    { video: { ...base, torch: true }, audio: false },
-    { video: { ...base, advanced: [{ fillLightMode: 'flash' }] }, audio: false },
-    { video: { ...base, fillLightMode: { ideal: 'flash' } }, audio: false },
-    { video: base, audio: false }
+    { video: base, audio: false },
+    { video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false },
+    { video: { facingMode: 'environment' }, audio: false }
   ];
   let lastErr = null;
   for (const constraints of attempts) {
@@ -724,6 +727,30 @@ async function autoScanOpenCameraStream() {
     }
   }
   throw lastErr || new Error('Camera unavailable');
+}
+
+function autoScanStartTorchLoop(track) {
+  if (!track || autoScanState.torchRetryTimer) return;
+  let attempts = 0;
+  autoScanState.torchRetryTimer = setInterval(async () => {
+    if (!autoScanState.torchOn || autoScanState.mode !== 'scan' || !autoScanState.videoTrack) {
+      clearInterval(autoScanState.torchRetryTimer);
+      autoScanState.torchRetryTimer = null;
+      return;
+    }
+    if (autoScanState.torchSupported) {
+      await autoScanApplyTorch(autoScanState.videoTrack, true);
+      clearInterval(autoScanState.torchRetryTimer);
+      autoScanState.torchRetryTimer = null;
+      return;
+    }
+    if (++attempts > 20) {
+      clearInterval(autoScanState.torchRetryTimer);
+      autoScanState.torchRetryTimer = null;
+      return;
+    }
+    await autoScanEnableTorchImmediate(autoScanState.videoTrack);
+  }, 250);
 }
 
 async function autoScanSetTorch(on) {
@@ -846,12 +873,28 @@ function autoScanDrawCropEditor() {
     ctx.strokeStyle = '#1f2937';
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.arc(p.x, p.y, 12, 0, Math.PI * 2);
+    ctx.arc(p.x, p.y, 16, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
+    ctx.fillStyle = '#1f2937';
+    ctx.fill();
     review._handlePx = review._handlePx || [];
     review._handlePx[idx] = { x: p.x, y: p.y };
   });
+}
+
+const AUTO_SCAN_CROP_HIT_RADIUS = 44;
+
+function autoScanCropPointerCoords(overlay, clientX, clientY) {
+  const rect = overlay.getBoundingClientRect();
+  const scaleX = overlay.width / rect.width;
+  const scaleY = overlay.height / rect.height;
+  return {
+    x: Math.max(0, Math.min(overlay.width, (clientX - rect.left) * scaleX)),
+    y: Math.max(0, Math.min(overlay.height, (clientY - rect.top) * scaleY))
+  };
 }
 
 window.autoScanUpdateReviewPreview = function() {
@@ -891,16 +934,15 @@ function autoScanCropPointerDown(e) {
   const review = autoScanState.review;
   if (!review?.cropEditing) return;
   const overlay = document.getElementById('autoScanCropOverlay');
-  const rect = overlay.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
+  const { x, y } = autoScanCropPointerCoords(overlay, e.clientX, e.clientY);
   let hit = -1;
   (review._handlePx || []).forEach((h, i) => {
-    if (Math.hypot(h.x - x, h.y - y) < 22) hit = i;
+    if (Math.hypot(h.x - x, h.y - y) < AUTO_SCAN_CROP_HIT_RADIUS) hit = i;
   });
   if (hit < 0) return;
   autoScanState.cropDrag = { idx: hit, overlay };
   overlay.setPointerCapture(e.pointerId);
+  overlay.style.cursor = 'grabbing';
   e.preventDefault();
 }
 
@@ -909,10 +951,8 @@ function autoScanCropPointerMove(e) {
   const review = autoScanState.review;
   if (!drag || !review) return;
   const overlay = drag.overlay;
-  const rect = overlay.getBoundingClientRect();
-  const x = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
-  const y = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
-  review.corners[drag.idx] = { x: x / rect.width, y: y / rect.height };
+  const { x, y } = autoScanCropPointerCoords(overlay, e.clientX, e.clientY);
+  review.corners[drag.idx] = { x: x / overlay.width, y: y / overlay.height };
   autoScanDrawCropEditor();
   window.autoScanUpdateReviewPreview();
   e.preventDefault();
@@ -920,6 +960,7 @@ function autoScanCropPointerMove(e) {
 
 function autoScanCropPointerUp(e) {
   if (!autoScanState.cropDrag) return;
+  autoScanState.cropDrag.overlay.style.cursor = 'grab';
   autoScanState.cropDrag.overlay?.releasePointerCapture?.(e.pointerId);
   autoScanState.cropDrag = null;
 }
@@ -942,7 +983,10 @@ window.autoScanRetry = async function() {
   if (video && autoScanState.stream) {
     try {
       await video.play();
-      if (autoScanState.torchOn) await autoScanEnableTorchImmediate(autoScanState.videoTrack);
+      if (autoScanState.torchOn) {
+        await autoScanEnableTorchImmediate(autoScanState.videoTrack);
+        autoScanStartTorchLoop(autoScanState.videoTrack);
+      }
       autoScanResizeOverlay();
       autoScanState.timer = setInterval(autoScanTick, 100);
     } catch (_) {
@@ -1038,32 +1082,18 @@ window.openAutoScan = async function(context) {
     autoScanState.videoTrack = stream.getVideoTracks()[0] || null;
     const video = document.getElementById('autoScanVideo');
     video.srcObject = stream;
-    video.onloadeddata = () => autoScanSetStatus('Camera ready — align document', false);
+    video.onloadeddata = () => autoScanSetStatus('Camera ready — turning on flash…', false);
+    video.addEventListener('playing', () => autoScanEnableTorchImmediate(autoScanState.videoTrack), { once: true });
     await video.play();
 
     await autoScanEnableTorchImmediate(autoScanState.videoTrack);
+    autoScanStartTorchLoop(autoScanState.videoTrack);
     autoScanSetStatus(
       autoScanState.torchSupported
         ? 'Flash on — align document edges in frame'
         : 'Align document in frame (using screen boost on capture)',
       false
     );
-
-    let torchAttempts = 0;
-    autoScanState.torchRetryTimer = setInterval(async () => {
-      if (!autoScanState.torchOn || autoScanState.mode !== 'scan') return;
-      if (autoScanState.torchSupported) {
-        clearInterval(autoScanState.torchRetryTimer);
-        autoScanState.torchRetryTimer = null;
-        return;
-      }
-      if (++torchAttempts > 8) {
-        clearInterval(autoScanState.torchRetryTimer);
-        autoScanState.torchRetryTimer = null;
-        return;
-      }
-      await autoScanEnableTorchImmediate(autoScanState.videoTrack);
-    }, 400);
 
     autoScanResizeOverlay();
     autoScanStopScanLoop();
