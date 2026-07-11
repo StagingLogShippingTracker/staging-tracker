@@ -4,35 +4,38 @@
 <meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Swift Staging Tracker - Reports Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<link rel="stylesheet" href="style.css?v=6.2" />
+<link rel="stylesheet" href="style.css?v=6.3" />
 </head>
 <body>
 <datalist id="dl_customers"></datalist><datalist id="dl_locations"></datalist><datalist id="dl_stagers"></datalist><datalist id="dl_pastEmails"></datalist><datalist id="dl_sos"></datalist>
 
 <div class="wrap">
-  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:12px;">
-    <div class="dropdown">
-      <button class="hamburger-btn" onclick="window.toggleMenu(event)">☰</button>
-      <div class="dropdown-content">
-        <a href="index.html"><b>Index</b> (Dashboard)</a>
-        <a href="stage.html" class="indented">↳ Staging Entries Log</a>
-        <a href="ship.html" class="indented">↳ Shipped Log</a>
-        <a href="reports.html"><b>Reports</b></a>
-        <a href="notifications.html"><b>Notifications</b></a>
-        <a href="contacts.html"><b>Contacts</b></a>
+  <header class="site-header">
+    <div class="site-header__start">
+      <div class="dropdown">
+        <button class="hamburger-btn" onclick="window.toggleMenu(event)">☰</button>
+        <div class="dropdown-content">
+          <a href="index.html"><b>Index</b> (Dashboard)</a>
+          <a href="stage.html" class="indented">↳ Staging Entries Log</a>
+          <a href="ship.html" class="indented">↳ Shipped Log</a>
+          <a href="reports.html"><b>Reports</b></a>
+          <a href="notifications.html"><b>Notifications</b></a>
+          <a href="contacts.html"><b>Contacts</b></a>
+        </div>
       </div>
     </div>
-    <h2 style="margin:0; flex: 1 1 auto; font-size: 20px;">Reports Dashboard</h2><div id="authStatus"></div>
-  </div>
+    <h1 class="site-header__title">Reports Dashboard</h1>
+    <div class="site-header__end"><div id="authStatus" class="auth-status"></div></div>
+  </header>
 
   <div class="card">
     <div class="split"><h3>Operations Reporting</h3></div>
-    <p style="color:#64748b; font-size: 13px; margin-top: 0; margin-bottom: 16px;">Run system diagnostics and verify staging location accuracy to resolve discrepancies and keep the warehouse inventory synced.</p>
-    <div style="display:flex; flex-direction:column; gap:12px;">
-      <button class="btn" style="background:#8b5cf6; padding:16px; font-size:16px;" onclick="window.startStagingReport('all')">Staging Verification Report (All)</button>
-      <button class="btn" style="background:#0ea5e9; padding:16px; font-size:16px;" onclick="window.startStagingReport('aisle')">Stage Verification Report (Aisle Locations Only)</button>
-      <button class="btn" style="background:#f59e0b; padding:16px; font-size:16px;" onclick="window.startStagingReport('non_aisle')">Staging Verification Report (Shipping Locations Only)</button>
-      <button class="btn" style="background:#dc2626; padding:16px; font-size:16px;" onclick="window.startStagingReport('discrepancies')">Discrepancies Report</button>
+    <p class="card-desc">Run system diagnostics and verify staging location accuracy to resolve discrepancies and keep the warehouse inventory synced.</p>
+    <div class="action-stack">
+      <button class="btn btn-action-lg btn-purple" onclick="window.startStagingReport('all')">Staging Verification Report (All)</button>
+      <button class="btn btn-action-lg btn-info" onclick="window.startStagingReport('aisle')">Stage Verification Report (Aisle Locations Only)</button>
+      <button class="btn btn-action-lg btn-warning" onclick="window.startStagingReport('non_aisle')">Staging Verification Report (Shipping Locations Only)</button>
+      <button class="btn btn-action-lg btn-danger" onclick="window.startStagingReport('discrepancies')">Discrepancies Report</button>
     </div>
   </div>
 </div>

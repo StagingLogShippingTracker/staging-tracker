@@ -6,15 +6,14 @@
 <title>Swift Staging Tracker</title>
 <link rel="manifest" href="data:application/manifest+json;charset=utf-8,%7B%22short_name%22%3A%22StagingTracker%22%2C%22name%22%3A%22Swift%20Staging%20Tracker%20Hub%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22https%3A%2F%2Fcdn-icons-png.flaticon.com%2F512%2F3014%2F3014166.png%22%2C%22type%22%3A%22image%22%2C%22sizes%22%3A%22512x512%22%7D%5D%2C%22start_url%22%3A%22.%22%2C%22background_color%22%3A%22%23f6f7f9%22%2C%22theme_color%22%3A%22%23dd4d25%22%2C%22display%22%3A%22standalone%22%2C%22orientation%22%3A%22portrait%22%7D" id="pwa-manifest">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<link rel="stylesheet" href="style.css?v=6.2" />
+<link rel="stylesheet" href="style.css?v=6.3" />
 </head>
 <body>
 <datalist id="dl_customers"></datalist><datalist id="dl_locations"></datalist><datalist id="dl_stagers"></datalist><datalist id="dl_pastEmails"></datalist><datalist id="dl_sos"></datalist>
 
- <div class="wrap"> 
-  <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:18px;">
-    
-    <div style="flex: 1; display: flex; justify-content: flex-start;">
+ <div class="wrap">
+  <header class="site-header site-header--dashboard">
+    <div class="site-header__start">
       <div class="dropdown">
         <button class="hamburger-btn" onclick="window.toggleMenu(event)">☰</button>
         <div class="dropdown-content">
@@ -27,22 +26,21 @@
         </div>
       </div>
     </div>
-    
-    <div style="flex: 0 1 auto; text-align: center; padding: 0 10px;">
+
+    <div class="site-header__brand">
       <img src="Swift+Supply+logo.webp" alt="Swift Supply Logo" class="nav-logo" />
-      <h2 style="margin: 0; font-size: clamp(16px, 4.5vw, 20px); font-weight: 500; color: #475569; line-height: 1.2;">Staging & Shipping Tracker</h2>
+      <h1 class="site-header__subtitle">Staging &amp; Shipping Tracker</h1>
     </div>
 
-    <div style="flex: 1; display: flex; justify-content: flex-end;">
-      <div id="authStatus" style="display:flex; gap:8px; align-items:flex-start; justify-content:flex-end; flex-wrap:wrap;"></div>
+    <div class="site-header__end">
+      <div id="authStatus" class="auth-status"></div>
     </div>
+  </header>
 
-  </div>
-
-  <div id="err" style="display:none; background:#fee2e2; color:#991b1b; padding:10px; border-radius:10px; margin-bottom:10px"></div>
+  <div id="err" class="alert-error"></div>
 
   <div class="grid">
-    <div class="tile" onclick="window.openOrdersModal()" style="cursor:pointer; transition:0.2s;" onmouseover="this.style.borderColor='var(--brand)'" onmouseout="this.style.borderColor='#e6e7eb'"><h4>Orders</h4><div id="kOrders" class="big">0</div></div>
+    <div class="tile tile--interactive" onclick="window.openOrdersModal()"><h4>Orders</h4><div id="kOrders" class="big">0</div></div>
     <div class="tile"><h4>Containers</h4><div id="kContainers" class="big">0</div></div>
     <div class="tile"><h4>Skids</h4><div id="kSkids" class="big">0</div></div>
     <div class="tile"><h4>Boxes</h4><div id="kBoxes" class="big">0</div></div>
@@ -93,8 +91,8 @@
 
   <div class="card" id="stagingCard">
     <div class="split"><h3>Staging Entries</h3>
-      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-left:auto; justify-content:flex-end;">
-        <select id="sortToggle" class="btn" style="height:34px; background:#fff; border:1px solid #cbd5e1; color:#475569; font-size:13px; padding:0 12px; cursor:pointer;" onchange="window.renderTables()">
+      <div class="toolbar-row">
+        <select id="sortToggle" class="select-sort" onchange="window.renderTables()">
           <option value="urgency">Sort: Urgency (Default)</option>
           <option value="date_desc">Sort: Newest First</option>
           <option value="date_asc">Sort: Oldest First</option>
@@ -103,7 +101,7 @@
           <option value="customer">Sort: Customer A-Z</option>
           <option value="so">Sort: SO# A-Z</option>
         </select>
-        <button class="btn" style="background:#8b5cf6; padding:6px 12px;" onclick="window.open('stage.html?batch=true', '_blank')">Batch Mode</button><button class="btn" style="background:#0ea5e9; padding:6px 12px; margin-right:4px;" onclick="window.openChangelogModal('staging')">Changelog</button><button id="expandStaging" class="btn" onclick="window.open('stage.html', '_blank')" style="padding:6px 12px">Expand</button>
+        <button class="btn btn-sm btn-purple" onclick="window.open('stage.html?batch=true', '_blank')">Batch Mode</button><button class="btn btn-sm btn-info" onclick="window.openChangelogModal('staging')">Changelog</button><button id="expandStaging" class="btn btn-sm" onclick="window.open('stage.html', '_blank')">Expand</button>
       </div>
     </div>
     <div id="stagingStatusLegend" class="staging-status-legend" aria-label="Shipping status color legend"></div>
@@ -117,7 +115,7 @@
 
   <div class="card" id="shippedCard">
     <div class="split"><h3>Shipped Log</h3>
-      <div style="display:flex; gap:8px; margin-left:auto;"><button class="btn" style="background:#8b5cf6; padding:6px 12px;" onclick="window.open('ship.html?batch=true', '_blank')">Batch Mode</button><button class="btn" style="background:#0ea5e9; padding:6px 12px;" onclick="window.openChangelogModal('shipped')">Changelog</button><button id="expandShipped" class="btn" onclick="window.open('ship.html', '_blank')" style="padding:6px 12px;">Expand</button></div>
+      <div class="toolbar-row"><button class="btn btn-sm btn-purple" onclick="window.open('ship.html?batch=true', '_blank')">Batch Mode</button><button class="btn btn-sm btn-info" onclick="window.openChangelogModal('shipped')">Changelog</button><button id="expandShipped" class="btn btn-sm" onclick="window.open('ship.html', '_blank')">Expand</button></div>
     </div>
     <div class="tblwrap"><div class="tbl-scroller"><table id="tblShipped" class="responsive-log-table">
       <thead><tr>
