@@ -2,9 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Good, you? How about now? - Contacts Directory</title>
+<title>Swift Staging Tracker - Contacts Directory</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<link rel="stylesheet" href="style.css?v=6.3" />
+<link rel="stylesheet" href="style.css?v=6.4" />
 </head>
 <body>
 
@@ -68,18 +68,18 @@
 </div>
 
 <!-- Scripts -->
-<script src="employees.js?v=2.5"></script>
-<script src="config.js?v=2.5"></script>
-<script src="auth.js?v=2.5"></script>
-<script src="ui.js?v=6.2"></script>
-<script src="history.js?v=2.5"></script>
+<script src="employees.js?v=3.3"></script>
+<script src="config.js?v=3.3"></script>
+<script src="auth.js?v=3.3"></script>
+<script src="ui.js?v=6.4"></script>
+<script src="history.js?v=3.4"></script>
 <script src="split.js?v=3.7"></script>
 <script src="reports.js?v=3.7"></script>
-<script src="operations.js?v=4.0"></script>
+<script src="operations.js?v=4.1"></script>
 <script src="batch.js?v=6.0"></script>
 <script src="media.js?v=5.2"></script>
 <script src="autoscan.js?v=2.1"></script>
-<script src="app.js?v=4.0"></script>
+<script src="app.js?v=4.1"></script>
 
 <script>
   // Inject the parsed CSV data
@@ -144,7 +144,7 @@
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = "GoodYou_Contacts_Export.csv";
+    a.download = "Swift_Contacts_Export.csv";
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
