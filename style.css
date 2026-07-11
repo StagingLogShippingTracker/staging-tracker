@@ -1,7 +1,7 @@
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600;700&display=swap');
 
 :root {
-  --font-sans: 'Montserrat', sans-serif;
+  --font-sans: 'Oswald', sans-serif;
   --brand: #dd4d25;
   --brand-hover: #c4431f;
   --surface: #ffffff;
@@ -37,8 +37,8 @@ body {
   margin: 0;
   font-family: var(--font-sans);
   font-size: 14px;
-  font-weight: 500;
-  line-height: 1.5;
+  font-weight: 400;
+  line-height: 1.45;
   background: var(--surface-subtle);
   color: var(--text);
   -webkit-font-smoothing: antialiased;
@@ -46,7 +46,7 @@ body {
 
 .wrap { max-width: 1100px; margin: var(--space-xl) auto; padding: var(--space-md); }
 
-h1, h2, h3, h4 { font-weight: 800; margin: 0 0 var(--space-lg); line-height: 1.25; }
+h1, h2, h3, h4 { font-weight: 700; margin: 0 0 var(--space-lg); line-height: 1.25; }
 
 /* ── Site header ── */
 .site-header {
@@ -864,7 +864,7 @@ input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; margin: 0; 
   .btn-edit, .btn { padding: 8px 12px; font-size: 12px; }
   .photo-options-grid { grid-template-columns: 1fr; }
   .photo-options-grid--scan { grid-template-columns: 1fr; }
-  .header-brand-img { height: 110px; width: auto; }
+  .nav-brand-logo { height: 165px; width: auto; max-width: 100%; }
   .staging-status-legend { gap: 4px 10px; }
   .staging-status-legend__item { font-size: 10.5px; }
   .site-header__brand { order: -1; flex: 1 1 100%; padding: 0; margin-bottom: var(--space-xs); }
@@ -889,20 +889,23 @@ input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; margin: 0; 
 .so-link { color: var(--brand); cursor: pointer; text-decoration: underline; transition: color 0.2s; display: inline-block; max-width: 140px; white-space: normal; overflow-wrap: break-word; }
 .so-link:hover { color: #0284c7; }
 
-.header-brand-img {
+.nav-brand-logo {
   display: block;
-  margin-left: auto;
-  margin-right: auto;
-  height: 110px;
+  height: 165px;
   width: auto;
   max-width: 100%;
+  margin: 0 auto 5px;
   object-fit: contain;
 }
 
 @media (min-width: 768px) {
-  .header-brand-img {
-    height: 176px;
+  .nav-brand-logo {
+    height: 285px;
   }
+}
+
+@media (max-width: 767px) {
+  .nav-brand-logo { height: 165px; }
 }
 
 /* Contacts page batch mode (moved from inline) */
