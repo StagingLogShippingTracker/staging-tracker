@@ -20,8 +20,8 @@ window.updateAuthUI = function() {
 };
 
 window.requestAccess = function() {
-  const subject = encodeURIComponent("Access Request: Swift Staging Tracker");
-  const body = encodeURIComponent("Hello,\n\nI am requesting user access to create and edit entries on the Swift Staging Tracker.\n\nPlease set up an account for me and let me know my login credentials.\n\nThank you.");
+  const subject = encodeURIComponent("Access Request: Good, you? How about now?");
+  const body = encodeURIComponent("Hello,\n\nI am requesting user access to create and edit entries on Good, you? How about now?.\n\nPlease set up an account for me and let me know my login credentials.\n\nThank you.");
   window.location.href = `mailto:warehouse2@swiftsupply.ca?subject=${subject}&body=${body}`;
 };
 

@@ -1,10 +1,20 @@
-// --- autoscan.js — document scanner with torch + perspective crop ---
+// --- autoscan.js — document scanner with torch, crop preview, and filters ---
+
+const AUTO_SCAN_FILTERS = {
+  none: { label: 'Original (color)', apply: (canvas) => canvas },
+  bw: { label: 'Simple B&W', apply: autoScanFilterSimpleBw },
+  bwStrong: { label: 'Strong B&W', apply: autoScanFilterStrongBw },
+  document: { label: 'Document (adaptive)', apply: autoScanFilterDocument },
+  contrast: { label: 'High contrast', apply: autoScanFilterHighContrast }
+};
 
 const autoScanState = {
   context: null,
+  mode: 'scan',
   stream: null,
   videoTrack: null,
   timer: null,
+  torchRetryTimer: null,
   stableTicks: 0,
   prevGray: null,
   prevBounds: null,
@@ -14,7 +24,9 @@ const autoScanState = {
   torchOn: true,
   torchSupported: false,
   analysisCanvas: null,
-  analysisCtx: null
+  analysisCtx: null,
+  review: null,
+  cropDrag: null
 };
 
 window.ensureAutoScanModal = function() {
@@ -23,20 +35,84 @@ window.ensureAutoScanModal = function() {
 <div id="autoScanModal" class="modal-overlay" style="display:none;">
   <div class="auto-scan-shell">
     <button type="button" class="modal-close-x" id="autoScanClose" aria-label="Close">&times;</button>
-    <div class="auto-scan-hint">Align paperwork inside the frame — flash is on for best scan</div>
-    <button type="button" id="autoScanTorchBtn" class="auto-scan-torch-btn" title="Toggle flash">⚡ Flash On</button>
-    <video id="autoScanVideo" autoplay playsinline muted></video>
-    <canvas id="autoScanOverlay"></canvas>
-    <div class="auto-scan-flash" id="autoScanFlash"></div>
-    <div class="auto-scan-status is-searching" id="autoScanStatus">Position document in frame</div>
+
+    <div id="autoScanScanPanel" class="auto-scan-panel">
+      <div class="auto-scan-hint">Align paperwork inside the frame — flash turns on automatically</div>
+      <button type="button" id="autoScanTorchBtn" class="auto-scan-torch-btn" title="Toggle flash">⚡ Flash On</button>
+      <video id="autoScanVideo" autoplay playsinline muted></video>
+      <canvas id="autoScanOverlay"></canvas>
+      <div class="auto-scan-flash" id="autoScanFlash"></div>
+      <div class="auto-scan-status is-searching" id="autoScanStatus">Position document in frame</div>
+    </div>
+
+    <div id="autoScanReviewPanel" class="auto-scan-review" style="display:none;">
+      <div class="auto-scan-review-header">
+        <h3>Review scan</h3>
+        <p class="auto-scan-review-sub">Adjust crop borders if needed, pick a filter, then confirm or retry.</p>
+      </div>
+      <div id="autoScanCropEditor" class="auto-scan-crop-editor" style="display:none;">
+        <div class="auto-scan-crop-stage">
+          <canvas id="autoScanCropSource"></canvas>
+          <canvas id="autoScanCropOverlay"></canvas>
+        </div>
+        <p class="auto-scan-crop-hint">Drag the corner handles to match the document edges</p>
+      </div>
+      <div class="auto-scan-review-preview-wrap">
+        <canvas id="autoScanReviewPreview"></canvas>
+      </div>
+      <div class="auto-scan-review-controls">
+        <label class="auto-scan-filter-label" for="autoScanFilterSelect">Scan filter</label>
+        <select id="autoScanFilterSelect" class="auto-scan-filter-select"></select>
+        <div class="auto-scan-review-actions">
+          <button type="button" id="autoScanAdjustCropBtn" class="btn btn-muted auto-scan-btn">Adjust crop</button>
+          <button type="button" id="autoScanRetryBtn" class="btn auto-scan-btn" style="background:#64748b;">Retry</button>
+          <button type="button" id="autoScanConfirmBtn" class="btn auto-scan-btn">Use this scan</button>
+        </div>
+      </div>
+    </div>
   </div>
 </div>`);
+
   document.getElementById('autoScanClose').addEventListener('click', () => window.closeAutoScan());
   document.getElementById('autoScanModal').addEventListener('click', (e) => {
     if (e.target.id === 'autoScanModal') window.closeAutoScan();
   });
   document.getElementById('autoScanTorchBtn').addEventListener('click', () => window.toggleAutoScanTorch());
+  document.getElementById('autoScanRetryBtn').addEventListener('click', () => window.autoScanRetry());
+  document.getElementById('autoScanConfirmBtn').addEventListener('click', () => window.autoScanConfirm());
+  document.getElementById('autoScanAdjustCropBtn').addEventListener('click', () => window.autoScanToggleCropEditor());
+  document.getElementById('autoScanFilterSelect').addEventListener('change', () => window.autoScanUpdateReviewPreview());
+
+  const cropOverlay = document.getElementById('autoScanCropOverlay');
+  cropOverlay.addEventListener('pointerdown', autoScanCropPointerDown);
+  cropOverlay.addEventListener('pointermove', autoScanCropPointerMove);
+  cropOverlay.addEventListener('pointerup', autoScanCropPointerUp);
+  cropOverlay.addEventListener('pointercancel', autoScanCropPointerUp);
+
+  const sel = document.getElementById('autoScanFilterSelect');
+  sel.innerHTML = Object.entries(AUTO_SCAN_FILTERS).map(([id, f]) =>
+    `<option value="${id}">${f.label}</option>`
+  ).join('');
+  sel.value = 'document';
 };
+
+function autoScanShowScanPanel() {
+  autoScanState.mode = 'scan';
+  const scan = document.getElementById('autoScanScanPanel');
+  const review = document.getElementById('autoScanReviewPanel');
+  if (scan) scan.style.display = 'block';
+  if (review) review.style.display = 'none';
+  document.getElementById('autoScanTorchBtn').style.display = '';
+}
+
+function autoScanShowReviewPanel() {
+  autoScanState.mode = 'review';
+  document.getElementById('autoScanScanPanel').style.display = 'none';
+  document.getElementById('autoScanReviewPanel').style.display = 'flex';
+  document.getElementById('autoScanTorchBtn').style.display = 'none';
+  document.getElementById('autoScanCropEditor').style.display = 'none';
+  document.getElementById('autoScanAdjustCropBtn').textContent = 'Adjust crop';
+}
 
 function autoScanSetStatus(text, ready) {
   const el = document.getElementById('autoScanStatus');
@@ -56,16 +132,16 @@ function autoScanResizeOverlay() {
 }
 
 function autoScanDefaultGuide() {
-  return { left: 0.1, top: 0.16, right: 0.9, bottom: 0.84 };
+  return { left: 0.08, top: 0.14, right: 0.92, bottom: 0.86 };
 }
 
 function autoScanBoundsValid(bounds) {
   if (!bounds) return false;
   const bw = bounds.right - bounds.left;
   const bh = bounds.bottom - bounds.top;
-  if (bw < 0.18 || bh < 0.18 || bw > 0.97 || bh > 0.97) return false;
+  if (bw < 0.15 || bh < 0.15 || bw > 0.98 || bh > 0.98) return false;
   const ratio = bw / bh;
-  return ratio >= 0.22 && ratio <= 4.2;
+  return ratio >= 0.2 && ratio <= 4.5;
 }
 
 function autoScanBoundsDelta(a, b) {
@@ -78,6 +154,10 @@ function autoScanCornersDelta(a, b) {
   let d = 0;
   for (let i = 0; i < 4; i++) d += Math.abs(a[i].x - b[i].x) + Math.abs(a[i].y - b[i].y);
   return d;
+}
+
+function autoScanCloneCorners(corners) {
+  return corners.map(p => ({ x: p.x, y: p.y }));
 }
 
 function autoScanToGray(imageData) {
@@ -127,12 +207,12 @@ function autoScanOtsu(gray) {
 function autoScanDetectPaperBounds(gray, w, h) {
   const blurred = autoScanBlurGray(gray, w, h);
   const thresh = autoScanOtsu(blurred);
-  const marginX = Math.floor(w * 0.04);
-  const marginY = Math.floor(h * 0.04);
+  const marginX = Math.floor(w * 0.03);
+  const marginY = Math.floor(h * 0.03);
   let minX = w, minY = h, maxX = 0, maxY = 0, count = 0;
   for (let y = marginY; y < h - marginY; y++) {
     for (let x = marginX; x < w - marginX; x++) {
-      if (blurred[y * w + x] >= thresh) {
+      if (blurred[y * w + x] >= thresh - 8) {
         if (x < minX) minX = x;
         if (x > maxX) maxX = x;
         if (y < minY) minY = y;
@@ -141,9 +221,14 @@ function autoScanDetectPaperBounds(gray, w, h) {
       }
     }
   }
-  if (count < w * h * 0.06) return null;
+  if (count < w * h * 0.04) return null;
+  const padX = Math.floor(w * 0.008);
+  const padY = Math.floor(h * 0.008);
   return {
-    left: minX / w, top: minY / h, right: (maxX + 1) / w, bottom: (maxY + 1) / h
+    left: Math.max(0, (minX - padX) / w),
+    top: Math.max(0, (minY - padY) / h),
+    right: Math.min(1, (maxX + 1 + padX) / w),
+    bottom: Math.min(1, (maxY + 1 + padY) / h)
   };
 }
 
@@ -161,8 +246,8 @@ function autoScanCannyEdges(gray, w, h) {
       if (m > maxM) maxM = m;
     }
   }
-  const hi = maxM * 0.22;
-  const lo = maxM * 0.08;
+  const hi = maxM * 0.18;
+  const lo = maxM * 0.06;
   const edges = new Uint8Array(w * h);
   for (let i = 0; i < mag.length; i++) {
     if (mag[i] >= hi) edges[i] = 2;
@@ -184,15 +269,19 @@ function autoScanCannyEdges(gray, w, h) {
   return edges;
 }
 
-function autoScanMergeBounds(a, b) {
-  if (!a) return b;
-  if (!b) return a;
-  return {
-    left: Math.max(a.left, b.left),
-    top: Math.max(a.top, b.top),
-    right: Math.min(a.right, b.right),
-    bottom: Math.min(a.bottom, b.bottom)
-  };
+function autoScanPickBounds(paper, edge) {
+  if (edge && autoScanBoundsValid(edge)) return edge;
+  if (paper && autoScanBoundsValid(paper)) return paper;
+  if (paper && edge) {
+    const merged = {
+      left: Math.min(paper.left, edge.left),
+      top: Math.min(paper.top, edge.top),
+      right: Math.max(paper.right, edge.right),
+      bottom: Math.max(paper.bottom, edge.bottom)
+    };
+    if (autoScanBoundsValid(merged)) return merged;
+  }
+  return paper || edge;
 }
 
 function autoScanBoundsToCorners(bounds) {
@@ -215,7 +304,7 @@ function autoScanRefineCornersFromEdges(edges, w, h, bounds) {
       if (edges[y * w + x] === 2) pts.push({ x, y });
     }
   }
-  if (pts.length < 40) return autoScanBoundsToCorners(bounds);
+  if (pts.length < 30) return autoScanBoundsToCorners(bounds);
 
   const pick = (fn) => {
     let best = pts[0];
@@ -247,8 +336,8 @@ function autoScanDetectDocument(gray, w, h) {
       if (edges[y * w + x] === 2) { col[x]++; row[y]++; }
     }
   }
-  const xs = Math.floor(w * 0.06), xe = Math.floor(w * 0.94);
-  const ys = Math.floor(h * 0.06), ye = Math.floor(h * 0.94);
+  const xs = Math.floor(w * 0.05), xe = Math.floor(w * 0.95);
+  const ys = Math.floor(h * 0.05), ye = Math.floor(h * 0.95);
   const peak = (arr, start, end, forward) => {
     let best = -1, idx = forward ? start : end;
     for (let i = start; forward ? i <= end : i >= end; i += forward ? 1 : -1) {
@@ -265,16 +354,12 @@ function autoScanDetectDocument(gray, w, h) {
     };
   }
 
-  let bounds = autoScanMergeBounds(paper, edgeBounds);
-  if (!bounds || !autoScanBoundsValid(bounds)) {
-    if (paper && autoScanBoundsValid(paper)) bounds = paper;
-    else if (edgeBounds && autoScanBoundsValid(edgeBounds)) bounds = edgeBounds;
-    else return null;
-  }
+  const bounds = autoScanPickBounds(paper, edgeBounds);
+  if (!bounds || !autoScanBoundsValid(bounds)) return null;
 
   const corners = autoScanRefineCornersFromEdges(edges, w, h, bounds);
   const edgeScore = autoScanEdgeDensity(gray, w, h, bounds);
-  if (edgeScore < 7) return null;
+  if (edgeScore < 5) return null;
   return { bounds, corners, edgeScore };
 }
 
@@ -310,7 +395,7 @@ function autoScanDrawOverlay(bounds, corners, ready) {
   const w = overlay.width;
   const h = overlay.height;
   ctx.clearRect(0, 0, w, h);
-  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
   ctx.fillRect(0, 0, w, h);
 
   const drawPath = (pts) => {
@@ -334,8 +419,12 @@ function autoScanDrawOverlay(bounds, corners, ready) {
   ctx.stroke();
 
   const len = 22;
+  ctx.fillStyle = color;
   pts.forEach((p) => {
     const px = p.x * w, py = p.y * h;
+    ctx.beginPath();
+    ctx.arc(px, py, 7, 0, Math.PI * 2);
+    ctx.fill();
     ctx.beginPath();
     ctx.moveTo(px - len, py); ctx.lineTo(px + len, py);
     ctx.moveTo(px, py - len); ctx.lineTo(px, py + len);
@@ -363,8 +452,7 @@ function autoScanSampleBilinear(data, w, h, sx, sy) {
 function autoScanWarpPerspective(srcCanvas, corners, outW, outH) {
   const sw = srcCanvas.width;
   const sh = srcCanvas.height;
-  const srcCtx = srcCanvas.getContext('2d');
-  const src = srcCtx.getImageData(0, 0, sw, sh);
+  const src = srcCanvas.getContext('2d').getImageData(0, 0, sw, sh);
   const out = document.createElement('canvas');
   out.width = outW;
   out.height = outH;
@@ -389,33 +477,98 @@ function autoScanWarpPerspective(srcCanvas, corners, outW, outH) {
   return out;
 }
 
-function autoScanEnhance(canvas) {
-  const ctx = canvas.getContext('2d');
-  const w = canvas.width;
-  const h = canvas.height;
-  const img = ctx.getImageData(0, 0, w, h);
-  const gray = autoScanToGray(img);
-  const blurred = autoScanBlurGray(gray, w, h);
-  const threshold = autoScanOtsu(blurred);
+function autoScanOutputSize(corners, srcW, srcH) {
+  const outW = Math.max(320, Math.round(Math.hypot(corners[1].x - corners[0].x, corners[1].y - corners[0].y) * srcW));
+  const outH = Math.max(320, Math.round(Math.hypot(corners[3].x - corners[0].x, corners[3].y - corners[0].y) * srcH));
+  return { outW: Math.min(outW, 2400), outH: Math.min(outH, 2400) };
+}
+
+function autoScanFilterSimpleBw(canvas) {
+  const out = document.createElement('canvas');
+  out.width = canvas.width;
+  out.height = canvas.height;
+  const ctx = out.getContext('2d');
+  ctx.drawImage(canvas, 0, 0);
+  const img = ctx.getImageData(0, 0, out.width, out.height);
+  const gray = autoScanBlurGray(autoScanToGray(img), out.width, out.height);
+  const threshold = autoScanOtsu(gray);
   const d = img.data;
   for (let i = 0, p = 0; i < d.length; i += 4, p++) {
-    const v = blurred[p] >= threshold ? 255 : 0;
+    const v = gray[p] >= threshold ? 255 : 0;
     d[i] = d[i + 1] = d[i + 2] = v;
   }
   ctx.putImageData(img, 0, 0);
-  return canvas;
+  return out;
+}
+
+function autoScanFilterStrongBw(canvas) {
+  const out = autoScanFilterSimpleBw(canvas);
+  const ctx = out.getContext('2d');
+  const img = ctx.getImageData(0, 0, out.width, out.height);
+  const d = img.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const v = d[i] > 200 ? 255 : 0;
+    d[i] = d[i + 1] = d[i + 2] = v;
+  }
+  ctx.putImageData(img, 0, 0);
+  return out;
+}
+
+function autoScanFilterDocument(canvas) {
+  const out = document.createElement('canvas');
+  out.width = canvas.width;
+  out.height = canvas.height;
+  const ctx = out.getContext('2d');
+  ctx.drawImage(canvas, 0, 0);
+  const img = ctx.getImageData(0, 0, out.width, out.height);
+  const gray = autoScanBlurGray(autoScanToGray(img), out.width, out.height);
+  const threshold = autoScanOtsu(gray);
+  const d = img.data;
+  for (let i = 0, p = 0; i < d.length; i += 4, p++) {
+    const local = gray[p];
+    const v = local >= threshold - 12 ? 255 : (local >= threshold - 35 ? 200 : 0);
+    d[i] = d[i + 1] = d[i + 2] = v;
+  }
+  ctx.putImageData(img, 0, 0);
+  return out;
+}
+
+function autoScanFilterHighContrast(canvas) {
+  const out = document.createElement('canvas');
+  out.width = canvas.width;
+  out.height = canvas.height;
+  const ctx = out.getContext('2d');
+  ctx.drawImage(canvas, 0, 0);
+  const img = ctx.getImageData(0, 0, out.width, out.height);
+  const d = img.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const g = d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114;
+    const v = Math.max(0, Math.min(255, (g - 128) * 1.8 + 128));
+    d[i] = d[i + 1] = d[i + 2] = v;
+  }
+  ctx.putImageData(img, 0, 0);
+  return out;
+}
+
+function autoScanBuildFilteredWarp(srcCanvas, corners, filterId) {
+  const { outW, outH } = autoScanOutputSize(corners, srcCanvas.width, srcCanvas.height);
+  let warped = autoScanWarpPerspective(srcCanvas, corners, outW, outH);
+  const filter = AUTO_SCAN_FILTERS[filterId] || AUTO_SCAN_FILTERS.document;
+  return filter.apply(warped);
 }
 
 function autoScanAnalyzeFrame() {
   const video = document.getElementById('autoScanVideo');
-  if (!video || video.readyState < 2 || autoScanState.capturing) return null;
+  if (!video || video.readyState < 2 || autoScanState.capturing || autoScanState.mode !== 'scan') return null;
 
   if (!autoScanState.analysisCanvas) {
     autoScanState.analysisCanvas = document.createElement('canvas');
     autoScanState.analysisCtx = autoScanState.analysisCanvas.getContext('2d', { willReadFrequently: true });
   }
-  const aw = 480;
-  const ah = 360;
+  const vw = video.videoWidth || 640;
+  const vh = video.videoHeight || 480;
+  const aw = 560;
+  const ah = Math.max(320, Math.round(560 * vh / vw));
   autoScanState.analysisCanvas.width = aw;
   autoScanState.analysisCanvas.height = ah;
   autoScanState.analysisCtx.drawImage(video, 0, 0, aw, ah);
@@ -428,9 +581,9 @@ function autoScanAnalyzeFrame() {
   const bounds = doc ? doc.bounds : autoScanDefaultGuide();
   const corners = doc ? doc.corners : null;
   const detected = !!doc;
-  const still = motion < 6.5;
-  const boundsStable = autoScanBoundsDelta(bounds, autoScanState.prevBounds) < 0.022;
-  const cornersStable = !corners || autoScanCornersDelta(corners, autoScanState.prevCorners) < 0.06;
+  const still = motion < 8;
+  const boundsStable = autoScanBoundsDelta(bounds, autoScanState.prevBounds) < 0.028;
+  const cornersStable = !corners || autoScanCornersDelta(corners, autoScanState.prevCorners) < 0.07;
   autoScanState.prevBounds = bounds;
   autoScanState.prevCorners = corners;
   autoScanState.corners = corners;
@@ -438,24 +591,43 @@ function autoScanAnalyzeFrame() {
   return { bounds, corners, detected, still, boundsStable, cornersStable, motion };
 }
 
+function autoScanTrackTorchCaps(track) {
+  const caps = track.getCapabilities?.() || {};
+  return {
+    torch: caps.torch === true,
+    fillFlash: Array.isArray(caps.fillLightMode) ? caps.fillLightMode.includes('flash') : caps.fillLightMode === 'flash'
+  };
+}
+
 async function autoScanApplyTorch(track, on) {
   if (!track || track.readyState === 'ended') return false;
   const want = !!on;
-  const attempts = [
-    () => track.applyConstraints({ advanced: [{ torch: want }] }),
-    () => track.applyConstraints({ torch: want }),
-    () => track.applyConstraints({ advanced: [{ fillLightMode: want ? 'flash' : 'off' }] }),
-    () => track.applyConstraints({ fillLightMode: want ? 'flash' : 'off' })
-  ];
+  const caps = autoScanTrackTorchCaps(track);
+  if (want && !caps.torch && !caps.fillFlash) return false;
+
+  const attempts = [];
+  if (caps.torch) {
+    attempts.push(() => track.applyConstraints({ advanced: [{ torch: want }] }));
+    attempts.push(() => track.applyConstraints({ torch: want }));
+  }
+  if (caps.fillFlash) {
+    attempts.push(() => track.applyConstraints({ advanced: [{ fillLightMode: want ? 'flash' : 'off' }] }));
+    attempts.push(() => track.applyConstraints({ fillLightMode: want ? 'flash' : 'off' }));
+  }
+  if (!attempts.length && want) {
+    attempts.push(() => track.applyConstraints({ advanced: [{ torch: true }] }));
+    attempts.push(() => track.applyConstraints({ torch: true }));
+  }
+
   for (const attempt of attempts) {
     try {
       await attempt();
-      const settings = track.getSettings ? track.getSettings() : {};
-      if (settings.torch === want) return true;
+      await new Promise(r => setTimeout(r, 60));
+      const settings = track.getSettings?.() || {};
+      if (want && settings.torch === true) return true;
       if (want && settings.fillLightMode === 'flash') return true;
       if (!want && (settings.torch === false || settings.fillLightMode === 'off')) return true;
-      return true;
-    } catch (_) { /* try next format */ }
+    } catch (_) { /* try next */ }
   }
   return false;
 }
@@ -463,19 +635,18 @@ async function autoScanApplyTorch(track, on) {
 async function autoScanEnableTorchImmediate(track) {
   if (!track) return false;
   let ok = await autoScanApplyTorch(track, true);
-  if (!ok) {
-    for (const delay of [80, 200, 450]) {
-      await new Promise(r => setTimeout(r, delay));
-      ok = await autoScanApplyTorch(track, true);
-      if (ok) break;
-    }
+  for (const delay of [50, 120, 250, 500, 900]) {
+    if (ok) break;
+    await new Promise(r => setTimeout(r, delay));
+    ok = await autoScanApplyTorch(track, true);
   }
   autoScanState.torchSupported = ok;
   const btn = document.getElementById('autoScanTorchBtn');
   if (btn) {
-    btn.style.display = ok ? '' : 'none';
-    btn.textContent = '⚡ Flash On';
-    btn.classList.remove('is-off');
+    btn.style.display = '';
+    btn.textContent = ok ? '⚡ Flash On' : '⚡ Flash (screen boost)';
+    btn.classList.toggle('is-off', !autoScanState.torchOn);
+    if (!ok) btn.title = 'Hardware flash unavailable — using screen brightness boost when capturing';
   }
   return ok;
 }
@@ -509,7 +680,7 @@ async function autoScanSetTorch(on) {
   autoScanState.torchOn = !!on;
   const btn = document.getElementById('autoScanTorchBtn');
   if (btn) {
-    btn.textContent = on ? '⚡ Flash On' : '⚡ Flash Off';
+    btn.textContent = on ? (autoScanState.torchSupported ? '⚡ Flash On' : '⚡ Flash (screen boost)') : '⚡ Flash Off';
     btn.classList.toggle('is-off', !on);
   }
   const track = autoScanState.videoTrack;
@@ -526,17 +697,37 @@ function autoScanScreenFlash() {
   const flash = document.getElementById('autoScanFlash');
   if (!flash) return;
   flash.classList.add('active');
-  setTimeout(() => flash.classList.remove('active'), 200);
+  setTimeout(() => flash.classList.remove('active'), 220);
 }
 
-async function autoScanCapture(bounds, corners) {
+function autoScanStopScanLoop() {
+  if (autoScanState.timer) {
+    clearInterval(autoScanState.timer);
+    autoScanState.timer = null;
+  }
+  if (autoScanState.torchRetryTimer) {
+    clearInterval(autoScanState.torchRetryTimer);
+    autoScanState.torchRetryTimer = null;
+  }
+}
+
+function autoScanPauseCameraPreview() {
+  autoScanStopScanLoop();
+  const video = document.getElementById('autoScanVideo');
+  if (video) video.pause();
+}
+
+async function autoScanCaptureFrame(bounds, corners) {
   const video = document.getElementById('autoScanVideo');
   if (!video || !autoScanState.context || autoScanState.capturing) return;
   autoScanState.capturing = true;
+  autoScanStopScanLoop();
 
-  if (autoScanState.torchSupported) await autoScanSetTorch(true);
-  autoScanScreenFlash();
-  await new Promise(r => setTimeout(r, 120));
+  if (autoScanState.torchOn) {
+    if (autoScanState.torchSupported) await autoScanSetTorch(true);
+    else autoScanScreenFlash();
+  }
+  await new Promise(r => setTimeout(r, autoScanState.torchSupported ? 140 : 80));
 
   const vw = video.videoWidth;
   const vh = video.videoHeight;
@@ -545,20 +736,186 @@ async function autoScanCapture(bounds, corners) {
   src.height = vh;
   src.getContext('2d').drawImage(video, 0, 0);
 
-  const c = corners || autoScanState.corners || autoScanBoundsToCorners(bounds || autoScanDefaultGuide());
-  const outW = Math.max(400, Math.round(Math.hypot(c[1].x - c[0].x, c[1].y - c[0].y) * vw));
-  const outH = Math.max(400, Math.round(Math.hypot(c[3].x - c[0].x, c[3].y - c[0].y) * vh));
-  let result = autoScanWarpPerspective(src, c, outW, outH);
-  result = autoScanEnhance(result);
+  const c = autoScanCloneCorners(corners || autoScanState.corners || autoScanBoundsToCorners(bounds || autoScanDefaultGuide()));
+  autoScanPauseCameraPreview();
 
+  autoScanState.review = {
+    srcCanvas: src,
+    corners: c,
+    filterId: document.getElementById('autoScanFilterSelect')?.value || 'document',
+    cropEditing: false
+  };
+  autoScanState.capturing = false;
+  autoScanShowReviewPanel();
+  window.autoScanUpdateReviewPreview();
+}
+
+function autoScanDrawCropEditor() {
+  const review = autoScanState.review;
+  if (!review) return;
+  const srcCanvas = document.getElementById('autoScanCropSource');
+  const overlay = document.getElementById('autoScanCropOverlay');
+  if (!srcCanvas || !overlay) return;
+
+  const maxW = Math.min(window.innerWidth - 32, 640);
+  const scale = maxW / review.srcCanvas.width;
+  const dw = Math.round(review.srcCanvas.width * scale);
+  const dh = Math.round(review.srcCanvas.height * scale);
+  srcCanvas.width = dw;
+  srcCanvas.height = dh;
+  overlay.width = dw;
+  overlay.height = dh;
+  srcCanvas.getContext('2d').drawImage(review.srcCanvas, 0, 0, dw, dh);
+
+  const ctx = overlay.getContext('2d');
+  ctx.clearRect(0, 0, dw, dh);
+  ctx.fillStyle = 'rgba(0,0,0,0.45)';
+  ctx.fillRect(0, 0, dw, dh);
+
+  const pts = review.corners.map(p => ({ x: p.x * dw, y: p.y * dh }));
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, pts[0].y);
+  for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+  ctx.closePath();
+  ctx.save();
+  ctx.clip();
+  ctx.clearRect(0, 0, dw, dh);
+  ctx.restore();
+
+  ctx.strokeStyle = '#facc15';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, pts[0].y);
+  for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+  ctx.closePath();
+  ctx.stroke();
+
+  pts.forEach((p, idx) => {
+    ctx.fillStyle = '#facc15';
+    ctx.strokeStyle = '#1f2937';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 12, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    review._handlePx = review._handlePx || [];
+    review._handlePx[idx] = { x: p.x, y: p.y };
+  });
+}
+
+window.autoScanUpdateReviewPreview = function() {
+  const review = autoScanState.review;
+  if (!review) return;
+  review.filterId = document.getElementById('autoScanFilterSelect')?.value || 'document';
+  const preview = document.getElementById('autoScanReviewPreview');
+  if (!preview) return;
+
+  const result = autoScanBuildFilteredWarp(review.srcCanvas, review.corners, review.filterId);
+  const maxW = Math.min(window.innerWidth - 32, 720);
+  const scale = Math.min(1, maxW / result.width);
+  preview.width = Math.round(result.width * scale);
+  preview.height = Math.round(result.height * scale);
+  preview.getContext('2d').drawImage(result, 0, 0, preview.width, preview.height);
+
+  if (review.cropEditing) autoScanDrawCropEditor();
+};
+
+window.autoScanToggleCropEditor = function() {
+  const review = autoScanState.review;
+  if (!review) return;
+  review.cropEditing = !review.cropEditing;
+  const editor = document.getElementById('autoScanCropEditor');
+  const btn = document.getElementById('autoScanAdjustCropBtn');
+  if (review.cropEditing) {
+    editor.style.display = 'block';
+    btn.textContent = 'Done adjusting';
+    autoScanDrawCropEditor();
+  } else {
+    editor.style.display = 'none';
+    btn.textContent = 'Adjust crop';
+  }
+};
+
+function autoScanCropPointerDown(e) {
+  const review = autoScanState.review;
+  if (!review?.cropEditing) return;
+  const overlay = document.getElementById('autoScanCropOverlay');
+  const rect = overlay.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  let hit = -1;
+  (review._handlePx || []).forEach((h, i) => {
+    if (Math.hypot(h.x - x, h.y - y) < 22) hit = i;
+  });
+  if (hit < 0) return;
+  autoScanState.cropDrag = { idx: hit, overlay };
+  overlay.setPointerCapture(e.pointerId);
+  e.preventDefault();
+}
+
+function autoScanCropPointerMove(e) {
+  const drag = autoScanState.cropDrag;
+  const review = autoScanState.review;
+  if (!drag || !review) return;
+  const overlay = drag.overlay;
+  const rect = overlay.getBoundingClientRect();
+  const x = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+  const y = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
+  review.corners[drag.idx] = { x: x / rect.width, y: y / rect.height };
+  autoScanDrawCropEditor();
+  window.autoScanUpdateReviewPreview();
+  e.preventDefault();
+}
+
+function autoScanCropPointerUp(e) {
+  if (!autoScanState.cropDrag) return;
+  autoScanState.cropDrag.overlay?.releasePointerCapture?.(e.pointerId);
+  autoScanState.cropDrag = null;
+}
+
+window.autoScanRetry = async function() {
+  const context = autoScanState.context;
+  autoScanState.review = null;
+  autoScanState.capturing = false;
+  autoScanState.stableTicks = 0;
+  autoScanState.prevGray = null;
+  autoScanState.prevBounds = null;
+  autoScanState.prevCorners = null;
+  autoScanState.corners = null;
+  autoScanShowScanPanel();
+  autoScanSetStatus(autoScanState.torchOn ? 'Flash on — center document in frame' : 'Center document in frame', false);
+  autoScanDrawOverlay(null, null, false);
+
+  const video = document.getElementById('autoScanVideo');
+  if (video && autoScanState.stream) {
+    try {
+      await video.play();
+      if (autoScanState.torchOn) await autoScanEnableTorchImmediate(autoScanState.videoTrack);
+      autoScanResizeOverlay();
+      autoScanState.timer = setInterval(autoScanTick, 100);
+    } catch (_) {
+      window.closeAutoScan();
+    }
+  } else {
+    window.closeAutoScan();
+    if (context) window.openAutoScan(context);
+  }
+};
+
+window.autoScanConfirm = function() {
+  const review = autoScanState.review;
+  const context = autoScanState.context;
+  if (!review || !context) return;
+
+  const result = autoScanBuildFilteredWarp(review.srcCanvas, review.corners, review.filterId);
   result.toBlob((blob) => {
     if (blob) {
-      window.addPhotoFromBlob(blob, autoScanState.context);
-      if (typeof window.showNotification === 'function') window.showNotification('Document scanned');
+      window.addPhotoFromBlob(blob, context);
+      if (typeof window.showNotification === 'function') window.showNotification('Document scan saved');
     }
     window.closeAutoScan();
-  }, 'image/jpeg', 0.94);
-}
+  }, 'image/jpeg', 0.92);
+};
 
 function autoScanTick() {
   autoScanResizeOverlay();
@@ -570,17 +927,17 @@ function autoScanTick() {
 
   if (ready) {
     autoScanState.stableTicks++;
-    autoScanSetStatus('Hold still — auto-scanning…', false);
-    autoScanDrawOverlay(bounds, corners, autoScanState.stableTicks >= 5);
-    if (autoScanState.stableTicks >= 8) {
-      autoScanSetStatus('Captured!', true);
-      autoScanCapture(bounds, corners);
+    autoScanSetStatus('Hold still — detecting document borders…', false);
+    autoScanDrawOverlay(bounds, corners, autoScanState.stableTicks >= 4);
+    if (autoScanState.stableTicks >= 7) {
+      autoScanSetStatus('Captured — review your scan', true);
+      autoScanCaptureFrame(bounds, corners);
     }
   } else {
     autoScanState.stableTicks = 0;
     if (!detected) autoScanSetStatus('Center document in frame', false);
     else if (!still) autoScanSetStatus('Hold camera steady', false);
-    else autoScanSetStatus('Align all edges in frame', false);
+    else autoScanSetStatus('Align all document edges in frame', false);
     autoScanDrawOverlay(bounds, corners, false);
   }
 }
@@ -599,6 +956,7 @@ window.openAutoScan = async function(context) {
 
   window.ensureAutoScanModal();
   autoScanState.context = context;
+  autoScanState.review = null;
   autoScanState.stableTicks = 0;
   autoScanState.prevGray = null;
   autoScanState.prevBounds = null;
@@ -606,10 +964,12 @@ window.openAutoScan = async function(context) {
   autoScanState.corners = null;
   autoScanState.capturing = false;
   autoScanState.torchOn = true;
+  autoScanShowScanPanel();
   autoScanSetStatus('Turning on camera flash…', false);
   autoScanDrawOverlay(null, null, false);
 
   document.getElementById('autoScanModal').style.display = 'flex';
+  autoScanScreenFlash();
 
   try {
     const stream = await autoScanOpenCameraStream();
@@ -618,13 +978,33 @@ window.openAutoScan = async function(context) {
     const video = document.getElementById('autoScanVideo');
     video.srcObject = stream;
     await video.play();
-    const torchOk = await autoScanEnableTorchImmediate(autoScanState.videoTrack);
+
+    await autoScanEnableTorchImmediate(autoScanState.videoTrack);
     autoScanSetStatus(
-      torchOk ? 'Flash on — center document in frame' : 'Center document in frame (flash unavailable)',
+      autoScanState.torchSupported
+        ? 'Flash on — align document edges in frame'
+        : 'Align document in frame (using screen boost on capture)',
       false
     );
+
+    let torchAttempts = 0;
+    autoScanState.torchRetryTimer = setInterval(async () => {
+      if (!autoScanState.torchOn || autoScanState.mode !== 'scan') return;
+      if (autoScanState.torchSupported) {
+        clearInterval(autoScanState.torchRetryTimer);
+        autoScanState.torchRetryTimer = null;
+        return;
+      }
+      if (++torchAttempts > 8) {
+        clearInterval(autoScanState.torchRetryTimer);
+        autoScanState.torchRetryTimer = null;
+        return;
+      }
+      await autoScanEnableTorchImmediate(autoScanState.videoTrack);
+    }, 400);
+
     autoScanResizeOverlay();
-    if (autoScanState.timer) clearInterval(autoScanState.timer);
+    autoScanStopScanLoop();
     autoScanState.timer = setInterval(autoScanTick, 100);
     window.addEventListener('resize', autoScanResizeOverlay);
   } catch (e) {
@@ -634,10 +1014,7 @@ window.openAutoScan = async function(context) {
 };
 
 window.closeAutoScan = async function() {
-  if (autoScanState.timer) {
-    clearInterval(autoScanState.timer);
-    autoScanState.timer = null;
-  }
+  autoScanStopScanLoop();
   window.removeEventListener('resize', autoScanResizeOverlay);
   if (autoScanState.videoTrack) {
     try { await autoScanApplyTorch(autoScanState.videoTrack, false); } catch (_) {}
@@ -652,10 +1029,12 @@ window.closeAutoScan = async function() {
   const modal = document.getElementById('autoScanModal');
   if (modal) modal.style.display = 'none';
   autoScanState.context = null;
+  autoScanState.review = null;
   autoScanState.capturing = false;
   autoScanState.stableTicks = 0;
   autoScanState.prevGray = null;
   autoScanState.prevBounds = null;
   autoScanState.prevCorners = null;
   autoScanState.corners = null;
+  autoScanState.mode = 'scan';
 };
