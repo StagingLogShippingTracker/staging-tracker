@@ -108,17 +108,14 @@ window.submitReturnToStock = async function() {
 
       const attachmentUrls = editTargetRecord.photo_urls ? editTargetRecord.photo_urls.map(p => `https://gdrpdiwykmnybmkadlrv.supabase.co/storage/v1/object/public/freight-photos/${p}`) : [];
 
-      fetch('https://hook.us2.make.com/cxvgao3s4lwnrmntk762j25qct6bkkft', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          to: finalPmEmail, 
-          cc: "warehouse1@swiftsupply.ca", 
-          subject: cachedSubject, 
+      window.sendPmEmailWebhook({
+          to: finalPmEmail,
+          cc: "warehouse1@swiftsupply.ca",
+          subject: cachedSubject,
           body: cachedBody,
           attachments: attachmentUrls,
           has_attachments: attachmentUrls.length > 0
-        })
-      }).catch(err => console.warn(err));
+        });
     }
 
     if($('#returnModal')) $('#returnModal').style.display='none';
@@ -258,17 +255,14 @@ window.submitFreightDispatch = async function() {
 
       const attachmentUrls = photoUrls.map(p => `https://gdrpdiwykmnybmkadlrv.supabase.co/storage/v1/object/public/freight-photos/${p}`);
 
-      fetch('https://hook.us2.make.com/cxvgao3s4lwnrmntk762j25qct6bkkft', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          to: finalPmEmail, 
-          cc: "warehouse1@swiftsupply.ca", 
-          subject: cachedSubject, 
+      window.sendPmEmailWebhook({
+          to: finalPmEmail,
+          cc: "warehouse1@swiftsupply.ca",
+          subject: cachedSubject,
           body: cachedBody,
           attachments: attachmentUrls,
           has_attachments: attachmentUrls.length > 0
-        })
-      }).catch(err => console.warn(err));
+        });
     }
 
     window.closeShipModal();
@@ -422,17 +416,14 @@ window.submitNotifyReturn = async function() {
     if (photoLinksHTML !== "") emailBody += `<b>Photos:</b><br>${photoLinksHTML}<br><br>`;
     emailBody += `For more details, visit: <a href="https://swiftoperations.github.io/staging-tracker/">Swift Staging Tracker</a>`;
 
-    fetch('https://hook.us2.make.com/cxvgao3s4lwnrmntk762j25qct6bkkft', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        to: finalPmEmail, 
-        cc: "warehouse1@swiftsupply.ca", 
-        subject: emailSubject, 
+    window.sendPmEmailWebhook({
+        to: finalPmEmail,
+        cc: "warehouse1@swiftsupply.ca",
+        subject: emailSubject,
         body: emailBody,
         attachments: attachmentUrls,
         has_attachments: attachmentUrls.length > 0
-      })
-    }).catch(e => console.warn('Webhook silently caught error:', e));
+      });
 
     window.logAction('staging', `Sent Automated Return Notification for SO: ${soVal}`);
     if(typeof window.showNotification === 'function') window.showNotification('Return Notification Sent Successfully');
@@ -503,17 +494,14 @@ window.submitPoNotification = async function() {
     if (photoLinksHTML !== '') emailBody += `<b>Photos:</b><br>${photoLinksHTML}<br><br>`;
     emailBody += `For more details, visit: <a href="https://swiftoperations.github.io/staging-tracker/">Swift Staging Tracker</a>`;
 
-    fetch('https://hook.us2.make.com/cxvgao3s4lwnrmntk762j25qct6bkkft', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    window.sendPmEmailWebhook({
         to: 'warehouse1@swiftsupply.ca',
         cc: 'warehouse1@swiftsupply.ca',
         subject: emailSubject,
         body: emailBody,
         attachments: attachmentUrls,
         has_attachments: attachmentUrls.length > 0
-      })
-    }).catch(e => console.warn('Webhook silently caught error:', e));
+      });
 
     window.logAction('staging', `Sent Automated PO Notification for PO: ${poVal}`);
     if (typeof window.showNotification === 'function') window.showNotification('PO Notification Sent Successfully');
@@ -670,7 +658,7 @@ window.submitQuickShip = async function() {
 
       const attachmentUrls = photoUrls.map(p => `https://gdrpdiwykmnybmkadlrv.supabase.co/storage/v1/object/public/freight-photos/${p}`);
 
-      fetch('https://hook.us2.make.com/cxvgao3s4lwnrmntk762j25qct6bkkft', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ to: finalPmEmail, cc: "warehouse1@swiftsupply.ca", subject: cachedSubject, body: cachedBody, attachments: attachmentUrls, has_attachments: attachmentUrls.length > 0 }) }).catch(err => console.warn(err));
+      window.sendPmEmailWebhook({ to: finalPmEmail, cc: "warehouse1@swiftsupply.ca", subject: cachedSubject, body: cachedBody, attachments: attachmentUrls, has_attachments: attachmentUrls.length > 0 });
     }
 
     $('#quickShipModal').style.display = 'none';
