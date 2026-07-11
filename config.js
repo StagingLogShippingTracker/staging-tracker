@@ -7,6 +7,7 @@ const PM_SMS_ROSTER = {
   'Amber Shuya': '7809141677@msg.telus.com',
   'Ben Karpiak': '7802320414@txt.bell.ca',
   'Brandon Kaminski': '7809755556@msg.telus.com',
+  'Brice Johnson': '7809350628@msg.telus.com',
   'Carmen Martin': '7802385255@pcs.rogers.com',
   'Chris Acorn': '7807253416@msg.telus.com',
   'Dustin Strachan': '7809759387@msg.telus.com',
