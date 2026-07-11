@@ -1175,7 +1175,55 @@ input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; margin: 0; 
 }
 
 @media (max-width: 767px) and (orientation: portrait) {
-  /* Expanded log pages: toolbar row, full-width title, centered auth */
+  /* Expanded log pages: toolbar row, full-width title, auth right */
+  body.log-page {
+    display: flex;
+    flex-direction: column;
+    min-height: 100dvh;
+  }
+
+  body.log-page > .wrap {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    width: 100%;
+  }
+
+  body.log-page > .site-footer {
+    flex: 0 0 auto;
+    margin-top: auto;
+    width: 100%;
+  }
+
+  body.log-page .wrap > .card:not(.card--search) {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  body.log-page .tblwrap {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+  }
+
+  body.log-page .tbl-scroller {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
   body.log-page .site-header {
     display: grid;
     grid-template-columns: auto 1fr auto;
@@ -1222,8 +1270,8 @@ input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; margin: 0; 
   body.log-page .site-header__end > .auth-status {
     grid-column: 1 / -1;
     grid-row: 3;
-    justify-self: center;
-    justify-content: center;
+    justify-self: end;
+    justify-content: flex-end;
     flex-wrap: wrap;
     gap: var(--space-xs);
   }
@@ -1244,6 +1292,26 @@ input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; margin: 0; 
 
   /* Batch Mode is incompatible with stacked card view */
   .batch-mode-trigger { display: none !important; }
+
+  /* Contacts directory: keep table inside a scroll container */
+  .contacts-table-wrap {
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .contacts-table-wrap .tbl-scroller {
+    overflow-x: auto;
+    overflow-y: auto;
+    max-height: calc(100dvh - 340px);
+    -webkit-overflow-scrolling: touch;
+  }
+
+  #tblContacts {
+    min-width: 640px;
+  }
 }
 
 @media (max-width: 767px) and (orientation: landscape) {
