@@ -31,7 +31,8 @@ const autoScanState = {
   cropDrag: null
 };
 
-const AUTO_SCAN_MODAL_VERSION = '4';
+const AUTO_SCAN_MODAL_VERSION = '5';
+const AUTO_SCAN_TORCH_DEVICE_KEY = 'autoscan_torch_device_id';
 
 function autoScanCameraErrorMessage(err) {
   if (!window.isSecureContext) {
@@ -68,17 +69,124 @@ window.autoScanBeginCameraRequest = function() {
 };
 
 async function autoScanPrepareStream(initialStream) {
-  let stream = initialStream;
-  const track = stream.getVideoTracks()[0];
-  if (track) autoScanTryTorchSync(track);
+  if (!autoScanIsAndroid()) return initialStream;
+  return autoScanFindBestTorchStream(initialStream);
+}
 
-  if (autoScanIsAndroid()) {
-    stream = await autoScanRestartOnRearCamera(stream);
-    const rearTrack = stream.getVideoTracks()[0];
-    if (rearTrack) autoScanTryTorchSync(rearTrack);
+function autoScanStopStream(stream) {
+  if (!stream) return;
+  stream.getTracks().forEach(t => {
+    try { t.stop(); } catch (_) {}
+    try { stream.removeTrack(t); } catch (_) {}
+  });
+}
+
+function autoScanScoreCameraDevice(device) {
+  const label = (device.label || '').toLowerCase();
+  if (/front|user|selfie|face/.test(label)) return -1000;
+  let score = 0;
+  if (/back|rear|environment|facing back/.test(label)) score += 100;
+  if (/wide|ultra|0\.6|trifocal|telephoto|zoom/.test(label)) score -= 60;
+  if (/main|standard|camera 0|cam 0/.test(label)) score += 40;
+  if (device.deviceId) score += 1;
+  return score;
+}
+
+function autoScanRankCameraDevices(devices) {
+  return devices
+    .filter(d => d.kind === 'videoinput' && d.deviceId)
+    .sort((a, b) => autoScanScoreCameraDevice(b) - autoScanScoreCameraDevice(a));
+}
+
+function autoScanTrackReportsTorch(track) {
+  if (!track?.getCapabilities) return false;
+  const caps = track.getCapabilities();
+  if (Object.prototype.hasOwnProperty.call(caps, 'torch')) return true;
+  const settings = track.getSettings?.() || {};
+  return Object.prototype.hasOwnProperty.call(settings, 'torch');
+}
+
+async function autoScanOpenStreamForDevice(deviceId) {
+  return navigator.mediaDevices.getUserMedia({
+    video: {
+      deviceId: { exact: deviceId },
+      width: { ideal: 1920 },
+      height: { ideal: 1080 },
+      frameRate: { ideal: 30 }
+    },
+    audio: false
+  });
+}
+
+async function autoScanVerifyTorchOn(track) {
+  if (!track) return false;
+  const ok = await autoScanApplyTorch(track, true);
+  if (!ok) return false;
+  await new Promise(r => setTimeout(r, 120));
+  const settings = track.getSettings?.() || {};
+  if (settings.torch === true) return true;
+  return autoScanTrackReportsTorch(track);
+}
+
+async function autoScanProbeDeviceForTorch(deviceId) {
+  let stream = null;
+  try {
+    stream = await autoScanOpenStreamForDevice(deviceId);
+    const track = stream.getVideoTracks()[0];
+    if (!track || !autoScanTrackReportsTorch(track)) {
+      autoScanStopStream(stream);
+      return null;
+    }
+    const torchOk = await autoScanVerifyTorchOn(track);
+    if (!torchOk) {
+      autoScanStopStream(stream);
+      return null;
+    }
+    return stream;
+  } catch (_) {
+    autoScanStopStream(stream);
+    return null;
+  }
+}
+
+async function autoScanFindBestTorchStream(currentStream) {
+  let devices = [];
+  try {
+    devices = await navigator.mediaDevices.enumerateDevices();
+  } catch (_) {
+    return currentStream;
   }
 
-  return stream;
+  const ranked = autoScanRankCameraDevices(devices);
+  if (!ranked.length) return currentStream;
+
+  const tryOrder = [];
+  const savedId = localStorage.getItem(AUTO_SCAN_TORCH_DEVICE_KEY);
+  if (savedId) tryOrder.push(savedId);
+  ranked.forEach(d => {
+    if (!tryOrder.includes(d.deviceId)) tryOrder.push(d.deviceId);
+  });
+
+  const currentId = currentStream?.getVideoTracks?.()[0]?.getSettings?.().deviceId;
+  if (currentId && autoScanTrackReportsTorch(currentStream.getVideoTracks()[0])) {
+    const torchOk = await autoScanVerifyTorchOn(currentStream.getVideoTracks()[0]);
+    if (torchOk) {
+      localStorage.setItem(AUTO_SCAN_TORCH_DEVICE_KEY, currentId);
+      return currentStream;
+    }
+  }
+
+  for (const deviceId of tryOrder) {
+    if (deviceId === currentId) continue;
+    const stream = await autoScanProbeDeviceForTorch(deviceId);
+    if (stream) {
+      autoScanStopStream(currentStream);
+      localStorage.setItem(AUTO_SCAN_TORCH_DEVICE_KEY, deviceId);
+      return stream;
+    }
+  }
+
+  return currentStream;
 }
 
 function autoScanIsIOS() {
@@ -741,24 +849,15 @@ function autoScanTrackTorchCaps(track) {
   };
 }
 
+function autoScanTorchConstraint(on) {
+  return { torch: on, advanced: [{ torch: on }] };
+}
+
 function autoScanTryTorchSync(track) {
   if (!track || track.readyState === 'ended') return;
-  const caps = autoScanTrackTorchCaps(track);
-  const syncAttempts = [];
-  if (caps.torch) {
-    syncAttempts.push({ advanced: [{ torch: true }] });
-    syncAttempts.push({ torch: true });
-  }
-  if (caps.fillFlash) {
-    syncAttempts.push({ advanced: [{ fillLightMode: 'flash' }] });
-    syncAttempts.push({ fillLightMode: 'flash' });
-  }
-  if (!syncAttempts.length) {
-    syncAttempts.push({ advanced: [{ torch: true }] }, { torch: true });
-  }
-  syncAttempts.forEach(c => {
-    try { track.applyConstraints(c); } catch (_) {}
-  });
+  try { track.applyConstraints(autoScanTorchConstraint(true)); } catch (_) {}
+  try { track.applyConstraints({ advanced: [{ torch: true }] }); } catch (_) {}
+  try { track.applyConstraints({ torch: true }); } catch (_) {}
 }
 
 async function autoScanTryImageCaptureTorch(track) {
@@ -768,7 +867,7 @@ async function autoScanTryImageCaptureTorch(track) {
     const caps = await ic.getPhotoCapabilities();
     const modes = caps.fillLightMode || [];
     if (Array.isArray(modes) && modes.includes('flash')) {
-      await track.applyConstraints({ advanced: [{ fillLightMode: 'flash' }] });
+      await track.applyConstraints(autoScanTorchConstraint(true));
       return true;
     }
   } catch (_) {}
@@ -779,39 +878,45 @@ async function autoScanApplyTorch(track, on) {
   if (!track || track.readyState === 'ended') return false;
   const want = !!on;
   const caps = autoScanTrackTorchCaps(track);
-  if (want && !caps.torch && !caps.fillFlash) {
-    autoScanTryTorchSync(track);
-    return false;
-  }
 
   const attempts = [];
-  if (caps.torch) {
-    attempts.push(() => track.applyConstraints({ advanced: [{ torch: want }] }));
-    attempts.push(() => track.applyConstraints({ torch: want }));
-  }
-  if (caps.fillFlash) {
-    attempts.push(() => track.applyConstraints({ advanced: [{ fillLightMode: want ? 'flash' : 'off' }] }));
-    attempts.push(() => track.applyConstraints({ fillLightMode: want ? 'flash' : 'off' }));
-  }
-  if (!attempts.length && want) {
-    attempts.push(() => track.applyConstraints({ advanced: [{ torch: true }] }));
+  if (want) {
+    attempts.push(() => track.applyConstraints(autoScanTorchConstraint(true)));
     attempts.push(() => track.applyConstraints({ torch: true }));
+    attempts.push(() => track.applyConstraints({ advanced: [{ torch: true }] }));
+    if (caps.fillFlash) {
+      attempts.push(() => track.applyConstraints({ advanced: [{ fillLightMode: 'flash' }] }));
+    }
+  } else {
+    attempts.push(() => track.applyConstraints(autoScanTorchConstraint(false)));
+    attempts.push(() => track.applyConstraints({ torch: false }));
+    attempts.push(() => track.applyConstraints({ advanced: [{ torch: false }] }));
+    if (caps.fillFlash) {
+      attempts.push(() => track.applyConstraints({ advanced: [{ fillLightMode: 'off' }] }));
+    }
   }
 
   for (const attempt of attempts) {
     try {
       await attempt();
+      await new Promise(r => setTimeout(r, 80));
       const settings = track.getSettings?.() || {};
       if (want) {
         if (settings.torch === true || settings.fillLightMode === 'flash') return true;
-        if (caps.torch || caps.fillFlash) return true;
       } else if (settings.torch === false || settings.fillLightMode === 'off') {
         return true;
       }
     } catch (_) { /* try next */ }
   }
-  if (want) return autoScanTryImageCaptureTorch(track);
-  return false;
+
+  if (want) {
+    if (caps.torch) {
+      const settings = track.getSettings?.() || {};
+      if (settings.torch !== false) return true;
+    }
+    return autoScanTryImageCaptureTorch(track);
+  }
+  return !want;
 }
 
 function autoScanUpdateTorchButton() {
@@ -834,16 +939,37 @@ function autoScanUpdateTorchButton() {
 }
 
 async function autoScanActivateLighting(track) {
+  if (!track || autoScanIsIOS()) {
+    autoScanState.torchSupported = false;
+    autoScanUpdateTorchButton();
+    return false;
+  }
+
   autoScanTryTorchSync(track);
-  let hardwareOk = await autoScanEnableTorchImmediate(track);
-  if (!hardwareOk) {
-    for (const delay of [60, 150, 300, 600]) {
+  let hardwareOk = await autoScanVerifyTorchOn(track);
+
+  if (!hardwareOk && autoScanState.stream) {
+    autoScanSetStatus('Finding camera with flash…', false);
+    const betterStream = await autoScanFindBestTorchStream(autoScanState.stream);
+    if (betterStream !== autoScanState.stream) {
+      autoScanState.stream = betterStream;
+      autoScanState.videoTrack = betterStream.getVideoTracks()[0] || null;
+      const video = document.getElementById('autoScanVideo');
+      if (video) video.srcObject = betterStream;
+      track = autoScanState.videoTrack;
+    }
+    if (track) hardwareOk = await autoScanVerifyTorchOn(track);
+  }
+
+  if (!hardwareOk && track) {
+    for (const delay of [100, 250, 500]) {
       await new Promise(r => setTimeout(r, delay));
       autoScanTryTorchSync(track);
       hardwareOk = await autoScanApplyTorch(track, true);
       if (hardwareOk) break;
     }
   }
+
   autoScanState.torchSupported = hardwareOk;
   autoScanUpdateTorchButton();
   return hardwareOk;
@@ -851,46 +977,24 @@ async function autoScanActivateLighting(track) {
 
 async function autoScanEnableTorchImmediate(track) {
   if (!track) return false;
-  autoScanTryTorchSync(track);
-  let ok = await autoScanApplyTorch(track, true);
-  if (!ok) {
-    for (const delay of [40, 100, 200, 400]) {
-      await new Promise(r => setTimeout(r, delay));
-      autoScanTryTorchSync(track);
-      ok = await autoScanApplyTorch(track, true);
-      if (ok) break;
-    }
-  }
+  const ok = await autoScanVerifyTorchOn(track);
   autoScanState.torchSupported = ok;
   autoScanUpdateTorchButton();
   return ok;
 }
 
-async function autoScanRestartOnRearCamera(currentStream) {
-  try {
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    const videos = devices.filter(d => d.kind === 'videoinput');
-    const rear = videos.find(d => /back|rear|environment/i.test(d.label));
-    if (!rear?.deviceId) return currentStream;
-
-    const currentId = currentStream?.getVideoTracks?.()[0]?.getSettings?.().deviceId;
-    if (currentId === rear.deviceId) return currentStream;
-
-    currentStream?.getTracks?.().forEach(t => t.stop());
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        deviceId: { exact: rear.deviceId },
-        width: { ideal: 1920 },
-        height: { ideal: 1080 },
-        advanced: [{ torch: true }]
-      },
-      audio: false
-    });
-    autoScanTryTorchSync(stream.getVideoTracks()[0]);
-    return stream;
-  } catch (_) {
-    return currentStream;
+async function autoScanSwapToTorchCamera() {
+  if (!autoScanState.stream) return false;
+  autoScanSetStatus('Switching to flash camera…', false);
+  const stream = await autoScanFindBestTorchStream(autoScanState.stream);
+  autoScanState.stream = stream;
+  autoScanState.videoTrack = stream.getVideoTracks()[0] || null;
+  const video = document.getElementById('autoScanVideo');
+  if (video) {
+    video.srcObject = stream;
+    await video.play();
   }
+  return autoScanEnableTorchImmediate(autoScanState.videoTrack);
 }
 
 function autoScanStartTorchLoop(track) {
@@ -908,12 +1012,16 @@ function autoScanStartTorchLoop(track) {
       autoScanState.torchRetryTimer = null;
       return;
     }
-    if (++attempts > 20) {
+    if (++attempts > 24) {
       clearInterval(autoScanState.torchRetryTimer);
       autoScanState.torchRetryTimer = null;
       return;
     }
-    await autoScanEnableTorchImmediate(autoScanState.videoTrack);
+    if (!autoScanState.torchSupported) {
+      await autoScanSwapToTorchCamera();
+    } else {
+      await autoScanEnableTorchImmediate(autoScanState.videoTrack);
+    }
   }, 250);
 }
 
@@ -936,15 +1044,18 @@ async function autoScanSetTorch(on) {
   return true;
 }
 
-window.toggleAutoScanTorch = function() {
+window.toggleAutoScanTorch = async function() {
   if (autoScanState.torchOn) {
     autoScanSetTorch(false);
     return;
   }
   autoScanState.torchOn = true;
-  if (autoScanState.videoTrack) {
-    autoScanTryTorchSync(autoScanState.videoTrack);
-    autoScanEnableTorchImmediate(autoScanState.videoTrack);
+  if (!autoScanState.videoTrack) return;
+  autoScanTryTorchSync(autoScanState.videoTrack);
+  let ok = await autoScanEnableTorchImmediate(autoScanState.videoTrack);
+  if (!ok) ok = await autoScanSwapToTorchCamera();
+  if (!ok) {
+    autoScanSetStatus('Flash not available on this camera — try Chrome on Android', false);
   }
 };
 
@@ -1244,7 +1355,7 @@ window.openAutoScan = async function(context, cameraPromise) {
   autoScanState.torchSupported = false;
 
   autoScanShowScanPanel();
-  autoScanSetStatus('Waiting for camera permission…', false);
+  autoScanSetStatus('Opening camera and flash…', false);
   autoScanDrawOverlay(null, null, false);
   document.getElementById('autoScanModal').style.display = 'flex';
 
