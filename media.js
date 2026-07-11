@@ -130,12 +130,25 @@ window.injectAutoScanButtons = function() {
     if (isStagingPhotoGrid(grid)) return;
     const context = inferPhotoContextFromGrid(grid);
     if (!context || window.PHOTO_NO_SCAN.has(context)) return;
-    if (grid.querySelector('.photo-uploader--scan')) return;
+
+    grid.querySelectorAll('.photo-uploader--scan').forEach(el => el.remove());
+
     grid.classList.add('photo-options-grid--scan');
-    const btn = document.createElement('div');
+    const btn = document.createElement('button');
+    btn.type = 'button';
     btn.className = 'photo-uploader photo-uploader--scan';
     btn.textContent = window.PHOTO_UI.autoScan;
-    btn.addEventListener('click', () => window.openAutoScan(context));
+    btn.dataset.autoscanVersion = '2';
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (typeof window.autoScanBeginCameraRequest !== 'function' || typeof window.openAutoScan !== 'function') {
+        alert('Auto Scan is still loading. Please try again in a moment.');
+        return;
+      }
+      const cameraPromise = window.autoScanBeginCameraRequest();
+      window.openAutoScan(context, cameraPromise);
+    });
     grid.appendChild(btn);
   });
 };
