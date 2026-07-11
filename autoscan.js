@@ -25,15 +25,61 @@ const autoScanState = {
   cameraStarting: false,
   torchOn: true,
   torchSupported: false,
-  useScreenTorch: false,
-  screenTorchActive: false,
   analysisCanvas: null,
   analysisCtx: null,
   review: null,
   cropDrag: null
 };
 
-const AUTO_SCAN_MODAL_VERSION = '3';
+const AUTO_SCAN_MODAL_VERSION = '4';
+
+function autoScanCameraErrorMessage(err) {
+  if (!window.isSecureContext) {
+    return 'Camera access requires HTTPS. Open the tracker from your deployed website (not as a local file on your phone).';
+  }
+  if (err?.code === 'NO_API') {
+    return 'This browser does not support camera access.';
+  }
+  if (err?.name === 'NotAllowedError' || err?.name === 'PermissionDeniedError' || err?.code === 'DENIED') {
+    return 'Camera permission was blocked. In your browser settings, allow camera access for this site, then tap Auto Scan again.';
+  }
+  if (err?.name === 'NotFoundError' || err?.name === 'DevicesNotFoundError') {
+    return 'No camera was found on this device.';
+  }
+  return 'Unable to access camera: ' + (err?.message || 'unknown error');
+}
+
+window.autoScanBeginCameraRequest = function() {
+  if (!window.isSecureContext) {
+    return Promise.reject(Object.assign(new Error('INSECURE'), { code: 'INSECURE' }));
+  }
+  const md = navigator.mediaDevices;
+  if (!md?.getUserMedia) {
+    return Promise.reject(Object.assign(new Error('NO_API'), { code: 'NO_API' }));
+  }
+  return md.getUserMedia({
+    video: {
+      facingMode: { ideal: 'environment' },
+      width: { ideal: 1920 },
+      height: { ideal: 1080 }
+    },
+    audio: false
+  });
+};
+
+async function autoScanPrepareStream(initialStream) {
+  let stream = initialStream;
+  const track = stream.getVideoTracks()[0];
+  if (track) autoScanTryTorchSync(track);
+
+  if (autoScanIsAndroid()) {
+    stream = await autoScanRestartOnRearCamera(stream);
+    const rearTrack = stream.getVideoTracks()[0];
+    if (rearTrack) autoScanTryTorchSync(rearTrack);
+  }
+
+  return stream;
+}
 
 function autoScanIsIOS() {
   return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
@@ -98,10 +144,8 @@ window.ensureAutoScanModal = function() {
     <div id="autoScanScanPanel" class="auto-scan-panel">
       <div class="auto-scan-hint" id="autoScanHint">Align paperwork inside the frame</div>
       <button type="button" id="autoScanTorchBtn" class="auto-scan-torch-btn" title="Toggle flash">⚡ Flash On</button>
-      <div id="autoScanScreenLight" class="auto-scan-screen-light" aria-hidden="true"></div>
       <video id="autoScanVideo" autoplay playsinline muted></video>
       <canvas id="autoScanOverlay"></canvas>
-      <div class="auto-scan-flash" id="autoScanFlash"></div>
       <button type="button" id="autoScanManualBtn" class="auto-scan-manual-btn">Capture now</button>
       <div class="auto-scan-status is-searching" id="autoScanStatus">Starting camera…</div>
     </div>
@@ -156,7 +200,6 @@ function autoScanShowScanPanel() {
 
 function autoScanShowReviewPanel() {
   autoScanState.mode = 'review';
-  autoScanStopScreenTorch();
   document.getElementById('autoScanScanPanel').style.display = 'none';
   document.getElementById('autoScanReviewPanel').style.display = 'flex';
   document.getElementById('autoScanTorchBtn').style.display = 'none';
@@ -780,62 +823,28 @@ function autoScanUpdateTorchButton() {
     btn.textContent = autoScanState.torchOn ? '⚡ Flash On' : '⚡ Flash Off';
     btn.title = 'Toggle hardware flash';
     if (hint) hint.textContent = 'Align paperwork inside the frame — flash is on';
-  } else if (autoScanState.useScreenTorch) {
-    btn.textContent = autoScanState.torchOn ? '💡 Screen Light On' : '💡 Screen Light Off';
-    btn.title = autoScanIsIOS()
-      ? 'iPhone browsers cannot control the LED — screen light is used instead'
-      : 'Hardware flash unavailable — screen light is used instead';
-    if (hint) hint.textContent = autoScanIsIOS()
-      ? 'Align paperwork — screen light is on (iPhone LED not available in browser)'
-      : 'Align paperwork — screen light is on';
   } else {
     btn.textContent = autoScanState.torchOn ? '⚡ Flash' : '⚡ Flash Off';
-    btn.title = 'Tap to enable flash';
+    btn.title = autoScanIsIOS()
+      ? 'iPhone browsers do not expose the camera LED — flash works on Android Chrome'
+      : 'Tap to enable flash';
     if (hint) hint.textContent = 'Align paperwork inside the frame';
   }
   btn.classList.toggle('is-off', !autoScanState.torchOn);
 }
 
-function autoScanStartScreenTorch() {
-  if (!autoScanState.torchOn) return;
-  autoScanState.useScreenTorch = true;
-  autoScanState.screenTorchActive = true;
-  const light = document.getElementById('autoScanScreenLight');
-  if (light) light.classList.add('active');
-  autoScanUpdateTorchButton();
-}
-
-function autoScanStopScreenTorch() {
-  autoScanState.screenTorchActive = false;
-  const light = document.getElementById('autoScanScreenLight');
-  if (light) light.classList.remove('active');
-  const flash = document.getElementById('autoScanFlash');
-  if (flash) flash.classList.remove('active', 'active-burst');
-}
-
 async function autoScanActivateLighting(track) {
-  autoScanState.useScreenTorch = autoScanIsIOS();
   autoScanTryTorchSync(track);
-
-  let hardwareOk = false;
-  if (!autoScanIsIOS()) {
-    hardwareOk = await autoScanEnableTorchImmediate(track);
-    if (!hardwareOk) {
-      for (const delay of [60, 150, 300]) {
-        await new Promise(r => setTimeout(r, delay));
-        autoScanTryTorchSync(track);
-        hardwareOk = await autoScanApplyTorch(track, true);
-        if (hardwareOk) break;
-      }
+  let hardwareOk = await autoScanEnableTorchImmediate(track);
+  if (!hardwareOk) {
+    for (const delay of [60, 150, 300, 600]) {
+      await new Promise(r => setTimeout(r, delay));
+      autoScanTryTorchSync(track);
+      hardwareOk = await autoScanApplyTorch(track, true);
+      if (hardwareOk) break;
     }
-    autoScanState.torchSupported = hardwareOk;
   }
-
-  if (!hardwareOk && autoScanState.torchOn) {
-    autoScanStartScreenTorch();
-  } else {
-    autoScanStopScreenTorch();
-  }
+  autoScanState.torchSupported = hardwareOk;
   autoScanUpdateTorchButton();
   return hardwareOk;
 }
@@ -855,56 +864,6 @@ async function autoScanEnableTorchImmediate(track) {
   autoScanState.torchSupported = ok;
   autoScanUpdateTorchButton();
   return ok;
-}
-
-async function autoScanOpenCameraStream() {
-  if (!navigator.mediaDevices?.getUserMedia) {
-    throw new Error('Camera API unavailable');
-  }
-
-  const rearBase = {
-    facingMode: { ideal: 'environment' },
-    width: { ideal: 1920 },
-    height: { ideal: 1080 }
-  };
-
-  const attempts = [];
-
-  if (autoScanIsAndroid()) {
-    attempts.push({
-      video: { ...rearBase, advanced: [{ torch: true }] },
-      audio: false
-    });
-    attempts.push({
-      video: { ...rearBase, torch: true },
-      audio: false
-    });
-    attempts.push({
-      video: { facingMode: { exact: 'environment' }, advanced: [{ torch: true }] },
-      audio: false
-    });
-  }
-
-  attempts.push({ video: rearBase, audio: false });
-  attempts.push({
-    video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
-    audio: false
-  });
-  attempts.push({ video: { facingMode: 'environment' }, audio: false });
-  attempts.push({ video: true, audio: false });
-
-  let lastErr = null;
-  for (const constraints of attempts) {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      const track = stream.getVideoTracks()[0];
-      if (track) autoScanTryTorchSync(track);
-      return stream;
-    } catch (e) {
-      lastErr = e;
-    }
-  }
-  throw lastErr || new Error('Camera unavailable');
 }
 
 async function autoScanRestartOnRearCamera(currentStream) {
@@ -952,7 +911,6 @@ function autoScanStartTorchLoop(track) {
     if (++attempts > 20) {
       clearInterval(autoScanState.torchRetryTimer);
       autoScanState.torchRetryTimer = null;
-      if (!autoScanState.torchSupported && autoScanState.torchOn) autoScanStartScreenTorch();
       return;
     }
     await autoScanEnableTorchImmediate(autoScanState.videoTrack);
@@ -980,32 +938,15 @@ async function autoScanSetTorch(on) {
 
 window.toggleAutoScanTorch = function() {
   if (autoScanState.torchOn) {
-    autoScanState.torchOn = false;
-    autoScanStopScreenTorch();
-    if (autoScanState.videoTrack) autoScanApplyTorch(autoScanState.videoTrack, false);
-    autoScanUpdateTorchButton();
+    autoScanSetTorch(false);
     return;
   }
   autoScanState.torchOn = true;
   if (autoScanState.videoTrack) {
     autoScanTryTorchSync(autoScanState.videoTrack);
-    autoScanEnableTorchImmediate(autoScanState.videoTrack).then((ok) => {
-      autoScanState.torchSupported = ok;
-      if (!ok || autoScanIsIOS()) autoScanStartScreenTorch();
-      else autoScanStopScreenTorch();
-      autoScanUpdateTorchButton();
-    });
-  } else {
-    autoScanStartScreenTorch();
+    autoScanEnableTorchImmediate(autoScanState.videoTrack);
   }
 };
-
-function autoScanScreenFlash() {
-  const flash = document.getElementById('autoScanFlash');
-  if (!flash) return;
-  flash.classList.add('active', 'active-burst');
-  setTimeout(() => flash.classList.remove('active-burst'), 260);
-}
 
 function autoScanStopScanLoop() {
   if (autoScanState.timer) {
@@ -1030,12 +971,10 @@ async function autoScanCaptureFrame(bounds, corners) {
   autoScanState.capturing = true;
   autoScanStopScanLoop();
 
-  if (autoScanState.torchOn) {
-    if (autoScanState.torchSupported && autoScanState.videoTrack) await autoScanSetTorch(true);
-    else if (autoScanState.useScreenTorch) autoScanScreenFlash();
-    else autoScanScreenFlash();
+  if (autoScanState.torchOn && autoScanState.torchSupported && autoScanState.videoTrack) {
+    await autoScanSetTorch(true);
   }
-  await new Promise(r => setTimeout(r, autoScanState.torchSupported ? 160 : 120));
+  await new Promise(r => setTimeout(r, autoScanState.torchSupported ? 160 : 80));
 
   const vw = video.videoWidth;
   const vh = video.videoHeight;
@@ -1225,7 +1164,7 @@ window.autoScanRetry = async function() {
     }
   } else {
     window.closeAutoScan();
-    if (context) window.openAutoScan(context);
+    alert('Camera stopped. Tap Auto Scan again to restart.');
   }
 };
 
@@ -1277,15 +1216,16 @@ window.autoScanManualCapture = function() {
   autoScanCaptureFrame(bounds, corners);
 };
 
-window.openAutoScan = async function(context) {
+window.openAutoScan = async function(context, cameraPromise) {
   if (window.PHOTO_NO_SCAN && window.PHOTO_NO_SCAN.has(context)) return;
   const blobs = window.getPhotoBlobArray ? window.getPhotoBlobArray(context) : null;
   if (blobs && blobs.length >= (window.PHOTO_UI?.maxCount || 10)) {
     alert(`Maximum of ${window.PHOTO_UI.maxCount} photos reached.`);
     return;
   }
-  if (!navigator.mediaDevices?.getUserMedia) {
-    alert('Camera access is not available on this device.');
+
+  if (!cameraPromise) {
+    alert('Tap the Auto Scan button to start the camera.');
     return;
   }
 
@@ -1302,18 +1242,15 @@ window.openAutoScan = async function(context) {
   autoScanState.cameraStarting = false;
   autoScanState.torchOn = true;
   autoScanState.torchSupported = false;
-  autoScanState.useScreenTorch = autoScanIsIOS();
-  autoScanState.screenTorchActive = false;
 
   autoScanShowScanPanel();
-  autoScanSetStatus('Requesting camera permission…', false);
+  autoScanSetStatus('Waiting for camera permission…', false);
   autoScanDrawOverlay(null, null, false);
-  autoScanStopScreenTorch();
   document.getElementById('autoScanModal').style.display = 'flex';
 
   try {
-    let stream = await autoScanOpenCameraStream();
-    stream = await autoScanRestartOnRearCamera(stream);
+    let stream = await cameraPromise;
+    stream = await autoScanPrepareStream(stream);
 
     autoScanState.stream = stream;
     autoScanState.videoTrack = stream.getVideoTracks()[0] || null;
@@ -1328,9 +1265,7 @@ window.openAutoScan = async function(context) {
     autoScanSetStatus(
       autoScanState.torchSupported
         ? 'Flash on — align document edges in frame'
-        : autoScanState.useScreenTorch
-          ? 'Screen light on — align document edges in frame'
-          : 'Camera ready — align document in frame',
+        : 'Camera ready — tap ⚡ Flash if needed',
       false
     );
 
@@ -1339,17 +1274,13 @@ window.openAutoScan = async function(context) {
     autoScanState.timer = setInterval(autoScanTick, 100);
     window.addEventListener('resize', autoScanResizeOverlay);
   } catch (e) {
-    const denied = e && (e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError');
-    alert(denied
-      ? 'Camera permission is required for Auto Scan. Please allow camera access when prompted, or enable it in your browser/device settings.'
-      : 'Unable to access camera: ' + (e.message || 'unknown error'));
+    alert(autoScanCameraErrorMessage(e));
     window.closeAutoScan();
   }
 };
 
 window.closeAutoScan = async function() {
   autoScanStopScanLoop();
-  autoScanStopScreenTorch();
   window.removeEventListener('resize', autoScanResizeOverlay);
   if (autoScanState.videoTrack) {
     try { await autoScanApplyTorch(autoScanState.videoTrack, false); } catch (_) {}
@@ -1374,6 +1305,4 @@ window.closeAutoScan = async function() {
   autoScanState.bounds = null;
   autoScanState.mode = 'scan';
   autoScanState.cameraStarting = false;
-  autoScanState.useScreenTorch = false;
-  autoScanState.screenTorchActive = false;
 };
