@@ -22,20 +22,16 @@ window.initSiteFooter = function() {
 };
 
 window.initPmSmsDropdown = function() {
-  let dl = document.getElementById('dl_pmSmsNames');
-  if (!dl) {
-    dl = document.createElement('datalist');
-    dl.id = 'dl_pmSmsNames';
-    document.body.appendChild(dl);
-  }
-  dl.innerHTML = Object.keys(PM_SMS_ROSTER).sort().map(name => `<option value="${name}"></option>`).join('');
-  const input = document.getElementById('pn_pm_email');
-  if (input) {
-    input.setAttribute('list', 'dl_pmSmsNames');
-    input.placeholder = 'Select PM name...';
-    input.disabled = false;
-    input.removeAttribute('style');
-  }
+  const sel = document.getElementById('pn_pm_email');
+  if (!sel || sel.tagName !== 'SELECT') return;
+  const saved = sel.value;
+  sel.innerHTML = '<option value="">— Select PM —</option>' +
+    Object.keys(PM_SMS_ROSTER).sort().map(name =>
+      `<option value="${name}">${name}</option>`
+    ).join('');
+  if (saved && PM_SMS_ROSTER[saved]) sel.value = saved;
+  const staleList = document.getElementById('dl_pmSmsNames');
+  if (staleList) staleList.remove();
 };
 
 window.initEmployeeEmailDropdown = function() {

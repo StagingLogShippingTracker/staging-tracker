@@ -509,6 +509,7 @@ button[onclick*="banishMemory"]:hover {
 
 .modal-field { display: flex; flex-direction: column; gap: var(--space-xs); text-align: left; }
 .modal-field label { font-size: 12px; font-weight: 600; color: var(--text-muted); letter-spacing: 0.02em; }
+.pm-sms-select { width: 100%; cursor: pointer; }
 .req-mark { color: #ef4444; font-weight: 700; }
 
 .modal-actions {
