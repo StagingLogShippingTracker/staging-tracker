@@ -593,6 +593,48 @@ button[onclick*="banishMemory"]:hover {
 }
 
 .auto-scan-panel { position: absolute; inset: 0; }
+.auto-scan-permission {
+  position: absolute; inset: 0; z-index: 3;
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+  background: rgba(0,0,0,0.92);
+}
+.auto-scan-permission-card {
+  width: min(100%, 380px);
+  background: #fff;
+  border-radius: var(--radius-lg);
+  padding: 28px 24px;
+  text-align: center;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.45);
+}
+.auto-scan-permission-icon { font-size: 42px; margin-bottom: 8px; }
+.auto-scan-permission-card h3 {
+  margin: 0 0 12px;
+  font-size: 20px;
+  color: var(--text);
+}
+.auto-scan-permission-card p {
+  margin: 0 0 10px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+.auto-scan-permission-note {
+  font-size: 13px !important;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: var(--radius-md);
+  padding: 10px 12px !important;
+  margin-bottom: 16px !important;
+}
+.auto-scan-permission-btn {
+  width: 100%;
+  min-height: 48px;
+  margin-bottom: 10px;
+  font-size: 15px;
+  font-weight: 800;
+}
+.auto-scan-permission-cancel { width: 100%; min-height: 42px; }
 .auto-scan-review {
   position: absolute; inset: 0;
   display: flex; flex-direction: column;

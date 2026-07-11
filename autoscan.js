@@ -22,6 +22,7 @@ const autoScanState = {
   corners: null,
   bounds: null,
   capturing: false,
+  cameraStarting: false,
   torchOn: true,
   torchSupported: false,
   analysisCanvas: null,
@@ -37,7 +38,18 @@ window.ensureAutoScanModal = function() {
   <div class="auto-scan-shell">
     <button type="button" class="modal-close-x" id="autoScanClose" aria-label="Close">&times;</button>
 
-    <div id="autoScanScanPanel" class="auto-scan-panel">
+    <div id="autoScanPermissionPanel" class="auto-scan-permission">
+      <div class="auto-scan-permission-card">
+        <div class="auto-scan-permission-icon" aria-hidden="true">📷</div>
+        <h3>Camera &amp; Flash Access</h3>
+        <p>Auto Scan uses your rear camera and turns on the flash automatically for clearer document photos.</p>
+        <p class="auto-scan-permission-note">Tap the button below, then choose <strong>Allow</strong> when your device asks for camera permission.</p>
+        <button type="button" id="autoScanPermissionBtn" class="btn auto-scan-permission-btn">Allow Camera &amp; Flash</button>
+        <button type="button" id="autoScanPermissionCancel" class="btn btn-muted auto-scan-permission-cancel">Cancel</button>
+      </div>
+    </div>
+
+    <div id="autoScanScanPanel" class="auto-scan-panel" style="display:none;">
       <div class="auto-scan-hint">Align paperwork inside the frame — flash turns on automatically</div>
       <button type="button" id="autoScanTorchBtn" class="auto-scan-torch-btn" title="Toggle flash">⚡ Flash On</button>
       <video id="autoScanVideo" autoplay playsinline muted></video>
@@ -79,6 +91,8 @@ window.ensureAutoScanModal = function() {
   document.getElementById('autoScanModal').addEventListener('click', (e) => {
     if (e.target.id === 'autoScanModal') window.closeAutoScan();
   });
+  document.getElementById('autoScanPermissionBtn').addEventListener('click', () => window.autoScanStartCamera());
+  document.getElementById('autoScanPermissionCancel').addEventListener('click', () => window.closeAutoScan());
   document.getElementById('autoScanTorchBtn').addEventListener('click', () => window.toggleAutoScanTorch());
   document.getElementById('autoScanManualBtn').addEventListener('click', () => window.autoScanManualCapture());
   document.getElementById('autoScanRetryBtn').addEventListener('click', () => window.autoScanRetry());
@@ -99,17 +113,32 @@ window.ensureAutoScanModal = function() {
   sel.value = 'document';
 };
 
-function autoScanShowScanPanel() {
-  autoScanState.mode = 'scan';
+function autoScanShowPermissionPanel() {
+  autoScanState.mode = 'permission';
+  const perm = document.getElementById('autoScanPermissionPanel');
   const scan = document.getElementById('autoScanScanPanel');
   const review = document.getElementById('autoScanReviewPanel');
+  if (perm) perm.style.display = 'flex';
+  if (scan) scan.style.display = 'none';
+  if (review) review.style.display = 'none';
+}
+
+function autoScanShowScanPanel() {
+  autoScanState.mode = 'scan';
+  const perm = document.getElementById('autoScanPermissionPanel');
+  const scan = document.getElementById('autoScanScanPanel');
+  const review = document.getElementById('autoScanReviewPanel');
+  if (perm) perm.style.display = 'none';
   if (scan) scan.style.display = 'block';
   if (review) review.style.display = 'none';
-  document.getElementById('autoScanTorchBtn').style.display = '';
+  const torchBtn = document.getElementById('autoScanTorchBtn');
+  if (torchBtn) torchBtn.style.display = '';
 }
 
 function autoScanShowReviewPanel() {
   autoScanState.mode = 'review';
+  const perm = document.getElementById('autoScanPermissionPanel');
+  if (perm) perm.style.display = 'none';
   document.getElementById('autoScanScanPanel').style.display = 'none';
   document.getElementById('autoScanReviewPanel').style.display = 'flex';
   document.getElementById('autoScanTorchBtn').style.display = 'none';
@@ -651,11 +680,48 @@ function autoScanTrackTorchCaps(track) {
   };
 }
 
+function autoScanTryTorchSync(track) {
+  if (!track || track.readyState === 'ended') return;
+  const caps = autoScanTrackTorchCaps(track);
+  const syncAttempts = [];
+  if (caps.torch) {
+    syncAttempts.push({ advanced: [{ torch: true }] });
+    syncAttempts.push({ torch: true });
+  }
+  if (caps.fillFlash) {
+    syncAttempts.push({ advanced: [{ fillLightMode: 'flash' }] });
+    syncAttempts.push({ fillLightMode: 'flash' });
+  }
+  if (!syncAttempts.length) {
+    syncAttempts.push({ advanced: [{ torch: true }] }, { torch: true });
+  }
+  syncAttempts.forEach(c => {
+    try { track.applyConstraints(c); } catch (_) {}
+  });
+}
+
+async function autoScanTryImageCaptureTorch(track) {
+  if (typeof ImageCapture === 'undefined' || !track) return false;
+  try {
+    const ic = new ImageCapture(track);
+    const caps = await ic.getPhotoCapabilities();
+    const modes = caps.fillLightMode || [];
+    if (Array.isArray(modes) && modes.includes('flash')) {
+      await track.applyConstraints({ advanced: [{ fillLightMode: 'flash' }] });
+      return true;
+    }
+  } catch (_) {}
+  return false;
+}
+
 async function autoScanApplyTorch(track, on) {
   if (!track || track.readyState === 'ended') return false;
   const want = !!on;
   const caps = autoScanTrackTorchCaps(track);
-  if (want && !caps.torch && !caps.fillFlash) return false;
+  if (want && !caps.torch && !caps.fillFlash) {
+    autoScanTryTorchSync(track);
+    return false;
+  }
 
   const attempts = [];
   if (caps.torch) {
@@ -674,35 +740,47 @@ async function autoScanApplyTorch(track, on) {
   for (const attempt of attempts) {
     try {
       await attempt();
-      await new Promise(r => setTimeout(r, 60));
       const settings = track.getSettings?.() || {};
-      if (want && settings.torch === true) return true;
-      if (want && settings.fillLightMode === 'flash') return true;
-      if (!want && (settings.torch === false || settings.fillLightMode === 'off')) return true;
+      if (want) {
+        if (settings.torch === true || settings.fillLightMode === 'flash') return true;
+        if (caps.torch || caps.fillFlash) return true;
+      } else if (settings.torch === false || settings.fillLightMode === 'off') {
+        return true;
+      }
     } catch (_) { /* try next */ }
   }
+  if (want) return autoScanTryImageCaptureTorch(track);
   return false;
+}
+
+function autoScanUpdateTorchButton() {
+  const btn = document.getElementById('autoScanTorchBtn');
+  if (!btn) return;
+  btn.style.display = '';
+  if (autoScanState.torchSupported) {
+    btn.textContent = autoScanState.torchOn ? '⚡ Flash On' : '⚡ Flash Off';
+    btn.title = 'Toggle flash';
+  } else {
+    btn.textContent = autoScanState.torchOn ? '⚡ Flash (screen boost)' : '⚡ Flash Off';
+    btn.title = 'Hardware flash unavailable — tap to retry or use screen boost on capture';
+  }
+  btn.classList.toggle('is-off', !autoScanState.torchOn);
 }
 
 async function autoScanEnableTorchImmediate(track) {
   if (!track) return false;
-  for (let i = 0; i < 12 && track.readyState !== 'live'; i++) {
-    await new Promise(r => setTimeout(r, 50));
-  }
+  autoScanTryTorchSync(track);
   let ok = await autoScanApplyTorch(track, true);
-  for (const delay of [80, 160, 320, 640, 1000, 1500]) {
-    if (ok) break;
-    await new Promise(r => setTimeout(r, delay));
-    ok = await autoScanApplyTorch(track, true);
+  if (!ok) {
+    for (const delay of [40, 100, 200, 400]) {
+      await new Promise(r => setTimeout(r, delay));
+      autoScanTryTorchSync(track);
+      ok = await autoScanApplyTorch(track, true);
+      if (ok) break;
+    }
   }
   autoScanState.torchSupported = ok;
-  const btn = document.getElementById('autoScanTorchBtn');
-  if (btn) {
-    btn.style.display = '';
-    btn.textContent = ok ? '⚡ Flash On' : '⚡ Flash (screen boost)';
-    btn.classList.toggle('is-off', !autoScanState.torchOn);
-    if (!ok) btn.title = 'Hardware flash unavailable — using screen brightness boost when capturing';
-  }
+  autoScanUpdateTorchButton();
   return ok;
 }
 
@@ -755,19 +833,31 @@ function autoScanStartTorchLoop(track) {
 
 async function autoScanSetTorch(on) {
   autoScanState.torchOn = !!on;
-  const btn = document.getElementById('autoScanTorchBtn');
-  if (btn) {
-    btn.textContent = on ? (autoScanState.torchSupported ? '⚡ Flash On' : '⚡ Flash (screen boost)') : '⚡ Flash Off';
-    btn.classList.toggle('is-off', !on);
-  }
   const track = autoScanState.videoTrack;
-  if (!track) return false;
-  if (on) return autoScanEnableTorchImmediate(track);
-  return autoScanApplyTorch(track, false);
+  if (!track) {
+    autoScanUpdateTorchButton();
+    return false;
+  }
+  if (on) {
+    autoScanTryTorchSync(track);
+    const ok = await autoScanEnableTorchImmediate(track);
+    autoScanState.torchSupported = ok;
+    autoScanUpdateTorchButton();
+    return ok;
+  }
+  await autoScanApplyTorch(track, false);
+  autoScanUpdateTorchButton();
+  return true;
 }
 
 window.toggleAutoScanTorch = function() {
-  autoScanSetTorch(!autoScanState.torchOn);
+  if (autoScanState.torchOn) {
+    autoScanSetTorch(false);
+    return;
+  }
+  autoScanState.torchOn = true;
+  autoScanTryTorchSync(autoScanState.videoTrack);
+  autoScanEnableTorchImmediate(autoScanState.videoTrack);
 };
 
 function autoScanScreenFlash() {
@@ -1046,7 +1136,7 @@ window.autoScanManualCapture = function() {
   autoScanCaptureFrame(bounds, corners);
 };
 
-window.openAutoScan = async function(context) {
+window.openAutoScan = function(context) {
   if (window.PHOTO_NO_SCAN && window.PHOTO_NO_SCAN.has(context)) return;
   const blobs = window.getPhotoBlobArray ? window.getPhotoBlobArray(context) : null;
   if (blobs && blobs.length >= (window.PHOTO_UI?.maxCount || 10)) {
@@ -1069,29 +1159,56 @@ window.openAutoScan = async function(context) {
   autoScanState.bounds = null;
   autoScanState.capturing = false;
   autoScanState.torchOn = true;
-  autoScanShowScanPanel();
-  autoScanSetStatus('Starting camera…', false);
-  autoScanDrawOverlay(null, null, false);
+  autoScanState.torchSupported = false;
+  autoScanState.cameraStarting = false;
 
+  autoScanShowPermissionPanel();
   document.getElementById('autoScanModal').style.display = 'flex';
-  autoScanScreenFlash();
+
+  const permBtn = document.getElementById('autoScanPermissionBtn');
+  const hasUsed = localStorage.getItem('autoscan_camera_ack') === '1';
+  if (permBtn) {
+    permBtn.textContent = hasUsed ? 'Start Camera & Flash' : 'Allow Camera & Flash';
+  }
+};
+
+window.autoScanStartCamera = async function() {
+  if (autoScanState.cameraStarting || autoScanState.mode === 'scan') return;
+  if (!autoScanState.context) return;
+
+  autoScanState.cameraStarting = true;
+  const permBtn = document.getElementById('autoScanPermissionBtn');
+  if (permBtn) {
+    permBtn.disabled = true;
+    permBtn.textContent = 'Opening camera…';
+  }
+
+  autoScanShowScanPanel();
+  autoScanSetStatus('Requesting camera access…', false);
+  autoScanDrawOverlay(null, null, false);
 
   try {
     const stream = await autoScanOpenCameraStream();
     autoScanState.stream = stream;
     autoScanState.videoTrack = stream.getVideoTracks()[0] || null;
+
+    autoScanTryTorchSync(autoScanState.videoTrack);
+
     const video = document.getElementById('autoScanVideo');
     video.srcObject = stream;
     video.onloadeddata = () => autoScanSetStatus('Camera ready — turning on flash…', false);
-    video.addEventListener('playing', () => autoScanEnableTorchImmediate(autoScanState.videoTrack), { once: true });
+
     await video.play();
 
+    autoScanTryTorchSync(autoScanState.videoTrack);
     await autoScanEnableTorchImmediate(autoScanState.videoTrack);
     autoScanStartTorchLoop(autoScanState.videoTrack);
+
+    localStorage.setItem('autoscan_camera_ack', '1');
     autoScanSetStatus(
       autoScanState.torchSupported
         ? 'Flash on — align document edges in frame'
-        : 'Align document in frame (using screen boost on capture)',
+        : 'Tap ⚡ Flash to retry, or use screen boost on capture',
       false
     );
 
@@ -1100,8 +1217,23 @@ window.openAutoScan = async function(context) {
     autoScanState.timer = setInterval(autoScanTick, 100);
     window.addEventListener('resize', autoScanResizeOverlay);
   } catch (e) {
-    alert('Unable to access camera: ' + (e.message || 'permission denied'));
-    window.closeAutoScan();
+    autoScanShowPermissionPanel();
+    if (permBtn) {
+      permBtn.disabled = false;
+      permBtn.textContent = 'Allow Camera & Flash';
+    }
+    const denied = e && (e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError');
+    alert(denied
+      ? 'Camera permission was denied. Please allow camera access in your browser or device settings, then try again.'
+      : 'Unable to access camera: ' + (e.message || 'unknown error'));
+  } finally {
+    autoScanState.cameraStarting = false;
+    if (permBtn && autoScanState.mode === 'permission') {
+      permBtn.disabled = false;
+      permBtn.textContent = localStorage.getItem('autoscan_camera_ack') === '1'
+        ? 'Start Camera & Flash'
+        : 'Allow Camera & Flash';
+    }
   }
 };
 
@@ -1130,4 +1262,12 @@ window.closeAutoScan = async function() {
   autoScanState.corners = null;
   autoScanState.bounds = null;
   autoScanState.mode = 'scan';
+  autoScanState.cameraStarting = false;
+  const perm = document.getElementById('autoScanPermissionPanel');
+  if (perm) perm.style.display = 'none';
+  const permBtn = document.getElementById('autoScanPermissionBtn');
+  if (permBtn) {
+    permBtn.disabled = false;
+    permBtn.textContent = 'Allow Camera & Flash';
+  }
 };
