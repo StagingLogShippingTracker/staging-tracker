@@ -3,8 +3,10 @@
 <head>
 <meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Swift Staging Tracker - Reports Dashboard</title>
+<meta name="theme-color" content="#e04015" />
+<link rel="manifest" href="manifest.webmanifest" />
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<link rel="stylesheet" href="style.css?v=7.1" />
+<link rel="stylesheet" href="style.css?v=7.3" />
 </head>
 <body>
 <datalist id="dl_customers"></datalist><datalist id="dl_locations"></datalist><datalist id="dl_stagers"></datalist><datalist id="dl_pastEmails"></datalist><datalist id="dl_sos"></datalist>
@@ -50,7 +52,7 @@
 <div id="reportMainModal" class="modal-overlay">
   <div class="modal-window" style="max-width: 500px; text-align:center;"><button class="modal-close-x" onclick="document.querySelector('#reportMainModal').style.display='none'; try{ window.pauseReport(); }catch(e){};">&times;</button>
     <h3 style="margin-top:0; color:#64748b; font-size:14px; text-transform:uppercase;">Staging Verification</h3>
-    <div id="rep_loc" style="font-size:42px; font-weight:900; color:#dd4d25; margin:10px 0;"></div>
+    <div id="rep_loc" style="font-size:42px; font-weight:900; color:#e04015; margin:10px 0;"></div>
     <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:16px; text-align:left; font-size:13.5px; color:#334155; margin-bottom:16px;">
       <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><b>SO:</b> <span id="rep_so" style="font-weight:700;"></span></div>
       <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><b>Customer:</b> <span id="rep_cust"></span></div>
@@ -265,16 +267,16 @@
 </div>  
   
 <script src="employees.js?v=3.3"></script>
-<script src="config.js?v=3.3"></script>
+<script src="config.js?v=3.4"></script>
 <script src="auth.js?v=3.3"></script>
 <script src="ui.js?v=6.4"></script>
 <script src="history.js?v=3.4"></script>
 <script src="split.js?v=3.7"></script>
 <script src="reports.js?v=3.7"></script>
-<script src="operations.js?v=4.1"></script>
+<script src="operations.js?v=4.2"></script>
 <script src="batch.js?v=6.0"></script>
 <script src="media.js?v=5.2"></script>
 <script src="autoscan.js?v=2.1"></script>
-<script src="app.js?v=4.1"></script>
+<script src="app.js?v=4.4"></script>
 </body>
 </html>

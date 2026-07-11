@@ -1,10 +1,24 @@
 window.bootstrapStandalonePWA = function() {
-  const pwaData = {
-    "short_name": "StagingTracker", "name": "Swift Staging Tracker",
-    "icons": [{"src": "staging-shipping-logo.png?v=2", "type": "image/png", "sizes": "512x512"}],
-    "start_url": ".", "background_color": "#f1f5f9", "theme_color": "#dd4d25", "display": "standalone", "orientation": "portrait"
-  };
-  if($('#pwa-manifest')) $('#pwa-manifest').setAttribute('href', 'data:application/manifest+json;charset=utf-8,' + encodeURIComponent(JSON.stringify(pwaData)));
+  const themeColor = '#e04015';
+  let themeMeta = document.querySelector('meta[name="theme-color"]');
+  if (!themeMeta) {
+    themeMeta = document.createElement('meta');
+    themeMeta.setAttribute('name', 'theme-color');
+    document.head.appendChild(themeMeta);
+  }
+  themeMeta.setAttribute('content', themeColor);
+};
+
+window.initSiteFooter = function() {
+  if (document.querySelector('.site-footer')) return;
+  const footer = document.createElement('footer');
+  footer.className = 'site-footer';
+  footer.setAttribute('aria-label', 'Site credit and legal notice');
+  footer.innerHTML = `
+    <p class="site-footer__credit">Designed, developed, and maintained by Brice Johnson.</p>
+    <p class="site-footer__legal">Open-source components are used under their respective licenses. All other software, design, and content are the property of Brice Johnson. All rights reserved. Unauthorized use, reproduction, or distribution is prohibited.</p>
+  `;
+  document.body.appendChild(footer);
 };
 
 window.initEmployeeEmailDropdown = function() {
@@ -41,6 +55,7 @@ function initApp() {
   if (typeof window.initUniversalDropdowns === 'function') window.initUniversalDropdowns();
   if (typeof window.initSoCustomerAutofill === 'function') window.initSoCustomerAutofill();
   if (typeof window.initSearchClearButtons === 'function') window.initSearchClearButtons();
+  window.initSiteFooter();
 
   if (!document.getElementById('dl_sos')) {
     document.body.insertAdjacentHTML('beforeend', '<datalist id="dl_sos"></datalist>');
