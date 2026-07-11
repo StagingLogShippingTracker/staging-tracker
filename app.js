@@ -93,7 +93,9 @@ window.initSiteFooter = function() {
     <p class="site-footer__credit">Designed, developed, and maintained by Brice Johnson.</p>
     <p class="site-footer__legal">Open-source components are used under their respective licenses. All other software, design, and content are the property of Brice Johnson. All rights reserved. Unauthorized use, reproduction, or distribution is prohibited.</p>
   `;
-  document.body.appendChild(footer);
+  const wrap = document.querySelector('.wrap');
+  if (wrap && wrap.parentNode === document.body) wrap.insertAdjacentElement('afterend', footer);
+  else document.body.appendChild(footer);
 };
 
 window.initPmSmsDropdown = function() {
