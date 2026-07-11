@@ -12,6 +12,7 @@ const PM_SMS_ROSTER = {
   'Chris Acorn': '7807253416@msg.telus.com',
   'Dustin Strachan': '7809759387@msg.telus.com',
   'Kim Mulder': '7809530959@msg.telus.com',
+  'Meedo Attia': '5875013894@txt.freedommobile.ca',
   'Miranda McBrayne': '7809356267@fido.ca',
   'Renee Jean': '7808196520@msg.telus.com',
   'Sean Fitzpatrick': '7802660362@msg.telus.com',
