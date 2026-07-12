@@ -701,8 +701,8 @@ window.checkSoConflict = async function(so, excludeId) {
   if (conflicts.length > 0) {
     return new Promise(resolve => {
       $('#conflict_so_title').textContent = so;
-      let html = `<div style="background:#fff; border-radius:8px; padding:12px; border:1px solid #cbd5e1;">`;
-      html += `<h4 style="margin:0 0 8px 0; color:#0ea5e9; border-bottom:2px solid #e0f2fe; padding-bottom:6px; font-size:14px;">Current Active Staging</h4>`;
+      let html = `<div class="history-section">`;
+      html += `<h4 class="section-staging">Current Active Staging</h4>`;
       html += typeof window.formatActiveStagingList === 'function'
         ? window.formatActiveStagingList(conflicts)
         : '';

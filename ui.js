@@ -85,9 +85,24 @@ window.STAGING_STATUS_COLORS = [
   { match: 'customer pick', label: 'Customer Pick-Up', color: '#f3e8ff' },
 ];
 
+window.STAGING_STATUS_COLORS_DARK = [
+  { match: 'partial', label: 'Partial', color: 'rgba(251, 146, 60, 0.24)' },
+  { match: 'today', label: 'Ship Today', color: 'rgba(239, 68, 68, 0.26)' },
+  { match: 'tomorrow', label: 'Ship Tomorrow', color: 'rgba(234, 179, 8, 0.22)' },
+  { match: 'future', label: 'Ship On Future Date', color: 'rgba(59, 130, 246, 0.24)' },
+  { match: 'corp pick', label: 'Corp Pick', color: 'rgba(34, 197, 94, 0.22)' },
+  { match: 'customer pick', label: 'Customer Pick-Up', color: 'rgba(168, 85, 247, 0.24)' },
+];
+
+window.getStagingStatusColors = function() {
+  return document.documentElement.getAttribute('data-theme') === 'dark'
+    ? window.STAGING_STATUS_COLORS_DARK
+    : window.STAGING_STATUS_COLORS;
+};
+
 window.getRowColor = function(dbStatus) {
   const s = window.getFormattedStatus(dbStatus).toLowerCase();
-  for (const item of window.STAGING_STATUS_COLORS) {
+  for (const item of window.getStagingStatusColors()) {
     if (s.includes(item.match)) return item.color;
   }
   return '';
@@ -108,7 +123,9 @@ window.toggleQuickActions = function(btn) {
 
 window.SEARCH_CLEAR_CONFIG = [
   { id: 'q', onClear: () => { if (typeof window.renderTables === 'function') window.renderTables(); } },
-  { id: 'searchOrdersModal', onClear: () => { if (typeof window.filterOrdersModal === 'function') window.filterOrdersModal(); } },
+  { id: 'searchStatDetail', onClear: () => { if (typeof window.filterStatDetailModal === 'function') window.filterStatDetailModal(); } },
+  { id: 'searchOrdersModal', onClear: () => { if (typeof window.filterStatDetailModal === 'function') window.filterStatDetailModal(); } },
+  { id: 'searchShippedExpanded', onClear: () => { if (typeof window.renderShippedExpandedModal === 'function') window.renderShippedExpandedModal(); } },
   { id: 'contactSearch', onClear: () => { if (typeof renderContactsTable === 'function') renderContactsTable(); } }
 ];
 
@@ -175,8 +192,8 @@ window.renderStagingStatusLegend = function() {
   const el = document.getElementById('stagingStatusLegend');
   if (!el) return;
   const items = [
-    ...window.STAGING_STATUS_COLORS,
-    { label: 'Awaiting Instructions', color: '#ffffff' },
+    ...window.getStagingStatusColors(),
+    { label: 'Awaiting Instructions', color: document.documentElement.getAttribute('data-theme') === 'dark' ? '#475569' : '#ffffff' },
   ];
   el.innerHTML = items.map(({ label, color }) =>
     `<span class="staging-status-legend__item"><span class="staging-status-legend__swatch" style="background:${color};"></span>${label}</span>`
@@ -184,7 +201,12 @@ window.renderStagingStatusLegend = function() {
 };
 
 window.renderTables = function() {
-  const q = $('#q') ? $('#q').value.toLowerCase() : ''; const canEdit = !!currentUser;
+  const q = $('#q') ? $('#q').value.toLowerCase() : '';
+  if (window._renderSearchKey !== q) {
+    if (typeof window.resetMobileCardVisible === 'function') window.resetMobileCardVisible();
+    window._renderSearchKey = q;
+  }
+  const canEdit = !!currentUser;
   const fStaging = appData.staging.filter(o => (o.so||'').toLowerCase().includes(q) || (o.customer||'').toLowerCase().includes(q) || (o.location||'').toLowerCase().includes(q));
   const sortMode = $('#sortToggle') ? $('#sortToggle').value : 'urgency';
   const sortedStaging = window.sortStagingEntries(fStaging, sortMode);
@@ -193,15 +215,11 @@ window.renderTables = function() {
   if($('#tblStaging')) {
     const sBody = $('#tblStaging').querySelector('tbody'); 
     if(sBody) {
-      sBody.innerHTML = ''; const limitStaging = $('#stageLimitNotice') ? 20 : 999999;
-      // Inject dynamic CSS to ensure cell backgrounds don't hide the row color, 
-      // while safely preserving the hover-darken effect using a CSS overlay gradient
-      if (!document.getElementById('status-row-styles')) {
-        document.head.insertAdjacentHTML('beforeend', `<style id="status-row-styles">
-          tr.status-row td { background-color: inherit !important; }
-          tr.status-row:hover td { background-image: linear-gradient(rgba(0,0,0,0.04), rgba(0,0,0,0.04)) !important; }
-        </style>`);
-      }
+      sBody.innerHTML = '';
+      const isDashPreview = !!$('#stageLimitNotice');
+      const limitStaging = typeof window.getTableRenderLimit === 'function'
+        ? window.getTableRenderLimit('tblStaging', isDashPreview)
+        : (isDashPreview ? 20 : 999999);
 
       sortedStaging.slice(0, limitStaging).forEach(o => {
         const picBtn = (o.photo_urls && o.photo_urls.length > 0) ? `<button class="btn btn-table btn-table--view" onclick="window.openPhotoViewer('${o.id}')">View</button>` : '';
@@ -213,7 +231,7 @@ window.renderTables = function() {
         const rowBg = window.getRowColor(o.status);
         const trClass = rowBg ? `class="status-row"` : '';
         const trStyle = rowBg ? `style="background-color: ${rowBg};"` : '';
-        const stickyStyle = rowBg ? `background-color: inherit;` : `background:#f8fafc;`;
+        const stickyClass = rowBg ? 'sticky-ship-col' : 'sticky-ship-col';
 
         sBody.insertAdjacentHTML('beforeend', `<tr ${trClass} ${trStyle}>
           ${window.labeledCell('Select', batchChk, 'show-in-batch', 'text-align:center;')}
@@ -226,18 +244,25 @@ window.renderTables = function() {
           ${window.labeledCell('Location', `<b>${o.location}</b>`)}
           ${window.labeledCell('Weight', o.weight || '—')}
           ${window.labeledCell('Comments', commentBtn, 'hide-in-batch')}
-          ${window.labeledCell('Status', `<span style="font-weight:bold; color:#475569;">${window.getFormattedStatus(o.status)}</span>`)}
+          ${window.labeledCell('Status', `<span class="status-cell-label">${window.getFormattedStatus(o.status)}</span>`)}
           ${window.labeledCell('Staged By', o.staged_by || '—', 'col-low-priority')}
-          ${window.labeledCell('Ship', chkBox, 'hide-in-batch', `text-align:center; ${stickyStyle} border-left:1px solid #e2e8f0;`)}
+          ${window.labeledCell('Ship', chkBox, `hide-in-batch ${stickyClass}`)}
         </tr>`);
       });
+      if (typeof window.updateMobileCardMoreButtons === 'function') {
+        window.updateMobileCardMoreButtons('tblStaging', Math.min(limitStaging, sortedStaging.length), sortedStaging.length, isDashPreview);
+      }
     }
   }
 
   if($('#tblShipped')) {
     const shBody = $('#tblShipped').querySelector('tbody'); 
     if(shBody) {
-      shBody.innerHTML = ''; const limitShipped = $('#shippedLimitNotice') ? 20 : 999999;
+      shBody.innerHTML = '';
+      const isDashPreview = !!$('#shippedLimitNotice');
+      const limitShipped = typeof window.getTableRenderLimit === 'function'
+        ? window.getTableRenderLimit('tblShipped', isDashPreview)
+        : (isDashPreview ? 20 : 999999);
       fShipped.slice(0, limitShipped).forEach(o => {
         const isRet = (o.carrier === 'RETURNED TO STOCK' || o.carrier === 'CONSOLIDATED'); const rowClass = isRet ? 'class="grey-strike"' : '';
         const picBtn = (o.photo_urls && o.photo_urls.length > 0) ? `<button class="btn btn-table btn-table--view" onclick="window.openPhotoViewer('${o.id}')">View</button>` : '';
@@ -262,6 +287,9 @@ window.renderTables = function() {
           ${window.labeledCell("PM'd Email", o.pmd_email ? o.pmd_email + (isRet ? '' : '<span class="green-check"> ✓</span>') : '—', 'col-low-priority')}
         </tr>`);
       });
+      if (typeof window.updateMobileCardMoreButtons === 'function') {
+        window.updateMobileCardMoreButtons('tblShipped', Math.min(limitShipped, fShipped.length), fShipped.length, isDashPreview);
+      }
     }
   }
 
@@ -382,55 +410,255 @@ window.triggerShipModal = function(id) {
 
 window.closeShipModal = function() { if($('#shipModal')) $('#shipModal').style.display = 'none'; window.loadCloudData(); };
 
-window.openOrdersModal = function() {
-  if(!$('#ordersModal')) return; const tbody = $('#tblOrders tbody'); if(!tbody) return; tbody.innerHTML = '';
-  if($('#searchOrdersModal')) $('#searchOrdersModal').value = '';
-  
+window.STAT_DETAIL_MODES = {
+  orders: { title: 'Active Staging Orders', entryLabel: 'Staging Entry' },
+  containers: { title: 'Active Staging Containers', entryLabel: 'Container', flat: true },
+  skid: { title: 'Active Staging Skids', entryLabel: 'Container', filter: 'Skid' },
+  box: { title: 'Active Staging Boxes', entryLabel: 'Container', filter: 'Box' },
+  crate: { title: 'Active Staging Crates', entryLabel: 'Container', filter: 'Crate' },
+  pipe: { title: 'Active Staging Pipe/Rod', entryLabel: 'Container', filter: 'Pipe/Rod' },
+  other: { title: 'Active Staging Other', entryLabel: 'Container', filter: 'Other' }
+};
+
+window._statDetailMode = 'orders';
+
+window.getStatDetailEls = function() {
+  if ($('#statDetailModal')) {
+    return {
+      modal: $('#statDetailModal'),
+      title: $('#statDetailTitle'),
+      search: $('#searchStatDetail'),
+      tbody: $('#tblStatDetail') ? $('#tblStatDetail').querySelector('tbody') : null
+    };
+  }
+  return {
+    modal: $('#ordersModal'),
+    title: $('#ordersModal') ? $('#ordersModal').querySelector('h3') : null,
+    search: $('#searchOrdersModal'),
+    tbody: $('#tblOrders') ? $('#tblOrders').querySelector('tbody') : null
+  };
+};
+
+window.sortSoKeysAsc = function(keys) {
+  return keys.sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+};
+
+window.expandEntryContainers = function(entry, filterType) {
+  const counts = window.parseContainerString(entry.type);
+  const specs = [
+    { n: counts.sk, type: 'Skid' },
+    { n: counts.bx, type: 'Box' },
+    { n: counts.cr, type: 'Crate' },
+    { n: counts.pi, type: 'Pipe/Rod' },
+    { n: counts.ot, type: 'Other' }
+  ];
+  const out = [];
+  specs.forEach(({ n, type }) => {
+    if (filterType && type !== filterType) return;
+    for (let i = 0; i < n; i++) out.push({ entry, containerLabel: window.formatContainer(1, type) });
+  });
+  return out;
+};
+
+window.buildStatDetailGroups = function(mode) {
+  const cfg = window.STAT_DETAIL_MODES[mode];
   const groups = {};
-  appData.staging.forEach(o => { const key = o.so || 'Unknown SO'; if(!groups[key]) groups[key] = []; groups[key].push(o); });
-  
-  Object.keys(groups).forEach(so => {
-    groups[so].sort((a,b) => new Date(b.entry_date) - new Date(a.entry_date));
-    const safeId = so.replace(/[^a-zA-Z0-9]/g, '_'); const allCustomers = groups[so].map(x => x.customer).join(' ');
-    
-    tbody.insertAdjacentHTML('beforeend', `
-      <tr class="group-header-row" data-so="${so}" data-cust="${allCustomers}" data-safeid="${safeId}" style="cursor:pointer; background:#f8fafc;" onclick="window.toggleOrderGroup('${safeId}')">
-        <td style="padding: 12px; border-bottom:1px solid #e2e8f0;"><span id="icon_so_${safeId}" style="display:inline-block; width:16px; font-weight:900; color:#64748b;">+</span> <a class="so-link" onclick="event.stopPropagation(); window.openOrderHistory('${so}')">${so}</a></td>
-        <td colspan="3" style="text-align:right; font-size:12px; color:#64748b; padding: 12px; border-bottom:1px solid #e2e8f0;">${groups[so].length} Staging Entry(s)</td>
+
+  if (mode === 'orders') {
+    appData.staging.forEach(o => {
+      const so = o.so || 'Unknown SO';
+      if (!groups[so]) groups[so] = [];
+      groups[so].push({ entry: o, containerLabel: o.type });
+    });
+    return groups;
+  }
+
+  appData.staging.forEach(o => {
+    const items = window.expandEntryContainers(o, cfg.filter);
+    if (!items.length) return;
+    const so = o.so || 'Unknown SO';
+    if (!groups[so]) groups[so] = [];
+    groups[so].push(...items);
+  });
+  return groups;
+};
+
+window.buildStatDetailFlatList = function(mode) {
+  const cfg = window.STAT_DETAIL_MODES[mode];
+  const rows = [];
+  appData.staging.forEach(o => {
+    const items = mode === 'containers'
+      ? window.expandEntryContainers(o)
+      : window.expandEntryContainers(o, cfg.filter);
+    items.forEach(item => rows.push({ entry: o, containerLabel: item.containerLabel }));
+  });
+  rows.sort((a, b) => {
+    const soCmp = (a.entry.so || '').localeCompare(b.entry.so || '', undefined, { numeric: true, sensitivity: 'base' });
+    if (soCmp !== 0) return soCmp;
+    return new Date(a.entry.entry_date) - new Date(b.entry.entry_date);
+  });
+  return rows;
+};
+
+window.updateStatDetailTableHead = function(mode) {
+  const cfg = window.STAT_DETAIL_MODES[mode] || window.STAT_DETAIL_MODES.orders;
+  const table = $('#tblStatDetail') || $('#tblOrders');
+  const theadRow = table ? table.querySelector('thead tr') : null;
+  if (!theadRow) return;
+  if (cfg.flat) {
+    theadRow.innerHTML = '<th>SO</th><th>Customer</th><th>Container</th><th>Location</th><th>Entry Date</th>';
+  } else {
+    theadRow.innerHTML = '<th>SO</th><th colspan="3">Details</th>';
+  }
+};
+
+window.renderStatDetailModal = function() {
+  const els = window.getStatDetailEls();
+  if (!els.tbody) return;
+  const mode = window._statDetailMode || 'orders';
+  const cfg = window.STAT_DETAIL_MODES[mode] || window.STAT_DETAIL_MODES.orders;
+  window.updateStatDetailTableHead(mode);
+  els.tbody.innerHTML = '';
+
+  if (cfg.flat) {
+    window.buildStatDetailFlatList(mode).forEach(({ entry: o, containerLabel }) => {
+      const so = o.so || 'Unknown SO';
+      els.tbody.insertAdjacentHTML('beforeend', `
+        <tr class="stat-detail-flat-row" data-so="${so}" data-cust="${o.customer || ''}">
+          <td><a class="so-link" onclick="event.stopPropagation(); window.openOrderHistory('${so}')">${so}</a></td>
+          <td>${o.customer}</td>
+          <td style="white-space: nowrap;">${containerLabel}</td>
+          <td style="white-space: nowrap;"><b>${o.location}</b></td>
+          <td class="order-group-sub__date">${new Date(o.entry_date).toLocaleString()}</td>
+        </tr>
+      `);
+    });
+    return;
+  }
+
+  const groups = window.buildStatDetailGroups(mode);
+  window.sortSoKeysAsc(Object.keys(groups)).forEach(so => {
+    const items = groups[so];
+    items.sort((a, b) => new Date(b.entry.entry_date) - new Date(a.entry.entry_date));
+    const safeId = so.replace(/[^a-zA-Z0-9]/g, '_');
+    const allCustomers = [...new Set(items.map(x => x.entry.customer).filter(Boolean))].join(' ');
+
+    els.tbody.insertAdjacentHTML('beforeend', `
+      <tr class="order-group-header group-header-row" data-so="${so}" data-cust="${allCustomers}" data-safeid="${safeId}" onclick="window.toggleOrderGroup('${safeId}')">
+        <td><span id="icon_so_${safeId}" class="order-group-header__toggle">+</span> <a class="so-link" onclick="event.stopPropagation(); window.openOrderHistory('${so}')">${so}</a></td>
+        <td colspan="3" class="order-group-header__meta">${items.length} ${cfg.entryLabel}(s)</td>
       </tr>
     `);
-    
-    groups[so].forEach(o => {
-      tbody.insertAdjacentHTML('beforeend', `
-        <tr class="sub_so_${safeId}" style="display:none; font-size:12px; background:#fff;">
-          <td style="padding: 10px 12px 10px 24px; color:#475569; border-bottom:1px solid #f1f5f9;">↳ ${o.customer}</td>
-          <td style="padding: 10px 12px; border-bottom:1px solid #f1f5f9; white-space: nowrap;">${o.type}</td>
-          <td style="padding: 10px 12px; border-bottom:1px solid #f1f5f9; white-space: nowrap;"><b>${o.location}</b></td>
-          <td style="padding: 10px 12px; border-bottom:1px solid #f1f5f9; color:#64748b; text-align:right; white-space:nowrap;">${new Date(o.entry_date).toLocaleString()}</td>
+
+    items.forEach(({ entry: o, containerLabel }) => {
+      els.tbody.insertAdjacentHTML('beforeend', `
+        <tr class="order-group-sub sub_so_${safeId}">
+          <td>↳ ${o.customer}</td>
+          <td style="white-space: nowrap;">${containerLabel}</td>
+          <td style="white-space: nowrap;"><b>${o.location}</b></td>
+          <td class="order-group-sub__date">${new Date(o.entry_date).toLocaleString()}</td>
         </tr>
       `);
     });
   });
-  $('#ordersModal').style.display = 'flex';
 };
 
-window.filterOrdersModal = function() {
-  const q = $('#searchOrdersModal').value.toLowerCase();
-  document.querySelectorAll('.group-header-row').forEach(tr => {
+window.openStatDetailModal = function(mode) {
+  const els = window.getStatDetailEls();
+  if (!els.modal) return;
+  window._statDetailMode = mode;
+  const cfg = window.STAT_DETAIL_MODES[mode] || window.STAT_DETAIL_MODES.orders;
+  if (els.title) els.title.textContent = cfg.title;
+  if (els.search) els.search.value = '';
+  window.renderStatDetailModal();
+  els.modal.style.display = 'flex';
+};
+
+window.openOrdersModal = function() {
+  window.openStatDetailModal('orders');
+};
+
+window.filterStatDetailModal = function() {
+  const els = window.getStatDetailEls();
+  const q = (els.search ? els.search.value : '').toLowerCase();
+  document.querySelectorAll('#tblStatDetail .stat-detail-flat-row, #tblOrders .stat-detail-flat-row').forEach(tr => {
+    const match = tr.getAttribute('data-so').toLowerCase().includes(q) || tr.getAttribute('data-cust').toLowerCase().includes(q);
+    tr.style.display = match ? 'table-row' : 'none';
+  });
+  document.querySelectorAll('#tblStatDetail .group-header-row, #tblOrders .group-header-row').forEach(tr => {
     const match = tr.getAttribute('data-so').toLowerCase().includes(q) || tr.getAttribute('data-cust').toLowerCase().includes(q);
     tr.style.display = match ? 'table-row' : 'none';
     const safeId = tr.getAttribute('data-safeid');
-    if(!match) {
+    if (!match) {
       document.querySelectorAll('.sub_so_' + safeId).forEach(r => r.style.display = 'none');
-      const icon = document.getElementById('icon_so_' + safeId); if(icon) icon.textContent = '+';
+      const icon = document.getElementById('icon_so_' + safeId);
+      if (icon) icon.textContent = '+';
     }
   });
+};
+
+window.filterOrdersModal = window.filterStatDetailModal;
+
+window.renderShippedExpandedModal = function() {
+  const table = $('#tblShippedExpanded');
+  if (!table) return;
+  const shBody = table.querySelector('tbody');
+  if (!shBody) return;
+
+  const q = ($('#searchShippedExpanded') ? $('#searchShippedExpanded').value : '').toLowerCase();
+  const canEdit = !!currentUser;
+  const fShipped = appData.shipped.filter(o =>
+    (o.so || '').toLowerCase().includes(q) ||
+    (o.customer || '').toLowerCase().includes(q) ||
+    (o.location || '').toLowerCase().includes(q)
+  );
+
+  shBody.innerHTML = '';
+  fShipped.forEach(o => {
+    const isRet = (o.carrier === 'RETURNED TO STOCK' || o.carrier === 'CONSOLIDATED');
+    const rowClass = isRet ? 'class="grey-strike"' : '';
+    const picBtn = (o.photo_urls && o.photo_urls.length > 0)
+      ? `<button class="btn btn-table btn-table--view" onclick="window.openPhotoViewer('${o.id}')">View</button>` : '';
+    const editBtn = canEdit
+      ? `<button class="btn-edit" onclick="window.openUniversalEditor('shipped', '${o.id}')">Edit</button>`
+      : `<span class="text-readonly">Read-Only</span>`;
+    const commentBtn = o.comments
+      ? `<button class="btn btn-table btn-table--comment" onclick="window.openCommentModal('shipped', '${o.id}')">See</button>`
+      : (canEdit
+        ? `<button class="btn btn-table btn-table--comment-add" onclick="window.openCommentModal('shipped', '${o.id}')">Add</button>`
+        : `<span class="text-muted">—</span>`);
+
+    shBody.insertAdjacentHTML('beforeend', `<tr ${rowClass}>
+      ${window.labeledCell('Edit', editBtn)}
+      ${window.labeledCell('Photo(s)', picBtn)}
+      ${window.labeledCell('SO', `<a class="so-link" onclick="event.stopPropagation(); window.openOrderHistory('${o.so}')">${o.so}</a>`)}
+      ${window.labeledCell('Customer', o.customer)}
+      ${window.labeledCell('Containers', o.type)}
+      ${window.labeledCell('Carrier', `<b>${o.carrier || '—'}</b>`)}
+      ${window.labeledCell('Location', o.location)}
+      ${window.labeledCell('Weight', o.weight || '—')}
+      ${window.labeledCell('Comments', commentBtn)}
+      ${window.labeledCell('Shipped At', new Date(o.shipped_at).toLocaleString(), 'col-low-priority')}
+      ${window.labeledCell('Shipped By', o.shipped_by || '—', 'col-low-priority')}
+      ${window.labeledCell("PM'd Email", o.pmd_email ? o.pmd_email + (isRet ? '' : '<span class="green-check"> ✓</span>') : '—', 'col-low-priority')}
+    </tr>`);
+  });
+};
+
+window.openShippedExpandedModal = function() {
+  if (!$('#shippedExpandedModal')) {
+    window.open('ship.html', '_blank');
+    return;
+  }
+  if ($('#searchShippedExpanded')) $('#searchShippedExpanded').value = '';
+  window.renderShippedExpandedModal();
+  $('#shippedExpandedModal').style.display = 'flex';
 };
 
 window.toggleOrderGroup = function(safeId) {
    const rows = document.querySelectorAll('.sub_so_' + safeId);
    const icon = document.getElementById('icon_so_' + safeId);
-   let isHidden = false; if(rows.length > 0) isHidden = rows[0].style.display === 'none';
+   const isHidden = rows.length > 0 && window.getComputedStyle(rows[0]).display === 'none';
    rows.forEach(r => r.style.display = isHidden ? 'table-row' : 'none');
    if(icon) icon.textContent = isHidden ? '-' : '+';
 };

@@ -60,12 +60,12 @@ window.openOrderHistory = async function(so) {
   try {
     const activeEntries = appData.staging.filter(x => x.so === so);
     const shippedEntries = appData.shipped.filter(x => x.so === so);
-    let html = `<div class="history-section" style="background:#fff; border-radius:8px; padding:12px; border:1px solid #cbd5e1;">`;
+    let html = `<div class="history-section">`;
 
-    html += `<h4 style="margin:0 0 8px 0; color:#0ea5e9; border-bottom:2px solid #e0f2fe; padding-bottom:6px; font-size:14px;">Current Active Staging</h4>`;
+    html += `<h4 class="section-staging">Current Active Staging</h4>`;
     html += window.formatActiveStagingList(activeEntries);
 
-    html += `<h4 style="margin:0 0 8px 0; color:#10b981; border-bottom:2px solid #d1fae5; padding-bottom:6px; font-size:14px;">Past Shipments</h4>`;
+    html += `<h4 class="section-shipped">Past Shipments</h4>`;
     if(shippedEntries.length === 0) html += `<p style="font-size:12px; color:#6b7280;">No past shipments found.</p>`;
     else {
       html += `<ul style="margin:0 0 12px 0; padding-left:20px; font-size:13px; color:#334155;">`;
@@ -76,7 +76,7 @@ window.openOrderHistory = async function(so) {
       html += `</ul>`;
     }
 
-    html += `<h4 style="margin:0 0 8px 0; color:#8b5cf6; border-bottom:2px solid #ede9fe; padding-bottom:6px; font-size:14px;">Changelog History</h4>`;
+    html += `<h4 class="section-changelog">Changelog History</h4>`;
     const { data, error } = await supabaseClient.from('changelog').select('*').ilike('action', `%${so}%`).order('created_at', { ascending: false });
     if(error) throw error;
     if(!data || data.length === 0) {

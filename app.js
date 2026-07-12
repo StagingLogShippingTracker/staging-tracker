@@ -19,6 +19,9 @@ window.toggleDarkMode = function() {
     localStorage.setItem(window.SWIFT_THEME_KEY, 'dark');
   }
   window.syncThemeToggleLabels();
+  if (typeof window.renderStagingStatusLegend === 'function') window.renderStagingStatusLegend();
+  if (typeof window.renderTables === 'function') window.renderTables();
+  if (typeof window.renderContactsTable === 'function') window.renderContactsTable();
 };
 
 window.syncThemeToggleLabels = function() {
@@ -59,6 +62,55 @@ window.isMobilePortraitCardView = function() {
   return window.matchMedia('(max-width: 767px) and (orientation: portrait)').matches;
 };
 
+window.isMobileCardView = function() {
+  return window.matchMedia('(max-width: 767px)').matches;
+};
+
+window.MOBILE_CARD_INITIAL = 5;
+window.MOBILE_CARD_STEP = 5;
+window.mobileCardVisible = { tblStaging: 5, tblShipped: 5 };
+
+window.resetMobileCardVisible = function() {
+  window.mobileCardVisible = {
+    tblStaging: window.MOBILE_CARD_INITIAL,
+    tblShipped: window.MOBILE_CARD_INITIAL
+  };
+};
+
+window.showMoreMobileCards = function(tableId) {
+  if (!window.mobileCardVisible) window.resetMobileCardVisible();
+  window.mobileCardVisible[tableId] = (window.mobileCardVisible[tableId] || window.MOBILE_CARD_INITIAL) + window.MOBILE_CARD_STEP;
+  if (typeof window.renderTables === 'function') window.renderTables();
+};
+
+window.getTableRenderLimit = function(tableId, isDashboardPreview) {
+  if (window.isMobileCardView()) {
+    if (!window.mobileCardVisible) window.resetMobileCardVisible();
+    return window.mobileCardVisible[tableId] || window.MOBILE_CARD_INITIAL;
+  }
+  if (isDashboardPreview) return 20;
+  return 999999;
+};
+
+window.updateMobileCardMoreButtons = function(tableId, shownCount, totalCount, isDashboardPreview) {
+  const isStaging = tableId === 'tblStaging';
+  const btn = document.getElementById(isStaging ? 'stagingShowMore' : 'shippedShowMore');
+  const notice = document.getElementById(isStaging ? 'stageLimitNotice' : 'shippedLimitNotice');
+
+  if (window.isMobileCardView()) {
+    if (notice) notice.style.display = 'none';
+    if (btn) btn.style.display = shownCount < totalCount ? 'block' : 'none';
+    return;
+  }
+
+  if (btn) btn.style.display = 'none';
+  if (notice && isDashboardPreview) {
+    notice.style.display = totalCount > 20 ? 'block' : 'none';
+  } else if (notice) {
+    notice.style.display = 'none';
+  }
+};
+
 window.syncMobileCardBatchMode = function() {
   const hide = window.isMobilePortraitCardView();
   document.body.classList.toggle('batch-unavailable', hide);
@@ -74,7 +126,7 @@ window.syncMobileCardBatchMode = function() {
 };
 
 window.bootstrapStandalonePWA = function() {
-  const themeColor = '#e04015';
+  const themeColor = '#D93223';
   let themeMeta = document.querySelector('meta[name="theme-color"]');
   if (!themeMeta) {
     themeMeta = document.createElement('meta');
@@ -92,6 +144,9 @@ window.initSiteFooter = function() {
   footer.innerHTML = `
     <p class="site-footer__credit">Designed, developed, and maintained by Brice Johnson.</p>
     <p class="site-footer__legal">Open-source components are used under their respective licenses. All other software, design, and content are the property of Brice Johnson. All rights reserved. Unauthorized use, reproduction, or distribution is prohibited.</p>
+    <div class="site-footer__etched-mark" aria-hidden="true">
+      <img src="brand/staging-shipping-tire-logo.png?v=5" alt="" class="site-footer__etched-logo" width="40" height="40" draggable="false" />
+    </div>
   `;
   const wrap = document.querySelector('.wrap');
   if (wrap && wrap.parentNode === document.body) wrap.insertAdjacentElement('afterend', footer);
@@ -137,6 +192,14 @@ function initApp() {
   window.syncMobileCardBatchMode();
   window.addEventListener('resize', window.syncMobileCardBatchMode);
   window.addEventListener('orientationchange', () => setTimeout(window.syncMobileCardBatchMode, 100));
+  window.addEventListener('resize', () => {
+    if (typeof window.renderTables === 'function') window.renderTables();
+  });
+  window.addEventListener('orientationchange', () => {
+    setTimeout(() => {
+      if (typeof window.renderTables === 'function') window.renderTables();
+    }, 100);
+  });
   window.initAuth();
 
   if (isBatchMode && !window.isMobilePortraitCardView()) document.body.classList.add('batch-mode');
