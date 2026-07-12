@@ -2,15 +2,16 @@
 
 window.splitEngine = { targetId: null, total: 0, current: 0, dataArray: [], sourceItem: null };
 
-window.openSplitPrompt = function() {
+window.openSplitPrompt = async function() {
+  if (!(await window.openModal('splitPromptModal'))) return;
   window.splitEngine.targetId = window.activeReportMode ? window.reportQueue[window.reportIndex] : currentEditId;
-  $('#split_count_input').value = 2;
-  if($('#editModal')) $('#editModal').style.display = 'none';
-  $('#splitPromptModal').style.display = 'flex';
+  const countInput = $('#split_count_input');
+  if (countInput) countInput.value = 2;
+  window.closeModal('editModal');
 };
 
-window.submitSplitCount = function() {
-  const count = parseInt($('#split_count_input').value);
+window.submitSplitCount = async function() {
+  const count = parseInt($('#split_count_input') ? $('#split_count_input').value : '', 10);
   if(isNaN(count) || count < 2) return alert("Must select at least 2 splits.");
   
   window.splitEngine.total = count;
@@ -19,22 +20,23 @@ window.submitSplitCount = function() {
   window.splitEngine.sourceItem = appData.staging.find(x => x.id === window.splitEngine.targetId);
   if (!window.splitEngine.sourceItem) return alert("Source entry not found.");
   
-  $('#splitPromptModal').style.display = 'none';
-  window.renderSplitConfig();
+  window.closeModal('splitPromptModal');
+  await window.renderSplitConfig();
 };
 
-window.renderSplitConfig = function() {
+window.renderSplitConfig = async function() {
+  if (!(await window.openModal('configureSplitModal'))) return;
   const item = window.splitEngine.sourceItem;
-  $('#splitConfigTitle').textContent = `Configure Split (${window.splitEngine.current} of ${window.splitEngine.total})`;
-  $('#sp_so').value = item.so;
-  $('#sp_cust').value = item.customer;
+  if (!item) return;
+  if ($('#splitConfigTitle')) $('#splitConfigTitle').textContent = `Configure Split (${window.splitEngine.current} of ${window.splitEngine.total})`;
+  if ($('#sp_so')) $('#sp_so').value = item.so;
+  if ($('#sp_cust')) $('#sp_cust').value = item.customer;
   
-  $('#sp_skid').value = 0; $('#sp_box').value = 0; $('#sp_crate').value = 0; $('#sp_pipe').value = 0; $('#sp_other').value = 0;
-  $('#sp_loc').value = ''; $('#sp_weight').value = ''; $('#sp_comments').value = '';
-  $('#sp_status').value = 'Partial';
-  $('#sp_staged_by').value = currentUser ? currentUser.email.split('@')[0] : '';
-  
-  $('#configureSplitModal').style.display = 'flex';
+  if ($('#sp_skid')) $('#sp_skid').value = 0; if ($('#sp_box')) $('#sp_box').value = 0; if ($('#sp_crate')) $('#sp_crate').value = 0;
+  if ($('#sp_pipe')) $('#sp_pipe').value = 0; if ($('#sp_other')) $('#sp_other').value = 0;
+  if ($('#sp_loc')) $('#sp_loc').value = ''; if ($('#sp_weight')) $('#sp_weight').value = ''; if ($('#sp_comments')) $('#sp_comments').value = '';
+  if ($('#sp_status')) $('#sp_status').value = 'Partial';
+  if ($('#sp_staged_by')) $('#sp_staged_by').value = currentUser ? currentUser.email.split('@')[0] : '';
 };
 
 window.saveConfigureSplit = async function() {
@@ -53,7 +55,7 @@ window.saveConfigureSplit = async function() {
   window.splitEngine.current++;
   
   if (window.splitEngine.current > window.splitEngine.total) {
-    $('#configureSplitModal').style.display = 'none';
+    window.closeModal('configureSplitModal');
     try {
       const { error: insErr } = await supabaseClient.from('staging').insert(window.splitEngine.dataArray);
       if(insErr) throw insErr;
@@ -67,7 +69,7 @@ window.saveConfigureSplit = async function() {
       if(window.activeReportMode) { window.reportRecordAction('Fixed via Split'); }
     } catch(e) { alert("Split Error: " + e.message); }
   } else {
-    $('#configureSplitModal').style.display = 'none';
+    window.closeModal('configureSplitModal');
     setTimeout(window.renderSplitConfig, 200);
   }
 };

@@ -9,7 +9,7 @@
 <meta name="mobile-web-app-capable" content="yes" />
 <link rel="manifest" href="manifest.webmanifest?v=2" />
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<link rel="stylesheet" href="style.css?v=10.8" />
+<link rel="stylesheet" href="style.css?v=10.11" />
 </head>
 <body>
 <datalist id="dl_customers"></datalist><datalist id="dl_locations"></datalist><datalist id="dl_stagers"></datalist><datalist id="dl_pastEmails"></datalist><datalist id="dl_sos"></datalist>
@@ -95,7 +95,7 @@
     <div class="split"><h3>Staging Entries</h3>
       <div class="toolbar-row">
         <select id="sortToggle" class="select-sort" onchange="window.renderTables()">
-          <option value="urgency">Sort: Urgency (Default)</option>
+          <option value="urgency">Sort: Urgency</option>
           <option value="date_desc">Sort: Newest First</option>
           <option value="date_asc">Sort: Oldest First</option>
           <option value="status">Sort: Shipping Status</option>
@@ -103,7 +103,7 @@
           <option value="customer">Sort: Customer A-Z</option>
           <option value="so">Sort: SO# A-Z</option>
         </select>
-        <button class="btn btn-sm btn-purple batch-mode-trigger" onclick="window.open('stage.html?batch=true', '_blank')">Batch Mode</button><button class="btn btn-sm btn-info" onclick="window.openChangelogModal('staging')">Changelog</button><button id="expandStaging" class="btn btn-sm" onclick="window.open('stage.html', '_blank')">Expand</button>
+        <button class="btn btn-sm btn-purple batch-mode-trigger" onclick="window.openStagingExpandedBatchModal()">Batch Mode</button><button class="btn btn-sm btn-info" onclick="window.openChangelogModal('staging')">Changelog</button><button id="expandStaging" class="btn btn-sm" onclick="window.openStagingExpandedModal()">Expand</button>
       </div>
     </div>
     <div id="stagingStatusLegend" class="staging-status-legend" aria-label="Shipping status color legend"></div>
@@ -119,7 +119,7 @@
 
   <div class="card" id="shippedCard">
     <div class="split"><h3>Shipped Log</h3>
-      <div class="toolbar-row"><button class="btn btn-sm btn-purple batch-mode-trigger" onclick="window.open('ship.html?batch=true', '_blank')">Batch Mode</button><button class="btn btn-sm btn-info" onclick="window.openChangelogModal('shipped')">Changelog</button><button id="expandShipped" class="btn btn-sm" onclick="window.open('ship.html', '_blank')">Expand</button></div>
+      <div class="toolbar-row"><button class="btn btn-sm btn-purple batch-mode-trigger" onclick="window.openShippedExpandedBatchModal()">Batch Mode</button><button class="btn btn-sm btn-info" onclick="window.openChangelogModal('shipped')">Changelog</button><button id="expandShipped" class="btn btn-sm" onclick="window.openShippedExpandedModal()">Expand</button></div>
     </div>
     <div class="tblwrap"><div class="tbl-scroller"><table id="tblShipped" class="responsive-log-table">
       <thead><tr>
@@ -133,6 +133,8 @@
   <div class="card coming-soon-card" id="shipmentTrackerCard"><h3 class="coming-soon-title">Shipment Tracker (Coming Soon)</h3><p class="coming-soon-text">Track outbound shipments from this dashboard in a future release.</p></div>
 </div>
 
+<div id="shared-modals-host"></div>
+<script type="text/plain" id="tpl-shared-modals">
 <div id="returnModal" class="modal-overlay">
   <div class="modal-window">
     <button class="modal-close-x" onclick="document.querySelector('#returnModal').style.display='none'">&times;</button>
@@ -217,10 +219,8 @@
 
 <div id="changelogModal" class="modal-overlay"><div class="modal-window" style="max-width: 700px;"><button class="modal-close-x" onclick="document.querySelector('#changelogModal').style.display='none'">&times;</button><h3 id="changelogTitle" style="margin:0 0 10px 0;">Changelog</h3><div class="table-wrap" style="max-height: 400px; overflow-y: auto;"><table id="tblChangelog" style="min-width: 100%;"><thead><tr><th style="width:160px; background:#fafafa; padding:8px;">Date/Time</th><th style="background:#fafafa; padding:8px;">Action Details</th></tr></thead><tbody></tbody></table></div></div></div>
 <div id="commentModal" class="modal-overlay"><div class="modal-window" style="max-width: 400px;"><button class="modal-close-x" onclick="document.querySelector('#commentModal').style.display='none'">&times;</button><h3 style="margin:0;">Comments</h3><div class="modal-field"><textarea id="quick_comments" rows="4" style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px 12px; font-family:inherit; resize:vertical;"></textarea></div><div style="display:flex; justify-content:flex-end; gap:8px; margin-top:4px;"><button class="btn" style="background:#9ca3af;" onclick="document.querySelector('#commentModal').style.display='none'">Close</button><button id="saveCommentBtn" class="btn" onclick="window.saveQuickComment()">Save</button></div></div></div>
-<div id="statDetailModal" class="modal-overlay"><div class="modal-window" style="max-width: 600px;"><button class="modal-close-x" onclick="document.querySelector('#statDetailModal').style.display='none'">&times;</button><h3 id="statDetailTitle" style="margin:0 0 10px 0;">Active Staging Orders</h3><div class="search-with-clear" style="margin-bottom:12px;"><input id="searchStatDetail" autocomplete="off" spellcheck="false" placeholder="Quick Search SO or Customer..." oninput="window.filterStatDetailModal()"/><button type="button" class="search-clear-btn is-empty" aria-label="Clear search" onclick="window.clearSearchField('searchStatDetail')">Clear</button></div><div class="table-wrap" style="max-height: 400px; overflow-y: auto;"><table id="tblStatDetail" style="min-width: 480px; width: 100%;"><thead><tr><th>SO</th><th colspan="3">Details</th></tr></thead><tbody></tbody></table></div></div></div>
-<div id="shippedExpandedModal" class="modal-overlay"><div class="modal-window modal-window--xl" style="max-width: min(1120px, 96vw);"><button class="modal-close-x" onclick="document.querySelector('#shippedExpandedModal').style.display='none'">&times;</button><div class="split" style="margin-bottom:12px;"><h3 style="margin:0;">Shipped Expanded Log</h3><div class="toolbar-row"><button class="btn btn-sm btn-purple" onclick="window.open('ship.html?batch=true', '_blank')">Batch Mode</button><button class="btn btn-sm btn-info" onclick="window.openChangelogModal('shipped')">Changelog</button></div></div><div class="search-with-clear" style="margin-bottom:12px;"><input id="searchShippedExpanded" autocomplete="off" spellcheck="false" placeholder="Quick search SO / Location / Customer..." oninput="window.renderShippedExpandedModal()"/><button type="button" class="search-clear-btn is-empty" aria-label="Clear search" onclick="window.clearSearchField('searchShippedExpanded')">Clear</button></div><div class="table-wrap" style="max-height: 65vh; overflow: auto;"><table id="tblShippedExpanded" class="responsive-log-table" style="min-width: 980px; width: 100%;"><thead><tr><th>Edit</th><th>Photo(s)</th><th>SO</th><th>Customer</th><th>Containers</th><th>Carrier</th><th>Location</th><th>Weight</th><th>Comments</th><th class="col-low-priority">Shipped At</th><th class="col-low-priority">Shipped By</th><th class="col-low-priority">PM'd Email</th></tr></thead><tbody></tbody></table></div></div></div>
-<div id="loginModal" class="modal-overlay"><div class="modal-window" style="max-width: 350px;"><button class="modal-close-x" onclick="document.querySelector('#loginModal').style.display='none'">&times;</button><h3 style="margin:0 0 10px 0;">Sign In</h3><div class="modal-field"><label>E-mail <span class="req-mark">*</span></label><input type="email" id="login_email" autocomplete="username" placeholder="warehouse@swiftsupply.ca" /></div><div class="modal-field"><label>Password <span class="req-mark">*</span></label><input type="password" id="login_password" autocomplete="current-password" placeholder="••••••••" /></div><button id="loginBtn" class="btn" style="margin-top:12px; width:100%;" onclick="window.submitLogin()">Sign In</button></div></div>
 
+<div id="loginModal" class="modal-overlay"><div class="modal-window" style="max-width: 350px;"><button class="modal-close-x" onclick="document.querySelector('#loginModal').style.display='none'">&times;</button><h3 style="margin:0 0 10px 0;">Sign In</h3><div class="modal-field"><label>E-mail <span class="req-mark">*</span></label><input type="email" id="login_email" autocomplete="username" placeholder="warehouse@swiftsupply.ca" /></div><div class="modal-field"><label>Password <span class="req-mark">*</span></label><input type="password" id="login_password" autocomplete="current-password" placeholder="••••••••" /></div><button id="loginBtn" class="btn" style="margin-top:12px; width:100%;" onclick="window.submitLogin()">Sign In</button></div></div>
 <div id="orderHistoryModal" class="modal-overlay" style="z-index: 2000;">
   <div class="modal-window" style="max-width: 550px;">
     <button class="modal-close-x" onclick="document.querySelector('#orderHistoryModal').style.display='none'">&times;</button>
@@ -332,18 +332,22 @@
     <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:8px;"><button id="qsConfirmBtn" class="btn" style="background:#10b981;" onclick="window.submitQuickShip()">Quick Ship Dispatch</button></div>
   </div>
 </div>
- 
+</script>
+<div id="statDetailModal" class="modal-overlay"><div class="modal-window" style="max-width: 600px;"><button class="modal-close-x" onclick="window.closeModal('statDetailModal')">&times;</button><div class="split" style="margin-bottom:12px;"><h3 id="statDetailTitle" style="margin:0;">Active Staging Orders</h3><div class="toolbar-row"><select id="sortStatDetail" class="select-sort" onchange="window.renderStatDetailModal()"></select></div></div><div class="search-with-clear" style="margin-bottom:12px;"><input id="searchStatDetail" autocomplete="off" spellcheck="false" placeholder="Quick Search SO or Customer..." oninput="window.filterStatDetailModal()"/><button type="button" class="search-clear-btn is-empty" aria-label="Clear search" onclick="window.clearSearchField('searchStatDetail')">Clear</button></div><div class="table-wrap" style="max-height: 400px; overflow-y: auto;"><table id="tblStatDetail" style="min-width: 480px; width: 100%;"><thead><tr><th>SO</th><th colspan="3">Details</th></tr></thead><tbody></tbody></table></div></div></div>
+<div id="stagingExpandedModal" class="modal-overlay"><div class="modal-window modal-window--xl" style="max-width: min(1120px, 96vw);"><button class="modal-close-x" onclick="window.closeStagingExpandedModal()">&times;</button><div class="split" style="margin-bottom:12px;"><h3 style="margin:0;">Staging Entries Expanded Log</h3><div class="toolbar-row"><select id="sortStagingExpanded" class="select-sort" onchange="window.renderStagingExpandedModal()"></select><button class="btn btn-sm btn-purple batch-mode-trigger" onclick="window.enableExpandedStagingBatch()">Batch Mode</button><button class="btn btn-sm btn-info" onclick="window.openChangelogModal('staging')">Changelog</button></div></div><div class="search-with-clear" style="margin-bottom:12px;"><input id="searchStagingExpanded" autocomplete="off" spellcheck="false" placeholder="Quick search SO / Location / Customer..." oninput="window.renderStagingExpandedModal()"/><button type="button" class="search-clear-btn is-empty" aria-label="Clear search" onclick="window.clearSearchField('searchStagingExpanded')">Clear</button></div><div id="stagingStatusLegendExpanded" class="staging-status-legend" style="margin-bottom:12px;" aria-label="Shipping status color legend"></div><div class="table-wrap" style="max-height: 65vh; overflow: auto;"><table id="tblStagingExpanded" class="responsive-log-table" style="min-width: 980px; width: 100%;"><thead><tr><th class="show-in-batch" style="width:70px; background:#fafafa; padding:4px;"><div class="batch-header-btns" style="display:flex; flex-direction:column; gap:4px; text-align:center;"><button onclick="window.batchSelectAll()" style="font-size:10px; background:#fff; color:#4b5563;">Select All</button><button onclick="window.batchUnselectAll()" style="font-size:10px; background:#fff; color:#4b5563;">Unselect</button><button onclick="window.openBatchConsolidateModal(false)" style="font-size:10px; background:#8b5cf6; color:#fff; border-color:#8b5cf6;">Consolidate</button><button onclick="window.batchDelete()" style="font-size:10px; background:#dc2626; color:#fff; border-color:#dc2626;">Delete</button><button onclick="window.batchCancel()" style="font-size:10px; background:#e5e7eb; color:#4b5563; border-color:#cbd5e1;">Cancel</button></div></th><th class="hide-in-batch">Edit</th><th class="hide-in-batch">Photo(s)</th><th>SO</th><th>Customer</th><th class="col-low-priority">Entry Date</th><th>Containers</th><th>Location</th><th>Weight</th><th class="hide-in-batch">Comments</th><th>Status</th><th class="col-low-priority">Staged By</th><th class="hide-in-batch" style="text-align:center;">Shipped</th></tr></thead><tbody></tbody></table></div></div></div><div id="shippedExpandedModal" class="modal-overlay"><div class="modal-window modal-window--xl" style="max-width: min(1120px, 96vw);"><button class="modal-close-x" onclick="window.closeShippedExpandedModal()">&times;</button><div class="split" style="margin-bottom:12px;"><h3 style="margin:0;">Shipped Expanded Log</h3><div class="toolbar-row"><select id="sortShippedExpanded" class="select-sort" onchange="window.renderShippedExpandedModal()"></select><button class="btn btn-sm btn-purple batch-mode-trigger" onclick="window.enableExpandedShippedBatch()">Batch Mode</button><button class="btn btn-sm btn-info" onclick="window.openChangelogModal('shipped')">Changelog</button></div></div><div class="search-with-clear" style="margin-bottom:12px;"><input id="searchShippedExpanded" autocomplete="off" spellcheck="false" placeholder="Quick search SO / Location / Customer..." oninput="window.renderShippedExpandedModal()"/><button type="button" class="search-clear-btn is-empty" aria-label="Clear search" onclick="window.clearSearchField('searchShippedExpanded')">Clear</button></div><div class="table-wrap" style="max-height: 65vh; overflow: auto;"><table id="tblShippedExpanded" class="responsive-log-table" style="min-width: 980px; width: 100%;"><thead><tr><th class="show-in-batch" style="width:70px; background:#fafafa; padding:4px;"><div class="batch-header-btns" style="display:flex; flex-direction:column; gap:4px; text-align:center;"><button onclick="window.batchSelectAllShipped()" style="font-size:10px; background:#fff; color:#4b5563;">Select All</button><button onclick="window.batchUnselectAll()" style="font-size:10px; background:#fff; color:#4b5563;">Unselect</button><button onclick="window.batchUndoShipped()" style="font-size:10px; background:#f59e0b; color:#fff; border-color:#f59e0b;">Undo</button><button onclick="window.batchDeleteShipped()" style="font-size:10px; background:#dc2626; color:#fff; border-color:#dc2626;">Delete</button><button onclick="window.batchCancel()" style="font-size:10px; background:#e5e7eb; color:#4b5563; border-color:#cbd5e1;">Cancel</button></div></th><th class="hide-in-batch">Edit</th><th class="hide-in-batch">Photo(s)</th><th>SO</th><th>Customer</th><th>Containers</th><th>Carrier</th><th>Location</th><th>Weight</th><th>Comments</th><th class="col-low-priority">Shipped At</th><th class="col-low-priority">Shipped By</th><th class="col-low-priority">PM'd Email</th></tr></thead><tbody></tbody></table></div></div></div>
+
 <script src="employees.js?v=3.3"></script>
-<script src="config.js?v=4.0"></script>
+<script src="config.js?v=4.1"></script>
+<script src="partials-loader.js?v=1.4"></script>
 <script src="auth.js?v=3.4"></script>
-<script src="ui.js?v=6.8"></script>
+<script src="ui.js?v=7.6"></script>
 <script src="history.js?v=3.5"></script>
 <script src="split.js?v=3.7"></script>
-    <script src="reports.js?v=3.7"></script>
-    <script src="operations.js?v=5.0"></script>
-    <script src="batch.js?v=6.0"></script>
+<script src="reports.js?v=3.9"></script>
+<script src="operations.js?v=5.2"></script>
+<script src="batch.js?v=6.2"></script>
 <script src="autoscan.js?v=3.0"></script>
 <script src="media.js?v=5.4"></script>
-<script src="app.js?v=5.8"></script>
+<script src="app.js?v=6.1"></script>
 </body>
 </html>

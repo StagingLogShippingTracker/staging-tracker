@@ -124,9 +124,9 @@ window.toggleQuickActions = function(btn) {
 window.SEARCH_CLEAR_CONFIG = [
   { id: 'q', onClear: () => { if (typeof window.renderTables === 'function') window.renderTables(); } },
   { id: 'searchStatDetail', onClear: () => { if (typeof window.filterStatDetailModal === 'function') window.filterStatDetailModal(); } },
-  { id: 'searchOrdersModal', onClear: () => { if (typeof window.filterStatDetailModal === 'function') window.filterStatDetailModal(); } },
   { id: 'searchShippedExpanded', onClear: () => { if (typeof window.renderShippedExpandedModal === 'function') window.renderShippedExpandedModal(); } },
-  { id: 'contactSearch', onClear: () => { if (typeof renderContactsTable === 'function') renderContactsTable(); } }
+  { id: 'searchStagingExpanded', onClear: () => { if (typeof window.renderStagingExpandedModal === 'function') window.renderStagingExpandedModal(); } },
+  { id: 'contactSearch', onClear: () => { if (typeof window.renderContactsTable === 'function') window.renderContactsTable(); } }
 ];
 
 window.updateSearchClearButton = function(input) {
@@ -189,15 +189,169 @@ window.initSearchClearButtons = function() {
 };
 
 window.renderStagingStatusLegend = function() {
-  const el = document.getElementById('stagingStatusLegend');
-  if (!el) return;
   const items = [
     ...window.getStagingStatusColors(),
     { label: 'Awaiting Instructions', color: document.documentElement.getAttribute('data-theme') === 'dark' ? '#475569' : '#ffffff' },
   ];
-  el.innerHTML = items.map(({ label, color }) =>
+  const html = items.map(({ label, color }) =>
     `<span class="staging-status-legend__item"><span class="staging-status-legend__swatch" style="background:${color};"></span>${label}</span>`
   ).join('');
+  ['stagingStatusLegend', 'stagingStatusLegendExpanded'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = html;
+  });
+};
+
+window.filterLogByQuickSearch = function(entries, query) {
+  const q = (query || '').toLowerCase();
+  return entries.filter(o =>
+    (o.so || '').toLowerCase().includes(q) ||
+    (o.customer || '').toLowerCase().includes(q) ||
+    (o.location || '').toLowerCase().includes(q)
+  );
+};
+
+window.buildStagingRowHtml = function(o, { canEdit, includeBatch }) {
+  const picBtn = (o.photo_urls && o.photo_urls.length > 0)
+    ? `<button class="btn btn-table btn-table--view" onclick="window.openPhotoViewer('${o.id}')">View</button>` : '';
+  const editBtn = canEdit
+    ? `<button class="btn-edit" onclick="window.openUniversalEditor('staging', '${o.id}')">Edit</button>`
+    : `<span class="text-readonly">Read-Only</span>`;
+  const chkBox = canEdit
+    ? `<input type="checkbox" onchange="if(this.checked){ window.triggerShipModal('${o.id}'); this.checked=false; }">`
+    : `<span class="text-muted">—</span>`;
+  const commentBtn = o.comments
+    ? `<button class="btn btn-table btn-table--comment" onclick="window.openCommentModal('staging', '${o.id}')">See</button>`
+    : (canEdit
+      ? `<button class="btn btn-table btn-table--comment-add" onclick="window.openCommentModal('staging', '${o.id}')">Add</button>`
+      : `<span class="text-muted">—</span>`);
+  const batchChk = `<input type="checkbox" class="batch-checkbox" onchange="window.toggleBatchSelect('${o.id}', this.checked)" ${batchSelectedIds.has(o.id) ? 'checked' : ''}>`;
+  const batchClass = includeBatch ? 'hide-in-batch' : '';
+  const rowBg = window.getRowColor(o.status);
+  const trClass = rowBg ? 'class="status-row"' : '';
+  const trStyle = rowBg ? `style="background-color: ${rowBg};"` : '';
+  const stickyClass = 'sticky-ship-col';
+  const shipCellClass = includeBatch ? `hide-in-batch ${stickyClass}` : stickyClass;
+  const shipCellStyle = includeBatch ? '' : 'text-align:center;';
+
+  return `<tr ${trClass} ${trStyle}>
+    ${includeBatch ? window.labeledCell('Select', batchChk, 'show-in-batch', 'text-align:center;') : ''}
+    ${window.labeledCell('Edit', editBtn, batchClass)}
+    ${window.labeledCell('Photo(s)', picBtn, batchClass)}
+    ${window.labeledCell('SO', `<a class="so-link" onclick="event.stopPropagation(); window.openOrderHistory('${o.so}')">${o.so}</a>`)}
+    ${window.labeledCell('Customer', o.customer)}
+    ${window.labeledCell('Entry Date', new Date(o.entry_date).toLocaleString(), 'col-low-priority')}
+    ${window.labeledCell('Containers', o.type)}
+    ${window.labeledCell('Location', `<b>${o.location}</b>`)}
+    ${window.labeledCell('Weight', o.weight || '—')}
+    ${window.labeledCell('Comments', commentBtn, batchClass)}
+    ${window.labeledCell('Status', `<span class="status-cell-label">${window.getFormattedStatus(o.status)}</span>`)}
+    ${window.labeledCell('Staged By', o.staged_by || '—', 'col-low-priority')}
+    ${window.labeledCell('Ship', chkBox, shipCellClass, shipCellStyle)}
+  </tr>`;
+};
+
+window.buildShippedRowHtml = function(o, { canEdit, includeBatch }) {
+  const isRet = (o.carrier === 'RETURNED TO STOCK' || o.carrier === 'CONSOLIDATED');
+  const rowClass = isRet ? 'class="grey-strike"' : '';
+  const picBtn = (o.photo_urls && o.photo_urls.length > 0)
+    ? `<button class="btn btn-table btn-table--view" onclick="window.openPhotoViewer('${o.id}')">View</button>` : '';
+  const editBtn = canEdit
+    ? `<button class="btn-edit" onclick="window.openUniversalEditor('shipped', '${o.id}')">Edit</button>`
+    : `<span class="text-readonly">Read-Only</span>`;
+  const commentBtn = o.comments
+    ? `<button class="btn btn-table btn-table--comment" onclick="window.openCommentModal('shipped', '${o.id}')">See</button>`
+    : (canEdit
+      ? `<button class="btn btn-table btn-table--comment-add" onclick="window.openCommentModal('shipped', '${o.id}')">Add</button>`
+      : `<span class="text-muted">—</span>`);
+  const batchChk = `<input type="checkbox" class="batch-checkbox" onchange="window.toggleBatchSelect('${o.id}', this.checked)" ${batchSelectedIds.has(o.id) ? 'checked' : ''}>`;
+  const batchClass = includeBatch ? 'hide-in-batch' : '';
+
+  return `<tr ${rowClass}>
+    ${includeBatch ? window.labeledCell('Select', batchChk, 'show-in-batch', 'text-align:center;') : ''}
+    ${window.labeledCell('Edit', editBtn, batchClass)}
+    ${window.labeledCell('Photo(s)', picBtn, batchClass)}
+    ${window.labeledCell('SO', `<a class="so-link" onclick="event.stopPropagation(); window.openOrderHistory('${o.so}')">${o.so}</a>`)}
+    ${window.labeledCell('Customer', o.customer)}
+    ${window.labeledCell('Containers', o.type)}
+    ${window.labeledCell('Carrier', `<b>${o.carrier || '—'}</b>`)}
+    ${window.labeledCell('Location', o.location)}
+    ${window.labeledCell('Weight', o.weight || '—')}
+    ${window.labeledCell('Comments', commentBtn)}
+    ${window.labeledCell('Shipped At', new Date(o.shipped_at).toLocaleString(), 'col-low-priority')}
+    ${window.labeledCell('Shipped By', o.shipped_by || '—', 'col-low-priority')}
+    ${window.labeledCell("PM'd Email", o.pmd_email ? o.pmd_email + (isRet ? '' : '<span class="green-check"> ✓</span>') : '—', 'col-low-priority')}
+  </tr>`;
+};
+
+window.renderStagingTableBody = function({ tableId, query, sortMode, includeBatch, isDashPreview }) {
+  const table = document.getElementById(tableId);
+  if (!table) return { total: 0, shown: 0 };
+  const sBody = table.querySelector('tbody');
+  if (!sBody) return { total: 0, shown: 0 };
+
+  const canEdit = !!currentUser;
+  const filtered = window.filterLogByQuickSearch(appData.staging, query);
+  const sorted = window.sortStagingEntries(filtered, sortMode || 'urgency');
+  const useMainTableLimits = tableId === 'tblStaging';
+  const limit = useMainTableLimits && typeof window.getTableRenderLimit === 'function'
+    ? window.getTableRenderLimit(tableId, !!isDashPreview)
+    : (isDashPreview ? 20 : 999999);
+  const rows = sorted.slice(0, limit);
+
+  sBody.innerHTML = rows.map(o => window.buildStagingRowHtml(o, { canEdit, includeBatch: !!includeBatch })).join('');
+
+  if (tableId === 'tblStaging' && typeof window.updateMobileCardMoreButtons === 'function') {
+    window.updateMobileCardMoreButtons('tblStaging', rows.length, sorted.length, !!isDashPreview);
+  }
+
+  return { total: sorted.length, shown: rows.length };
+};
+
+window.renderShippedTableBody = function({ tableId, query, sortMode, includeBatch, isDashPreview }) {
+  const table = document.getElementById(tableId);
+  if (!table) return { total: 0, shown: 0 };
+  const shBody = table.querySelector('tbody');
+  if (!shBody) return { total: 0, shown: 0 };
+
+  const canEdit = !!currentUser;
+  const filtered = window.filterLogByQuickSearch(appData.shipped, query);
+  const sorted = window.sortShippedEntries(filtered, sortMode || 'default');
+  const useMainTableLimits = tableId === 'tblShipped';
+  const limit = useMainTableLimits && typeof window.getTableRenderLimit === 'function'
+    ? window.getTableRenderLimit(tableId, !!isDashPreview)
+    : (isDashPreview ? 20 : 999999);
+  const rows = sorted.slice(0, limit);
+
+  shBody.innerHTML = rows.map(o => window.buildShippedRowHtml(o, { canEdit, includeBatch: !!includeBatch })).join('');
+
+  if (tableId === 'tblShipped' && typeof window.updateMobileCardMoreButtons === 'function') {
+    window.updateMobileCardMoreButtons('tblShipped', rows.length, sorted.length, !!isDashPreview);
+  }
+
+  return { total: sorted.length, shown: rows.length };
+};
+
+window.syncExpandedLogControls = function() {
+  const q = $('#q') ? $('#q').value : '';
+  const searchStaging = $('#searchStagingExpanded');
+  const searchShipped = $('#searchShippedExpanded');
+  const sortToggle = $('#sortToggle');
+  const sortStagingExpanded = $('#sortStagingExpanded');
+  const sortShipped = $('#sortShipped');
+  const sortShippedExpanded = $('#sortShippedExpanded');
+
+  if (searchStaging) searchStaging.value = q;
+  if (searchShipped) searchShipped.value = q;
+  if (sortToggle && sortStagingExpanded) sortStagingExpanded.value = sortToggle.value;
+  if (sortShipped && sortShippedExpanded) sortShippedExpanded.value = sortShipped.value;
+
+  if (searchStaging && typeof window.updateSearchClearButton === 'function') {
+    window.updateSearchClearButton(searchStaging);
+  }
+  if (searchShipped && typeof window.updateSearchClearButton === 'function') {
+    window.updateSearchClearButton(searchShipped);
+  }
 };
 
 window.renderTables = function() {
@@ -206,91 +360,36 @@ window.renderTables = function() {
     if (typeof window.resetMobileCardVisible === 'function') window.resetMobileCardVisible();
     window._renderSearchKey = q;
   }
-  const canEdit = !!currentUser;
-  const fStaging = appData.staging.filter(o => (o.so||'').toLowerCase().includes(q) || (o.customer||'').toLowerCase().includes(q) || (o.location||'').toLowerCase().includes(q));
   const sortMode = $('#sortToggle') ? $('#sortToggle').value : 'urgency';
-  const sortedStaging = window.sortStagingEntries(fStaging, sortMode);
-  const fShipped = appData.shipped.filter(o => (o.so||'').toLowerCase().includes(q) || (o.customer||'').toLowerCase().includes(q) || (o.location||'').toLowerCase().includes(q));
 
-  if($('#tblStaging')) {
-    const sBody = $('#tblStaging').querySelector('tbody'); 
-    if(sBody) {
-      sBody.innerHTML = '';
-      const isDashPreview = !!$('#stageLimitNotice');
-      const limitStaging = typeof window.getTableRenderLimit === 'function'
-        ? window.getTableRenderLimit('tblStaging', isDashPreview)
-        : (isDashPreview ? 20 : 999999);
-
-      sortedStaging.slice(0, limitStaging).forEach(o => {
-        const picBtn = (o.photo_urls && o.photo_urls.length > 0) ? `<button class="btn btn-table btn-table--view" onclick="window.openPhotoViewer('${o.id}')">View</button>` : '';
-        const editBtn = canEdit ? `<button class="btn-edit" onclick="window.openUniversalEditor('staging', '${o.id}')">Edit</button>` : `<span class="text-readonly">Read-Only</span>`;
-        const chkBox = canEdit ? `<input type="checkbox" onchange="if(this.checked){ window.triggerShipModal('${o.id}'); this.checked=false; }">` : `<span class="text-muted">—</span>`;
-        const commentBtn = o.comments ? `<button class="btn btn-table btn-table--comment" onclick="window.openCommentModal('staging', '${o.id}')">See</button>` : (canEdit ? `<button class="btn btn-table btn-table--comment-add" onclick="window.openCommentModal('staging', '${o.id}')">Add</button>` : `<span class="text-muted">—</span>`);
-        const batchChk = `<input type="checkbox" class="batch-checkbox" onchange="window.toggleBatchSelect('${o.id}', this.checked)" ${batchSelectedIds.has(o.id) ? 'checked' : ''}>`;
-
-        const rowBg = window.getRowColor(o.status);
-        const trClass = rowBg ? `class="status-row"` : '';
-        const trStyle = rowBg ? `style="background-color: ${rowBg};"` : '';
-        const stickyClass = rowBg ? 'sticky-ship-col' : 'sticky-ship-col';
-
-        sBody.insertAdjacentHTML('beforeend', `<tr ${trClass} ${trStyle}>
-          ${window.labeledCell('Select', batchChk, 'show-in-batch', 'text-align:center;')}
-          ${window.labeledCell('Edit', editBtn, 'hide-in-batch')}
-          ${window.labeledCell('Photo(s)', picBtn, 'hide-in-batch')}
-          ${window.labeledCell('SO', `<a class="so-link" onclick="event.stopPropagation(); window.openOrderHistory('${o.so}')">${o.so}</a>`)}
-          ${window.labeledCell('Customer', o.customer)}
-          ${window.labeledCell('Entry Date', new Date(o.entry_date).toLocaleString(), 'col-low-priority')}
-          ${window.labeledCell('Containers', o.type)}
-          ${window.labeledCell('Location', `<b>${o.location}</b>`)}
-          ${window.labeledCell('Weight', o.weight || '—')}
-          ${window.labeledCell('Comments', commentBtn, 'hide-in-batch')}
-          ${window.labeledCell('Status', `<span class="status-cell-label">${window.getFormattedStatus(o.status)}</span>`)}
-          ${window.labeledCell('Staged By', o.staged_by || '—', 'col-low-priority')}
-          ${window.labeledCell('Ship', chkBox, `hide-in-batch ${stickyClass}`)}
-        </tr>`);
-      });
-      if (typeof window.updateMobileCardMoreButtons === 'function') {
-        window.updateMobileCardMoreButtons('tblStaging', Math.min(limitStaging, sortedStaging.length), sortedStaging.length, isDashPreview);
-      }
-    }
+  if ($('#tblStaging')) {
+    window.renderStagingTableBody({
+      tableId: 'tblStaging',
+      query: q,
+      sortMode,
+      includeBatch: window.isBatchActiveFor('tblStaging'),
+      isDashPreview: !!$('#stageLimitNotice')
+    });
   }
 
-  if($('#tblShipped')) {
-    const shBody = $('#tblShipped').querySelector('tbody'); 
-    if(shBody) {
-      shBody.innerHTML = '';
-      const isDashPreview = !!$('#shippedLimitNotice');
-      const limitShipped = typeof window.getTableRenderLimit === 'function'
-        ? window.getTableRenderLimit('tblShipped', isDashPreview)
-        : (isDashPreview ? 20 : 999999);
-      fShipped.slice(0, limitShipped).forEach(o => {
-        const isRet = (o.carrier === 'RETURNED TO STOCK' || o.carrier === 'CONSOLIDATED'); const rowClass = isRet ? 'class="grey-strike"' : '';
-        const picBtn = (o.photo_urls && o.photo_urls.length > 0) ? `<button class="btn btn-table btn-table--view" onclick="window.openPhotoViewer('${o.id}')">View</button>` : '';
-        const editBtn = canEdit ? `<button class="btn-edit" onclick="window.openUniversalEditor('shipped', '${o.id}')">Edit</button>` : `<span class="text-readonly">Read-Only</span>`;
-        const commentBtn = o.comments ? `<button class="btn btn-table btn-table--comment" onclick="window.openCommentModal('shipped', '${o.id}')">See</button>` : (canEdit ? `<button class="btn btn-table btn-table--comment-add" onclick="window.openCommentModal('shipped', '${o.id}')">Add</button>` : `<span class="text-muted">—</span>`);
+  if ($('#tblShipped')) {
+    const shippedSortMode = $('#sortShipped') ? $('#sortShipped').value : 'default';
+    window.renderShippedTableBody({
+      tableId: 'tblShipped',
+      query: q,
+      sortMode: shippedSortMode,
+      includeBatch: window.isBatchActiveFor('tblShipped'),
+      isDashPreview: !!$('#shippedLimitNotice')
+    });
+  }
 
-        const batchChk = `<input type="checkbox" class="batch-checkbox" onchange="window.toggleBatchSelect('${o.id}', this.checked)" ${batchSelectedIds.has(o.id) ? 'checked' : ''}>`;
-
-        shBody.insertAdjacentHTML('beforeend', `<tr ${rowClass}>
-          ${window.labeledCell('Select', batchChk, 'show-in-batch', 'text-align:center;')}
-          ${window.labeledCell('Edit', editBtn, 'hide-in-batch')}
-          ${window.labeledCell('Photo(s)', picBtn, 'hide-in-batch')}
-          ${window.labeledCell('SO', `<a class="so-link" onclick="event.stopPropagation(); window.openOrderHistory('${o.so}')">${o.so}</a>`)}
-          ${window.labeledCell('Customer', o.customer)}
-          ${window.labeledCell('Containers', o.type)}
-          ${window.labeledCell('Carrier', `<b>${o.carrier || '—'}</b>`)}
-          ${window.labeledCell('Location', o.location)}
-          ${window.labeledCell('Weight', o.weight || '—')}
-          ${window.labeledCell('Comments', commentBtn)}
-          ${window.labeledCell('Shipped At', new Date(o.shipped_at).toLocaleString(), 'col-low-priority')}
-          ${window.labeledCell('Shipped By', o.shipped_by || '—', 'col-low-priority')}
-          ${window.labeledCell("PM'd Email", o.pmd_email ? o.pmd_email + (isRet ? '' : '<span class="green-check"> ✓</span>') : '—', 'col-low-priority')}
-        </tr>`);
-      });
-      if (typeof window.updateMobileCardMoreButtons === 'function') {
-        window.updateMobileCardMoreButtons('tblShipped', Math.min(limitShipped, fShipped.length), fShipped.length, isDashPreview);
-      }
-    }
+  const stagingModal = $('#stagingExpandedModal');
+  if (stagingModal && (stagingModal.classList.contains('is-open') || stagingModal.style.display === 'flex')) {
+    window.renderStagingExpandedModal();
+  }
+  const shippedModal = $('#shippedExpandedModal');
+  if (shippedModal && (shippedModal.classList.contains('is-open') || shippedModal.style.display === 'flex')) {
+    window.renderShippedExpandedModal();
   }
 
   const sumByType = t => appData.staging.reduce((acc, c) => {
@@ -310,7 +409,8 @@ window.renderTables = function() {
   if($('#kShipped')) $('#kShipped').textContent = appData.shipped.filter(x => x.carrier !== 'RETURNED TO STOCK' && x.carrier !== 'CONSOLIDATED').length;
 };
 
-window.openUniversalEditor = function(table, id) {
+window.openUniversalEditor = async function(table, id) {
+  if (!(await window.openModal('editModal'))) return;
   const o = appData[table].find(x => x.id === id); if (!o) return;
   
   // STRIPPED WINDOW PREFIXES
@@ -366,31 +466,31 @@ window.openUniversalEditor = function(table, id) {
   }
   
   window.renderEditPhotoStrip();
-  if($('#editModal')) $('#editModal').style.display = 'flex';
 };
 
-window.triggerReturnModal = function() {
-  if($('#returnModal')) $('#returnModal').style.display = 'flex'; if($('#editModal')) $('#editModal').style.display = 'none';
+window.triggerReturnModal = async function() {
+  if (!(await window.openModal('returnModal'))) return;
+  window.closeModal('editModal');
   if($('#r_picked_by')) $('#r_picked_by').value = ''; if($('#r_returned_by')) $('#r_returned_by').value = ''; if($('#r_reason')) $('#r_reason').value = ''; 
   if($('#r_pm_chk')) $('#r_pm_chk').checked = false; window.togglePMEmail(false, 'r_pm_email', 'r_pm_email_btn'); if($('#r_pm_email')) $('#r_pm_email').value = ''; 
 };
 
-window.openCommentModal = function(table, id) {
+window.openCommentModal = async function(table, id) {
   const o = appData[table].find(x => x.id === id); if(!o) return; 
+  if (!(await window.openModal('commentModal'))) return;
   
-  // STRIPPED WINDOW PREFIX
   currentCommentTarget = { table: table, id: id };
   
   if($('#quick_comments')) { $('#quick_comments').value = o.comments || ''; $('#quick_comments').disabled = !currentUser; }
   if($('#saveCommentBtn')) $('#saveCommentBtn').style.display = currentUser ? 'block' : 'none';
-  if($('#commentModal')) $('#commentModal').style.display = 'flex';
 };
 
 window.togglePMEmail = function(isChecked, inputId, btnId) {
   if($('#'+inputId)) $('#'+inputId).disabled = !isChecked; if($('#'+btnId)) $('#'+btnId).disabled = !isChecked;
 };
 
-window.triggerShipModal = function(id) {
+window.triggerShipModal = async function(id) {
+  if (!(await window.openModal('shipModal'))) return;
   const item = appData.staging.find(x => x.id === id); if (!item) return; 
   
   // STRIPPED WINDOW PREFIXES
@@ -404,38 +504,183 @@ window.triggerShipModal = function(id) {
   if($('#m_comments')) $('#m_comments').value = item.comments || ''; 
   
   if($('#m_pm_chk')) $('#m_pm_chk').checked = false; window.togglePMEmail(false, 'm_pm_email', 'm_pm_email_btn'); if($('#m_pm_email')) $('#m_pm_email').value = '';
-  if($('#shipModal')) $('#shipModal').style.display = 'flex';
   window.renderPhotoStrip();
 };
 
-window.closeShipModal = function() { if($('#shipModal')) $('#shipModal').style.display = 'none'; window.loadCloudData(); };
+window.closeShipModal = function() { window.closeModal('shipModal'); window.loadCloudData(); };
 
 window.STAT_DETAIL_MODES = {
-  orders: { title: 'Active Staging Orders', entryLabel: 'Staging Entry' },
-  containers: { title: 'Active Staging Containers', entryLabel: 'Container', flat: true },
-  skid: { title: 'Active Staging Skids', entryLabel: 'Container', filter: 'Skid' },
-  box: { title: 'Active Staging Boxes', entryLabel: 'Container', filter: 'Box' },
-  crate: { title: 'Active Staging Crates', entryLabel: 'Container', filter: 'Crate' },
-  pipe: { title: 'Active Staging Pipe/Rod', entryLabel: 'Container', filter: 'Pipe/Rod' },
-  other: { title: 'Active Staging Other', entryLabel: 'Container', filter: 'Other' }
+  orders: { title: 'Active Staging Orders', entryLabel: 'Staging Entry', defaultSort: 'so' },
+  containers: { title: 'Active Staging Containers', entryLabel: 'Container', flat: true, defaultSort: 'so' },
+  skid: { title: 'Active Staging Skids', entryLabel: 'Container', filter: 'Skid', defaultSort: 'so' },
+  box: { title: 'Active Staging Boxes', entryLabel: 'Container', filter: 'Box', defaultSort: 'so' },
+  crate: { title: 'Active Staging Crates', entryLabel: 'Container', filter: 'Crate', defaultSort: 'so' },
+  pipe: { title: 'Active Staging Pipe/Rod', entryLabel: 'Container', filter: 'Pipe/Rod', defaultSort: 'so' },
+  other: { title: 'Active Staging Other', entryLabel: 'Container', filter: 'Other', defaultSort: 'so' }
 };
 
 window._statDetailMode = 'orders';
 
-window.getStatDetailEls = function() {
-  if ($('#statDetailModal')) {
-    return {
-      modal: $('#statDetailModal'),
-      title: $('#statDetailTitle'),
-      search: $('#searchStatDetail'),
-      tbody: $('#tblStatDetail') ? $('#tblStatDetail').querySelector('tbody') : null
-    };
+window.STAGING_SORT_OPTIONS = [
+  { value: 'urgency', label: 'Sort: Urgency' },
+  { value: 'date_desc', label: 'Sort: Newest First' },
+  { value: 'date_asc', label: 'Sort: Oldest First' },
+  { value: 'status', label: 'Sort: Shipping Status' },
+  { value: 'location', label: 'Sort: Location A-Z' },
+  { value: 'customer', label: 'Sort: Customer A-Z' },
+  { value: 'so', label: 'Sort: SO# A-Z' }
+];
+
+window.SHIPPED_SORT_OPTIONS = [
+  { value: 'default', label: 'Sort: Log Order' },
+  { value: 'date_desc', label: 'Sort: Shipped Newest First' },
+  { value: 'date_asc', label: 'Sort: Shipped Oldest First' },
+  { value: 'so', label: 'Sort: SO# A-Z' },
+  { value: 'customer', label: 'Sort: Customer A-Z' },
+  { value: 'location', label: 'Sort: Location A-Z' },
+  { value: 'carrier', label: 'Sort: Carrier A-Z' }
+];
+
+window.populateSortSelect = function(selectEl, options, selectedValue, defaultValue) {
+  if (!selectEl || !options?.length) return;
+  const defaultVal = defaultValue !== undefined ? defaultValue : options[0].value;
+  const current = selectedValue !== undefined ? selectedValue : (selectEl.value || defaultVal);
+  selectEl.innerHTML = options.map(o => {
+    const base = o.label.replace(/\s*\(Default\)\s*$/, '');
+    const label = o.value === defaultVal ? `${base} (Default)` : base;
+    return `<option value="${o.value}">${label}</option>`;
+  }).join('');
+  selectEl.value = options.some(o => o.value === current) ? current : defaultVal;
+};
+
+window.populateStagingSortSelect = function(selectEl, selectedValue) {
+  window.populateSortSelect(selectEl, window.STAGING_SORT_OPTIONS, selectedValue, 'urgency');
+};
+
+window.populateStatDetailSortSelect = function(selectEl, mode) {
+  const defaultSort = window.getStatDetailDefaultSort(mode);
+  window.populateSortSelect(selectEl, window.STAGING_SORT_OPTIONS, defaultSort, defaultSort);
+};
+
+window.populateShippedSortSelect = function(selectEl, selectedValue) {
+  window.populateSortSelect(selectEl, window.SHIPPED_SORT_OPTIONS, selectedValue, 'default');
+};
+
+window.getStatDetailDefaultSort = function(mode) {
+  return window.STAT_DETAIL_MODES[mode]?.defaultSort || 'so';
+};
+
+window.sortShippedEntries = function(entries, sortMode) {
+  if (!sortMode || sortMode === 'default') return entries;
+  const sorted = [...entries];
+  sorted.sort((a, b) => {
+    if (sortMode === 'date_desc') return new Date(b.shipped_at) - new Date(a.shipped_at);
+    if (sortMode === 'date_asc') return new Date(a.shipped_at) - new Date(b.shipped_at);
+    if (sortMode === 'customer') return (a.customer || '').localeCompare(b.customer || '');
+    if (sortMode === 'location') return (a.location || '').localeCompare(b.location || '');
+    if (sortMode === 'carrier') return (a.carrier || '').localeCompare(b.carrier || '');
+    if (sortMode === 'so') return (a.so || '').localeCompare(b.so || '', undefined, { numeric: true, sensitivity: 'base' });
+    return 0;
+  });
+  return sorted;
+};
+
+window.compareStatDetailEntries = function(a, b, sortMode, flatDefault) {
+  const ae = a.entry || a;
+  const be = b.entry || b;
+  if (sortMode === 'date_desc') return new Date(be.entry_date) - new Date(ae.entry_date);
+  if (sortMode === 'date_asc') return new Date(ae.entry_date) - new Date(be.entry_date);
+  if (sortMode === 'customer') return (ae.customer || '').localeCompare(be.customer || '');
+  if (sortMode === 'location') return (ae.location || '').localeCompare(be.location || '');
+  if (sortMode === 'status') return window.getFormattedStatus(ae.status).localeCompare(window.getFormattedStatus(be.status));
+  if (sortMode === 'urgency') {
+    const u = window.getUrgencyWeight(be.status) - window.getUrgencyWeight(ae.status);
+    if (u !== 0) return u;
+    return new Date(be.entry_date) - new Date(ae.entry_date);
   }
+  const soCmp = (ae.so || '').localeCompare(be.so || '', undefined, { numeric: true, sensitivity: 'base' });
+  if (soCmp !== 0) return soCmp;
+  if (flatDefault) return new Date(ae.entry_date) - new Date(be.entry_date);
+  return new Date(be.entry_date) - new Date(ae.entry_date);
+};
+
+window.sortStatDetailGroupKeys = function(keys, groups, sortMode) {
+  if (sortMode === 'so') return window.sortSoKeysAsc(keys);
+  return keys.sort((ka, kb) => {
+    const repA = { entry: groups[ka][0].entry };
+    const repB = { entry: groups[kb][0].entry };
+    return window.compareStatDetailEntries(repA, repB, sortMode, false);
+  });
+};
+
+window.sortStatDetailGroupItems = function(items, sortMode) {
+  return [...items].sort((a, b) => window.compareStatDetailEntries(a, b, sortMode, false));
+};
+
+window.initStagingSortSelects = function() {
+  ['sortToggle', 'sortStagingExpanded', 'sortStatDetail'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && !el.dataset.sortInit) {
+      window.populateStagingSortSelect(el);
+      el.dataset.sortInit = '1';
+    }
+  });
+  ['sortShipped', 'sortShippedExpanded'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && !el.dataset.sortInit) {
+      window.populateShippedSortSelect(el);
+      el.dataset.sortInit = '1';
+    }
+  });
+};
+
+window.FREIGHT_COUNTER_SPECS = [
+  { key: 'skid', label: 'Skids' },
+  { key: 'box', label: 'Boxes' },
+  { key: 'crate', label: 'Crates' },
+  { key: 'pipe', label: 'Pipe/Rod' },
+  { key: 'other', label: 'Other' }
+];
+
+window.renderFreightBlock = function(prefix, adjustFn = 'adjustEditCount') {
+  return window.FREIGHT_COUNTER_SPECS.map(({ key, label }) =>
+    `<div class="counter-box"><label>${label}</label><div class="counter-controls"><button class="counter-btn" onclick="window.${adjustFn}('${prefix}_${key}',-1)">-</button><input id="${prefix}_${key}" value="0" readonly/><button class="counter-btn" onclick="window.${adjustFn}('${prefix}_${key}',1)">+</button></div></div>`
+  ).join('');
+};
+
+window.hydrateFreightBlocks = function() {
+  document.querySelectorAll('.freight-block[data-prefix]').forEach(block => {
+    if (block.dataset.hydrated) return;
+    const prefix = block.getAttribute('data-prefix');
+    const adjustFn = block.getAttribute('data-adjust-fn') || 'adjustEditCount';
+    block.innerHTML = window.renderFreightBlock(prefix, adjustFn);
+    block.dataset.hydrated = '1';
+  });
+};
+
+window.buildSameSoRowHtml = function(o, checked) {
+  const chk = checked
+    ? `<input type="checkbox" class="batch-checkbox" style="width:18px;height:18px;" onchange="window.toggleSameSoSelect('${o.id}', this.checked)" checked>`
+    : `<input type="checkbox" class="batch-checkbox" style="width:18px;height:18px;" onchange="window.toggleSameSoSelect('${o.id}', this.checked)">`;
+  return `<tr style="color:#64748b;">
+    ${window.labeledCell('Select', chk, '', 'text-align:center;')}
+    ${window.labeledCell('SO', `<b>${o.so}</b>`)}
+    ${window.labeledCell('Customer', o.customer)}
+    ${window.labeledCell('Entry Date', new Date(o.entry_date).toLocaleString())}
+    ${window.labeledCell('Containers', o.type)}
+    ${window.labeledCell('Location', `<b>${o.location}</b>`)}
+    ${window.labeledCell('Weight', o.weight || '—')}
+    ${window.labeledCell('Status', `<span class="status-cell-label">${window.getFormattedStatus(o.status)}</span>`)}
+    ${window.labeledCell('Staged By', o.staged_by || '—')}
+  </tr>`;
+};
+
+window.getStatDetailEls = function() {
   return {
-    modal: $('#ordersModal'),
-    title: $('#ordersModal') ? $('#ordersModal').querySelector('h3') : null,
-    search: $('#searchOrdersModal'),
-    tbody: $('#tblOrders') ? $('#tblOrders').querySelector('tbody') : null
+    modal: $('#statDetailModal'),
+    title: $('#statDetailTitle'),
+    search: $('#searchStatDetail'),
+    tbody: $('#tblStatDetail') ? $('#tblStatDetail').querySelector('tbody') : null
   };
 };
 
@@ -483,7 +728,7 @@ window.buildStatDetailGroups = function(mode) {
   return groups;
 };
 
-window.buildStatDetailFlatList = function(mode) {
+window.buildStatDetailFlatList = function(mode, sortMode) {
   const cfg = window.STAT_DETAIL_MODES[mode];
   const rows = [];
   appData.staging.forEach(o => {
@@ -492,17 +737,14 @@ window.buildStatDetailFlatList = function(mode) {
       : window.expandEntryContainers(o, cfg.filter);
     items.forEach(item => rows.push({ entry: o, containerLabel: item.containerLabel }));
   });
-  rows.sort((a, b) => {
-    const soCmp = (a.entry.so || '').localeCompare(b.entry.so || '', undefined, { numeric: true, sensitivity: 'base' });
-    if (soCmp !== 0) return soCmp;
-    return new Date(a.entry.entry_date) - new Date(b.entry.entry_date);
-  });
+  const effectiveSort = sortMode || window.getStatDetailDefaultSort(mode);
+  rows.sort((a, b) => window.compareStatDetailEntries(a, b, effectiveSort, true));
   return rows;
 };
 
 window.updateStatDetailTableHead = function(mode) {
   const cfg = window.STAT_DETAIL_MODES[mode] || window.STAT_DETAIL_MODES.orders;
-  const table = $('#tblStatDetail') || $('#tblOrders');
+  const table = $('#tblStatDetail');
   const theadRow = table ? table.querySelector('thead tr') : null;
   if (!theadRow) return;
   if (cfg.flat) {
@@ -517,11 +759,12 @@ window.renderStatDetailModal = function() {
   if (!els.tbody) return;
   const mode = window._statDetailMode || 'orders';
   const cfg = window.STAT_DETAIL_MODES[mode] || window.STAT_DETAIL_MODES.orders;
+  const sortMode = $('#sortStatDetail') ? $('#sortStatDetail').value : window.getStatDetailDefaultSort(mode);
   window.updateStatDetailTableHead(mode);
   els.tbody.innerHTML = '';
 
   if (cfg.flat) {
-    window.buildStatDetailFlatList(mode).forEach(({ entry: o, containerLabel }) => {
+    window.buildStatDetailFlatList(mode, sortMode).forEach(({ entry: o, containerLabel }) => {
       const so = o.so || 'Unknown SO';
       els.tbody.insertAdjacentHTML('beforeend', `
         <tr class="stat-detail-flat-row" data-so="${so}" data-cust="${o.customer || ''}">
@@ -537,9 +780,8 @@ window.renderStatDetailModal = function() {
   }
 
   const groups = window.buildStatDetailGroups(mode);
-  window.sortSoKeysAsc(Object.keys(groups)).forEach(so => {
-    const items = groups[so];
-    items.sort((a, b) => new Date(b.entry.entry_date) - new Date(a.entry.entry_date));
+  window.sortStatDetailGroupKeys(Object.keys(groups), groups, sortMode).forEach(so => {
+    const items = window.sortStatDetailGroupItems(groups[so], sortMode);
     const safeId = so.replace(/[^a-zA-Z0-9]/g, '_');
     const allCustomers = [...new Set(items.map(x => x.entry.customer).filter(Boolean))].join(' ');
 
@@ -563,15 +805,16 @@ window.renderStatDetailModal = function() {
   });
 };
 
-window.openStatDetailModal = function(mode) {
+window.openStatDetailModal = async function(mode) {
   const els = window.getStatDetailEls();
-  if (!els.modal) return;
+  if (!(await window.openModal('statDetailModal'))) return;
   window._statDetailMode = mode;
   const cfg = window.STAT_DETAIL_MODES[mode] || window.STAT_DETAIL_MODES.orders;
   if (els.title) els.title.textContent = cfg.title;
   if (els.search) els.search.value = '';
+  const sortEl = $('#sortStatDetail');
+  if (sortEl) window.populateStatDetailSortSelect(sortEl, mode);
   window.renderStatDetailModal();
-  els.modal.style.display = 'flex';
 };
 
 window.openOrdersModal = function() {
@@ -581,11 +824,11 @@ window.openOrdersModal = function() {
 window.filterStatDetailModal = function() {
   const els = window.getStatDetailEls();
   const q = (els.search ? els.search.value : '').toLowerCase();
-  document.querySelectorAll('#tblStatDetail .stat-detail-flat-row, #tblOrders .stat-detail-flat-row').forEach(tr => {
+  document.querySelectorAll('#tblStatDetail .stat-detail-flat-row').forEach(tr => {
     const match = tr.getAttribute('data-so').toLowerCase().includes(q) || tr.getAttribute('data-cust').toLowerCase().includes(q);
     tr.style.display = match ? 'table-row' : 'none';
   });
-  document.querySelectorAll('#tblStatDetail .group-header-row, #tblOrders .group-header-row').forEach(tr => {
+  document.querySelectorAll('#tblStatDetail .group-header-row').forEach(tr => {
     const match = tr.getAttribute('data-so').toLowerCase().includes(q) || tr.getAttribute('data-cust').toLowerCase().includes(q);
     tr.style.display = match ? 'table-row' : 'none';
     const safeId = tr.getAttribute('data-safeid');
@@ -599,60 +842,83 @@ window.filterStatDetailModal = function() {
 
 window.filterOrdersModal = window.filterStatDetailModal;
 
-window.renderShippedExpandedModal = function() {
-  const table = $('#tblShippedExpanded');
-  if (!table) return;
-  const shBody = table.querySelector('tbody');
-  if (!shBody) return;
-
-  const q = ($('#searchShippedExpanded') ? $('#searchShippedExpanded').value : '').toLowerCase();
-  const canEdit = !!currentUser;
-  const fShipped = appData.shipped.filter(o =>
-    (o.so || '').toLowerCase().includes(q) ||
-    (o.customer || '').toLowerCase().includes(q) ||
-    (o.location || '').toLowerCase().includes(q)
-  );
-
-  shBody.innerHTML = '';
-  fShipped.forEach(o => {
-    const isRet = (o.carrier === 'RETURNED TO STOCK' || o.carrier === 'CONSOLIDATED');
-    const rowClass = isRet ? 'class="grey-strike"' : '';
-    const picBtn = (o.photo_urls && o.photo_urls.length > 0)
-      ? `<button class="btn btn-table btn-table--view" onclick="window.openPhotoViewer('${o.id}')">View</button>` : '';
-    const editBtn = canEdit
-      ? `<button class="btn-edit" onclick="window.openUniversalEditor('shipped', '${o.id}')">Edit</button>`
-      : `<span class="text-readonly">Read-Only</span>`;
-    const commentBtn = o.comments
-      ? `<button class="btn btn-table btn-table--comment" onclick="window.openCommentModal('shipped', '${o.id}')">See</button>`
-      : (canEdit
-        ? `<button class="btn btn-table btn-table--comment-add" onclick="window.openCommentModal('shipped', '${o.id}')">Add</button>`
-        : `<span class="text-muted">—</span>`);
-
-    shBody.insertAdjacentHTML('beforeend', `<tr ${rowClass}>
-      ${window.labeledCell('Edit', editBtn)}
-      ${window.labeledCell('Photo(s)', picBtn)}
-      ${window.labeledCell('SO', `<a class="so-link" onclick="event.stopPropagation(); window.openOrderHistory('${o.so}')">${o.so}</a>`)}
-      ${window.labeledCell('Customer', o.customer)}
-      ${window.labeledCell('Containers', o.type)}
-      ${window.labeledCell('Carrier', `<b>${o.carrier || '—'}</b>`)}
-      ${window.labeledCell('Location', o.location)}
-      ${window.labeledCell('Weight', o.weight || '—')}
-      ${window.labeledCell('Comments', commentBtn)}
-      ${window.labeledCell('Shipped At', new Date(o.shipped_at).toLocaleString(), 'col-low-priority')}
-      ${window.labeledCell('Shipped By', o.shipped_by || '—', 'col-low-priority')}
-      ${window.labeledCell("PM'd Email", o.pmd_email ? o.pmd_email + (isRet ? '' : '<span class="green-check"> ✓</span>') : '—', 'col-low-priority')}
-    </tr>`);
+window.renderStagingExpandedModal = function() {
+  const q = ($('#searchStagingExpanded') ? $('#searchStagingExpanded').value : '').toLowerCase();
+  const sortMode = $('#sortStagingExpanded') ? $('#sortStagingExpanded').value : 'urgency';
+  window.renderStagingTableBody({
+    tableId: 'tblStagingExpanded',
+    query: q,
+    sortMode,
+    includeBatch: window.isBatchActiveFor('tblStagingExpanded'),
+    isDashPreview: false
   });
 };
 
-window.openShippedExpandedModal = function() {
-  if (!$('#shippedExpandedModal')) {
-    window.open('ship.html', '_blank');
+window.openStagingExpandedModal = async function(startInBatchMode = false) {
+  if (!(await window.openModal('stagingExpandedModal', { requireShared: false }))) {
+    window.open(startInBatchMode ? 'stage.html?batch=true' : 'stage.html', '_blank');
     return;
   }
-  if ($('#searchShippedExpanded')) $('#searchShippedExpanded').value = '';
-  window.renderShippedExpandedModal();
-  $('#shippedExpandedModal').style.display = 'flex';
+  window.syncExpandedLogControls();
+  window.renderStagingStatusLegend();
+  if (!startInBatchMode && typeof window.isBatchActiveFor === 'function' && window.isBatchActiveFor('tblStagingExpanded')) {
+    window.batchCancel();
+  }
+  if (startInBatchMode) {
+    window.enableBatchMode('tblStagingExpanded');
+  } else {
+    window.renderStagingExpandedModal();
+  }
+};
+
+window.openStagingExpandedBatchModal = function() {
+  window.openStagingExpandedModal(true);
+};
+
+window.closeStagingExpandedModal = function() {
+  if (typeof window.isBatchActiveFor === 'function' && window.isBatchActiveFor('tblStagingExpanded')) {
+    window.batchCancel();
+  }
+  window.closeModal('stagingExpandedModal');
+};
+
+window.renderShippedExpandedModal = function() {
+  const q = ($('#searchShippedExpanded') ? $('#searchShippedExpanded').value : '').toLowerCase();
+  const sortMode = $('#sortShippedExpanded') ? $('#sortShippedExpanded').value : 'default';
+  window.renderShippedTableBody({
+    tableId: 'tblShippedExpanded',
+    query: q,
+    sortMode,
+    includeBatch: window.isBatchActiveFor('tblShippedExpanded'),
+    isDashPreview: false
+  });
+};
+
+window.openShippedExpandedModal = async function(startInBatchMode = false) {
+  if (!(await window.openModal('shippedExpandedModal', { requireShared: false }))) {
+    window.open(startInBatchMode ? 'ship.html?batch=true' : 'ship.html', '_blank');
+    return;
+  }
+  window.syncExpandedLogControls();
+  if (!startInBatchMode && typeof window.isBatchActiveFor === 'function' && window.isBatchActiveFor('tblShippedExpanded')) {
+    window.batchCancel();
+  }
+  if (startInBatchMode) {
+    window.enableBatchMode('tblShippedExpanded');
+  } else {
+    window.renderShippedExpandedModal();
+  }
+};
+
+window.openShippedExpandedBatchModal = function() {
+  window.openShippedExpandedModal(true);
+};
+
+window.closeShippedExpandedModal = function() {
+  if (typeof window.isBatchActiveFor === 'function' && window.isBatchActiveFor('tblShippedExpanded')) {
+    window.batchCancel();
+  }
+  window.closeModal('shippedExpandedModal');
 };
 
 window.toggleOrderGroup = function(safeId) {
@@ -692,7 +958,12 @@ window.playSuccessChime = function() {
 };
 
 window.toggleMenu = function(e) {
-  e.stopPropagation(); const content = e.currentTarget.nextElementSibling; content.classList.toggle('show-menu');
+  e.stopPropagation();
+  const btn = e.currentTarget;
+  const content = btn.nextElementSibling;
+  if (!content) return;
+  const isOpen = content.classList.toggle('show-menu');
+  btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
 };
 
 document.addEventListener('click', function(e) {
@@ -730,15 +1001,15 @@ document.addEventListener('change', function(e) {
       $('#fd_datePicker').min = todayStr; $('#fd_datePicker').value = todayStr;
       $('#fd_datePicker').disabled = false; $('#fd_tbd').checked = false;
     }
-    if($('#futureDateModal')) $('#futureDateModal').style.display = 'flex';
+    if($('#futureDateModal')) window.openModal('futureDateModal', { requireShared: false });
   }
 });
 
 window.cancelDateModal = function() {
-  if($('#futureDateModal')) $('#futureDateModal').style.display = 'none';
+  window.closeModal('futureDateModal');
   if (window.overdueAwaitingDate) {
     window.overdueAwaitingDate = null;
-    if ($('#overdueResolveModal')) $('#overdueResolveModal').style.display = 'flex';
+    window.openModal('overdueResolveModal', { requireShared: false });
     return;
   }
   if(window.activeStatusDropdownId && $('#' + window.activeStatusDropdownId)) $('#' + window.activeStatusDropdownId).value = 'Partial';
@@ -748,7 +1019,7 @@ window.confirmDateModal = function() {
   const isTbd = $('#fd_tbd').checked; const dateVal = $('#fd_datePicker').value;
   if(!isTbd && !dateVal) return alert("Please select a date or check TBD.");
   const finalVal = isTbd ? 'TBD' : dateVal;
-  if($('#futureDateModal')) $('#futureDateModal').style.display = 'none';
+  window.closeModal('futureDateModal');
 
   if (window.overdueAwaitingDate) {
     const entryId = window.overdueAwaitingDate;
@@ -815,8 +1086,8 @@ window.populateOverduePrompt = function(entry) {
 
 window.showNextOverduePrompt = function() {
   if (!$('#overduePromptModal')) return;
-  if ($('#overduePromptModal').style.display === 'flex') return;
-  if ($('#overdueResolveModal') && $('#overdueResolveModal').style.display === 'flex') return;
+  if ($('#overduePromptModal') && $('#overduePromptModal').classList.contains('is-open')) return;
+  if ($('#overdueResolveModal') && $('#overdueResolveModal').classList.contains('is-open')) return;
 
   const handled = window.getOverdueHandledIds();
   const overdue = appData.staging
@@ -825,12 +1096,12 @@ window.showNextOverduePrompt = function() {
 
   if (!overdue.length) return;
   window.populateOverduePrompt(overdue[0]);
-  $('#overduePromptModal').style.display = 'flex';
+  window.openModal('overduePromptModal', { requireShared: false });
 };
 
 window.checkOverdueShipments = function() {
   if (!currentUser || window.activeReportMode) return;
-  const openModal = document.querySelector('.modal-overlay[style*="flex"]');
+  const openModal = document.querySelector('.modal-overlay.is-open');
   if (openModal && openModal.id !== 'overduePromptModal' && openModal.id !== 'overdueResolveModal') return;
   window.showNextOverduePrompt();
 };
@@ -838,18 +1109,18 @@ window.checkOverdueShipments = function() {
 window.overdueHandleYes = function() {
   const entry = window.overdueTarget;
   if (!entry) return;
-  if ($('#overduePromptModal')) $('#overduePromptModal').style.display = 'none';
+  if ($('#overduePromptModal')) window.closeModal('overduePromptModal');
   window.markOverdueHandled(entry.id);
   window.overdueTarget = null;
   window.triggerShipModal(entry.id);
 };
 
-window.overdueHandleNo = function() {
+window.overdueHandleNo = async function() {
   const entry = window.overdueTarget;
   if (!entry) return;
-  if ($('#overduePromptModal')) $('#overduePromptModal').style.display = 'none';
+  window.closeModal('overduePromptModal');
   if ($('#od_res_so')) $('#od_res_so').textContent = entry.so;
-  if ($('#overdueResolveModal')) $('#overdueResolveModal').style.display = 'flex';
+  await window.openModal('overdueResolveModal', { requireShared: false });
 };
 
 window.overdueApplyStatus = async function(newDbStatus) {
@@ -862,12 +1133,12 @@ window.overdueApplyStatus = async function(newDbStatus) {
   await window.logAction('staging', `Overdue SO ${entry.so}: status updated to ${window.getFormattedStatus(newDbStatus)}`);
   window.markOverdueHandled(entry.id);
   window.overdueTarget = null;
-  if ($('#overdueResolveModal')) $('#overdueResolveModal').style.display = 'none';
+  window.closeModal('overdueResolveModal');
   if (typeof window.showNotification === 'function') window.showNotification('Status updated');
   window.loadCloudData();
 };
 
-window.overdueUpdateStatus = function(uiStatus) {
+window.overdueUpdateStatus = async function(uiStatus) {
   if (!window.overdueTarget) return;
 
   if (uiStatus === 'Ship On Future Date') {
@@ -879,8 +1150,8 @@ window.overdueUpdateStatus = function(uiStatus) {
       $('#fd_datePicker').disabled = false;
     }
     if ($('#fd_tbd')) $('#fd_tbd').checked = false;
-    if ($('#overdueResolveModal')) $('#overdueResolveModal').style.display = 'none';
-    if ($('#futureDateModal')) $('#futureDateModal').style.display = 'flex';
+    window.closeModal('overdueResolveModal');
+    await window.openModal('futureDateModal', { requireShared: false });
     return;
   }
 
@@ -898,7 +1169,7 @@ window.overdueDelete = async function() {
   await window.logAction('staging', `Overdue SO ${entry.so}: entry deleted`);
   window.markOverdueHandled(entry.id);
   window.overdueTarget = null;
-  if ($('#overdueResolveModal')) $('#overdueResolveModal').style.display = 'none';
+  window.closeModal('overdueResolveModal');
   if (typeof window.showNotification === 'function') window.showNotification('Entry deleted');
   window.loadCloudData();
 };

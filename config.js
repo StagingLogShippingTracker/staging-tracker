@@ -4,6 +4,24 @@ const MAKE_EMAIL_WEBHOOK_URL = 'https://hook.us2.make.com/cxvgao3s4lwnrmntk762j2
 const TRACKER_SITE_URL = 'https://swiftoperations.github.io/staging-tracker/';
 const TRACKER_LOGO_URL = `${TRACKER_SITE_URL}staging-shipping-logo.png?v=4`;
 
+window.APP_ASSET_VERSIONS = {
+  config: '4.1',
+  partials: '1.3',
+  style: '10.9',
+  ui: '7.4',
+  app: '6.0',
+  auth: '3.4',
+  history: '3.5',
+  split: '3.7',
+  reports: '3.8',
+  operations: '5.2',
+  batch: '6.2',
+  media: '5.4',
+  autoscan: '3.0',
+  employees: '3.3',
+  contacts: '1.1'
+};
+
 window.buildEmailNotificationFooter = function() {
   return `For more details, visit: <a href="${TRACKER_SITE_URL}">Staging Log & Shipping Tracker</a><br><br><a href="${TRACKER_SITE_URL}"><img src="${TRACKER_LOGO_URL}" alt="SLST — Staging Log & Shipping Tracker" style="max-width:360px;width:100%;height:auto;border:0;display:block;" /></a><br><br>Thanks`;
 };
@@ -56,6 +74,7 @@ let currentUser = null;
 
 let isBatchMode = new URLSearchParams(window.location.search).get('batch') === 'true';
 let batchSelectedIds = new Set();
+let batchTarget = null;
 let isSameSoMode = false;
 let sameSoSelectedIds = new Set();
 window.discrepancyList = [];

@@ -14,7 +14,7 @@ window.updateAuthUI = function() {
     if($('#authStatus')) $('#authStatus').innerHTML = `<span class="auth-status__label">${shortEmail}</span><button class="btn btn-toolbar btn-muted" onclick="window.signOut()">Sign Out</button>`;
     if($('#entryFormCard')) $('#entryFormCard').style.display = 'block'; 
   } else {
-    if($('#authStatus')) $('#authStatus').innerHTML = `<button class="btn btn-toolbar btn-ghost" onclick="document.querySelector('#loginModal').style.display='flex'">Sign In</button><button class="btn btn-toolbar btn-info" onclick="window.requestAccess()">Sign Up</button>`;
+    if($('#authStatus')) $('#authStatus').innerHTML = `<button class="btn btn-toolbar btn-ghost" onclick="window.openModal('loginModal')">Sign In</button><button class="btn btn-toolbar btn-info" onclick="window.requestAccess()">Sign Up</button>`;
     if($('#entryFormCard')) $('#entryFormCard').style.display = 'none'; 
   }
 };
@@ -31,7 +31,7 @@ window.submitLogin = async function() {
   $('#loginBtn').disabled = true; $('#loginBtn').textContent = 'Signing in...';
   const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
   $('#loginBtn').disabled = false; $('#loginBtn').textContent = 'Sign In';
-  if(error) alert("Login Failed: " + error.message); else $('#loginModal').style.display = 'none';
+  if(error) alert("Login Failed: " + error.message); else window.closeModal('loginModal');
 };
 
 window.signOut = async function() { await supabaseClient.auth.signOut(); window.location.reload(); };
