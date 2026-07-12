@@ -171,10 +171,17 @@ window.openOrderHistory = async function(so) {
   if ($('#history_so_title')) $('#history_so_title').textContent = so;
   if ($('#history_content')) $('#history_content').innerHTML = '<div style="text-align:center; padding:20px; color:#6b7280;">Loading history...</div>';
 
+  const p21Promise = typeof window.fetchP21OrderInsights === 'function'
+    ? window.fetchP21OrderInsights(so)
+    : Promise.resolve({ ok: false, offline: true, message: 'P21 module not loaded.' });
+
   try {
     const activeEntries = appData.staging.filter(x => x.so === so);
     const shippedEntries = appData.shipped.filter(x => x.so === so);
     let html = `<div class="history-section">`;
+
+    html += `<h4 class="section-p21">Prophet21 Order Insights</h4>`;
+    html += `<div id="history_p21_content"><div style="text-align:center; padding:12px; color:#6b7280;">Loading Prophet21...</div></div>`;
 
     html += `<h4 class="section-staging">Current Active Staging</h4>`;
     html += window.formatActiveStagingList(activeEntries);
@@ -209,5 +216,11 @@ window.openOrderHistory = async function(so) {
 
     html += `</div>`;
     $('#history_content').innerHTML = html;
+
+    const p21Result = await p21Promise;
+    const p21El = document.getElementById('history_p21_content');
+    if (p21El && typeof window.formatP21OrderInsightsSection === 'function') {
+      p21El.innerHTML = window.formatP21OrderInsightsSection(p21Result);
+    }
   } catch (e) { $('#history_content').innerHTML = `<span style="color:red;">Error: ${e.message}</span>`; }
 };

@@ -1,0 +1,4 @@
+.env
+scripts/p21-proxy/.env
+scripts/p21-proxy/.env.vpn
+node_modules/

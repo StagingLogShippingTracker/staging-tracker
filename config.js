@@ -3,6 +3,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const MAKE_EMAIL_WEBHOOK_URL = 'https://hook.us2.make.com/cxvgao3s4lwnrmntk762j25qct6bkkft';
 const TRACKER_SITE_URL = 'https://swiftoperations.github.io/staging-tracker/';
 const TRACKER_LOGO_URL = `${TRACKER_SITE_URL}staging-shipping-logo.png?v=4`;
+window.P21_PROXY_BASE = window.P21_PROXY_BASE || 'http://127.0.0.1:8787';
 
 window.APP_ASSET_VERSIONS = {
   config: '4.1',
