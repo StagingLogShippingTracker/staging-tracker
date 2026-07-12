@@ -4,8 +4,9 @@ from pathlib import Path
 from PIL import Image
 import numpy as np
 
-SRC = Path(r"C:\Users\Brice\Downloads\staging-shipping-logo.png")
-DST = Path(r"C:\Users\Brice\Downloads\brand\staging-shipping-logo-transparent.png")
+ROOT = Path(__file__).resolve().parents[1]
+SRC = ROOT / "staging-shipping-logo.png"
+DST = ROOT / "brand" / "staging-shipping-logo-transparent.png"
 TOLERANCE = 52
 
 
