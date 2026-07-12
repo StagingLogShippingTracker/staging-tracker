@@ -55,6 +55,9 @@ window.loadCloudData = async function() {
     window.renderTables(); 
     if(typeof window.initUniversalDropdowns === 'function') window.initUniversalDropdowns();
     if(typeof window.checkOverdueShipments === 'function') window.checkOverdueShipments();
+    if (typeof window.warmP21CacheForOrders === 'function') {
+      window.warmP21CacheForOrders(allData.map(x => x.so).filter(Boolean));
+    }
   } catch(e) { console.error("Data load failed:", e); }
 };
 

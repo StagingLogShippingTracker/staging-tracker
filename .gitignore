@@ -1,0 +1,4 @@
+.env
+scripts/removed-proxy/.env
+scripts/removed-proxy/.env.vpn
+node_modules/
