@@ -6,14 +6,14 @@ window.reportIndex = 0;
 window.reportResults = [];
 window.reportPhotoBlobs = [];
 
-window.startStagingReport = function(mode) {
+window.startStagingReport = async function(mode) {
   const saved = localStorage.getItem('swift_report_state');
   if(saved) {
     try {
       const state = JSON.parse(saved);
       if(state.queue && state.queue.length > 0 && state.index < state.queue.length) {
         window.pendingReportMode = mode;
-        if($('#reportResumeModal')) $('#reportResumeModal').style.display = 'flex';
+        if($('#reportResumeModal')) await window.openModal('reportResumeModal', { requireShared: false });
         return;
       }
     } catch(e) {}
@@ -46,7 +46,7 @@ window.resumeStagingReport = function() {
   window.reportResults = state.results || [];
   window.currentReportFilter = state.filter || 'all';
   window.activeReportMode = true;
-  if($('#reportResumeModal')) $('#reportResumeModal').style.display = 'none';
+  if($('#reportResumeModal')) window.closeModal('reportResumeModal');
   window.renderNextReportItem();
 };
 
@@ -75,7 +75,7 @@ window.initStagingReport = function(mode = 'all') {
   window.reportResults = [];
   window.activeReportMode = true;
   window.saveReportState();
-  if($('#reportResumeModal')) $('#reportResumeModal').style.display = 'none';
+  if($('#reportResumeModal')) window.closeModal('reportResumeModal');
   window.renderNextReportItem();
 };
 
@@ -86,6 +86,11 @@ window.saveReportState = function() {
 window.pauseReport = function() {
   if (!window.activeReportMode) return;
   window.saveReportState();
+};
+
+window.closeReportMainModal = function() {
+  window.closeModal('reportMainModal');
+  if (typeof window.pauseReport === 'function') window.pauseReport();
 };
 
 window.downloadCSV = function(data, filename) {
@@ -99,9 +104,15 @@ window.downloadCSV = function(data, filename) {
   a.click();
 };
 
-window.renderNextReportItem = function() {
+window.renderNextReportItem = async function() {
   if(!window.activeReportMode) return;
-  document.querySelectorAll('.modal-overlay').forEach(m => m.style.display = 'none'); 
+  document.querySelectorAll('.modal-overlay').forEach(m => {
+    const open = m.classList.contains('is-open') || window.getComputedStyle(m).display === 'flex';
+    if (!open) return;
+    if (m.id && typeof window.closeModal === 'function') window.closeModal(m.id);
+    else { m.style.display = 'none'; m.classList.remove('is-open'); }
+  });
+  if (typeof window.updateModalScrollLock === 'function') window.updateModalScrollLock();
   
   if (window.reportIndex >= window.reportQueue.length) {
     alert("Staging Verification Report Complete!");
@@ -138,7 +149,7 @@ window.renderNextReportItem = function() {
   }
   
   if($('#rep_progress')) $('#rep_progress').textContent = `${window.reportIndex + 1} of ${window.reportQueue.length}`;
-  if($('#reportMainModal')) $('#reportMainModal').style.display = 'flex';
+  await window.openModal('reportMainModal', { requireShared: false });
 };
 
 window.reportRecordAction = function(resultStr) {
@@ -158,9 +169,9 @@ window.reportHandleYes = function() {
   window.reportRecordAction('Verified');
 };
 
-window.reportHandleNo = function() {
-  if($('#reportMainModal')) $('#reportMainModal').style.display = 'none';
-  if($('#reportNoModal')) $('#reportNoModal').style.display = 'flex';
+window.reportHandleNo = async function() {
+  window.closeModal('reportMainModal');
+  await window.openModal('reportNoModal', { requireShared: false });
 };
 
 window.reportHandleBack = function() {
@@ -174,16 +185,16 @@ window.reportHandleBack = function() {
   }
 };
 
-window.reportAction = function(action) {
+window.reportAction = async function(action) {
   const itemId = window.reportQueue[window.reportIndex];
-  if($('#reportNoModal')) $('#reportNoModal').style.display = 'none';
+  window.closeModal('reportNoModal');
   
   if(action === 'settle') {
     window.reportRecordAction('Discrepancy - Unresolved');
   } 
   else if (action === 'change') {
     if($('#report_new_loc')) $('#report_new_loc').value = '';
-    if($('#reportChangeLocModal')) $('#reportChangeLocModal').style.display = 'flex';
+    await window.openModal('reportChangeLocModal', { requireShared: false });
   } 
   else if (action === 'split') {
     window.openSplitPrompt();
@@ -192,17 +203,17 @@ window.reportAction = function(action) {
     window.triggerShipModal(itemId);
   }
   else if (action === 'edit') {
-    window.openUniversalEditor('staging', itemId);
-    if($('#reportNoModal')) $('#reportNoModal').style.display = 'none';
-    if($('#reportMainModal')) $('#reportMainModal').style.display = 'none';
+    await window.openUniversalEditor('staging', itemId);
+    window.closeModal('reportNoModal');
+    window.closeModal('reportMainModal');
   }
   else {
-    window.openUniversalEditor('staging', itemId);
-    if($('#editModal')) $('#editModal').style.display = 'none'; 
-    
-    if (action === 'delete') window.deleteCurrentRecord();
-    else if (action === 'return') window.triggerReturnModal();
-    else if (action === 'consolidate') window.triggerUniversalConsolidate(appData.staging.find(x => x.id === itemId).so);
+    await window.openUniversalEditor('staging', itemId);
+    window.closeModal('editModal');
+
+    if (action === 'delete') await window.deleteCurrentRecord();
+    else if (action === 'return') await window.triggerReturnModal();
+    else if (action === 'consolidate') await window.triggerUniversalConsolidate(appData.staging.find(x => x.id === itemId).so);
   }
 };
 
@@ -213,7 +224,7 @@ window.reportSubmitNewLocation = async function() {
   const targetId = window.reportQueue[window.reportIndex];
   const target = appData.staging.find(x => x.id === targetId);
   
-  $('#reportChangeLocModal').style.display = 'none';
+  window.closeModal('reportChangeLocModal');
   try {
     const { error } = await supabaseClient.from('staging').update({ location: newLoc }).eq('id', targetId);
     if(error) throw error;
@@ -228,56 +239,39 @@ window.reportSubmitNewLocation = async function() {
 
 
 window.submitReportAddEntry = async function() {
-  const sk = parseInt($('#ra_skid').value)||0, bx = parseInt($('#ra_box').value)||0, cr = parseInt($('#ra_crate').value)||0, pi = parseInt($('#ra_pipe').value)||0, ot = parseInt($('#ra_other').value)||0;
-  if(!$('#ra_so').value || !$('#ra_cust').value || !$('#ra_loc').value) return alert("Fields Missing.");
-  
-  const totalQty = sk + bx + cr + pi + ot;
-  if (totalQty === 0) return alert("Error: You must add at least 1 container.");
-  
-  const soVal = $('#ra_so').value.trim();
-  const locValue = $('#ra_loc').value.trim();
-
-  const proceed = await window.checkSoConflict(soVal, null);
-  if(!proceed) return;
-
-  let type = []; 
-  if(sk) type.push(window.formatContainer(sk, 'Skid'));
-  if(bx) type.push(window.formatContainer(bx, 'Box'));
-  if(cr) type.push(window.formatContainer(cr, 'Crate'));
-  if(pi) type.push(window.formatContainer(pi, 'Pipe/Rod'));
-  if(ot) type.push(window.formatContainer(ot, 'Other'));
-  
-  $('#ra_submitBtn').disabled = true; $('#ra_submitBtn').textContent = 'Saving...';
-  
-  try {
-    let photoUrls = []; 
-    for (let i = 0; i < window.reportPhotoBlobs.length; i++) {
-      const file = window.reportPhotoBlobs[i]; 
-      const cleanFileName = file.name.replace(/[^a-zA-Z0-9.]/g, '');
-      const path = `${soVal}-staging-${Date.now()}-${i}-${cleanFileName}`;
-      const { error: uploadError } = await supabaseClient.storage.from('freight-photos').upload(path, file);
-      if(!uploadError) photoUrls.push(path);
+  const result = await window.insertStagingEntry({
+    fields: {
+      so: $('#ra_so') ? $('#ra_so').value : '',
+      customer: $('#ra_cust') ? $('#ra_cust').value : '',
+      location: $('#ra_loc') ? $('#ra_loc').value : '',
+      weight: $('#ra_weight') ? $('#ra_weight').value : '',
+      comments: $('#ra_comments') ? $('#ra_comments').value : '',
+      status: $('#ra_status') ? $('#ra_status').value : 'Partial',
+      staged_by: $('#ra_staged_by') ? $('#ra_staged_by').value : '',
+      skid: $('#ra_skid') ? $('#ra_skid').value : 0,
+      box: $('#ra_box') ? $('#ra_box').value : 0,
+      crate: $('#ra_crate') ? $('#ra_crate').value : 0,
+      pipe: $('#ra_pipe') ? $('#ra_pipe').value : 0,
+      other: $('#ra_other') ? $('#ra_other').value : 0
+    },
+    photoBlobs: window.reportPhotoBlobs || [],
+    logMessage: `Added new entry via Report module for SO: ${($('#ra_so') ? $('#ra_so').value : '').trim()}`,
+    submitBtn: $('#ra_submitBtn'),
+    onSuccess: (record) => {
+      if (record) {
+        appData.staging.push(record);
+        window.injectIntoReportQueue(record);
+      }
+      if ($('#reportAddModal')) $('#reportAddModal').style.display = 'none';
+      if (window.activeReportMode && typeof window.renderNextReportItem === 'function') {
+        window.renderNextReportItem();
+      }
     }
-  
-    const newEntry = { so: soVal, customer: $('#ra_cust').value.trim(), status: window.getDbStatus($('#ra_status').value), location: locValue, weight: $('#ra_weight').value.trim(), comments: $('#ra_comments').value.trim(), staged_by: $('#ra_staged_by').value.trim(), type: type.join(', '), qty: totalQty, photo_urls: photoUrls };
-    
-    const { data: insertedData, error } = await supabaseClient.from('staging').insert([newEntry]).select();
-    
-    if (error) { alert("Database Error: " + error.message); $('#ra_submitBtn').disabled = false; $('#ra_submitBtn').textContent = 'Add Entry'; return; }
-    
-    window.logAction('staging', `Added new entry via Report module for SO: ${soVal}`);
-    if(typeof window.showNotification === 'function') window.showNotification('Staging Entry Added');
-    if (typeof window.rememberPersonBy === 'function') window.rememberPersonBy($('#ra_staged_by').value.trim());
-    
-    appData.staging.push(insertedData[0]); 
-    window.injectIntoReportQueue(insertedData[0]);
-    
-    $('#reportAddModal').style.display = 'none';
-    window.loadCloudData();
-    if (window.activeReportMode && typeof window.renderNextReportItem === 'function') window.renderNextReportItem();
-  } catch(e) { alert("System Error: " + e.message); }
-  
-  $('#ra_submitBtn').disabled = false; $('#ra_submitBtn').textContent = 'Add Entry';
+  });
+  if (result && !result.ok && $('#ra_submitBtn')) {
+    $('#ra_submitBtn').disabled = false;
+    $('#ra_submitBtn').textContent = 'Add Entry';
+  }
 };
 
 window.injectIntoReportQueue = function(item) {

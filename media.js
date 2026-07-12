@@ -220,10 +220,11 @@ window.deleteEditPhoto = async function(index) {
   }
 };
 
-window.openPhotoViewer = function(id, indexToOpen = 0) {
+window.openPhotoViewer = async function(id, indexToOpen = 0) {
   const o = appData.staging.find(x => x.id === id) || appData.shipped.find(x => x.id === id);
   if (!o || !o.photo_urls || o.photo_urls.length === 0) return;
+  if (!(await window.openModal('viewModal'))) return;
   const gal = document.querySelector('#modalPhotoGallery');
+  if (!gal) return;
   gal.innerHTML = o.photo_urls.map(p => `<a href="${SUPABASE_URL}/storage/v1/object/public/freight-photos/${p}" target="_blank" style="display:block; text-decoration:none;"><img src="${SUPABASE_URL}/storage/v1/object/public/freight-photos/${p}" style="width:100%; height:140px; object-fit:cover; border-radius:10px; border:1px solid #cbd5e1; box-shadow:0 2px 4px rgba(0,0,0,0.1);"><div style="text-align:center; font-size:11px; margin-top:6px; font-weight:700; color:#4b5563;">TAP TO ENLARGE</div></a>`).join('');
-  document.querySelector('#viewModal').style.display = 'flex';
 };

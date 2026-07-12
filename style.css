@@ -609,6 +609,16 @@ button[onclick*="banishMemory"]:hover {
   color: var(--text);
 }
 
+.modal-window > .split {
+  padding-right: calc(32px + var(--space-sm));
+  margin-bottom: var(--space-md);
+}
+
+.modal-window > .split h3 {
+  padding-right: 0;
+  min-width: 0;
+}
+
 .modal-close-x {
   position: absolute;
   top: 14px;
@@ -1426,6 +1436,18 @@ input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; margin: 0; 
     font-size: 10px;
   }
 
+  .site-header--dashboard .auth-status__label {
+    font-size: 10px;
+    padding: 3px 6px;
+    max-width: 68px;
+  }
+
+  .site-header--dashboard .auth-status .btn-toolbar {
+    height: 28px;
+    padding: 0 7px;
+    font-size: 10px;
+  }
+
   /* Expanded log pages: toolbar row, full-width title, auth right */
   body.log-page {
     display: flex;
@@ -2116,3 +2138,181 @@ input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; margin: 0; 
 .contact-name-cell {
   color: var(--text);
 }
+
+/* --- Modal UX & accessibility polish (v10.9) --- */
+:root {
+  --z-dropdown: 200;
+  --z-modal: 1000;
+  --z-modal-nested: 1100;
+  --z-modal-critical: 1200;
+  --z-scan: 5000;
+  --z-toast: 9000;
+  --bp-sm: 520px;
+  --bp-md: 768px;
+  --bp-lg: 1024px;
+}
+
+body.modal-open {
+  overflow: hidden;
+  touch-action: none;
+}
+
+.modal-overlay {
+  z-index: var(--z-modal);
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+.modal-overlay.is-open {
+  display: flex;
+}
+
+.modal-window {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.modal-heading--info { margin-top: 0; color: var(--info); }
+.modal-heading--sky { margin-top: 0; color: #0ea5e9; }
+.section-label--upper {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-top: var(--space-sm);
+  margin-bottom: -2px;
+  text-transform: uppercase;
+}
+.field-textarea {
+  width: 100%;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  background: var(--surface-muted);
+  font-family: inherit;
+  resize: vertical;
+}
+.btn-block { width: 100%; margin-top: var(--space-md); }
+
+[data-theme="dark"] tr.status-row td {
+  color: var(--text);
+}
+
+[data-theme="dark"] .freight-block {
+  border-color: var(--border);
+}
+
+@media (max-width: 767px) {
+  .btn-table,
+  .btn-edit,
+  .btn-del {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 10px 14px;
+  }
+
+  .counter-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .modal-close-x {
+    width: 44px;
+    height: 44px;
+    font-size: 24px;
+  }
+
+  .modal-window > .split {
+    padding-right: calc(44px + var(--space-sm));
+  }
+
+  .modal-window > h3 {
+    padding-right: calc(44px + var(--space-xs));
+  }
+
+  .search-clear-btn {
+    min-height: 44px;
+    padding: 0 14px;
+  }
+
+  .batch-mode-trigger {
+    display: none !important;
+  }
+
+  .mobile-card-show-more {
+    display: block !important;
+  }
+
+  .contacts-table-wrap .tbl-scroller {
+    overflow-x: visible;
+  }
+}
+
+@media (min-width: 768px) {
+  .mobile-card-show-more {
+    display: none !important;
+  }
+}
+
+.btn:focus-visible,
+.hamburger-btn:focus-visible,
+.modal-close-x:focus-visible,
+.photo-uploader:focus-visible,
+.mobile-actions-toggle:focus-visible,
+.dropdown-theme-toggle:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--brand-ring);
+}
+
+.hamburger-btn {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast-msg,
+  .tile,
+  .modal-overlay {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* Scoped batch mode inside expanded log modals (index.html) */
+#stagingExpandedModal.batch-mode .hide-in-batch,
+#shippedExpandedModal.batch-mode .hide-in-batch {
+  display: none !important;
+}
+
+#stagingExpandedModal.batch-mode .show-in-batch,
+#shippedExpandedModal.batch-mode .show-in-batch {
+  display: table-cell !important;
+}
+
+#stagingExpandedModal.batch-mode .batch-mode-trigger,
+#shippedExpandedModal.batch-mode .batch-mode-trigger {
+  display: none !important;
+}
+
+@media (max-width: 767px) {
+  #stagingExpandedModal.batch-mode .responsive-log-table .hide-in-batch,
+  #shippedExpandedModal.batch-mode .responsive-log-table .hide-in-batch {
+    display: none !important;
+  }
+
+  #stagingExpandedModal.batch-mode .responsive-log-table .show-in-batch,
+  #shippedExpandedModal.batch-mode .responsive-log-table .show-in-batch {
+    display: flex !important;
+  }
+}
+
+@media (min-width: 768px) {
+  #stagingExpandedModal.batch-mode .responsive-log-table .hide-in-batch,
+  #shippedExpandedModal.batch-mode .responsive-log-table .hide-in-batch {
+    display: none !important;
+  }
+
+  #stagingExpandedModal.batch-mode .responsive-log-table .show-in-batch,
+  #shippedExpandedModal.batch-mode .responsive-log-table .show-in-batch {
+    display: table-cell !important;
+  }
+}
+

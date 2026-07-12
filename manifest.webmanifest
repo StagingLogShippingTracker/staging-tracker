@@ -1,0 +1,17 @@
+{
+  "short_name": "SLST",
+  "name": "SLST - Staging Log & Shipping Tracker",
+  "icons": [
+    {
+      "src": "staging-shipping-logo.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": ".",
+  "scope": ".",
+  "background_color": "#f3f5f8",
+  "theme_color": "#D93223",
+  "display": "standalone",
+  "orientation": "portrait"
+}

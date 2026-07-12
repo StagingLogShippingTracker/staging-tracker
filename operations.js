@@ -62,7 +62,7 @@ window.deleteCurrentRecord = async function() {
   if(confirm("Are you sure you want to PERMANENTLY delete this record?")) {
     await supabaseClient.from(editTargetRecord.table).delete().eq('id', currentEditId);
     window.logAction(editTargetRecord.table, `Deleted entry for SO: ${editTargetRecord.so}`);
-    if($('#editModal')) $('#editModal').style.display = 'none';
+    window.closeModal('editModal');
     if(typeof window.showNotification === 'function') window.showNotification('Record Deleted Permanently');
     window.loadCloudData();
     
@@ -118,7 +118,7 @@ window.submitReturnToStock = async function() {
         });
     }
 
-    if($('#returnModal')) $('#returnModal').style.display='none';
+    window.closeModal('returnModal');
     window.loadCloudData();
     if(window.activeReportMode) { window.reportRecordAction('Fixed via Return to Stock'); }
 
@@ -169,7 +169,7 @@ window.saveEditedRecord = async function() {
   
   window.logAction(editTargetRecord.table, `Edited SO ${basePayload.so}`);
   
-  if($('#editModal')) $('#editModal').style.display = 'none'; 
+  if($('#editModal')) window.closeModal('editModal'); 
   if(typeof window.showNotification === 'function') window.showNotification('Record Updated Successfully');
   window.loadCloudData();
   
@@ -192,7 +192,7 @@ window.executeShippedUndo = async function() {
     window.logAction('shipped', `Undo Shipment Action for SO: ${currentRecord.so}`);
     window.logAction('staging', `Restored to Staging via Undo for SO: ${currentRecord.so}`);
     if(typeof window.showNotification === 'function') window.showNotification('Shipment Action Undone');
-    if($('#editModal')) $('#editModal').style.display = 'none'; 
+    window.closeModal('editModal'); 
     window.loadCloudData();
   } catch(e) { alert("Undo error: " + e.message); }
 };
@@ -275,69 +275,144 @@ window.submitFreightDispatch = async function() {
   }
 };
 
-window.submitStagingEntry = async function() {
-  const sk = parseInt($('#c_skid').value)||0, bx = parseInt($('#c_box').value)||0, cr = parseInt($('#c_crate').value)||0, pi = parseInt($('#c_pipe').value)||0, ot = parseInt($('#c_other').value)||0;
-  if(!$('#so').value || !$('#customer').value || !$('#loc').value) return alert("Fields Missing.");
-  
+window.insertStagingEntry = async function({
+  fields,
+  photoBlobs = [],
+  logMessage,
+  onSuccess,
+  submitBtn
+}) {
+  const sk = parseInt(fields.skid) || 0;
+  const bx = parseInt(fields.box) || 0;
+  const cr = parseInt(fields.crate) || 0;
+  const pi = parseInt(fields.pipe) || 0;
+  const ot = parseInt(fields.other) || 0;
+  const soVal = (fields.so || '').trim();
+  const locValue = (fields.location || '').trim();
+
+  if (!soVal || !(fields.customer || '').trim() || !locValue) {
+    alert('Fields Missing.');
+    return { ok: false };
+  }
+
   const totalQty = sk + bx + cr + pi + ot;
-  if (totalQty === 0) return alert("Error: You must add at least 1 container to confirm this entry.");
-  
-  const soVal = $('#so').value.trim();
-  const locValue = $('#loc').value.trim();
+  if (totalQty === 0) {
+    alert('Error: You must add at least 1 container to confirm this entry.');
+    return { ok: false };
+  }
 
   const proceed = await window.checkSoConflict(soVal, null);
-  if(!proceed) return;
+  if (!proceed) return { ok: false };
 
   const aisleRegex = /^[A-Z]-\d{2}-[A-F]-[12]$/i;
   if (aisleRegex.test(locValue)) {
     const isOccupied = appData.staging.some(x => (x.location || '').toLowerCase() === locValue.toLowerCase());
-    if (isOccupied) {
-      if (!confirm(`Conflict Warning: Aisle location ${locValue.toUpperCase()} is already occupied. Do you want to proceed and place them together?`)) return;
+    if (isOccupied && !confirm(`Conflict Warning: Aisle location ${locValue.toUpperCase()} is already occupied. Do you want to proceed and place them together?`)) {
+      return { ok: false };
     }
   }
-  
-  let type = []; 
-  if(sk) type.push(window.formatContainer(sk, 'Skid'));
-  if(bx) type.push(window.formatContainer(bx, 'Box'));
-  if(cr) type.push(window.formatContainer(cr, 'Crate'));
-  if(pi) type.push(window.formatContainer(pi, 'Pipe/Rod'));
-  if(ot) type.push(window.formatContainer(ot, 'Other'));
-  
-  $('#add').disabled = true;
-  $('#add').textContent = 'Saving...';
-  
+
+  const typeParts = [];
+  if (sk) typeParts.push(window.formatContainer(sk, 'Skid'));
+  if (bx) typeParts.push(window.formatContainer(bx, 'Box'));
+  if (cr) typeParts.push(window.formatContainer(cr, 'Crate'));
+  if (pi) typeParts.push(window.formatContainer(pi, 'Pipe/Rod'));
+  if (ot) typeParts.push(window.formatContainer(ot, 'Other'));
+
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.dataset.prevText = submitBtn.textContent;
+    submitBtn.textContent = 'Saving...';
+  }
+
   try {
-    let photoUrls = []; 
-    for (let i = 0; i < mainPhotoBlobs.length; i++) {
-      const file = mainPhotoBlobs[i]; 
+    const photoUrls = [];
+    for (let i = 0; i < photoBlobs.length; i++) {
+      const file = photoBlobs[i];
       const cleanFileName = file.name.replace(/[^a-zA-Z0-9.]/g, '');
       const path = `${soVal}-staging-${Date.now()}-${i}-${cleanFileName}`;
       const { error: uploadError } = await supabaseClient.storage.from('freight-photos').upload(path, file);
-      if(!uploadError) photoUrls.push(path);
+      if (!uploadError) photoUrls.push(path);
     }
-  
-    const { error } = await supabaseClient.from('staging').insert([{ so: soVal, customer: $('#customer').value.trim(), status: window.getDbStatus($('#status').value), location: locValue, weight: $('#weight').value.trim(), comments: $('#comments').value.trim(), staged_by: $('#staged_by').value.trim(), type: type.join(', '), qty: totalQty, photo_urls: photoUrls }]);
-    
+
+    const payload = {
+      so: soVal,
+      customer: (fields.customer || '').trim(),
+      status: window.getDbStatus(fields.status || 'Partial'),
+      location: locValue,
+      weight: (fields.weight || '').trim(),
+      comments: (fields.comments || '').trim(),
+      staged_by: (fields.staged_by || '').trim(),
+      type: typeParts.join(', '),
+      qty: totalQty,
+      photo_urls: photoUrls
+    };
+
+    const { data: insertedData, error } = await supabaseClient.from('staging').insert([payload]).select();
     if (error) {
-      alert("Database Error: " + error.message);
-      $('#add').disabled = false; $('#add').textContent = 'Add'; return;
+      alert('Database Error: ' + error.message);
+      return { ok: false, error };
     }
-    
-    window.logAction('staging', `Added new entry for SO: ${soVal}`);
-    if(typeof window.showNotification === 'function') window.showNotification('Staging Entry Added');
-    if (typeof window.rememberPersonBy === 'function') {
-      const stagedBy = ($('#staged_by').value || '').trim();
-      window.rememberPersonBy(stagedBy);
+
+    window.logAction('staging', logMessage || `Added new entry for SO: ${soVal}`);
+    if (typeof window.showNotification === 'function') window.showNotification('Staging Entry Added');
+    if (typeof window.rememberPersonBy === 'function' && payload.staged_by) {
+      window.rememberPersonBy(payload.staged_by);
     }
-    
-    $('#so').value=''; $('#customer').value=''; $('#loc').value=''; $('#staged_by').value=''; $('#weight').value=''; $('#c_skid').value=0; $('#c_box').value=0; $('#c_crate').value=0; $('#c_pipe').value=0; $('#c_other').value=0; 
-    if($('#comments')) $('#comments').value='';
-    mainPhotoBlobs = []; window.renderMainPhotoStrip();
+
+    if (onSuccess) onSuccess(insertedData && insertedData[0] ? insertedData[0] : null);
     window.loadCloudData();
-  } catch(e) { alert("System Error: " + e.message); }
-  
-  $('#add').disabled = false;
-  $('#add').textContent = 'Add';
+    return { ok: true, record: insertedData && insertedData[0] ? insertedData[0] : null };
+  } catch (e) {
+    alert('System Error: ' + e.message);
+    return { ok: false, error: e };
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = submitBtn.dataset.prevText || submitBtn.textContent;
+    }
+  }
+};
+
+window.submitStagingEntry = async function() {
+  const result = await window.insertStagingEntry({
+    fields: {
+      so: $('#so') ? $('#so').value : '',
+      customer: $('#customer') ? $('#customer').value : '',
+      location: $('#loc') ? $('#loc').value : '',
+      weight: $('#weight') ? $('#weight').value : '',
+      comments: $('#comments') ? $('#comments').value : '',
+      status: $('#status') ? $('#status').value : 'Partial',
+      staged_by: $('#staged_by') ? $('#staged_by').value : '',
+      skid: $('#c_skid') ? $('#c_skid').value : 0,
+      box: $('#c_box') ? $('#c_box').value : 0,
+      crate: $('#c_crate') ? $('#c_crate').value : 0,
+      pipe: $('#c_pipe') ? $('#c_pipe').value : 0,
+      other: $('#c_other') ? $('#c_other').value : 0
+    },
+    photoBlobs: mainPhotoBlobs,
+    logMessage: `Added new entry for SO: ${($('#so') ? $('#so').value : '').trim()}`,
+    submitBtn: $('#add'),
+    onSuccess: () => {
+      if ($('#so')) $('#so').value = '';
+      if ($('#customer')) $('#customer').value = '';
+      if ($('#loc')) $('#loc').value = '';
+      if ($('#staged_by')) $('#staged_by').value = '';
+      if ($('#weight')) $('#weight').value = '';
+      if ($('#c_skid')) $('#c_skid').value = 0;
+      if ($('#c_box')) $('#c_box').value = 0;
+      if ($('#c_crate')) $('#c_crate').value = 0;
+      if ($('#c_pipe')) $('#c_pipe').value = 0;
+      if ($('#c_other')) $('#c_other').value = 0;
+      if ($('#comments')) $('#comments').value = '';
+      mainPhotoBlobs = [];
+      if (typeof window.renderMainPhotoStrip === 'function') window.renderMainPhotoStrip();
+    }
+  });
+  if (result && !result.ok && $('#add')) {
+    $('#add').disabled = false;
+    $('#add').textContent = 'Add';
+  }
 };
 
 window.saveQuickComment = async function() {
@@ -348,18 +423,27 @@ window.saveQuickComment = async function() {
   const o = appData[currentCommentTarget.table].find(x => x.id === currentCommentTarget.id);
   if(o) window.logAction(currentCommentTarget.table, `Added/Edited comment for SO: ${o.so}`);
   if(typeof window.showNotification === 'function') window.showNotification('Comment Saved');
-  if($('#commentModal')) $('#commentModal').style.display = 'none';
+  if($('#commentModal')) window.closeModal('commentModal');
   window.loadCloudData();
 };
 
 window.nrPhotoBlobs = [];
 
-window.openNotifyReturnModal = function() {
-  $('#nr_so').value=''; $('#nr_cust').value=''; $('#nr_skid').value=0; $('#nr_box').value=0; $('#nr_crate').value=0; $('#nr_pipe').value=0; $('#nr_other').value=0; 
-  $('#nr_loc').value=''; $('#nr_weight').value=''; $('#nr_comments').value=''; 
-  $('#nr_received_by').value = currentUser ? currentUser.email.split('@')[0] : '';
-  window.nrPhotoBlobs = []; window.renderNRPhotoStrip();
-  $('#notifyReturnModal').style.display = 'flex';
+window.openNotifyReturnModal = async function() {
+  if (!(await window.openModal('notifyReturnModal', { requireShared: false }))) return;
+  if ($('#nr_so')) $('#nr_so').value='';
+  if ($('#nr_cust')) $('#nr_cust').value='';
+  if ($('#nr_skid')) $('#nr_skid').value=0;
+  if ($('#nr_box')) $('#nr_box').value=0;
+  if ($('#nr_crate')) $('#nr_crate').value=0;
+  if ($('#nr_pipe')) $('#nr_pipe').value=0;
+  if ($('#nr_other')) $('#nr_other').value=0;
+  if ($('#nr_loc')) $('#nr_loc').value='';
+  if ($('#nr_weight')) $('#nr_weight').value='';
+  if ($('#nr_comments')) $('#nr_comments').value='';
+  if ($('#nr_received_by')) $('#nr_received_by').value = currentUser ? currentUser.email.split('@')[0] : '';
+  window.nrPhotoBlobs = [];
+  if (typeof window.renderNRPhotoStrip === 'function') window.renderNRPhotoStrip();
 };
 
 window.submitNotifyReturn = async function() {
@@ -428,7 +512,7 @@ window.submitNotifyReturn = async function() {
     window.logAction('staging', `Sent Automated Return Notification for SO: ${soVal}`);
     if(typeof window.showNotification === 'function') window.showNotification('Return Notification Sent Successfully');
     if (typeof window.rememberPersonBy === 'function') window.rememberPersonBy(receivedByVal);
-    $('#notifyReturnModal').style.display = 'none';
+    window.closeModal('notifyReturnModal');
 
   } catch(e) { alert("System Error: " + e.message); }
   
@@ -437,14 +521,22 @@ window.submitNotifyReturn = async function() {
 
 window.pnPhotoBlobs = [];
 
-window.openPoNotifyModal = function() {
-  $('#pn_po').value = ''; $('#pn_cust').value = ''; $('#pn_skid').value = 0; $('#pn_box').value = 0;
-  $('#pn_crate').value = 0; $('#pn_pipe').value = 0; $('#pn_other').value = 0;
-  $('#pn_loc').value = ''; $('#pn_weight').value = ''; $('#pn_comments').value = '';
-  $('#pn_received_by').value = currentUser ? currentUser.email.split('@')[0] : '';
+window.openPoNotifyModal = async function() {
+  if (!(await window.openModal('poNotifyModal', { requireShared: false }))) return;
+  if ($('#pn_po')) $('#pn_po').value = '';
+  if ($('#pn_cust')) $('#pn_cust').value = '';
+  if ($('#pn_skid')) $('#pn_skid').value = 0;
+  if ($('#pn_box')) $('#pn_box').value = 0;
+  if ($('#pn_crate')) $('#pn_crate').value = 0;
+  if ($('#pn_pipe')) $('#pn_pipe').value = 0;
+  if ($('#pn_other')) $('#pn_other').value = 0;
+  if ($('#pn_loc')) $('#pn_loc').value = '';
+  if ($('#pn_weight')) $('#pn_weight').value = '';
+  if ($('#pn_comments')) $('#pn_comments').value = '';
+  if ($('#pn_received_by')) $('#pn_received_by').value = currentUser ? currentUser.email.split('@')[0] : '';
   if ($('#pn_pm_email')) $('#pn_pm_email').value = '';
-  window.pnPhotoBlobs = []; window.renderPNPhotoStrip();
-  $('#poNotifyModal').style.display = 'flex';
+  window.pnPhotoBlobs = [];
+  if (typeof window.renderPNPhotoStrip === 'function') window.renderPNPhotoStrip();
 };
 
 window.submitPoNotification = async function() {
@@ -533,7 +625,7 @@ window.submitPoNotification = async function() {
     window.logAction('staging', `Sent Automated PO Notification for PO: ${poVal}${pmNameVal ? ' (PM SMS: ' + pmNameVal + ')' : ''}`);
     if (typeof window.showNotification === 'function') window.showNotification('PO Notification Sent Successfully');
     if (typeof window.rememberPersonBy === 'function') window.rememberPersonBy(receivedByVal);
-    $('#poNotifyModal').style.display = 'none';
+    window.closeModal('poNotifyModal');
   } catch (e) { alert('System Error: ' + e.message); }
 
   $('#pn_submitBtn').disabled = false; $('#pn_submitBtn').textContent = 'Submit PO Notification';
@@ -550,7 +642,7 @@ window.resolveEmail = function(inputVal) {
   return null; 
 };
 
-window.triggerUniversalConsolidate = function(targetSo) {
+window.triggerUniversalConsolidate = async function(targetSo) {
   let so = typeof targetSo === 'string' ? targetSo : null;
   
   // Intelligent Context Detection: 
@@ -562,9 +654,9 @@ window.triggerUniversalConsolidate = function(targetSo) {
   }
 
   // Hide overlapping modals to prevent z-index boxing conflicts
-  if($('#editModal')) $('#editModal').style.display = 'none';
-  if($('#orderHistoryModal')) $('#orderHistoryModal').style.display = 'none';
-  if($('#reportNoModal')) $('#reportNoModal').style.display = 'none';
+  window.closeModal('editModal');
+  window.closeModal('orderHistoryModal');
+  window.closeModal('reportNoModal');
   
   // If we STILL don't have an SO, prompt the user for one (Quick Consolidate route)
   if (!so) {
@@ -585,17 +677,12 @@ window.triggerUniversalConsolidate = function(targetSo) {
   editTargetRecord.table = 'staging'; 
   
   if(typeof window.openSameSoModal === 'function') {
-    window.openSameSoModal();
-    // Force the z-index dynamically so it stays on top
-    if($('#sameSoModal')) {
-      $('#sameSoModal').style.display = 'flex';
-      $('#sameSoModal').style.zIndex = '3500';
-    }
+    await window.openSameSoModal();
   }
 };
 
-window.openUniversalAddModal = function(so) {
-  if($('#orderHistoryModal')) $('#orderHistoryModal').style.display = 'none';
+window.openUniversalAddModal = async function(so) {
+  window.closeModal('orderHistoryModal');
   const lockFields = !!(so && so.trim());
   const existingCustomer = lockFields ? window.lookupCustomerBySo(so) : null;
   
@@ -615,22 +702,31 @@ window.openUniversalAddModal = function(so) {
   if($('#ra_loc')) $('#ra_loc').value=''; if($('#ra_weight')) $('#ra_weight').value=''; if($('#ra_comments')) $('#ra_comments').value=''; 
   if($('#ra_staged_by')) { $('#ra_staged_by').value = currentUser ? currentUser.email.split('@')[0] : ''; $('#ra_staged_by').disabled = false; $('#ra_staged_by').style.background = ''; }
   
-  if($('#reportAddModal')) {
-    $('#reportAddModal').style.display = 'flex';
-    $('#reportAddModal').style.zIndex = '3600';
-  }
+  await window.openModal('reportAddModal', { requireShared: false, zIndex: 3600 });
 };
 window.qsPhotoBlobs = [];
 
-window.openQuickShipModal = function() {
-  $('#qs_so').value = ''; $('#qs_cust').value = '';
-  $('#qs_skid').value = 0; $('#qs_box').value = 0; $('#qs_crate').value = 0; $('#qs_pipe').value = 0; $('#qs_other').value = 0;
-  $('#qs_carrier').value = ''; $('#qs_loc').value = ''; $('#qs_weight').value = ''; $('#qs_comments').value = '';
-  $('#qs_by').value = currentUser ? currentUser.email.split('@')[0] : '';
-  if($('#qs_pm_chk')) $('#qs_pm_chk').checked = false; window.togglePMEmail(false, 'qs_pm_email', 'qs_pm_email_btn'); if($('#qs_pm_email')) $('#qs_pm_email').value = '';
+window.openQuickShipModal = async function() {
+  if (!(await window.openModal('quickShipModal'))) return;
+  const qsSo = $('#qs_so');
+  if (!qsSo) return;
+  qsSo.value = '';
+  if ($('#qs_cust')) $('#qs_cust').value = '';
+  if ($('#qs_skid')) $('#qs_skid').value = 0;
+  if ($('#qs_box')) $('#qs_box').value = 0;
+  if ($('#qs_crate')) $('#qs_crate').value = 0;
+  if ($('#qs_pipe')) $('#qs_pipe').value = 0;
+  if ($('#qs_other')) $('#qs_other').value = 0;
+  if ($('#qs_carrier')) $('#qs_carrier').value = '';
+  if ($('#qs_loc')) $('#qs_loc').value = '';
+  if ($('#qs_weight')) $('#qs_weight').value = '';
+  if ($('#qs_comments')) $('#qs_comments').value = '';
+  if ($('#qs_by')) $('#qs_by').value = currentUser ? currentUser.email.split('@')[0] : '';
+  if ($('#qs_pm_chk')) $('#qs_pm_chk').checked = false;
+  window.togglePMEmail(false, 'qs_pm_email', 'qs_pm_email_btn');
+  if ($('#qs_pm_email')) $('#qs_pm_email').value = '';
   window.qsPhotoBlobs = [];
   window.clearPhotoBlobs('quickship');
-  $('#quickShipModal').style.display = 'flex';
 };
 
 window.submitQuickShip = async function() {
@@ -688,7 +784,7 @@ window.submitQuickShip = async function() {
       window.sendPmEmailWebhook({ to: finalPmEmail, cc: "warehouse1@swiftsupply.ca", subject: cachedSubject, body: cachedBody, attachments: attachmentUrls, has_attachments: attachmentUrls.length > 0 });
     }
 
-    $('#quickShipModal').style.display = 'none';
+    window.closeModal('quickShipModal');
     window.loadCloudData();
   } catch(e) { alert("Quick Ship Error: " + e.message); } finally {
     $('#qsConfirmBtn').disabled = false; $('#qsConfirmBtn').textContent = 'Quick Ship Dispatch';
@@ -699,20 +795,21 @@ window.checkSoConflict = async function(so, excludeId) {
   if (!so) return true;
   const conflicts = appData.staging.filter(x => x.so.toLowerCase() === so.toLowerCase() && x.id !== excludeId);
   if (conflicts.length > 0) {
-    return new Promise(resolve => {
-      $('#conflict_so_title').textContent = so;
+    return new Promise(async resolve => {
+      if ($('#conflict_so_title')) $('#conflict_so_title').textContent = so;
       let html = `<div class="history-section">`;
       html += `<h4 class="section-staging">Current Active Staging</h4>`;
       html += typeof window.formatActiveStagingList === 'function'
         ? window.formatActiveStagingList(conflicts)
         : '';
       html += `</div>`;
-      $('#conflict_content').innerHTML = html;
-      $('#soConflictModal').style.display = 'flex';
-      $('#soConflictModal').style.zIndex = '4000';
+      if ($('#conflict_content')) $('#conflict_content').innerHTML = html;
+      if (!(await window.openModal('soConflictModal', { zIndex: 4000 }))) { resolve(true); return; }
 
-      $('#conflictCancelBtn').onclick = () => { $('#soConflictModal').style.display = 'none'; resolve(false); };
-      $('#conflictProceedBtn').onclick = () => { $('#soConflictModal').style.display = 'none'; resolve(true); };
+      const cancelBtn = $('#conflictCancelBtn');
+      const proceedBtn = $('#conflictProceedBtn');
+      if (cancelBtn) cancelBtn.onclick = () => { window.closeModal('soConflictModal'); resolve(false); };
+      if (proceedBtn) proceedBtn.onclick = () => { window.closeModal('soConflictModal'); resolve(true); };
     });
   }
   return true;
@@ -1134,6 +1231,6 @@ window.openReportAddModal = function() {
 };
 
 window.closeReportAddModal = function() {
-  if ($('#reportAddModal')) $('#reportAddModal').style.display = 'none';
-  if (window.activeReportMode && $('#reportMainModal')) $('#reportMainModal').style.display = 'flex';
+  window.closeModal('reportAddModal');
+  if (window.activeReportMode) window.openModal('reportMainModal', { requireShared: false });
 };

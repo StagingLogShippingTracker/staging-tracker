@@ -1,6 +1,37 @@
 window.toggleBatchMode = function() {
-  isBatchMode = !isBatchMode; batchSelectedIds.clear();
-  document.body.classList.toggle('batch-mode', isBatchMode); window.renderTables();
+  window.enableBatchMode(document.getElementById('tblStaging') ? 'tblStaging' : 'tblShipped');
+};
+
+window.getBatchModalEl = function(tableId) {
+  if (tableId === 'tblStagingExpanded') return document.getElementById('stagingExpandedModal');
+  if (tableId === 'tblShippedExpanded') return document.getElementById('shippedExpandedModal');
+  return null;
+};
+
+window.isBatchActiveFor = function(tableId) {
+  return isBatchMode && batchTarget === tableId;
+};
+
+window.enableBatchMode = function(tableId) {
+  if (!tableId) return;
+  isBatchMode = true;
+  batchTarget = tableId;
+  batchSelectedIds.clear();
+  document.body.classList.remove('batch-mode');
+  document.getElementById('stagingExpandedModal')?.classList.remove('batch-mode');
+  document.getElementById('shippedExpandedModal')?.classList.remove('batch-mode');
+  const modal = window.getBatchModalEl(tableId);
+  if (modal) modal.classList.add('batch-mode');
+  else document.body.classList.add('batch-mode');
+  window.renderTables();
+};
+
+window.enableExpandedStagingBatch = function() {
+  window.enableBatchMode('tblStagingExpanded');
+};
+
+window.enableExpandedShippedBatch = function() {
+  window.enableBatchMode('tblShippedExpanded');
 };
 
 window.toggleBatchSelect = function(id, isChecked) {
@@ -8,9 +39,14 @@ window.toggleBatchSelect = function(id, isChecked) {
 };
 
 window.batchSelectAll = function() {
-  const q = $('#q') ? $('#q').value.toLowerCase() : '';
-  const fStaging = appData.staging.filter(o => (o.so||'').toLowerCase().includes(q) || (o.customer||'').toLowerCase().includes(q) || (o.location||'').toLowerCase().includes(q));
-  fStaging.forEach(o => batchSelectedIds.add(o.id)); window.renderTables();
+  let q = '';
+  if (batchTarget === 'tblStagingExpanded') {
+    q = $('#searchStagingExpanded') ? $('#searchStagingExpanded').value : '';
+  } else {
+    q = $('#q') ? $('#q').value : '';
+  }
+  window.filterLogByQuickSearch(appData.staging, q).forEach(o => batchSelectedIds.add(o.id));
+  window.renderTables();
 };
 
 window.batchUnselectAll = function() { batchSelectedIds.clear(); window.renderTables(); };
@@ -30,31 +66,32 @@ window.batchDelete = async function() {
 };
 
 window.batchCancel = function() {
-  isBatchMode = false; batchSelectedIds.clear(); document.body.classList.remove('batch-mode'); window.renderTables();
+  isBatchMode = false;
+  batchSelectedIds.clear();
+  batchTarget = null;
+  document.body.classList.remove('batch-mode');
+  document.getElementById('stagingExpandedModal')?.classList.remove('batch-mode');
+  document.getElementById('shippedExpandedModal')?.classList.remove('batch-mode');
+  window.renderTables();
 };
 
-window.openSameSoModal = function() {
-  if(!currentEditId) return; const target = appData.staging.find(x => x.id === currentEditId); if(!target) return;
-  if($('#editModal')) $('#editModal').style.display = 'none';
+window.openSameSoModal = async function() {
+  if(!currentEditId) return;
+  const target = appData.staging.find(x => x.id === currentEditId);
+  if(!target) return;
+  if (!(await window.openModal('sameSoModal'))) return;
+  window.closeModal('editModal');
   
   isSameSoMode = true; sameSoSelectedIds.clear();
-  const matchingItems = appData.staging.filter(x => x.so === target.so); matchingItems.forEach(o => sameSoSelectedIds.add(o.id));
+  const matchingItems = appData.staging.filter(x => x.so === target.so);
+  matchingItems.forEach(o => sameSoSelectedIds.add(o.id));
   
-  const tBody = $('#tblSameSo tbody'); tBody.innerHTML = '';
+  const tBody = $('#tblSameSo tbody');
+  if (!tBody) return;
+  tBody.innerHTML = '';
   matchingItems.forEach(o => {
-    tBody.insertAdjacentHTML('beforeend', `<tr style="color:#64748b;">
-      ${window.labeledCell('Select', `<input type="checkbox" style="width:18px;height:18px;" onchange="window.toggleSameSoSelect('${o.id}', this.checked)" checked>`, '', 'text-align:center;')}
-      ${window.labeledCell('SO', `<b>${o.so}</b>`)}
-      ${window.labeledCell('Customer', o.customer)}
-      ${window.labeledCell('Entry Date', new Date(o.entry_date).toLocaleString())}
-      ${window.labeledCell('Containers', o.type)}
-      ${window.labeledCell('Location', `<b>${o.location}</b>`)}
-      ${window.labeledCell('Weight', o.weight || '—')}
-      ${window.labeledCell('Status', o.status)}
-      ${window.labeledCell('Staged By', o.staged_by || '—')}
-    </tr>`);
+    tBody.insertAdjacentHTML('beforeend', window.buildSameSoRowHtml(o, sameSoSelectedIds.has(o.id)));
   });
-  $('#sameSoModal').style.display = 'flex';
 };
 
 window.toggleSameSoSelect = function(id, isChecked) { if(isChecked) sameSoSelectedIds.add(id); else sameSoSelectedIds.delete(id); };
@@ -65,9 +102,9 @@ window.sameSoSelectAll = function() {
   window.openSameSoModal(); 
 };
 
-window.sameSoCancel = function() { isSameSoMode = false; sameSoSelectedIds.clear(); $('#sameSoModal').style.display = 'none'; };
+window.sameSoCancel = function() { isSameSoMode = false; sameSoSelectedIds.clear(); window.closeModal('sameSoModal'); };
 
-window.openBatchConsolidateModal = function(fromSameSo = false) {
+window.openBatchConsolidateModal = async function(fromSameSo = false) {
   const selectedSet = fromSameSo ? sameSoSelectedIds : batchSelectedIds;
   if(selectedSet.size === 0) return alert("Select at least one order to consolidate.");
   
@@ -83,14 +120,16 @@ window.openBatchConsolidateModal = function(fromSameSo = false) {
   
   if(conflict && !confirm("Warning: Selected orders have differing SO or Customer names. Continue?")) return;
   
-  $('#bc_so').value = firstItem.so || ''; $('#bc_cust').value = firstItem.customer || '';
-  $('#bc_skid').value = totalSk; $('#bc_box').value = totalBx; $('#bc_crate').value = totalCr; $('#bc_pipe').value = totalPi; $('#bc_other').value = totalOt;
+  if (!(await window.openModal('batchConsolidateModal'))) return;
+  if ($('#bc_so')) $('#bc_so').value = firstItem.so || '';
+  if ($('#bc_cust')) $('#bc_cust').value = firstItem.customer || '';
+  if ($('#bc_skid')) $('#bc_skid').value = totalSk; $('#bc_box').value = totalBx; $('#bc_crate').value = totalCr; $('#bc_pipe').value = totalPi; $('#bc_other').value = totalOt;
   $('#bc_weight').value = totalWeight > 0 ? totalWeight.toLocaleString('en-US') : '';
   $('#bc_loc').value = ''; $('#bc_comments').value = ''; $('#bc_status').value = 'Partial';
   $('#bc_staged_by').value = currentUser ? (currentUser.email.split('@')[0]) : '';
   $('#bc_photo_urls').value = JSON.stringify(photoUrls); $('#bc_source').value = fromSameSo ? 'sameso' : 'batch';
   
-  if(fromSameSo) $('#sameSoModal').style.display = 'none'; $('#batchConsolidateModal').style.display = 'flex';
+  if(fromSameSo) window.closeModal('sameSoModal');
 };
 
 window.executeBatchConsolidate = async function() {
@@ -113,7 +152,7 @@ window.executeBatchConsolidate = async function() {
     if(typeof window.showNotification === 'function') window.showNotification('Batch Consolidation Successful');
     if (typeof window.rememberPersonBy === 'function') window.rememberPersonBy($('#bc_staged_by').value.trim());
     
-    $('#batchConsolidateModal').style.display = 'none';
+    window.closeModal('batchConsolidateModal');
     if(fromSameSo) window.sameSoCancel(); else window.batchCancel();
     window.loadCloudData();
     if(window.activeReportMode) { window.reportRecordAction('Fixed via Consolidation'); }
@@ -123,9 +162,14 @@ window.executeBatchConsolidate = async function() {
 };
 
 window.batchSelectAllShipped = function() {
-  const q = $('#q') ? $('#q').value.toLowerCase() : '';
-  const fShipped = appData.shipped.filter(o => (o.so||'').toLowerCase().includes(q) || (o.customer||'').toLowerCase().includes(q) || (o.location||'').toLowerCase().includes(q));
-  fShipped.forEach(o => batchSelectedIds.add(o.id)); window.renderTables();
+  let q = '';
+  if (batchTarget === 'tblShippedExpanded') {
+    q = $('#searchShippedExpanded') ? $('#searchShippedExpanded').value : '';
+  } else {
+    q = $('#q') ? $('#q').value : '';
+  }
+  window.filterLogByQuickSearch(appData.shipped, q).forEach(o => batchSelectedIds.add(o.id));
+  window.renderTables();
 };
 
 window.batchDeleteShipped = async function() {

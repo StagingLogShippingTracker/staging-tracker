@@ -10,12 +10,11 @@ window.logAction = async function(table, actionDesc) {
 };
 
 window.openChangelogModal = async function(table) {
-  if(!$('#changelogModal')) return;
-  $('#changelogTitle').textContent = table === 'staging' ? 'Staging Entries Changelog' : 'Shipped Log Changelog';
+  if(!(await window.openModal('changelogModal'))) return;
+  if($('#changelogTitle')) $('#changelogTitle').textContent = table === 'staging' ? 'Staging Entries Changelog' : 'Shipped Log Changelog';
   const tbody = $('#tblChangelog tbody');
   
   tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; padding:12px;">Loading changes...</td></tr>';
-  $('#changelogModal').style.display = 'flex';
   
   try {
     const { data, error } = await supabaseClient.from('changelog')
@@ -52,10 +51,9 @@ window.formatActiveStagingList = function(entries) {
 };
 
 window.openOrderHistory = async function(so) {
-  if(!$('#orderHistoryModal')) return;
-  $('#history_so_title').textContent = so;
-  $('#history_content').innerHTML = '<div style="text-align:center; padding:20px; color:#6b7280;">Loading history...</div>';
-  $('#orderHistoryModal').style.display = 'flex';
+  if(!(await window.openModal('orderHistoryModal'))) return;
+  if ($('#history_so_title')) $('#history_so_title').textContent = so;
+  if ($('#history_content')) $('#history_content').innerHTML = '<div style="text-align:center; padding:20px; color:#6b7280;">Loading history...</div>';
 
   try {
     const activeEntries = appData.staging.filter(x => x.so === so);

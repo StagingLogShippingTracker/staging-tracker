@@ -202,49 +202,64 @@ function initApp() {
   });
   window.initAuth();
 
-  if (isBatchMode && !window.isMobilePortraitCardView()) document.body.classList.add('batch-mode');
-  else if (isBatchMode && typeof window.batchCancel === 'function') window.batchCancel();
+  if (isBatchMode && !window.isMobilePortraitCardView()) {
+    if (!batchTarget) {
+      const path = window.location.pathname || '';
+      if (/stage\.html/i.test(path)) batchTarget = 'tblStaging';
+      else if (/ship\.html/i.test(path)) batchTarget = 'tblShipped';
+    }
+    if (batchTarget && typeof window.getBatchModalEl === 'function' && window.getBatchModalEl(batchTarget)) {
+      window.getBatchModalEl(batchTarget).classList.add('batch-mode');
+    } else {
+      document.body.classList.add('batch-mode');
+    }
+  } else if (isBatchMode && typeof window.batchCancel === 'function') {
+    window.batchCancel();
+  }
 
-  window.initEmployeeEmailDropdown();
-  window.initPmSmsDropdown();
   window.renderStagingStatusLegend();
   if (typeof window.initPersonByRoster === 'function') window.initPersonByRoster();
   if (typeof window.initCarrierRoster === 'function') window.initCarrierRoster();
-  if (typeof window.initPhotoFields === 'function') window.initPhotoFields();
-  if (typeof window.initUniversalDropdowns === 'function') window.initUniversalDropdowns();
-  if (typeof window.initSoCustomerAutofill === 'function') window.initSoCustomerAutofill();
-  if (typeof window.initSearchClearButtons === 'function') window.initSearchClearButtons();
+
+  if($('#add')) $('#add').addEventListener('click', window.submitStagingEntry);
+
+  if (typeof window.initContactsPage === 'function') window.initContactsPage();
+
   window.initSiteFooter();
 
   if (!document.getElementById('dl_sos')) {
     document.body.insertAdjacentHTML('beforeend', '<datalist id="dl_sos"></datalist>');
   }
 
-  document.querySelectorAll('input:not([type="password"]):not([type="email"]), textarea').forEach(el => {
-    el.setAttribute('autocomplete', 'off');
-    el.setAttribute('spellcheck', 'false');
-  });
-
-  document.querySelectorAll('input[id*="_so"], input[id="so"]').forEach(el => {
-    if(!el.id.includes('search')) el.setAttribute('list', 'dl_sos');
-  });
-
-  window.loadCloudData();
-  setInterval(window.loadCloudData, 5000);
-
-  document.querySelectorAll('option').forEach(opt => {
-    if (opt.textContent.trim() === 'Awaiting Instructions') opt.textContent = 'Awaiting Shipping Instructions';
-  });
-
-  const mWeight = document.getElementById('m_weight');
-  if (mWeight) {
-    mWeight.removeAttribute('readonly');
-    mWeight.style.background = '';
-    mWeight.setAttribute('oninput', 'window.formatWeight(this)');
+  if (typeof window.loadCloudData === 'function') {
+    window.loadCloudData();
+    setInterval(window.loadCloudData, 5000);
   }
-
-  if($('#add')) $('#add').addEventListener('click', window.submitStagingEntry);
+  window.initHamburgerMenus();
 }
 
-if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', initApp); }
-else { initApp(); }
+window.initHamburgerMenus = function() {
+  document.querySelectorAll('.hamburger-btn').forEach(btn => {
+    if (btn.dataset.menuReady) return;
+    btn.dataset.menuReady = '1';
+    btn.setAttribute('aria-label', 'Open navigation menu');
+    btn.setAttribute('aria-expanded', 'false');
+    btn.setAttribute('aria-haspopup', 'true');
+    const menu = btn.nextElementSibling;
+    if (menu) {
+      menu.setAttribute('role', 'menu');
+      if (!menu.id) menu.id = 'site-nav-menu-' + Math.random().toString(36).slice(2, 7);
+      btn.setAttribute('aria-controls', menu.id);
+    }
+  });
+};
+
+async function bootApp() {
+  if (typeof window.loadSharedPartials === 'function') {
+    await window.loadSharedPartials();
+  }
+  initApp();
+}
+
+if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', bootApp); }
+else { bootApp(); }
