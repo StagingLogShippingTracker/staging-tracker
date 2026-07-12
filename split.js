@@ -60,8 +60,10 @@ window.saveConfigureSplit = async function() {
       const { error: insErr } = await supabaseClient.from('staging').insert(window.splitEngine.dataArray);
       if(insErr) throw insErr;
       await supabaseClient.from('staging').delete().eq('id', window.splitEngine.targetId);
-      
-      window.logAction('staging', `Split Order SO ${payload.so} into ${window.splitEngine.total} separate entries.`);
+
+      const sourceLoc = window.splitEngine.sourceItem.location || 'Unknown';
+      const destLocs = [...new Set(window.splitEngine.dataArray.map(entry => entry.location).filter(Boolean))].join(', ') || 'Unknown';
+      window.logBinMovement('split', `SO ${payload.so} split from ${sourceLoc} into ${window.splitEngine.total} entries at ${destLocs}`);
       if(typeof window.showNotification === 'function') window.showNotification(`Order Split Successfully`);
       if (typeof window.rememberPersonBy === 'function') window.rememberPersonBy($('#sp_staged_by').value.trim());
       window.loadCloudData();

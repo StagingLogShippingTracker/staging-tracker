@@ -933,7 +933,25 @@ tr.status-row .sticky-ship-col { background-color: inherit; }
 .history-section h4 { margin: 0 0 8px 0; font-size: 14px; padding-bottom: 6px; border-bottom-width: 2px; border-bottom-style: solid; }
 .history-section h4.section-staging { color: #0ea5e9; border-bottom-color: #e0f2fe; }
 .history-section h4.section-shipped { color: #10b981; border-bottom-color: #d1fae5; }
-.history-section h4.section-changelog { color: #8b5cf6; border-bottom-color: #ede9fe; }
+.history-section h4.section-bin-movements { color: #d97706; border-bottom-color: #fef3c7; margin-top: 16px; }
+.history-section h4.section-changelog { color: #8b5cf6; border-bottom-color: #ede9fe; margin-top: 16px; }
+
+.bin-movement-type {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 2px 7px;
+  border-radius: 999px;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+.bin-movement-type--split { background: #ede9fe; color: #7c3aed; }
+.bin-movement-type--consolidate { background: #fef3c7; color: #b45309; }
+.bin-movement-type--move { background: #e0f2fe; color: #0369a1; }
+.bin-movement-type--to-shipped { background: #d1fae5; color: #047857; }
+.bin-movement-type--to-staging { background: #dbeafe; color: #1d4ed8; }
 
 .conflict-panel {
   background: var(--surface-muted);
@@ -2102,6 +2120,17 @@ input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; margin: 0; 
   color: #34d399;
   border-bottom-color: rgba(52, 211, 153, 0.25);
 }
+
+[data-theme="dark"] .history-section h4.section-bin-movements {
+  color: #fbbf24;
+  border-bottom-color: rgba(251, 191, 36, 0.25);
+}
+
+[data-theme="dark"] .bin-movement-type--split { background: rgba(124, 58, 237, 0.22); color: #c4b5fd; }
+[data-theme="dark"] .bin-movement-type--consolidate { background: rgba(217, 119, 6, 0.22); color: #fcd34d; }
+[data-theme="dark"] .bin-movement-type--move { background: rgba(3, 105, 161, 0.22); color: #7dd3fc; }
+[data-theme="dark"] .bin-movement-type--to-shipped { background: rgba(4, 120, 87, 0.22); color: #6ee7b7; }
+[data-theme="dark"] .bin-movement-type--to-staging { background: rgba(29, 78, 216, 0.22); color: #93c5fd; }
 
 [data-theme="dark"] .history-section h4.section-changelog {
   color: #c4b5fd;
