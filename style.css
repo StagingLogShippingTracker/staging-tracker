@@ -588,10 +588,13 @@ button[onclick*="banishMemory"]:hover {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
+  overflow-x: hidden;
   overflow-y: auto;
   position: relative;
   font-family: inherit;
   color: var(--text);
+  box-sizing: border-box;
+  min-width: 0;
 }
 
 .modal-window--sm { max-width: 350px; }
@@ -643,7 +646,8 @@ button[onclick*="banishMemory"]:hover {
 
 .modal-close-x:hover { background: #e2e8f0; color: var(--text); }
 
-.modal-field { display: flex; flex-direction: column; gap: var(--space-xs); text-align: left; }
+.modal-field { display: flex; flex-direction: column; gap: var(--space-xs); text-align: left; min-width: 0; max-width: 100%; }
+.modal-field > div { max-width: 100%; min-width: 0; box-sizing: border-box; }
 .modal-field label { font-size: 12px; font-weight: 600; color: var(--text-muted); letter-spacing: 0.02em; }
 .pm-sms-select { width: 100%; cursor: pointer; }
 .req-mark { color: #ef4444; font-weight: 700; }
@@ -1097,6 +1101,43 @@ input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; margin: 0; 
 }
 .contact-email-link { color: var(--info); text-decoration: none; }
 .contact-email-link:hover { text-decoration: underline; }
+
+/* Contacts card view: long emails/values must wrap inside the card */
+#tblContacts tbody tr {
+  max-width: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+#tblContacts tbody td {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+#tblContacts tbody td > * {
+  min-width: 0;
+  flex: 1 1 55%;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  text-align: right;
+}
+
+#tblContacts .contact-email-link {
+  display: inline-block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  vertical-align: top;
+}
+
+@media (max-width: 767px) {
+  #tblContacts .branch-badge {
+    white-space: normal;
+    text-align: right;
+  }
+}
 
 /* Report verification display */
 .report-loc-display { font-size: 42px; font-weight: 900; color: var(--brand); margin: 10px 0; line-height: 1.1; }
@@ -1571,24 +1612,26 @@ input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; margin: 0; 
   /* Batch Mode is incompatible with stacked card view */
   .batch-mode-trigger { display: none !important; }
 
-  /* Contacts directory: keep table inside a scroll container */
+  /* Contacts directory: card view on mobile portrait */
   .contacts-table-wrap {
     overflow: hidden;
     border: 1px solid var(--border);
     border-radius: var(--radius-xl);
     background: var(--surface);
     box-shadow: var(--shadow-sm);
+    max-width: 100%;
   }
 
   .contacts-table-wrap .tbl-scroller {
-    overflow-x: auto;
+    overflow-x: hidden;
     overflow-y: auto;
     max-height: calc(100dvh - 340px);
     -webkit-overflow-scrolling: touch;
   }
 
   #tblContacts {
-    min-width: 640px;
+    min-width: 0 !important;
+    width: 100%;
   }
 }
 
@@ -2159,7 +2202,13 @@ body.modal-open {
 
 .modal-overlay {
   z-index: var(--z-modal);
-  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  padding:
+    max(var(--space-md), env(safe-area-inset-top, 0px))
+    max(var(--space-md), env(safe-area-inset-right, 0px))
+    max(var(--space-md), env(safe-area-inset-bottom, 0px))
+    max(var(--space-md), env(safe-area-inset-left, 0px));
+  overflow: hidden;
+  overscroll-behavior: contain;
 }
 
 .modal-overlay.is-open {
@@ -2215,17 +2264,47 @@ body.modal-open {
   }
 
   .modal-close-x {
-    width: 44px;
-    height: 44px;
-    font-size: 24px;
+    width: 40px;
+    height: 40px;
+    font-size: 22px;
+    top: max(10px, env(safe-area-inset-top, 0px));
+    right: max(10px, env(safe-area-inset-right, 0px));
+  }
+
+  .modal-overlay {
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal-window {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    max-height: min(92dvh, calc(100dvh - 2 * var(--space-md)));
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .modal-window > h3,
+  .modal-window > .modal-close-x + h3 {
+    padding-right: 48px;
+    max-width: 100%;
+    overflow-wrap: anywhere;
   }
 
   .modal-window > .split {
-    padding-right: calc(44px + var(--space-sm));
+    padding-right: calc(40px + var(--space-md));
   }
 
-  .modal-window > h3 {
-    padding-right: calc(44px + var(--space-xs));
+  .modal-window .photo-options-grid,
+  .modal-window .freight-block,
+  .modal-window .photo-strip,
+  .modal-window .modal-field input,
+  .modal-window .modal-field select,
+  .modal-window .modal-field textarea {
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
   }
 
   .search-clear-btn {
@@ -2242,7 +2321,7 @@ body.modal-open {
   }
 
   .contacts-table-wrap .tbl-scroller {
-    overflow-x: visible;
+    overflow-x: hidden;
   }
 }
 

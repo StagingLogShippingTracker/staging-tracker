@@ -879,6 +879,7 @@ window.closeStagingExpandedModal = function() {
   if (typeof window.isBatchActiveFor === 'function' && window.isBatchActiveFor('tblStagingExpanded')) {
     window.batchCancel();
   }
+  window.closeModal('changelogModal');
   window.closeModal('stagingExpandedModal');
 };
 
@@ -918,6 +919,7 @@ window.closeShippedExpandedModal = function() {
   if (typeof window.isBatchActiveFor === 'function' && window.isBatchActiveFor('tblShippedExpanded')) {
     window.batchCancel();
   }
+  window.closeModal('changelogModal');
   window.closeModal('shippedExpandedModal');
 };
 

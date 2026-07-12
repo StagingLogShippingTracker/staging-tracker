@@ -65,6 +65,34 @@ window.bindModalScrollLockSync = function() {
   }, true);
 };
 
+window.getOpenModals = function() {
+  return Array.from(document.querySelectorAll('.modal-overlay[id]'))
+    .filter(el => el.classList.contains('is-open') || window.getComputedStyle(el).display === 'flex');
+};
+
+window.getModalBaseZ = function() {
+  const raw = window.getComputedStyle(document.documentElement).getPropertyValue('--z-modal').trim();
+  const n = parseInt(raw, 10);
+  return Number.isFinite(n) ? n : 1000;
+};
+
+window.getModalZStep = function() {
+  const base = window.getModalBaseZ();
+  const raw = window.getComputedStyle(document.documentElement).getPropertyValue('--z-modal-nested').trim();
+  const nested = parseInt(raw, 10);
+  return Number.isFinite(nested) && nested > base ? nested - base : 100;
+};
+
+window.getTopOpenModal = function() {
+  const open = window.getOpenModals();
+  if (!open.length) return null;
+  return open.sort((a, b) => {
+    const za = parseInt(window.getComputedStyle(a).zIndex, 10) || 0;
+    const zb = parseInt(window.getComputedStyle(b).zIndex, 10) || 0;
+    return zb - za;
+  })[0];
+};
+
 window.openModal = async function(id, options) {
   const opts = options || {};
   if (opts.requireShared !== false && !document.getElementById(id)) {
@@ -79,7 +107,17 @@ window.openModal = async function(id, options) {
   }
   el.classList.add('is-open');
   el.style.display = 'flex';
-  if (opts.zIndex != null) el.style.zIndex = String(opts.zIndex);
+  if (opts.zIndex != null) {
+    el.style.zIndex = String(opts.zIndex);
+  } else {
+    let maxZ = window.getModalBaseZ() - window.getModalZStep();
+    window.getOpenModals().forEach(m => {
+      if (m.id === id) return;
+      const z = parseInt(window.getComputedStyle(m).zIndex, 10);
+      if (Number.isFinite(z) && z > maxZ) maxZ = z;
+    });
+    el.style.zIndex = String(maxZ + window.getModalZStep());
+  }
   el.setAttribute('role', 'dialog');
   el.setAttribute('aria-modal', 'true');
   const heading = el.querySelector('h3, h2');
@@ -97,6 +135,7 @@ window.closeModal = function(id) {
   if (el) {
     el.classList.remove('is-open');
     el.style.display = 'none';
+    el.style.zIndex = '';
   }
   window._openModalIds.delete(id);
   window.updateModalScrollLock();
@@ -220,10 +259,8 @@ window.ensureSharedModals = async function() {
 
 document.addEventListener('keydown', function(e) {
   if (e.key !== 'Escape') return;
-  const openModals = Array.from(document.querySelectorAll('.modal-overlay'))
-    .filter(el => window.getComputedStyle(el).display === 'flex');
-  if (!openModals.length) return;
-  const top = openModals[openModals.length - 1];
+  const top = typeof window.getTopOpenModal === 'function' ? window.getTopOpenModal() : null;
+  if (!top) return;
   if (top.id === 'stagingExpandedModal' && typeof window.closeStagingExpandedModal === 'function') {
     window.closeStagingExpandedModal();
   } else if (top.id === 'shippedExpandedModal' && typeof window.closeShippedExpandedModal === 'function') {
