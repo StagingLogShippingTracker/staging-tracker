@@ -229,7 +229,7 @@ window.reportSubmitNewLocation = async function() {
     const { error } = await supabaseClient.from('staging').update({ location: newLoc }).eq('id', targetId);
     if(error) throw error;
     
-    window.logAction('staging', `Report Fix: Changed Location for SO ${target.so} to ${newLoc}`);
+    window.logBinMovement('move', `SO ${target.so} moved from ${target.location || 'Unknown'} to ${newLoc}`);
     if(typeof window.showNotification === 'function') window.showNotification('Location Updated');
     
     window.loadCloudData();

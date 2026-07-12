@@ -97,6 +97,7 @@ window.submitReturnToStock = async function() {
     if(insertError) throw insertError;
     
     await supabaseClient.from('staging').delete().eq('id', currentEditId);
+    window.logBinMovement('to-shipped', `SO ${editTargetRecord.so}: ${window.getDynamicType('e')} moved from Staging Log to Shipped Log (Returned to Stock) from ${$('#e_loc').value.trim()}`);
     window.logAction('staging', `Returned to Stock SO: ${editTargetRecord.so}`);
     window.logAction('shipped', `Added Return to Stock log for SO: ${editTargetRecord.so}`);
     if(typeof window.showNotification === 'function') window.showNotification('Returned to Stock Successfully');
@@ -152,6 +153,10 @@ window.saveEditedRecord = async function() {
     const newStatus = window.getDbStatus($('#e_status').value.trim());
     const { error } = await supabaseClient.from('staging').update({ ...basePayload, status: newStatus, staged_by: $('#e_staged_by').value.trim(), photo_urls: editTargetRecord.photo_urls }).eq('id', currentEditId);
     if(error) { alert("Database Error: " + error.message); return; }
+    const oldLoc = (editTargetRecord.location || '').trim();
+    if (oldLoc && oldLoc.toLowerCase() !== locValue.toLowerCase()) {
+      window.logBinMovement('move', `SO ${soVal} moved from ${oldLoc} to ${locValue}`);
+    }
     if (typeof window.rememberPersonBy === 'function') {
       window.rememberPersonBy($('#e_staged_by').value.trim());
     }
@@ -189,6 +194,7 @@ window.executeShippedUndo = async function() {
     if (error) { alert("Undo Database Error: " + error.message); return; }
     
     await supabaseClient.from('shipped').delete().eq('id', editTargetRecord.id);
+    window.logBinMovement('to-staging', `SO ${currentRecord.so}: ${currentRecord.type || 'containers'} moved from Shipped Log back to Staging Log${currentRecord.location ? ` (${currentRecord.location})` : ''}`);
     window.logAction('shipped', `Undo Shipment Action for SO: ${currentRecord.so}`);
     window.logAction('staging', `Restored to Staging via Undo for SO: ${currentRecord.so}`);
     if(typeof window.showNotification === 'function') window.showNotification('Shipment Action Undone');
@@ -238,6 +244,7 @@ window.submitFreightDispatch = async function() {
     }
 
     await supabaseClient.from('staging').delete().eq('id', activeShipTargetItem.id);
+    window.logBinMovement('to-shipped', `SO ${activeShipTargetItem.so}: ${activeShipTargetItem.type || 'containers'} moved from Staging Log to Shipped Log via ${carrierVal}${activeShipTargetItem.location ? ` (${activeShipTargetItem.location})` : ''}`);
     window.logAction('staging', `Ship Confirmed SO: ${activeShipTargetItem.so}`);
     window.logAction('shipped', `Added via Ship Confirm: SO: ${activeShipTargetItem.so}`);
     
@@ -768,6 +775,7 @@ window.submitQuickShip = async function() {
 
     if (insertError) throw insertError;
 
+    window.logBinMovement('to-shipped', `SO ${soVal}: ${dynamicType} moved to Shipped Log via Quick Ship (${carrierVal})`);
     window.logAction('shipped', `Added via Quick Ship: SO: ${soVal}`);
     if(typeof window.playSuccessChime === 'function') window.playSuccessChime();
     if(typeof window.showNotification === 'function') window.showNotification('Quick Ship Successful');

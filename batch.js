@@ -148,7 +148,9 @@ window.executeBatchConsolidate = async function() {
     if(insErr) throw insErr;
     
     for(let id of selectedSet) { await supabaseClient.from('staging').delete().eq('id', id); }
-    window.logAction('staging', `Batch Consolidated ${selectedSet.size} entries into new SO: ${$('#bc_so').value.trim()}`);
+    const sourceLocs = [...new Set(Array.from(selectedSet).map(id => appData.staging.find(x => x.id === id)?.location).filter(Boolean))].join(', ') || 'Unknown';
+    const targetLoc = $('#bc_loc').value.trim() || 'Unknown';
+    window.logBinMovement('consolidate', `SO ${$('#bc_so').value.trim()}: merged ${selectedSet.size} entries from ${sourceLocs} to ${targetLoc}`);
     if(typeof window.showNotification === 'function') window.showNotification('Batch Consolidation Successful');
     if (typeof window.rememberPersonBy === 'function') window.rememberPersonBy($('#bc_staged_by').value.trim());
     
@@ -206,6 +208,7 @@ window.batchUndoShipped = async function() {
       if(error) throw error;
       
       await supabaseClient.from('shipped').delete().eq('id', id);
+      window.logBinMovement('to-staging', `SO ${currentRecord.so}: ${currentRecord.type || 'containers'} moved from Shipped Log back to Staging Log via Batch Undo${currentRecord.location ? ` (${currentRecord.location})` : ''}`);
       window.logAction('shipped', `Batch Undo Shipment Action for SO: ${currentRecord.so}`);
       window.logAction('staging', `Restored to Staging via Batch Undo for SO: ${currentRecord.so}`);
     }
