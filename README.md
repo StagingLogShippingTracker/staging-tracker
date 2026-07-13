@@ -41,6 +41,11 @@ See [scripts/p21-proxy/README.md](scripts/p21-proxy/README.md).
 - `scripts/p21-proxy/.env` — P21 + Supabase sync key (gitignored)
 - Supabase Edge Function secrets — set in Supabase Dashboard
 
+## Integrations
+
+- **Supabase** — `plugin-supabase-supabase` MCP (database, edge functions)
+- **Make.com** — `.cursor/mcp.json` + OAuth sign-in (scenarios, webhooks). See [docs/MAKE-MCP-SETUP.md](docs/MAKE-MCP-SETUP.md)
+
 ## Remote
 
 - **GitHub:** https://github.com/StagingLogShippingTracker/staging-tracker
