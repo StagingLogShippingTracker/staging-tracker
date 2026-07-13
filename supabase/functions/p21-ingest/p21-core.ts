@@ -137,7 +137,7 @@ export async function fetchLiveInsights(soRaw: string, cfg: Record<string, strin
     return { ...data, source: 'connector' };
   }
 
-  const baseUrl = (cfg.P21_BASE_URL || 'https://swiftsupply.epicordistribution.com/Prophet21').replace(/\/+$/, '');
+  const baseUrl = (cfg.P21_BASE_URL || 'https://swiftsupply.epicordistribution.com').replace(/\/+$/, '');
   const username = cfg.P21_USERNAME || '';
   const password = cfg.P21_PASSWORD || '';
   if (!username || !password) throw new Error('P21 credentials are not configured on the server.');

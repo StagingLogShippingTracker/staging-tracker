@@ -7,7 +7,7 @@ Get-Content (Join-Path $here '.env') | ForEach-Object {
 $base = $cfg['P21_BASE_URL'].TrimEnd('/')
 $body = @{ username = $cfg['P21_USERNAME']; password = $cfg['P21_PASSWORD'] } | ConvertTo-Json
 try {
-  $tok = Invoke-RestMethod -Uri "$base/api/security/token/v2" -Method Post -ContentType 'application/json' -Body $body -TimeoutSec 45
+  $tok = Invoke-RestMethod -Uri "$base/api/security/token/v2" -Method Post -ContentType 'application/json' -Headers @{ Accept = 'application/json' } -Body $body -TimeoutSec 45
   Write-Output "TOKEN_OK=$([bool]$tok.AccessToken)"
   $h = @{ Authorization = "Bearer $($tok.AccessToken)"; Accept = 'application/json' }
   $views = @('p21_view_oe_hdr', 'oe_hdr')

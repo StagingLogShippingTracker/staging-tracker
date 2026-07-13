@@ -1,5 +1,6 @@
 import {
   corsHeaders,
+  canFetchLiveP21,
   fetchLiveInsights,
   loadP21Config,
   normalizeSo,
@@ -34,6 +35,7 @@ Deno.serve(async (req) => {
 
     const supabase = serviceClient();
     const cfg = loadP21Config();
+    const liveAllowed = canFetchLiveP21(cfg);
 
     if (!refresh) {
       const cached = await readCacheRow(supabase, soKey, true);
@@ -46,9 +48,33 @@ Deno.serve(async (req) => {
       }
     }
 
-    const live = await fetchLiveInsights(soRaw, cfg);
-    await writeCacheRow(supabase, soRaw, live);
-    return new Response(JSON.stringify({ ...live, cached: false, fetchedAt: new Date().toISOString() }), {
+    if (liveAllowed) {
+      const live = await fetchLiveInsights(soRaw, cfg);
+      await writeCacheRow(supabase, soRaw, live);
+      return new Response(JSON.stringify({ ...live, cached: false, fetchedAt: new Date().toISOString() }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const cached = await readCacheRow(supabase, soKey, true);
+    if (cached?.payload) {
+      return new Response(JSON.stringify({
+        ...(cached.payload as Record<string, unknown>),
+        cached: true,
+        stale: cached.stale,
+        fetchedAt: cached.fetched_at,
+        message: cached.stale
+          ? 'Prophet21 cache is stale; Swift network sync will refresh it.'
+          : undefined,
+      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    return new Response(JSON.stringify({
+      found: false,
+      cached: false,
+      message: 'Prophet21 data not synced yet. Run sync-to-supabase.ps1 on the Swift network.',
+    }), {
+      status: 404,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (e) {

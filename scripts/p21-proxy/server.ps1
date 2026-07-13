@@ -20,7 +20,7 @@ function Load-DotEnv($path) {
 }
 
 $cfg = Load-DotEnv $envFile
-$BaseUrl = if ($cfg['P21_BASE_URL']) { $cfg['P21_BASE_URL'] } else { 'https://swiftsupply.epicordistribution.com/Prophet21' }
+$BaseUrl = if ($cfg['P21_BASE_URL']) { $cfg['P21_BASE_URL'] } else { 'https://swiftsupply.epicordistribution.com' }
 $BaseUrl = $BaseUrl.TrimEnd('/')
 $Username = $cfg['P21_USERNAME']
 $Password = $cfg['P21_PASSWORD']
@@ -52,7 +52,7 @@ function Get-P21Token {
     throw [System.InvalidOperationException]::new('P21 credentials missing in scripts/p21-proxy/.env')
   }
   $body = @{ username = $Username; password = $Password } | ConvertTo-Json
-  $resp = Invoke-RestMethod -Uri "$BaseUrl/api/security/token/v2" -Method Post -ContentType 'application/json' -Body $body -TimeoutSec 45
+  $resp = Invoke-RestMethod -Uri "$BaseUrl/api/security/token/v2" -Method Post -ContentType 'application/json' -Headers @{ Accept = 'application/json' } -Body $body -TimeoutSec 45
   if (-not $resp.AccessToken) { throw [System.InvalidOperationException]::new('P21 token response missing AccessToken') }
   $script:Token = $resp.AccessToken
   $ttl = if ($resp.ExpiresInSeconds) { [int]$resp.ExpiresInSeconds } else { 3600 }
