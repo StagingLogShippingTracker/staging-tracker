@@ -1,6 +1,6 @@
 # SLST — Staging Log & Shipping Tracker
 
-Static HTML/JS PWA backed by Supabase. Deployed to GitHub Pages at [swiftoperations.github.io/staging-tracker](https://swiftoperations.github.io/staging-tracker/).
+Static HTML/JS PWA backed by Supabase. Deployed to GitHub Pages at [staginglogshippingtracker.github.io/staging-tracker](https://staginglogshippingtracker.github.io/staging-tracker/).
 
 ## Single-folder workflow
 
@@ -43,5 +43,5 @@ See [scripts/p21-proxy/README.md](scripts/p21-proxy/README.md).
 
 ## Remote
 
-- **GitHub:** https://github.com/SwiftOperations/staging-tracker
+- **GitHub:** https://github.com/StagingLogShippingTracker/staging-tracker
 - **Supabase project:** `gdrpdiwykmnybmkadlrv`
