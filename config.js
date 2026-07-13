@@ -1,12 +1,12 @@
 const SUPABASE_URL = 'https://gdrpdiwykmnybmkadlrv.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdkcnBkaXd5a21ueWJta2FkbHJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1MjMyMTIsImV4cCI6MjA5NjA5OTIxMn0.Z7ih_vQic1GtzCyZmTEV-RWJnmuaNZQDfOV2_Fvan5g';
 const MAKE_EMAIL_WEBHOOK_URL = 'https://hook.us2.make.com/cxvgao3s4lwnrmntk762j25qct6bkkft';
-const TRACKER_SITE_URL = 'https://swiftoperations.github.io/staging-tracker/';
+const TRACKER_SITE_URL = 'https://staginglogshippingtracker.github.io/staging-tracker/';
 const TRACKER_LOGO_URL = `${TRACKER_SITE_URL}staging-shipping-logo.png?v=4`;
 window.REMOVED = window.REMOVED || 'http://127.0.0.1:8787';
 
 window.APP_ASSET_VERSIONS = {
-  config: '4.1',
+  config: '4.3',
   partials: '1.3',
   style: '10.9',
   ui: '7.4',
