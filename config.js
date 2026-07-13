@@ -4,15 +4,16 @@ const MAKE_EMAIL_WEBHOOK_URL = 'https://hook.us2.make.com/cxvgao3s4lwnrmntk762j2
 const TRACKER_SITE_URL = 'https://staginglogshippingtracker.github.io/staging-tracker/';
 const TRACKER_LOGO_URL = `${TRACKER_SITE_URL}staging-shipping-logo.png?v=4`;
 window.REMOVED = window.REMOVED || 'http://127.0.0.1:8787';
+window.REMOVED = window.REMOVED || 'https://swiftsupply.example.invalid//#/';
 
 window.APP_ASSET_VERSIONS = {
-  config: '4.3',
+  config: '4.4',
   partials: '1.3',
   style: '10.9',
   ui: '7.4',
   app: '6.0',
   auth: '3.4',
-  history: '3.5',
+  history: '3.9',
   split: '3.7',
   reports: '3.8',
   operations: '5.2',
