@@ -1626,10 +1626,11 @@ input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; margin: 0; 
     -webkit-overflow-scrolling: touch;
   }
 
+  /* Expanded log pages: toolbar row, then full-width centered title (matches sub-pages) */
   body.log-page .site-header {
     display: grid;
     grid-template-columns: auto 1fr auto;
-    grid-template-rows: auto auto auto;
+    grid-template-rows: auto auto;
     align-items: center;
     column-gap: var(--space-sm);
     row-gap: var(--space-sm);
@@ -1648,14 +1649,12 @@ input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; margin: 0; 
   }
 
   body.log-page .site-header__end {
-    display: contents;
-  }
-
-  body.log-page .site-header__end > .btn-toolbar {
     grid-column: 3;
     grid-row: 1;
+    flex: none;
+    width: auto;
     justify-self: end;
-    z-index: 2;
+    align-self: start;
   }
 
   body.log-page .site-header__title-wrap {
@@ -1673,10 +1672,7 @@ input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; margin: 0; 
     line-height: 1.25;
   }
 
-  body.log-page .site-header__end > .auth-status {
-    grid-column: 1 / -1;
-    grid-row: 3;
-    justify-self: end;
+  body.log-page .site-header__end .auth-status {
     flex-direction: column;
     align-items: flex-end;
     gap: 4px;
