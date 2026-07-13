@@ -1,11 +1,21 @@
-// --- p21.js — Prophet21 insights (Supabase cache-first, works from anywhere) ---
+// --- p21.js — Prophet21 insights (cache-first + on-demand publish from Swift proxy) ---
 
 window.P21_PROXY_BASE = window.P21_PROXY_BASE || 'http://127.0.0.1:8787';
 window.P21_FUNCTION_NAME = window.P21_FUNCTION_NAME || 'p21-order-insights';
+window.P21_PUBLISH_FUNCTION_NAME = window.P21_PUBLISH_FUNCTION_NAME || 'p21-publish';
+window.P21_WEB_URL = window.P21_WEB_URL || 'https://swiftsupply.epicordistribution.com/Prophet21/#/';
 window._p21WarmSet = window._p21WarmSet || new Set();
+window._p21PublishSet = window._p21PublishSet || new Set();
 
 window.normalizeP21So = function(raw) {
   return String(raw || '').trim().replace(/^SO[#:\s-]*/i, '');
+};
+
+window.buildP21OpenUrl = function(so) {
+  const base = (window.P21_WEB_URL || 'https://swiftsupply.epicordistribution.com/Prophet21/#/').replace(/\/?$/, '/');
+  const soKey = window.normalizeP21So(so);
+  // SPA root; SO is shown in Order History for copy/search in P21
+  return soKey ? base : base;
 };
 
 function p21SupabaseConfig() {
@@ -96,36 +106,65 @@ async function fetchP21FromLocalProxy(so) {
   }
 }
 
-function refreshP21InBackground(so) {
-  fetchP21FromEdgeFunction(so, true).catch(() => {});
-}
+/** Publish a proxy/live payload into Supabase so all users can read it. */
+window.publishP21OrderInsights = function(so, payload) {
+  const soKey = window.normalizeP21So(so);
+  if (!soKey || !payload || typeof payload.found !== 'boolean') return;
+  if (window._p21PublishSet.has(soKey)) return;
+
+  const url = p21FunctionUrl(window.P21_PUBLISH_FUNCTION_NAME);
+  const cfg = p21SupabaseConfig();
+  if (!url || !cfg) return;
+
+  window._p21PublishSet.add(soKey);
+  fetch(url, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      apikey: cfg.key,
+      Authorization: `Bearer ${cfg.key}`
+    },
+    body: JSON.stringify({ so: soKey, payload })
+  })
+    .then((res) => {
+      if (!res.ok) window._p21PublishSet.delete(soKey);
+    })
+    .catch(() => window._p21PublishSet.delete(soKey));
+};
 
 window.fetchP21OrderInsights = async function(so, options) {
   const refresh = Boolean(options?.refresh);
   const soKey = window.normalizeP21So(so);
-  if (!soKey) return { ok: false, message: 'SO number is required.' };
+  if (!soKey) return { ok: false, message: 'SO number is required.', so: soKey };
 
   if (!refresh) {
     const cached = await fetchP21FromCacheTable(so, true);
-    if (cached?.ok) {
-      if (cached.data.stale) refreshP21InBackground(so);
-      return cached;
+    if (cached?.ok && !cached.data.stale) {
+      return { ...cached, so: soKey };
     }
   }
 
+  // On Swift WiFi with local proxy: fetch live, then publish for all users
+  const local = await fetchP21FromLocalProxy(so);
+  if (local?.ok && local.data) {
+    if (local.data.found) {
+      window.publishP21OrderInsights(soKey, local.data);
+    }
+    return { ...local, so: soKey };
+  }
+
   const edge = await fetchP21FromEdgeFunction(so, refresh).catch(() => null);
-  if (edge?.ok) return edge;
+  if (edge?.ok) return { ...edge, so: soKey };
 
   const stale = await fetchP21FromCacheTable(so, true);
-  if (stale?.ok) return stale;
-
-  const local = await fetchP21FromLocalProxy(so);
-  if (local?.ok) return local;
+  if (stale?.ok) return { ...stale, so: soKey };
 
   return edge || local || {
     ok: false,
     offline: true,
-    message: 'Prophet21 insights are not available yet. Data syncs from Swift network to Supabase automatically.'
+    so: soKey,
+    message: 'Prophet21 insights are not cached yet. On a Swift-network PC with the local P21 proxy running, open this order to publish insights for everyone.'
   };
 };
 
@@ -161,24 +200,38 @@ window.formatP21Value = function(value) {
   return String(value);
 };
 
+window.formatP21OpenLink = function(so) {
+  const soKey = window.normalizeP21So(so);
+  const href = window.buildP21OpenUrl(soKey);
+  const label = soKey ? `Open SO ${soKey} in Prophet21` : 'Open Prophet21';
+  return `<p class="p21-open-link" style="margin:8px 0 12px 0;">
+    <a href="${href}" target="_blank" rel="noopener noreferrer" class="btn btn-toolbar" style="display:inline-flex; text-decoration:none;">${label}</a>
+    <span style="display:block; font-size:11px; color:#9ca3af; margin-top:4px;">Requires Swift WiFi/VPN. Search or paste the SO in P21 if the app opens to the home screen.</span>
+  </p>`;
+};
+
 window.formatP21OrderInsightsSection = function(result) {
+  const so = result?.so || result?.data?.so || '';
+  const openLink = window.formatP21OpenLink(so);
+
   if (!result || !result.ok) {
     const hint = result?.offline
-      ? 'Prophet21 data is syncing to Supabase from the Swift network. Cached insights appear here once synced.'
+      ? 'No cached Prophet21 data for this SO yet. On a Swift-network PC with the local P21 proxy running, open this order once to publish insights for the whole team.'
       : (result?.authError
-        ? 'P21 authentication failed on the server. Contact an admin to verify Supabase P21 credentials.'
+        ? 'P21 authentication failed. Contact an admin to verify credentials on the Swift-network proxy.'
         : (result?.message || 'Prophet21 data unavailable.'));
-    return `<p class="p21-status p21-status--warn" style="font-size:12px; color:#6b7280; margin:0 0 12px 0;">${hint}</p>`;
+    return `<p class="p21-status p21-status--warn" style="font-size:12px; color:#6b7280; margin:0 0 8px 0;">${hint}</p>${openLink}`;
   }
 
   const payload = result.data;
   if (!payload.found) {
-    return `<p class="p21-status" style="font-size:12px; color:#6b7280; margin:0 0 12px 0;">${payload.message || 'No matching Prophet21 order.'}</p>`;
+    return `<p class="p21-status" style="font-size:12px; color:#6b7280; margin:0 0 8px 0;">${payload.message || 'No matching Prophet21 order.'}</p>${openLink}`;
   }
 
   const h = payload.header || {};
   const s = payload.summary || {};
   let html = `<div class="p21-insights-card">`;
+  html += openLink;
   html += `<dl class="p21-insights-grid">`;
   html += `<div><dt>Customer</dt><dd>${window.formatP21Value(s.customer)}</dd></div>`;
   html += `<div><dt>Order #</dt><dd>${window.formatP21Value(h.orderNo)}</dd></div>`;
@@ -209,9 +262,11 @@ window.formatP21OrderInsightsSection = function(result) {
   }
 
   const staleNote = payload.stale ? ' (updating…)' : '';
-  const cachedNote = payload.cached || result.via?.includes('cache') || result.via?.includes('stale') ? ' — synced copy' : '';
+  const viaLabel = result.via === 'local-proxy'
+    ? 'live proxy (published for all users)'
+    : (payload.cached || result.via?.includes('cache') || result.via?.includes('stale') ? 'synced copy' : window.formatP21Value(payload.matchedBy));
   const fetched = payload.fetchedAt ? ` · ${window.formatP21Value(payload.fetchedAt)}` : '';
-  html += `<p class="p21-footnote">Prophet21 via <b>${window.formatP21Value(payload.matchedBy)}</b>${cachedNote}${staleNote}${fetched}.</p>`;
+  html += `<p class="p21-footnote">Prophet21 via <b>${viaLabel}</b>${staleNote}${fetched}.</p>`;
   html += `</div>`;
   return html;
 };

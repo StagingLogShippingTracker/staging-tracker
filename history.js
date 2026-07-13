@@ -173,7 +173,7 @@ window.openOrderHistory = async function(so) {
 
   const p21Promise = typeof window.fetchP21OrderInsights === 'function'
     ? window.fetchP21OrderInsights(so)
-    : Promise.resolve({ ok: false, offline: true, message: 'P21 module not loaded.' });
+    : Promise.resolve({ ok: false, offline: true, so, message: 'P21 module not loaded.' });
 
   try {
     const activeEntries = appData.staging.filter(x => x.so === so);

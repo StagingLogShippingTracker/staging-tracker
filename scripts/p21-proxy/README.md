@@ -2,18 +2,21 @@
 
 Prophet21 Epicor is **only reachable on Swift’s private network** (office WiFi or VPN). Browsers and Supabase’s cloud cannot call it directly from home or cellular.
 
-**Universal pattern:** one always-on Swift-network machine syncs P21 snapshots into Supabase; every user reads that cache in Order History.
+**Universal pattern (on-demand publish):** a warehouse PC on Swift WiFi runs the local P21 proxy. When someone opens Order History for an SO, the browser loads live insights from the proxy and **publishes** that snapshot into Supabase (`p21-publish`). Every other user (any network) reads `p21_order_cache`.
 
-## Why Swift WiFi “works” today
+Optional bulk sync remains available once OData works.
+
+## Why Swift WiFi matters
 
 | Layer | On Swift WiFi | Off Swift network |
 |-------|---------------|-------------------|
 | P21 web UI (`…/Prophet21/#/`) | ✅ | ❌ |
-| P21 REST/OData API (`…/api/security/token/v2`) | ✅ | ❌ |
+| P21 REST/OData API | ✅ if OData enabled | ❌ |
 | Local proxy (`127.0.0.1:8787`) | ✅ if proxy running | ❌ |
 | Supabase `p21_order_cache` | ✅ | ✅ |
+| Order History “Open in Prophet21” | Useful | Link only works on Swift network |
 
-The web UI URL includes `/Prophet21/` for the SPA shell. **API calls use the site root**, not `/Prophet21`:
+The web UI URL includes `/Prophet21/` for the SPA shell. **REST/OData calls use the site root**, not `/Prophet21`:
 
 - Token: `https://swiftsupply.epicordistribution.com/api/security/token/v2`
 - OData: `https://swiftsupply.epicordistribution.com/odataservice/odata/view/…`
@@ -23,20 +26,17 @@ Token requests must send `Accept: application/json` (otherwise P21 returns XML).
 ## Architecture
 
 ```
-Swift PC (WiFi/VPN, always on)
-  ├─ server.ps1 / server.mjs  → talks to P21 OData
-  └─ sync-to-supabase.ps1     → pushes SO snapshots to Supabase
+Swift warehouse PC (WiFi + optional VPN)
+  ├─ start-proxy.ps1          → talks to P21
+  └─ Browser opens Order History
+        → local proxy fetch
+        → p21-publish → Supabase cache
 
-Supabase
-  ├─ p21_order_cache          → 7-day JSON cache (all users read this)
-  ├─ p21-ingest               → receives bulk sync from Swift PC
-  └─ p21-order-insights       → serves cache (no live P21 from cloud)
-
-Browser (any network)
-  └─ p21.js → history.js Order History modal
+Any user / any network
+  └─ Order History → p21_order_cache (read)
 ```
 
-## One-time setup
+## Warehouse PC setup (one-time)
 
 ### 1. Local `.env` (`scripts/p21-proxy/.env`)
 
@@ -49,39 +49,56 @@ Copy `.env.example`. Required:
 | `P21_PASSWORD` | Your P21 password |
 | `SUPABASE_URL` | Project URL |
 | `SUPABASE_ANON_KEY` | Anon key |
-| `P21_SYNC_KEY` | Random secret (match Supabase) |
+| `P21_SYNC_KEY` | Random secret (only for optional bulk sync) |
 
-### 2. Supabase Edge Function secrets
-
-Dashboard → Edge Functions → Secrets:
-
-| Secret | Value |
-|--------|--------|
-| `P21_SYNC_KEY` | Same as local `.env` |
-| `P21_BASE_URL` | `https://swiftsupply.epicordistribution.com` (only if using cloud live fetch) |
-
-Do **not** set `P21_ALLOW_CLOUD_LIVE=1` unless Supabase can reach P21 (it usually cannot). Default: cache-only from edge.
-
-### 3. Swift network sync (keeps cache fresh)
-
-On an **always-on PC at Swift**, every 5–15 minutes:
+### 2. Start the proxy when on Swift WiFi
 
 ```powershell
 cd scripts\p21-proxy
-.\start-proxy.ps1          # window 1 — or Task Scheduler
-.\sync-to-supabase.ps1     # window 2 — or schedule this
+.\start-proxy.ps1
 ```
 
-Optional: `.\install-p21-sync-task.ps1` registers a Windows scheduled task.
+Verify: `.\discover-p21-endpoints.ps1` — token should be OK; OData tables/views must also be OK for order data.
 
-Verify: `.\test-p21.ps1` should print `TOKEN_OK=True`.
+If OData stays **404** on WiFi alone, connect **FortiClient VPN** and/or ask IT to:
+
+- Enable **Allow OData API Service** for the integration user
+- Grant Dataservice permissions for order header/line views
+- Confirm the correct middleware base URL
+
+### 3. Use Order History as usual
+
+Open any SO → Order History. With the proxy running:
+
+1. Insights load from P21 (live)
+2. Payload is published to Supabase for the whole team
+3. Users off-network see the same snapshot afterward
+
+Empty state includes **Open in Prophet21** for WiFi users even when API data is missing.
+
+## Edge functions (Supabase)
+
+| Function | Role |
+|----------|------|
+| `p21-order-insights` | Serve cache (no live P21 from cloud by default) |
+| `p21-publish` | Client publishes proxy payloads (JWT/anon) |
+| `p21-ingest` | Bulk sync from Swift PC (`x-p21-sync-key`) |
+
+Dashboard: https://supabase.com/dashboard/project/gdrpdiwykmnybmkadlrv/functions
+
+## Optional bulk sync
+
+Once OData works, schedule on an always-on Swift PC:
+
+```powershell
+.\start-proxy.ps1
+.\sync-to-supabase.ps1
+# or
+.\install-p21-sync-task.ps1
+```
 
 ## Client flow (`p21.js`)
 
-1. Read `p21_order_cache` in Supabase (**instant, any network**)
-2. Background refresh via `p21-order-insights` if stale (returns cache; no cloud→P21 call)
-3. Local proxy fallback for dev on Swift WiFi only
-
-## Dashboard
-
-https://supabase.com/dashboard/project/gdrpdiwykmnybmkadlrv/functions
+1. Read `p21_order_cache` (any network)
+2. If miss/stale → try local proxy → on success, `POST` `p21-publish`
+3. Else → edge cache / empty state + Open in Prophet21
