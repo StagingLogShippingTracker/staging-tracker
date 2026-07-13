@@ -1,0 +1,117 @@
+================================================================================
+SLST — Prophet21 Swift PC Connector
+Staging Log & Shipping Tracker
+================================================================================
+
+PURPOSE
+  Run this on a PC connected to Swift WiFi (and FortiClient VPN if required).
+  It starts a local P21 proxy so Order History can load Prophet21 data and
+  publish it to Supabase for EVERY user on any network.
+
+You do NOT need SSH, Node.js, or a cloud server. Just this folder on Windows.
+
+--------------------------------------------------------------------------------
+STEP 1 — Copy to the Swift PC
+--------------------------------------------------------------------------------
+  1. Unzip SLST-P21-Swift-Connector.zip anywhere, e.g.:
+       C:\SLST-P21-Connector\
+  2. Keep all files together in that folder.
+
+--------------------------------------------------------------------------------
+STEP 2 — Fill in credentials (one time)
+--------------------------------------------------------------------------------
+  Option A — easiest:
+    Double-click  Start-P21-Connector.exe
+    On first run it creates .env and opens Notepad.
+    Set:
+      P21_USERNAME=your.real.p21.login
+      P21_PASSWORD=your.real.p21.password
+    Save and close Notepad, then run Start-P21-Connector.exe again.
+
+  Option B — manual:
+    Copy .env.example to .env
+    Edit .env in Notepad with your P21 username and password.
+    SUPABASE_URL and SUPABASE_ANON_KEY are already filled (safe public anon key).
+
+  NEVER email or commit .env with your password.
+
+--------------------------------------------------------------------------------
+STEP 3 — Start the connector
+--------------------------------------------------------------------------------
+  Double-click:
+      Start-P21-Connector.exe
+
+  Or double-click:
+      Start-P21-Connector.bat
+
+  A PowerShell window opens. LEAVE IT OPEN.
+  You should see something like:
+      P21 proxy listening on http://127.0.0.1:8787/
+
+--------------------------------------------------------------------------------
+STEP 4 — Use the website
+--------------------------------------------------------------------------------
+  On THAT SAME PC (or any PC that can reach 127.0.0.1 if proxy is local-only
+  — must be the same machine as the browser for the proxy):
+
+  1. Open:
+     https://staginglogshippingtracker.github.io/staging-tracker/
+  2. Sign in and open any SO → Order History.
+  3. If P21 returns data, it publishes to Supabase for everyone else.
+
+  Browsers on phones/home never run this .exe — they just read the shared cache.
+
+--------------------------------------------------------------------------------
+OPTIONAL — Check connectivity
+--------------------------------------------------------------------------------
+  In PowerShell (same folder):
+
+    powershell -ExecutionPolicy Bypass -File .\discover-p21-endpoints.ps1
+
+  You want Token OK. If OData shows FAIL 404, connect FortiClient VPN
+  and/or ask IT to enable OData API for your P21 user.
+
+--------------------------------------------------------------------------------
+OPTIONAL — Bulk sync all staging/shipped SOs
+--------------------------------------------------------------------------------
+  With the proxy already running:
+
+    powershell -ExecutionPolicy Bypass -File .\sync-to-supabase.ps1
+
+  Or register a scheduled task (every 10 minutes):
+
+    powershell -ExecutionPolicy Bypass -File .\install-p21-sync-task.ps1
+
+--------------------------------------------------------------------------------
+TROUBLESHOOTING
+--------------------------------------------------------------------------------
+  • "Local P21 proxy unreachable" on the website
+      → Start Start-P21-Connector.exe and leave the window open.
+      → Browse the site on the SAME PC as the proxy.
+
+  • Token works but no order data
+      → OData not enabled / needs VPN / IT must grant Dataservice permissions.
+
+  • Windows blocks .exe
+      → Right-click → Properties → Unblock → OK
+      → Or use Start-P21-Connector.bat instead.
+
+  • Antivirus quarantine
+      → Allow the folder, or use the .bat launcher (same thing).
+
+--------------------------------------------------------------------------------
+FILES IN THIS PACKAGE
+--------------------------------------------------------------------------------
+  Start-P21-Connector.exe   Launch proxy (recommended)
+  Start-P21-Connector.bat   Launch without .exe
+  SETUP.txt                 This file
+  .env.example              Credential template
+  start-proxy.ps1           Starts Node or PowerShell proxy
+  server.ps1                PowerShell P21 proxy (no Node needed)
+  server.mjs / p21-core.mjs Node proxy (used only if Node is installed)
+  discover-p21-endpoints.ps1  Connectivity test
+  test-p21.ps1              Token/OData quick test
+  sync-to-supabase.ps1      Optional bulk publish
+  install-p21-sync-task.ps1 Optional Windows Task Scheduler setup
+
+================================================================================
