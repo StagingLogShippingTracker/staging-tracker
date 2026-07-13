@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "make-oauth": {
+      "url": "https://mcp.make.com"
+    },
+    "make-token": {
+      "url": "https://us2.make.com/mcp/stateless",
+      "headers": {
+        "Authorization": "Bearer ${env:MAKE_MCP_TOKEN}"
+      }
+    }
+  }
+}
