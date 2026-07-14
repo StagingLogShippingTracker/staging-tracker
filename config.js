@@ -7,7 +7,7 @@ window.P21_PROXY_BASE = window.P21_PROXY_BASE || 'http://127.0.0.1:8787';
 window.P21_WEB_URL = window.P21_WEB_URL || 'https://swiftsupply.epicordistribution.com/Prophet21/#/';
 
 window.APP_ASSET_VERSIONS = {
-  config: '4.7',
+  config: '4.8',
   partials: '1.3',
   style: '10.19',
   ui: '7.9',
@@ -57,7 +57,9 @@ window.resolvePmSmsEmail = function(inputVal) {
 
 /**
  * Carrier email-to-SMS gateways strip HTML and often ignore newlines.
- * Use plain single-line text with " / " dividers; put the same text in subject + body.
+ * Use plain single-line text with " / " dividers.
+ * Put the message in body ONLY — if subject + body both have text, carriers
+ * often deliver both (e.g. "Subj: …" then the body again).
  */
 window.buildPmSmsPlainText = function(parts) {
   return (parts || [])
@@ -73,7 +75,7 @@ window.sendPmSmsWebhook = function(opts) {
   return window.sendPmEmailWebhook({
     to,
     cc: (opts && opts.cc) || undefined,
-    subject: plain,
+    subject: '',
     body: plain,
     text: plain,
     is_sms: true,
