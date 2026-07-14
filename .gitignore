@@ -1,5 +1,9 @@
 .env
 scripts/removed-proxy/.env
 scripts/removed-proxy/.env.vpn
+scripts/removed-proxy/_ui-map/
+scripts/removed-proxy/_*.txt
+scripts/removed-proxy/probe-*.ps1
+scripts/removed-proxy/node_modules/
 node_modules/
 .tools/
