@@ -8,50 +8,61 @@ Login/token works from anywhere. Order data queries currently fail with:
 
 > You are not authorized to access API. Please contact administrator to get access.
 
-That means the P21 **user** needs API flags turned on (not VPN).
+That is a **permission** issue, not a VPN issue. Warehouse logins (BRICE.JOHNSON, joe.laramee) can authenticate but cannot call OData until someone grants API rights **or** issues a Consumer Key.
 
-## Fix in Prophet21 (one-time)
+## Path A — Enable OData on a user (P21 User Maintenance)
 
-Using an admin account (or your own if you have User Maintenance rights):
+Needs User Maintenance rights (your warehouse accounts may not have this):
 
-1. Open **User Maintenance**
-2. Open user **BRICE.JOHNSON** (or a dedicated integration user)
-3. Tab **Application Security**
-4. Set **Allow OData API Service** = **Yes** → Save
-5. Note the user’s **Role**
-6. Open **Role Maintenance** → that role → **Dataservice Permission**
-7. Allow at least:
-   - `p21_view_oe_hdr` or `oe_hdr`
-   - `p21_view_oe_line` / `oe_line` (or **Allow All** for simplicity)
-8. Save
+1. **User Maintenance** → user → **Application Security**
+2. **Allow OData API Service** = **Yes** → Save
+3. **Role Maintenance** → **Dataservice Permission** → allow order views (or Allow All)
 
-## Verify
+## Path B — Consumer Key (recommended for integrations)
 
-On any PC (home WiFi is fine):
+Epicor’s preferred service-account method. A **Consumer Key bypasses** Application Security / Dataservice Permission checks; access is controlled by the key’s API **scope** instead.
 
-```powershell
-cd scripts\p21-proxy
-.\discover-p21-endpoints.ps1
+1. Open Middleware Admin:  
+   https://swiftsupply-api.epicordistribution.com/admin/
+2. Sign in with an account that has **SOA / Middleware Admin** rights (often IT/ERP admin, not a normal warehouse login).
+3. Open **API Console** → **Register Consumer Key**
+4. Type: **Service**, expire: **Never** (or long-lived)
+5. Scope (semicolon-delimited), at least:  
+   `/odataservice;/api/security`
+6. Save and copy the **Client Secret** (GUID)
+
+Then token with:
+
+```json
+{ "ClientSecret": "<consumer-key-guid>", "GrantType": "client_credentials" }
 ```
 
-Expect Token OK and OData OK (not 401).
-
-## Supabase secrets (cloud plugin — no Swift PC required)
-
-Dashboard → Project → Edge Functions → Secrets:
+Put in Supabase Edge secrets:
 
 | Secret | Value |
 |--------|--------|
 | `P21_BASE_URL` | `https://swiftsupply-api.epicordistribution.com` |
-| `P21_USERNAME` | `BRICE.JOHNSON` |
-| `P21_PASSWORD` | *(your P21 password)* |
-| `P21_SYNC_KEY` | *(optional; only for bulk sync)* |
+| `P21_CONSUMER_KEY` | *(the Client Secret GUID)* |
 
-After secrets + OData permission are set, Order History loads P21 live through Supabase for **every user on any network**.
+(Username/password not required for Consumer Key OData reads.)
+
+## Path C — Ask IT (copy/paste email)
+
+> Please create either (1) OData API access for an SLST service user, or (2) a Middleware Consumer Key (Service type) with scope covering `/odataservice` for the host `swiftsupply-api.epicordistribution.com`. We use it read-only for sales order header/lines in our warehouse Order History app. We do not need Interactive/Transaction write access.
+
+## Paths that do **not** work as a bypass
+
+| Idea | Why not |
+|------|---------|
+| Different warehouse password | Same 401 — OData not allowed for those users |
+| VPN-only | API is already reachable from home WiFi |
+| Scraping the Prophet21 web UI | Fragile, unsupported, not acceptable for production |
+| Chrome “plugin” alone | Browser cannot call OData with a 401 user token |
 
 ## Hosts cheat sheet
 
 | Purpose | URL |
 |---------|-----|
-| Web UI (browser) | `https://swiftsupply.epicordistribution.com/Prophet21/` |
-| REST / OData (plugin) | `https://swiftsupply-api.epicordistribution.com` |
+| Web UI | `https://swiftsupply.epicordistribution.com/Prophet21/` |
+| REST / OData | `https://swiftsupply-api.epicordistribution.com` |
+| Middleware Admin / API Console | `https://swiftsupply-api.epicordistribution.com/admin/` |

@@ -34,16 +34,15 @@ export function serviceClient() {
 }
 
 export function canFetchLiveP21(cfg: Record<string, string>) {
-  // API host is internet-reachable; live fetch when credentials or on-prem connector are configured.
   if (cfg.P21_CONNECTOR_URL?.trim()) return true;
   if (Deno.env.get('P21_ALLOW_CLOUD_LIVE') === '0') return false;
   if (Deno.env.get('P21_ALLOW_CLOUD_LIVE') === '1') return true;
-  return Boolean(cfg.P21_USERNAME && cfg.P21_PASSWORD);
+  return Boolean(cfg.P21_CONSUMER_KEY || (cfg.P21_USERNAME && cfg.P21_PASSWORD));
 }
 
 export function loadP21Config(): Record<string, string> {
   const cfg: Record<string, string> = {};
-  for (const key of ['P21_BASE_URL', 'P21_USERNAME', 'P21_PASSWORD', 'P21_CONNECTOR_URL', 'P21_SYNC_KEY']) {
+  for (const key of ['P21_BASE_URL', 'P21_USERNAME', 'P21_PASSWORD', 'P21_CONSUMER_KEY', 'P21_CONNECTOR_URL', 'P21_SYNC_KEY']) {
     const val = Deno.env.get(key);
     if (val) cfg[key] = val;
   }
@@ -61,14 +60,24 @@ export async function assertSyncKey(req: Request) {
   }
 }
 
-async function getP21Token(baseUrl: string, username: string, password: string) {
+async function getP21Token(baseUrl: string, username: string, password: string, consumerKey?: string) {
   if (tokenState.accessToken && Date.now() < tokenState.expiresAt - 60_000) {
     return tokenState.accessToken;
   }
+
+  // Consumer Key bypasses user OData Application Security / Dataservice Permission checks.
+  const body = consumerKey
+    ? { ClientSecret: consumerKey, GrantType: 'client_credentials' }
+    : { username, password };
+
+  if (!consumerKey && (!username || !password)) {
+    throw new Error('P21 credentials are not configured on the server.');
+  }
+
   const response = await fetch(`${baseUrl}/api/security/token/v2`, {
     method: 'POST',
     headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password }),
+    body: JSON.stringify(body),
   });
   if (!response.ok) throw new Error(`P21 authentication failed (${response.status})`);
   const data = await response.json();
@@ -148,12 +157,13 @@ export async function fetchLiveInsights(soRaw: string, cfg: Record<string, strin
   const baseUrl = (cfg.P21_BASE_URL || 'https://swiftsupply-api.epicordistribution.com').replace(/\/+$/, '');
   const username = cfg.P21_USERNAME || '';
   const password = cfg.P21_PASSWORD || '';
-  if (!username || !password) throw new Error('P21 credentials are not configured on the server.');
+  const consumerKey = cfg.P21_CONSUMER_KEY || '';
+  if (!consumerKey && (!username || !password)) throw new Error('P21 credentials are not configured on the server.');
 
   const so = normalizeSo(soRaw);
   if (!so) throw new Error('SO number is required');
 
-  const token = await getP21Token(baseUrl, username, password);
+  const token = await getP21Token(baseUrl, username, password, consumerKey || undefined);
   const hit = await findOrderHeader(baseUrl, token, so);
   if (!hit) {
     return { so, found: false, message: `No Prophet21 order found for SO ${so}.`, source: 'live' };
