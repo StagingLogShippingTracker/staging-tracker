@@ -176,7 +176,7 @@ window.initEmployeeEmailDropdown = function() {
     document.body.appendChild(dl);
   }
   dl.innerHTML = validContacts.map(c => `<option value="${c.email}">${c.name} (${c.branch})</option>`).join('');
-  const targetIds = ['m_pm_email', 'r_pm_email', 'e_pm', 'nr_pm_email', 'qs_pm_email'];
+  const targetIds = ['m_pm_email', 'r_pm_email', 'e_pm', 'nr_pm_email', 'qs_pm_email', 'pn_pm_email'];
   targetIds.forEach(id => {
     const input = document.getElementById(id);
     if (input) {

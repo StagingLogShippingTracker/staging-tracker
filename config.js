@@ -7,16 +7,16 @@ window.REMOVED = window.REMOVED || 'http://127.0.0.1:8787';
 window.REMOVED = window.REMOVED || 'https://swiftsupply.example.invalid//#/';
 
 window.APP_ASSET_VERSIONS = {
-  config: '4.8',
-  partials: '1.3',
+  config: '4.9',
+  partials: '1.4',
   style: '10.19',
   ui: '7.9',
-  app: '6.0',
+  app: '6.2',
   auth: '3.4',
   history: '3.9',
   split: '3.7',
   reports: '3.8',
-  operations: '5.8',
+  operations: '5.9',
   batch: '6.2',
   media: '5.4',
   autoscan: '3.0',

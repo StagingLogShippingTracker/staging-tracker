@@ -49,11 +49,9 @@ The app **POSTs JSON** to the webhook; the Make scenario handles email/SMS forma
 
 `sendPmEmailWebhook` sends arbitrary JSON from callers. Common fields include PM email, SO, customer, and message body. When changing the scenario, keep backward compatibility or update all JS callers in the same change.
 
-### PO Notification SMS (`is_sms: true`)
+### PO Notification email
 
-`sendPmSmsWebhook()` / `notification_type: po_notification_sms` sends **plain text only** (same string in `subject`, `body`, and `text`) with ` / ` dividers — email-to-SMS gateways drop HTML and often ignore line breaks / deliver only the subject.
-
-In Make, when `is_sms` or `plain_text` is true: send as **plain-text email** (not HTML) to the carrier address so the full message becomes the SMS.
+PO Notifications use the same Make webhook as other PM emails (`sendPmEmailWebhook`): HTML body to the PM, CC warehouse, including photo attachments when present. Email-to-SMS is not used for this flow.
 
 ## Docs
 

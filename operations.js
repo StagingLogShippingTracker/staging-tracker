@@ -557,11 +557,14 @@ window.submitPoNotification = async function() {
   const custVal = $('#pn_cust').value.trim();
   const locVal = $('#pn_loc').value.trim();
   const receivedByVal = $('#pn_received_by').value.trim();
-  const pmNameVal = $('#pn_pm_email') ? $('#pn_pm_email').value.trim() : '';
+  const pmRaw = $('#pn_pm_email') ? $('#pn_pm_email').value.trim() : '';
 
   if (!poVal || !custVal || !locVal || !receivedByVal) return alert('Please fill out all required fields (*).');
-  if (pmNameVal && !window.resolvePmSmsEmail(pmNameVal)) {
-    return alert('Please select a valid PM name from the list.');
+  if (!pmRaw) return alert('Please specify a PM to notify of this PO.');
+
+  const finalPmEmail = window.resolveEmail(pmRaw);
+  if (!finalPmEmail) {
+    return alert('Invalid PM Entry. Please select a valid PM from the list or type a full email address (e.g., name@domain.com).');
   }
 
   $('#pn_submitBtn').disabled = true; $('#pn_submitBtn').textContent = 'Sending Notification...';
@@ -604,36 +607,15 @@ window.submitPoNotification = async function() {
     emailBody += window.buildEmailNotificationFooter();
 
     window.sendPmEmailWebhook({
-        to: 'warehouse1@swiftsupply.ca',
-        cc: 'warehouse1@swiftsupply.ca',
-        subject: emailSubject,
-        body: emailBody,
-        attachments: attachmentUrls,
-        has_attachments: attachmentUrls.length > 0
-      });
+      to: finalPmEmail,
+      cc: 'warehouse1@swiftsupply.ca',
+      subject: emailSubject,
+      body: emailBody,
+      attachments: attachmentUrls,
+      has_attachments: attachmentUrls.length > 0
+    });
 
-    if (pmNameVal) {
-      const pmSmsEmail = window.resolvePmSmsEmail(pmNameVal);
-      // Email-to-SMS: no HTML / no line breaks — carriers often deliver only the subject.
-      const smsPlain = window.buildPmSmsPlainText([
-        `PO ${poVal}`,
-        custVal,
-        `Containers: ${dynamicType || 'None'}`,
-        `Location: ${locVal}`,
-        `Weight: ${weightVal || '—'} lbs`,
-        `Received By: ${receivedByVal}`,
-        `Received At: ${currentTimeStamp}`,
-        commentsVal ? `Comments: ${commentsVal}` : ''
-      ]);
-      window.sendPmSmsWebhook({
-        to: pmSmsEmail,
-        cc: 'warehouse1@swiftsupply.ca',
-        plain: smsPlain,
-        notification_type: 'po_notification_sms'
-      });
-    }
-
-    window.logAction('staging', `Sent Automated PO Notification for PO: ${poVal}${pmNameVal ? ' (PM SMS: ' + pmNameVal + ')' : ''}`);
+    window.logAction('staging', `Sent Automated PO Notification for PO: ${poVal} (PM: ${finalPmEmail})`);
     if (typeof window.showNotification === 'function') window.showNotification('PO Notification Sent Successfully');
     if (typeof window.rememberPersonBy === 'function') window.rememberPersonBy(receivedByVal);
     window.closeModal('poNotifyModal');
