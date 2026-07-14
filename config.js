@@ -7,7 +7,7 @@ window.P21_PROXY_BASE = window.P21_PROXY_BASE || 'http://127.0.0.1:8787';
 window.P21_WEB_URL = window.P21_WEB_URL || 'https://swiftsupply.epicordistribution.com/Prophet21/#/';
 
 window.APP_ASSET_VERSIONS = {
-  config: '4.9',
+  config: '4.10',
   partials: '1.4',
   style: '10.19',
   ui: '7.9',
@@ -22,7 +22,7 @@ window.APP_ASSET_VERSIONS = {
   autoscan: '3.0',
   employees: '3.3',
   contacts: '1.1',
-  p21: '3.2'
+  p21: '3.3'
 };
 
 window.buildEmailNotificationFooter = function() {

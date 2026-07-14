@@ -56,6 +56,20 @@ When A–C are unavailable, run `scripts/p21-proxy/p21-ui-publisher.py` on a PC 
 
 See [scripts/p21-proxy/README.md](../scripts/p21-proxy/README.md).
 
+## Purchase orders (4xxxxxx)
+
+Site SO fields often hold a Swift **purchase order** (digits starting with `4`, e.g. `4276832`). `p21-order-insights` detects that heuristic and retrieves via Interactive **Purchase Order Entry** (`ServiceName: PurchaseOrder`, set `po_no` on `tp_1_dw_1` with TabName `DOCUMENT_LINK`):
+
+| Display | Source |
+|---------|--------|
+| **PO** | PO number; when a linked SO is found on document grids: `PO (for {SO customer} SO# {n})` |
+| **Customer** | Supplier (`vendor_name`) |
+| **PM** | PO buyer (`buyer_name`, reformatted), or linked-SO Taker when enrich succeeds |
+
+Manual P21 path for the same fields: **Report for Carmen** → filter PO Equal To → read Supplier + Sales Order Number → adjacent list filter Order No → read Customer Name + Taker. The edge function uses the Interactive PurchaseOrder window (same outcome for supplier/buyer). Full Carmen list/report IDs were not required once PurchaseOrder retrieve was confirmed.
+
+Non-`4…` keys still use Order Entry Interactive → OData fallback.
+
 ## Paths that do **not** work as a bypass
 
 | Idea | Why not |

@@ -11,7 +11,28 @@ export const corsHeaders = {
 const tokenState = { accessToken: '' as string, expiresAt: 0 };
 
 export function normalizeSo(raw: string) {
-  return String(raw || '').trim().replace(/^SO[#:\s-]*/i, '');
+  return String(raw || '').trim().replace(/^SO[#:\s-]*/i, '').replace(/^PO[#:\s-]*/i, '');
+}
+
+/** Swift purchase orders typically start with 4 (e.g. 4276832). */
+export function isPurchasePo(raw: string) {
+  const key = normalizeSo(raw);
+  return /^\d+$/.test(key) && key.startsWith('4') && key.length >= 6;
+}
+
+/** "Karpiak, Ben " → "Ben Karpiak"; leave "Ben Karpiak" / "BEN.KARPIAK" alone for later name match. */
+export function formatPersonDisplayName(raw: unknown) {
+  const s = String(raw || '').replace(/\s+/g, ' ').trim();
+  if (!s) return '';
+  if (s.includes(',')) {
+    const [last, ...rest] = s.split(',');
+    const first = rest.join(',').trim();
+    if (first && last.trim()) return `${first} ${last.trim()}`.replace(/\s+/g, ' ').trim();
+  }
+  if (s.includes('.') && !s.includes(' ')) {
+    return s.split('.').filter(Boolean).map((p) => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()).join(' ');
+  }
+  return s;
 }
 
 export function odataEscape(value: string) {
@@ -179,9 +200,26 @@ type InteractiveHeader = {
   status?: unknown;
   shipTo?: unknown;
   warehouse?: unknown;
+  linkedSo?: unknown;
+  soCustomer?: unknown;
+  purchasePo?: boolean;
 };
 
 function slimInsights(so: string, header: InteractiveHeader, matchedBy: string, source: string) {
+  const purchasePo = Boolean(header.purchasePo) || matchedBy === 'purchase_po';
+  const linkedSo = header.linkedSo ? String(header.linkedSo) : '';
+  const soCustomer = header.soCustomer ? String(header.soCustomer) : '';
+  let poDisplay = header.poNo ?? null;
+  if (purchasePo) {
+    if (linkedSo && soCustomer) {
+      poDisplay = `${so} (for ${soCustomer} SO# ${linkedSo})`;
+    } else if (linkedSo) {
+      poDisplay = `${so} (SO# ${linkedSo})`;
+    } else {
+      poDisplay = so;
+    }
+  }
+
   return {
     so,
     found: true,
@@ -191,7 +229,7 @@ function slimInsights(so: string, header: InteractiveHeader, matchedBy: string, 
       orderNo: header.orderNo || so,
       customerId: header.customerId ?? null,
       customerName: header.customerName ?? null,
-      poNo: header.poNo ?? null,
+      poNo: poDisplay,
       projectId: header.projectId ?? null,
       requiredDate: header.requiredDate ?? null,
       taker: header.taker ?? null,
@@ -199,45 +237,99 @@ function slimInsights(so: string, header: InteractiveHeader, matchedBy: string, 
       status: header.status ?? null,
       shipTo: header.shipTo ?? null,
       warehouse: header.warehouse ?? null,
+      linkedSo: linkedSo || null,
+      soCustomer: soCustomer || null,
+      purchasePo,
     },
     // Line breakdown intentionally omitted for Order History display
     lines: [] as Json[],
     summary: {
       customer: header.customerName || header.customerId || '—',
-      poNo: header.poNo || '—',
+      poNo: poDisplay || '—',
       projectId: header.projectId || '—',
       requiredDate: header.requiredDate || '—',
       taker: header.taker || '—',
+      pm: header.taker || '—',
       orderDate: header.orderDate || '—',
       status: header.status ?? '—',
+      linkedSo: linkedSo || '—',
+      soCustomer: soCustomer || '—',
+      purchasePo,
       lineCount: 0,
       totalQtyOrdered: 0,
     },
   };
 }
 
-function parseInteractiveDatawindows(data: unknown): Record<string, Record<string, unknown>> {
+function parseInteractiveBlocks(data: unknown): Array<{ name: string; rows: Record<string, unknown>[] }> {
   const blocks = Array.isArray(data)
     ? data
     : (data && typeof data === 'object' && Array.isArray((data as Json).Data)
       ? (data as Json).Data as unknown[]
       : []);
-  const out: Record<string, Record<string, unknown>> = {};
+  const out: Array<{ name: string; rows: Record<string, unknown>[] }> = [];
   for (const block of blocks) {
     if (!block || typeof block !== 'object') continue;
     const b = block as Json;
     const name = String(b.Name || '');
     const cols = Array.isArray(b.Columns) ? b.Columns as string[] : [];
     const rows = Array.isArray(b.Data) ? b.Data as unknown[][] : [];
-    if (!name || !cols.length || !rows.length) continue;
-    const row = rows[0] || [];
-    const mapped: Record<string, unknown> = {};
-    cols.forEach((c, i) => {
-      mapped[c] = row[i];
+    if (!name || !cols.length) continue;
+    const mappedRows = rows.map((row) => {
+      const mapped: Record<string, unknown> = {};
+      cols.forEach((c, i) => {
+        mapped[c] = row?.[i];
+      });
+      return mapped;
     });
-    out[name] = mapped;
+    out.push({ name, rows: mappedRows });
   }
   return out;
+}
+
+function parseInteractiveDatawindows(data: unknown): Record<string, Record<string, unknown>> {
+  const out: Record<string, Record<string, unknown>> = {};
+  for (const block of parseInteractiveBlocks(data)) {
+    if (block.rows[0]) out[block.name] = block.rows[0];
+  }
+  return out;
+}
+
+/** Candidate linked sales-order numbers from PO document-link / note grids (not commitment txn #s). */
+function findLinkedSoCandidates(blocks: Array<{ name: string; rows: Record<string, unknown>[] }>, poKey: string): string[] {
+  const keys = [
+    'sales_order_number',
+    'sales_order_no',
+    'sales_order',
+    'oe_order_no',
+    'linked_order_no',
+    'order_no',
+    'document_no',
+    'document_id',
+  ];
+  const found: string[] = [];
+  const push = (v: unknown) => {
+    const s = String(v || '').trim();
+    if (!/^\d{6,8}$/.test(s) || s === poKey || s.startsWith('4')) return;
+    if (!found.includes(s)) found.push(s);
+  };
+  for (const block of blocks) {
+    const n = block.name.toLowerCase();
+    // Skip commitment / allocation grids — those transaction_numbers are not Carmen SOs
+    if (/commit|alloc|inv/.test(n)) continue;
+    for (const row of block.rows) {
+      const docType = String(row.document_type || row.doc_type || row.source_type || row.type || '').toLowerCase();
+      const looksLikeOrderDoc = !docType || /order|oe|sales/.test(docType);
+      for (const k of keys) {
+        if (row[k] == null) continue;
+        if (k === 'document_no' || k === 'document_id' || k === 'order_no') {
+          if (!looksLikeOrderDoc && !/doc|link|order/.test(n)) continue;
+        }
+        push(row[k]);
+      }
+    }
+  }
+  return found;
 }
 
 function headerFromOrderRow(row: Record<string, unknown> | undefined): InteractiveHeader | null {
@@ -306,6 +398,210 @@ async function ensureInteractiveSession(uiBase: string, token: string) {
   }
   if (res.status !== 200 && res.status !== 201) {
     throw new Error(`Interactive session failed (${res.status})`);
+  }
+}
+
+/**
+ * Purchase Order Entry (ServiceName=PurchaseOrder).
+ * Discovered path: set po_no on tp_1_dw_1 with a valid TabName (DOCUMENT_LINK works)
+ * → vendor_name = supplier (Customer), buyer_name = PM.
+ * Linked sales-order number from Report for Carmen is not on this window; when/if
+ * a linked SO is provided later, format becomes: PO (for {soCustomer} SO# {linkedSo}).
+ */
+async function retrieveViaPurchasePo(baseUrl: string, token: string, poKey: string) {
+  const uiBase = `${baseUrl}/uiserver0`;
+  return withInteractiveLock(async () => {
+    await ensureInteractiveSession(uiBase, token);
+
+    const open = await interactiveApi(uiBase, token, 'POST', '/api/ui/interactive/v2/window', {
+      ServiceName: 'PurchaseOrder',
+    });
+    const wid = open.json && typeof open.json === 'object'
+      ? String((open.json as Json).WindowId || '')
+      : '';
+    if (!wid) throw new Error(`Open Purchase Order failed (${open.status})`);
+
+    try {
+      await interactiveApi(uiBase, token, 'POST', '/api/ui/interactive/v2/tools', {
+        WindowId: wid,
+        ToolName: 'Quick.Clear',
+      });
+
+      const tabCandidates = ['DOCUMENT_LINK', 'TABPAGE_1', 'TABPAGE_CONTACT', 'SHIP_TO', 'TOTALS'];
+      let headerRow: Record<string, unknown> | undefined;
+      let allBlocks: Array<{ name: string; rows: Record<string, unknown>[] }> = [];
+
+      for (const tab of tabCandidates) {
+        const change = await interactiveApi(uiBase, token, 'PUT', '/api/ui/interactive/v2/change', {
+          WindowId: wid,
+          List: [{
+            TabName: tab,
+            FieldName: 'po_no',
+            Value: poKey,
+            DatawindowName: 'tp_1_dw_1',
+            Row: 1,
+          }],
+        });
+        if (change.status !== 200) continue;
+
+        const dataRes = await interactiveApi(uiBase, token, 'GET', `/api/ui/interactive/v2/data?id=${wid}`);
+        const stateRes = await interactiveApi(uiBase, token, 'GET', `/api/ui/interactive/v2/window?id=${wid}`);
+        const blocks = [
+          ...parseInteractiveBlocks(dataRes.json),
+          ...parseInteractiveBlocks(
+            stateRes.json && typeof stateRes.json === 'object'
+              ? (stateRes.json as Json).Data
+              : null,
+          ),
+        ];
+        // Prefer later duplicate names from window state
+        const byName = new Map<string, { name: string; rows: Record<string, unknown>[] }>();
+        for (const b of blocks) byName.set(b.name, b);
+        allBlocks = [...byName.values()];
+        const headerDw = byName.get('tp_1_dw_1');
+        const row = headerDw?.rows?.[0];
+        if (row && String(row.po_no || '') === poKey) {
+          headerRow = row;
+          break;
+        }
+      }
+
+      if (!headerRow) {
+        return {
+          so: poKey,
+          found: false,
+          message: `No Prophet21 Purchase Order match for ${poKey}.`,
+          source: 'interactive',
+          lines: [],
+        };
+      }
+
+      const supplier = String(
+        headerRow.vendor_name
+          || headerRow.vendor_supplier_name
+          || headerRow.division_name
+          || '',
+      ).trim();
+      const buyer = formatPersonDisplayName(headerRow.buyer_name || headerRow.buyer_id);
+      const requiredDate = headerRow.required_date ?? null;
+      const orderDate = headerRow.order_date ?? null;
+      const status = headerRow.status ?? null;
+      const warehouse = headerRow.location_name || headerRow.location_id || null;
+      const vendorId = headerRow.vendor_id || headerRow.vendor_supplier_id || null;
+      const linkedCandidates = findLinkedSoCandidates(allBlocks, poKey);
+
+      // Close PO before Optional Order Entry enrich (same Interactive session)
+      try {
+        await interactiveApi(uiBase, token, 'POST', '/api/ui/interactive/v2/tools', {
+          WindowId: wid,
+          ToolName: 'Quick.Close',
+        });
+      } catch { /* ignore */ }
+      try {
+        await interactiveApi(uiBase, token, 'DELETE', `/api/ui/interactive/v2/window?id=${wid}`);
+      } catch { /* ignore */ }
+
+      let linkedSo = '';
+      let soCustomer = '';
+      let soTaker = '';
+      for (const candidate of linkedCandidates.slice(0, 3)) {
+        try {
+          const soHit = await retrieveViaInteractiveUnlocked(uiBase, token, candidate);
+          if (soHit?.found && soHit.header?.customerName) {
+            linkedSo = String(soHit.header.orderNo || candidate);
+            soCustomer = String(soHit.header.customerName || '');
+            soTaker = formatPersonDisplayName(soHit.header.taker);
+            break;
+          }
+        } catch (e) {
+          console.error('linked SO enrich failed', candidate, e);
+        }
+      }
+
+      const header: InteractiveHeader = {
+        orderNo: poKey,
+        customerId: vendorId,
+        customerName: supplier || null,
+        poNo: poKey,
+        projectId: null,
+        requiredDate,
+        // Prefer linked-SO taker; otherwise PO buyer (matches Carmen PM for sample 4276832)
+        taker: soTaker || buyer || null,
+        orderDate,
+        status,
+        shipTo: null,
+        warehouse,
+        linkedSo: linkedSo || null,
+        soCustomer: soCustomer || null,
+        purchasePo: true,
+      };
+
+      return slimInsights(poKey, header, 'purchase_po', 'interactive');
+    } finally {
+      try {
+        await interactiveApi(uiBase, token, 'POST', '/api/ui/interactive/v2/tools', {
+          WindowId: wid,
+          ToolName: 'Quick.Close',
+        });
+      } catch { /* ignore */ }
+      try {
+        await interactiveApi(uiBase, token, 'DELETE', `/api/ui/interactive/v2/window?id=${wid}`);
+      } catch { /* ignore */ }
+    }
+  });
+}
+
+/** Inner Order retrieve — caller must already hold interactive lock / session. */
+async function retrieveViaInteractiveUnlocked(uiBase: string, token: string, so: string) {
+  const open = await interactiveApi(uiBase, token, 'POST', '/api/ui/interactive/v2/window', {
+    ServiceName: 'Order',
+  });
+  const wid = open.json && typeof open.json === 'object'
+    ? String((open.json as Json).WindowId || '')
+    : '';
+  if (!wid) return { so, found: false, header: null as InteractiveHeader | null };
+
+  try {
+    await interactiveApi(uiBase, token, 'POST', '/api/ui/interactive/v2/tools', {
+      WindowId: wid,
+      ToolName: 'Quick.Clear',
+    });
+    await interactiveApi(uiBase, token, 'PUT', '/api/ui/interactive/v2/change', {
+      WindowId: wid,
+      List: [{
+        TabName: 'Order',
+        FieldName: 'order_no',
+        Value: so,
+        DatawindowName: 'order',
+        Row: 1,
+      }],
+    });
+    const dataRes = await interactiveApi(uiBase, token, 'GET', `/api/ui/interactive/v2/data?id=${wid}`);
+    const stateRes = await interactiveApi(uiBase, token, 'GET', `/api/ui/interactive/v2/window?id=${wid}`);
+    const dws = {
+      ...parseInteractiveDatawindows(dataRes.json),
+      ...parseInteractiveDatawindows(
+        stateRes.json && typeof stateRes.json === 'object'
+          ? (stateRes.json as Json).Data
+          : null,
+      ),
+    };
+    const header = headerFromOrderRow(dws.order);
+    const looksLoaded = Boolean(
+      header && (String(header.orderNo || '') === so || header.customerId || header.customerName),
+    );
+    if (!looksLoaded || !header) return { so, found: false, header: null };
+    return { so, found: true, header };
+  } finally {
+    try {
+      await interactiveApi(uiBase, token, 'POST', '/api/ui/interactive/v2/tools', {
+        WindowId: wid,
+        ToolName: 'Quick.Close',
+      });
+    } catch { /* ignore */ }
+    try {
+      await interactiveApi(uiBase, token, 'DELETE', `/api/ui/interactive/v2/window?id=${wid}`);
+    } catch { /* ignore */ }
   }
 }
 
@@ -452,6 +748,16 @@ export async function fetchLiveInsights(soRaw: string, cfg: Record<string, strin
   if (!so) throw new Error('SO number is required');
 
   const token = await getP21Token(baseUrl, username, password, consumerKey || undefined);
+
+  // Swift purchase orders (typically 4xxxxxx) → PurchaseOrder Interactive first
+  if (isPurchasePo(so)) {
+    try {
+      const poHit = await retrieveViaPurchasePo(baseUrl, token, so);
+      if (poHit?.found) return poHit;
+    } catch (e) {
+      console.error('purchase PO retrieve failed', e);
+    }
+  }
 
   // Prefer Interactive Order Entry (works without OData Dataservice rights)
   try {

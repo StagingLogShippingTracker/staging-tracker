@@ -53,6 +53,20 @@ Any SLST user
   → p21.js reads cache / edge function
 ```
 
+## Purchase orders (4xxxxxx)
+
+Cloud edge `p21-order-insights` also supports Swift purchase orders (all-digit keys starting with `4`):
+
+1. Open Interactive `ServiceName=PurchaseOrder`
+2. Set `po_no` on `tp_1_dw_1` (TabName `DOCUMENT_LINK` works)
+3. Read **supplier** (`vendor_name`) → SLST Customer
+4. Read **buyer** (`buyer_name`, e.g. `Karpiak, Ben` → `Ben Karpiak`) → SLST PM
+5. Optionally enrich from document-link grids with a linked sales order for the parenthetical PO line
+
+Research probes: `probe-po-confirm.py`, `probe-po-tabs.py`, `probe-purchase-po.py`.
+
+Manual UI equivalent: **Report for Carmen** PO list + Order list for Supplier / linked SO / Taker.
+
 ## Security notes
 
 - Keep `.env` local (gitignored). Do not commit passwords.

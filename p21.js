@@ -239,24 +239,33 @@ window.formatP21OrderInsightsSection = function(result) {
 
   const h = payload.header || {};
   const s = payload.summary || {};
-  // PM comes from Order Entry "Taker"
+  // PM comes from Order Entry "Taker" (or PO buyer when matchedBy=purchase_po)
   const pm = h.taker || s.taker || h.pm || s.pm || '';
+  const isPurchasePo = payload.matchedBy === 'purchase_po' || h.purchasePo || s.purchasePo;
+  const orderLabel = isPurchasePo ? 'PO' : 'Order Number';
+  const poLabel = isPurchasePo ? 'PO detail' : 'PO';
   let html = `<div class="p21-insights-card">`;
   html += `<dl class="p21-insights-grid">`;
-  html += `<div><dt>Order Number</dt><dd>${window.formatP21Value(h.orderNo || so)}</dd></div>`;
+  html += `<div><dt>${orderLabel}</dt><dd>${window.formatP21Value(isPurchasePo ? (h.poNo || s.poNo || h.orderNo || so) : (h.orderNo || so))}</dd></div>`;
   html += `<div><dt>Customer</dt><dd>${window.formatP21Value(h.customerName || s.customer)}</dd></div>`;
-  html += `<div><dt>PO</dt><dd>${window.formatP21Value(h.poNo || s.poNo)}</dd></div>`;
-  html += `<div><dt>Project</dt><dd>${window.formatP21Value(h.projectId || s.projectId)}</dd></div>`;
-  html += `<div><dt>Required Date</dt><dd>${window.formatP21Date(h.requiredDate || s.requiredDate)}</dd></div>`;
+  if (!isPurchasePo) {
+    html += `<div><dt>${poLabel}</dt><dd>${window.formatP21Value(h.poNo || s.poNo)}</dd></div>`;
+    html += `<div><dt>Project</dt><dd>${window.formatP21Value(h.projectId || s.projectId)}</dd></div>`;
+    html += `<div><dt>Required Date</dt><dd>${window.formatP21Date(h.requiredDate || s.requiredDate)}</dd></div>`;
+  } else if (h.linkedSo || s.linkedSo) {
+    html += `<div><dt>Linked SO</dt><dd>${window.formatP21Value(h.linkedSo || s.linkedSo)}</dd></div>`;
+  }
   html += `<div><dt>PM</dt><dd>${window.formatP21Value(pm)}</dd></div>`;
   html += `</dl>`;
 
   const staleNote = payload.stale ? ' (updating…)' : '';
   const viaLabel = result.via === 'local-proxy'
     ? 'local connector'
-    : (payload.source === 'interactive'
-      ? 'Order Entry'
-      : (payload.cached || result.via?.includes('cache') || result.via?.includes('stale') ? 'synced copy' : window.formatP21Value(payload.matchedBy || payload.source)));
+    : (payload.matchedBy === 'purchase_po'
+      ? 'Purchase Order'
+      : (payload.source === 'interactive'
+        ? 'Order Entry'
+        : (payload.cached || result.via?.includes('cache') || result.via?.includes('stale') ? 'synced copy' : window.formatP21Value(payload.matchedBy || payload.source))));
   const fetched = payload.fetchedAt ? ` · ${window.formatP21Value(payload.fetchedAt)}` : '';
   html += `<p class="p21-footnote">Prophet21 via <b>${viaLabel}</b>${staleNote}${fetched}.</p>`;
   html += `</div>`;
