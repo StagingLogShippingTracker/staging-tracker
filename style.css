@@ -216,7 +216,7 @@ h1, h2, h3, h4 { font-weight: 600; margin: 0 0 var(--space-lg); line-height: 1.2
     top: 0;
     left: 50%;
     transform: translateX(-50%);
-    z-index: 2;
+    z-index: 0;
     height: clamp(20px, 5.2vw, 26px);
     max-width: 96px;
   }
@@ -1536,6 +1536,8 @@ input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; margin: 0; 
   body:not(.log-page) .site-header:not(.site-header--dashboard) .site-header__start {
     grid-column: 1;
     grid-row: 1;
+    position: relative;
+    z-index: 40;
   }
 
   body:not(.log-page) .site-header:not(.site-header--dashboard) .site-header__end {
@@ -1543,6 +1545,8 @@ input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; margin: 0; 
     grid-row: 1;
     justify-self: end;
     align-self: start;
+    position: relative;
+    z-index: 30;
   }
 
   body:not(.log-page) .site-header:not(.site-header--dashboard) .site-header__title-wrap {
@@ -1551,6 +1555,8 @@ input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; margin: 0; 
     width: 100%;
     justify-self: center;
     padding-inline: var(--space-sm);
+    position: relative;
+    z-index: 1;
   }
 
   body:not(.log-page) .site-header:not(.site-header--dashboard) .auth-status__label {
@@ -1638,6 +1644,9 @@ input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; margin: 0; 
     margin-bottom: var(--space-xl);
     padding-bottom: var(--space-md);
     border-bottom: 1px solid var(--header-divider);
+    /* Whole header above search Clear / cards — otherwise overflow menu is trapped under later siblings */
+    position: relative;
+    z-index: 3000;
   }
 
   body.log-page .site-header__start {
@@ -1645,7 +1654,8 @@ input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; margin: 0; 
     grid-row: 1;
     flex: none;
     width: auto;
-    z-index: 2;
+    position: relative;
+    z-index: 3;
   }
 
   body.log-page .site-header__end {
@@ -1655,6 +1665,8 @@ input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; margin: 0; 
     width: auto;
     justify-self: end;
     align-self: start;
+    position: relative;
+    z-index: 3;
   }
 
   body.log-page .site-header__title-wrap {
@@ -1665,6 +1677,24 @@ input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; margin: 0; 
     margin: 0;
     min-width: 0;
     padding-inline: var(--space-sm);
+    position: relative;
+    z-index: 1;
+  }
+
+  body.log-page .site-header__title-logo {
+    z-index: 0;
+  }
+
+  body.log-page .dropdown-content {
+    z-index: 5;
+  }
+
+  /* While hamburger is open, keep decorative logo / search Clear from painting through */
+  body.log-page.nav-menu-open .site-header__title-logo {
+    visibility: hidden;
+  }
+  body.log-page.nav-menu-open .search-clear-btn {
+    visibility: hidden;
   }
 
   body.log-page .site-header__title {

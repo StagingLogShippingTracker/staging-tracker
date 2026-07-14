@@ -7,16 +7,16 @@ window.P21_PROXY_BASE = window.P21_PROXY_BASE || 'http://127.0.0.1:8787';
 window.P21_WEB_URL = window.P21_WEB_URL || 'https://swiftsupply.epicordistribution.com/Prophet21/#/';
 
 window.APP_ASSET_VERSIONS = {
-  config: '4.6',
+  config: '4.7',
   partials: '1.3',
-  style: '10.9',
-  ui: '7.8',
+  style: '10.19',
+  ui: '7.9',
   app: '6.0',
   auth: '3.4',
   history: '3.9',
   split: '3.7',
   reports: '3.8',
-  operations: '5.7',
+  operations: '5.8',
   batch: '6.2',
   media: '5.4',
   autoscan: '3.0',
@@ -54,6 +54,36 @@ window.resolvePmSmsEmail = function(inputVal) {
   const match = Object.keys(PM_SMS_ROSTER).find(name => name.toLowerCase() === lower);
   return match ? PM_SMS_ROSTER[match] : null;
 };
+
+/**
+ * Carrier email-to-SMS gateways strip HTML and often ignore newlines.
+ * Use plain single-line text with " / " dividers; put the same text in subject + body.
+ */
+window.buildPmSmsPlainText = function(parts) {
+  return (parts || [])
+    .map(p => String(p == null ? '' : p).replace(/\s+/g, ' ').trim())
+    .filter(Boolean)
+    .join(' / ');
+};
+
+window.sendPmSmsWebhook = function(opts) {
+  const to = opts && opts.to;
+  const plain = String((opts && opts.plain) || '').trim();
+  if (!to || !plain) return Promise.resolve();
+  return window.sendPmEmailWebhook({
+    to,
+    cc: (opts && opts.cc) || undefined,
+    subject: plain,
+    body: plain,
+    text: plain,
+    is_sms: true,
+    plain_text: true,
+    notification_type: (opts && opts.notification_type) || 'pm_sms',
+    attachments: [],
+    has_attachments: false
+  });
+};
+
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const $ = sel => document.querySelector(sel);
 

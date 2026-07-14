@@ -991,12 +991,23 @@ window.toggleMenu = function(e) {
   const btn = e.currentTarget;
   const content = btn.nextElementSibling;
   if (!content) return;
+  document.querySelectorAll('.dropdown-content.show-menu').forEach(menu => {
+    if (menu !== content) {
+      menu.classList.remove('show-menu');
+      const otherBtn = menu.previousElementSibling;
+      if (otherBtn) otherBtn.setAttribute('aria-expanded', 'false');
+    }
+  });
   const isOpen = content.classList.toggle('show-menu');
   btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+  document.body.classList.toggle('nav-menu-open', isOpen);
 };
 
 document.addEventListener('click', function(e) {
-  if (!e.target.matches('.hamburger-btn')) { document.querySelectorAll('.dropdown-content.show-menu').forEach(menu => { menu.classList.remove('show-menu'); }); }
+  if (!e.target.matches('.hamburger-btn')) {
+    document.querySelectorAll('.dropdown-content.show-menu').forEach(menu => { menu.classList.remove('show-menu'); });
+    document.body.classList.remove('nav-menu-open');
+  }
 });
 
 window.getFormattedStatus = function(dbStatus) {

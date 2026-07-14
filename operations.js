@@ -614,24 +614,22 @@ window.submitPoNotification = async function() {
 
     if (pmNameVal) {
       const pmSmsEmail = window.resolvePmSmsEmail(pmNameVal);
-      const smsLines = [
-        `• PO: ${poVal}`,
-        `• Customer: ${custVal}`,
-        `• Containers: ${dynamicType || 'None'}`,
-        `• Location: ${locVal}`,
-        `• Weight: ${weightVal || '—'} lbs`,
-        `• Received By: ${receivedByVal}`,
-        `• Received At: ${currentTimeStamp}`
-      ];
-      if (commentsVal) smsLines.push(`• Comments: ${commentsVal}`);
-      const smsBody = smsLines.join('\n');
-      window.sendPmEmailWebhook({
+      // Email-to-SMS: no HTML / no line breaks — carriers often deliver only the subject.
+      const smsPlain = window.buildPmSmsPlainText([
+        `PO ${poVal}`,
+        custVal,
+        `Containers: ${dynamicType || 'None'}`,
+        `Location: ${locVal}`,
+        `Weight: ${weightVal || '—'} lbs`,
+        `Received By: ${receivedByVal}`,
+        `Received At: ${currentTimeStamp}`,
+        commentsVal ? `Comments: ${commentsVal}` : ''
+      ]);
+      window.sendPmSmsWebhook({
         to: pmSmsEmail,
         cc: 'warehouse1@swiftsupply.ca',
-        subject: `PO ${poVal} - ${custVal}`,
-        body: smsBody,
-        attachments: [],
-        has_attachments: false
+        plain: smsPlain,
+        notification_type: 'po_notification_sms'
       });
     }
 
