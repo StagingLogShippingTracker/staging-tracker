@@ -50,19 +50,25 @@ Put in Supabase Edge secrets:
 
 > Please create either (1) OData API access for an SLST service user, or (2) a Middleware Consumer Key (Service type) with scope covering `/odataservice` for the host `swiftsupply-api.epicordistribution.com`. We use it read-only for sales order header/lines in our warehouse Order History app. We do not need Interactive/Transaction write access.
 
+## Path D — UI bridge (no IT grant)
+
+When A–C are unavailable, run `scripts/p21-proxy/p21-ui-publisher.py` on a PC with a normal P21 web login. It authenticates like the browser, uses the Interactive Order Entry API (not OData), and publishes snapshots into `p21_order_cache` via `p21-publish`. Every SLST user then reads Order History from the cache.
+
+See [scripts/p21-proxy/README.md](../scripts/p21-proxy/README.md).
+
 ## Paths that do **not** work as a bypass
 
 | Idea | Why not |
 |------|---------|
 | Different warehouse password | Same 401 — OData not allowed for those users |
 | VPN-only | API is already reachable from home WiFi |
-| Scraping the Prophet21 web UI | Fragile, unsupported, not acceptable for production |
-| Chrome “plugin” alone | Browser cannot call OData with a 401 user token |
+| Chrome extension alone | Browser still hits the same OData 401 |
+| Raw `/api/sales/orders` GETs | Hang or 401 without Dataservice rights |
 
 ## Hosts cheat sheet
 
 | Purpose | URL |
 |---------|-----|
 | Web UI | `https://swiftsupply.epicordistribution.com/Prophet21/` |
-| REST / OData | `https://swiftsupply-api.epicordistribution.com` |
+| REST / OData / Interactive | `https://swiftsupply-api.epicordistribution.com` |
 | Middleware Admin / API Console | `https://swiftsupply-api.epicordistribution.com/admin/` |

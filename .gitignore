@@ -1,5 +1,9 @@
 .env
 scripts/p21-proxy/.env
 scripts/p21-proxy/.env.vpn
+scripts/p21-proxy/_ui-map/
+scripts/p21-proxy/_*.txt
+scripts/p21-proxy/probe-*.ps1
+scripts/p21-proxy/node_modules/
 node_modules/
 .tools/

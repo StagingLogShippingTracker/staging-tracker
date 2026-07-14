@@ -1,0 +1,80 @@
+# SLST Prophet21 Proxy — Swift PC Setup
+
+Copy this whole folder to the Swift warehouse PC (USB stick, OneDrive, email, etc.).
+
+## Requirements
+
+- Windows PC on **Swift WiFi** (connect **FortiClient VPN** if OData still fails)
+- PowerShell 5.1+ (built into Windows)
+- No Node.js required (uses `server.ps1`)
+
+## Setup (5 minutes)
+
+1. Unzip this package to a folder, e.g. `C:\SLST\p21-proxy`
+
+2. Copy `.env.example` to `.env`:
+
+   ```powershell
+   cd C:\SLST\p21-proxy
+   Copy-Item .env.example .env
+   notepad .env
+   ```
+
+3. Edit `.env` and set at least:
+   - `P21_USERNAME` = your Prophet21 login
+   - `P21_PASSWORD` = your Prophet21 password
+
+   Leave `P21_BASE_URL` as `https://swiftsupply.epicordistribution.com`
+   `SUPABASE_URL` and `SUPABASE_ANON_KEY` are already filled for SLST.
+
+4. Start the proxy (leave this window open):
+
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File .\start-proxy.ps1
+   ```
+
+   You should see: `P21 proxy listening on http://127.0.0.1:8787/`
+
+5. Optional health check (new PowerShell window):
+
+   ```powershell
+   cd C:\SLST\p21-proxy
+   powershell -ExecutionPolicy Bypass -File .\discover-p21-endpoints.ps1
+   ```
+
+   Token should be `[OK]`. If OData lines say `[FAIL] 404`, connect FortiClient VPN and/or ask IT to enable OData for your P21 user.
+
+6. On that same PC, open the SLST website in Chrome/Edge:
+   https://staginglogshippingtracker.github.io/staging-tracker/
+
+   Click any SO → **Order History**.
+   With the proxy running, insights load and publish to Supabase for the whole team.
+
+## Do not
+
+- Commit or email a filled `.env` with your real password
+- Run this on phones — only one Windows PC on Swift network needs the proxy
+- Close the proxy window while warehouse staff are publishing orders
+
+## Optional bulk sync (later)
+
+Once OData works:
+
+```powershell
+.\sync-to-supabase.ps1
+# or schedule:
+.\install-p21-sync-task.ps1
+```
+
+## Files in this package
+
+| File | Purpose |
+|------|---------|
+| `start-proxy.ps1` | Starts the local P21 proxy |
+| `server.ps1` | Proxy implementation (PowerShell) |
+| `discover-p21-endpoints.ps1` | Diagnose token / OData access |
+| `test-p21.ps1` | Quick token + view test |
+| `sync-to-supabase.ps1` | Optional bulk sync of all SOs |
+| `install-p21-sync-task.ps1` | Optional Windows scheduled task |
+| `.env.example` | Template → copy to `.env` |
+| `README.md` | Full architecture notes |

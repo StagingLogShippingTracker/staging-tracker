@@ -34,7 +34,7 @@ Deno.serve(async (req) => {
     }
 
     const supabase = serviceClient();
-    const cfg = loadP21Config();
+    const cfg = await loadP21Config(supabase);
     const liveAllowed = canFetchLiveP21(cfg);
 
     if (!refresh) {
@@ -72,7 +72,7 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({
       found: false,
       cached: false,
-      message: 'Prophet21 data unavailable. Set Edge secrets (P21_BASE_URL=https://swiftsupply-api.epicordistribution.com, username, password) and enable Allow OData API Service for that user. See docs/P21-API-SETUP.md.',
+      message: 'Prophet21 data unavailable. Edge secrets need P21_BASE_URL + username/password (Interactive Order Entry). See docs/P21-API-SETUP.md.',
     }), {
       status: 404,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

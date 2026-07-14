@@ -105,6 +105,7 @@ window.submitReturnToStock = async function() {
     window.logAction('shipped', `Added Return to Stock log for SO: ${editTargetRecord.so}`);
     if(typeof window.showNotification === 'function') window.showNotification('Returned to Stock Successfully');
     if (typeof window.rememberPersonBy === 'function') window.rememberPersonBy(pickedBy, returnedBy);
+    if (typeof window.warmP21AfterSubmit === 'function') window.warmP21AfterSubmit(editTargetRecord.so);
 
     if(pmChecked && finalPmEmail) {
       const cachedSubject = `RETURN TO STOCK: SO ${editTargetRecord.so} - ${$('#e_cust').value.trim()}`;
@@ -257,6 +258,7 @@ window.submitFreightDispatch = async function() {
     if(typeof window.showNotification === 'function') window.showNotification('Freight Dispatched Successfully');
     if (typeof window.rememberPersonBy === 'function') window.rememberPersonBy(dispatcher);
     if (typeof window.rememberCarrier === 'function') window.rememberCarrier($('#m_carrier').value.trim());
+    if (typeof window.warmP21AfterSubmit === 'function') window.warmP21AfterSubmit(activeShipTargetItem.so);
 
     if(pmChecked && finalPmEmail) {
       const currentTimeStamp = new Date().toLocaleString();
@@ -369,6 +371,7 @@ window.insertStagingEntry = async function({
     if (typeof window.rememberPersonBy === 'function' && payload.staged_by) {
       window.rememberPersonBy(payload.staged_by);
     }
+    if (typeof window.warmP21AfterSubmit === 'function') window.warmP21AfterSubmit(soVal);
 
     if (onSuccess) onSuccess(insertedData && insertedData[0] ? insertedData[0] : null);
     window.loadCloudData();
@@ -644,12 +647,16 @@ window.submitPoNotification = async function() {
 window.resolveEmail = function(inputVal) {
   if (!inputVal) return null;
   let val = inputVal.trim();
-  if (val.includes('@') && val.includes('.')) return val; 
+  if (val.includes('@') && val.includes('.')) return val;
+  if (typeof window.findContactByPmName === 'function') {
+    const contact = window.findContactByPmName(val);
+    if (contact && contact.email && contact.email !== 'N/A') return contact.email;
+  }
   if (typeof rawContactsData !== 'undefined') {
     const match = rawContactsData.find(c => c.name.toLowerCase() === val.toLowerCase() || c.name.toLowerCase().includes(val.toLowerCase()));
     if (match && match.email && match.email !== 'N/A') return match.email;
   }
-  return null; 
+  return null;
 };
 
 window.triggerUniversalConsolidate = async function(targetSo) {
@@ -784,6 +791,7 @@ window.submitQuickShip = async function() {
     if(typeof window.showNotification === 'function') window.showNotification('Quick Ship Successful');
     if (typeof window.rememberPersonBy === 'function') window.rememberPersonBy(dispatcher);
     if (typeof window.rememberCarrier === 'function') window.rememberCarrier($('#qs_carrier').value.trim());
+    if (typeof window.warmP21AfterSubmit === 'function') window.warmP21AfterSubmit(soVal);
 
     if(pmChecked && finalPmEmail) {
       const currentTimeStamp = new Date().toLocaleString();
@@ -1101,21 +1109,64 @@ window.autofillCustomerFromSo = function(soInputId, customerInputId) {
   }
 };
 
-window.initSoCustomerAutofill = function() {
-  const pairs = [
+/** Map editable SO inputs to their paired customer fields (+ optional PM email autofill). */
+window.getSoCustomerPairs = function() {
+  return [
     { so: 'so', cust: 'customer' },
     { so: 'ra_so', cust: 'ra_cust' },
-    { so: 'qs_so', cust: 'qs_cust' }
+    { so: 'qs_so', cust: 'qs_cust', pm: { emailId: 'qs_pm_email', chkId: 'qs_pm_chk', btnId: 'qs_pm_email_btn' } },
+    { so: 'e_so', cust: 'e_cust', pm: { emailId: 'e_pm' } },
+    { so: 'nr_so', cust: 'nr_cust', pm: { emailId: 'nr_pm_email' } }
   ];
-  pairs.forEach(({ so, cust }) => {
+};
+
+/**
+ * Clicking an SO field opens a prompt (same idea as Quick Consolidate).
+ * OK → write SO, pull Prophet21 Order Entry, autofill customer (editable).
+ * Cancel → leave fields alone.
+ * Clicking SO again and confirming overwrites prior autofill/manual customer.
+ */
+window.applyPmContactToFields = function(contact, pmOpts) {
+  if (!contact || !pmOpts) return;
+  if (pmOpts.emailId) {
+    const el = document.getElementById(pmOpts.emailId);
+    if (el) el.value = contact.email;
+  }
+  if (pmOpts.selectId) {
+    const sel = document.getElementById(pmOpts.selectId);
+    if (sel && sel.tagName === 'SELECT') {
+      const want = typeof window.normalizePersonKey === 'function'
+        ? window.normalizePersonKey(contact.name)
+        : String(contact.name || '').toLowerCase();
+      const opt = Array.from(sel.options).find(o => {
+        const a = typeof window.normalizePersonKey === 'function' ? window.normalizePersonKey(o.value) : String(o.value || '').toLowerCase();
+        const b = typeof window.normalizePersonKey === 'function' ? window.normalizePersonKey(o.textContent) : String(o.textContent || '').toLowerCase();
+        return a === want || b === want;
+      });
+      if (opt) sel.value = opt.value;
+      else if (typeof PM_SMS_ROSTER !== 'undefined' && PM_SMS_ROSTER[contact.name]) sel.value = contact.name;
+    }
+  }
+  if (pmOpts.autoCheck && pmOpts.chkId) {
+    const chk = document.getElementById(pmOpts.chkId);
+    if (chk) {
+      chk.checked = true;
+      if (typeof window.togglePMEmail === 'function' && pmOpts.emailId) {
+        window.togglePMEmail(true, pmOpts.emailId, pmOpts.btnId);
+      }
+    }
+  }
+};
+
+window.initSoCustomerAutofill = function() {
+  const pairs = window.getSoCustomerPairs();
+  pairs.forEach(({ so, cust, pm }) => {
     const soEl = document.getElementById(so);
     const custEl = document.getElementById(cust);
-    if (!soEl || soEl.dataset.soAutofillBound) return;
-    soEl.dataset.soAutofillBound = '1';
-    const run = () => window.autofillCustomerFromSo(so, cust);
-    soEl.addEventListener('input', run);
-    soEl.addEventListener('change', run);
-    soEl.addEventListener('blur', run);
+    if (!soEl || soEl.readOnly || soEl.disabled) return;
+    if (soEl.dataset.soPromptBound === '1') return;
+    soEl.dataset.soPromptBound = '1';
+
     if (custEl && !custEl.dataset.customerManualBound) {
       custEl.dataset.customerManualBound = '1';
       custEl.addEventListener('input', () => {
@@ -1123,6 +1174,72 @@ window.initSoCustomerAutofill = function() {
         else delete custEl.dataset.manualCustomer;
       });
     }
+
+    soEl.addEventListener('click', async (ev) => {
+      if (soEl.readOnly || soEl.disabled) return;
+      // Ignore synthetic clicks from non-pointer sources if needed
+      const entered = prompt('Enter exact SO# (or PO#):', soEl.value || '');
+      if (entered === null) return; // Cancel — do not overwrite
+      const soVal = String(entered).trim();
+      soEl.value = soVal;
+      if (!soVal) {
+        if (custEl) {
+          custEl.value = '';
+          delete custEl.dataset.autoFilled;
+          delete custEl.dataset.manualCustomer;
+        }
+        return;
+      }
+
+      // Give P21 time: show busy state while looking up
+      const prevCust = custEl ? custEl.value : '';
+      if (custEl) {
+        custEl.value = 'Loading from Prophet21…';
+        custEl.disabled = true;
+      }
+      soEl.disabled = true;
+      try {
+        let customer = '';
+        let hit = null;
+        if (typeof window.lookupP21ForSoField === 'function') {
+          hit = await window.lookupP21ForSoField(soVal);
+          if (hit?.ok) {
+            customer = hit.customer || '';
+            if (hit.orderNo && hit.orderNo !== soVal) {
+              // Prefer canonical order number when user typed a PO
+              soEl.value = hit.orderNo;
+            }
+            if (pm && hit.contact) window.applyPmContactToFields(hit.contact, pm);
+            else if (pm && typeof window.autofillPmEmailFromSo === 'function') {
+              await window.autofillPmEmailFromSo(soEl.value.trim(), pm).catch(() => {});
+            }
+          }
+        }
+        if (!customer) {
+          customer = window.lookupCustomerBySo(soEl.value.trim()) || '';
+        }
+        if (custEl) {
+          custEl.value = customer || '';
+          if (customer) {
+            custEl.dataset.autoFilled = '1';
+            delete custEl.dataset.manualCustomer; // re-entry overwrites prior manual
+          } else {
+            custEl.value = prevCust && prevCust !== 'Loading from Prophet21…' ? '' : '';
+            delete custEl.dataset.autoFilled;
+          }
+        }
+        if (!customer && typeof window.showNotification === 'function') {
+          window.showNotification('Prophet21 customer not found — enter customer manually');
+        }
+      } catch (e) {
+        if (custEl) custEl.value = '';
+        alert('Prophet21 lookup failed: ' + (e.message || e));
+      } finally {
+        soEl.disabled = false;
+        if (custEl) custEl.disabled = false;
+        soEl.focus();
+      }
+    });
   });
 };
 

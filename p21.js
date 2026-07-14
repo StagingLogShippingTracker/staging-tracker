@@ -164,7 +164,7 @@ window.fetchP21OrderInsights = async function(so, options) {
     ok: false,
     offline: true,
     so: soKey,
-    message: 'Prophet21 insights are not cached yet. On a Swift-network PC with the local P21 proxy running, open this order to publish insights for everyone.'
+    message: 'Prophet21 insights are not cached yet. Enter/submit this SO to pull Order Entry fields, or wait for cache sync.'
   };
 };
 
@@ -210,63 +210,192 @@ window.formatP21OpenLink = function(so) {
   </p>`;
 };
 
+window.formatP21Date = function(value) {
+  if (value == null || value === '') return '—';
+  const s = String(value);
+  const d = new Date(s.includes('T') ? s : s.replace(' ', 'T'));
+  if (!Number.isNaN(d.getTime())) {
+    return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+  }
+  return s;
+};
+
 window.formatP21OrderInsightsSection = function(result) {
   const so = result?.so || result?.data?.so || '';
-  const openLink = window.formatP21OpenLink(so);
 
   if (!result || !result.ok) {
     const hint = result?.offline
-      ? 'No cached Prophet21 data for this SO yet. On a Swift-network PC with the local P21 proxy running, open this order once to publish insights for the whole team.'
+      ? 'No Prophet21 data for this SO yet. Submitting a staging/shipping entry with this SO will pull Order Entry fields automatically.'
       : (result?.authError
-        ? 'P21 authentication failed. Contact an admin to verify credentials on the Swift-network proxy.'
+        ? 'P21 authentication failed. Check Edge Function P21 credentials.'
         : (result?.message || 'Prophet21 data unavailable.'));
-    return `<p class="p21-status p21-status--warn" style="font-size:12px; color:#6b7280; margin:0 0 8px 0;">${hint}</p>${openLink}`;
+    return `<p class="p21-status p21-status--warn" style="font-size:12px; color:#6b7280; margin:0 0 8px 0;">${hint}</p>`;
   }
 
   const payload = result.data;
   if (!payload.found) {
-    return `<p class="p21-status" style="font-size:12px; color:#6b7280; margin:0 0 8px 0;">${payload.message || 'No matching Prophet21 order.'}</p>${openLink}`;
+    return `<p class="p21-status" style="font-size:12px; color:#6b7280; margin:0 0 8px 0;">${payload.message || 'No matching Prophet21 order.'}</p>`;
   }
 
   const h = payload.header || {};
   const s = payload.summary || {};
+  // PM comes from Order Entry "Taker"
+  const pm = h.taker || s.taker || h.pm || s.pm || '';
   let html = `<div class="p21-insights-card">`;
-  html += openLink;
   html += `<dl class="p21-insights-grid">`;
-  html += `<div><dt>Customer</dt><dd>${window.formatP21Value(s.customer)}</dd></div>`;
-  html += `<div><dt>Order #</dt><dd>${window.formatP21Value(h.orderNo)}</dd></div>`;
-  html += `<div><dt>PO #</dt><dd>${window.formatP21Value(s.poNo)}</dd></div>`;
-  html += `<div><dt>Order Date</dt><dd>${window.formatP21Value(s.orderDate)}</dd></div>`;
-  html += `<div><dt>Status</dt><dd>${window.formatP21Value(s.status)}</dd></div>`;
-  html += `<div><dt>Ship To</dt><dd>${window.formatP21Value(h.shipTo)}</dd></div>`;
-  html += `<div><dt>Ship Via</dt><dd>${window.formatP21Value(h.shipVia)}</dd></div>`;
-  html += `<div><dt>Warehouse</dt><dd>${window.formatP21Value(h.warehouse)}</dd></div>`;
-  html += `<div><dt>Lines</dt><dd>${window.formatP21Value(s.lineCount)}</dd></div>`;
-  html += `<div><dt>Total Qty Ordered</dt><dd>${window.formatP21Value(s.totalQtyOrdered)}</dd></div>`;
+  html += `<div><dt>Order Number</dt><dd>${window.formatP21Value(h.orderNo || so)}</dd></div>`;
+  html += `<div><dt>Customer</dt><dd>${window.formatP21Value(h.customerName || s.customer)}</dd></div>`;
+  html += `<div><dt>PO</dt><dd>${window.formatP21Value(h.poNo || s.poNo)}</dd></div>`;
+  html += `<div><dt>Project</dt><dd>${window.formatP21Value(h.projectId || s.projectId)}</dd></div>`;
+  html += `<div><dt>Required Date</dt><dd>${window.formatP21Date(h.requiredDate || s.requiredDate)}</dd></div>`;
+  html += `<div><dt>PM</dt><dd>${window.formatP21Value(pm)}</dd></div>`;
   html += `</dl>`;
-
-  if (payload.lines && payload.lines.length) {
-    html += `<div class="p21-lines-wrap"><table class="p21-lines-table"><thead><tr><th>Line</th><th>Item</th><th>Description</th><th>Qty</th><th>Shipped</th><th>UOM</th><th>Required</th></tr></thead><tbody>`;
-    payload.lines.forEach(line => {
-      html += `<tr>
-        <td>${window.formatP21Value(line.lineNo)}</td>
-        <td>${window.formatP21Value(line.itemId)}</td>
-        <td>${window.formatP21Value(line.description)}</td>
-        <td>${window.formatP21Value(line.qtyOrdered)}</td>
-        <td>${window.formatP21Value(line.qtyShipped)}</td>
-        <td>${window.formatP21Value(line.uom)}</td>
-        <td>${window.formatP21Value(line.requiredDate)}</td>
-      </tr>`;
-    });
-    html += `</tbody></table></div>`;
-  }
 
   const staleNote = payload.stale ? ' (updating…)' : '';
   const viaLabel = result.via === 'local-proxy'
-    ? 'live proxy (published for all users)'
-    : (payload.cached || result.via?.includes('cache') || result.via?.includes('stale') ? 'synced copy' : window.formatP21Value(payload.matchedBy));
+    ? 'local connector'
+    : (payload.source === 'interactive'
+      ? 'Order Entry'
+      : (payload.cached || result.via?.includes('cache') || result.via?.includes('stale') ? 'synced copy' : window.formatP21Value(payload.matchedBy || payload.source)));
   const fetched = payload.fetchedAt ? ` · ${window.formatP21Value(payload.fetchedAt)}` : '';
   html += `<p class="p21-footnote">Prophet21 via <b>${viaLabel}</b>${staleNote}${fetched}.</p>`;
   html += `</div>`;
   return html;
+};
+
+/** Fire-and-forget: pull Order Entry into cache after a site entry is saved. */
+window.warmP21AfterSubmit = function(so) {
+  const soKey = window.normalizeP21So(so);
+  if (!soKey || typeof window.fetchP21OrderInsights !== 'function') return;
+  window.fetchP21OrderInsights(soKey, { refresh: true }).catch(() => {});
+};
+
+/** Normalize P21 taker / contact names for fuzzy match (CHRIS.ACORN ↔ Chris Acorn). */
+window.normalizePersonKey = function(s) {
+  return String(s || '')
+    .toLowerCase()
+    .replace(/@.*$/, '')
+    .replace(/[._\-]+/g, ' ')
+    .replace(/[^a-z0-9\s]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+};
+
+window.extractP21TakerName = function(payload) {
+  const h = payload?.header || {};
+  const s = payload?.summary || {};
+  return String(h.taker || s.taker || h.pm || s.pm || h.takerName || s.takerName || '').trim();
+};
+
+/**
+ * Match Prophet21 Taker/PM to an employee in rawContactsData (employees.js / contacts).
+ * Returns the contact object or null.
+ */
+window.findContactByPmName = function(pmName) {
+  if (!pmName || typeof rawContactsData === 'undefined' || !Array.isArray(rawContactsData)) return null;
+  const key = window.normalizePersonKey(pmName);
+  if (!key) return null;
+  const words = key.split(' ').filter(Boolean);
+
+  let best = null;
+  let bestScore = 0;
+  for (const c of rawContactsData) {
+    if (!c || !c.email || String(c.email).toLowerCase() === 'n/a') continue;
+    const nameKey = window.normalizePersonKey(c.name);
+    const emailLocal = window.normalizePersonKey(String(c.email).split('@')[0]);
+    let score = 0;
+    if (nameKey === key || emailLocal === key) score = 100;
+    else if (words.length >= 2 && words.every(w => nameKey.includes(w))) score = 85;
+    else if (nameKey && (nameKey.includes(key) || key.includes(nameKey))) score = 55;
+    else continue;
+    if (/project\s*manager/i.test(c.designation || '')) score += 10;
+    if (score > bestScore) {
+      bestScore = score;
+      best = c;
+    }
+  }
+  return bestScore >= 55 ? best : null;
+};
+
+/**
+ * Prefill a PM email (or SMS roster select) from Prophet21 taker for an SO.
+ * Options: { emailId, chkId, btnId, selectId, autoCheck }
+ */
+window.autofillPmEmailFromSo = async function(so, opts) {
+  opts = opts || {};
+  const soKey = window.normalizeP21So(so);
+  if (!soKey) return null;
+
+  let result;
+  try {
+    result = await window.fetchP21OrderInsights(soKey, { refresh: Boolean(opts.refresh) });
+  } catch (_) {
+    return null;
+  }
+  if (!result?.ok || !result.data?.found) return null;
+
+  const taker = window.extractP21TakerName(result.data);
+  const contact = window.findContactByPmName(taker);
+  if (!contact) return { ok: false, taker, contact: null, email: null };
+
+  const emailId = opts.emailId;
+  const chkId = opts.chkId;
+  const btnId = opts.btnId;
+  const selectId = opts.selectId;
+
+  if (emailId) {
+    const el = document.getElementById(emailId);
+    if (el) el.value = contact.email;
+  }
+
+  if (selectId) {
+    const sel = document.getElementById(selectId);
+    if (sel && sel.tagName === 'SELECT') {
+      const want = window.normalizePersonKey(contact.name);
+      const opt = Array.from(sel.options).find(o =>
+        window.normalizePersonKey(o.value) === want || window.normalizePersonKey(o.textContent) === want
+      );
+      if (opt) sel.value = opt.value;
+      else if (typeof PM_SMS_ROSTER !== 'undefined' && PM_SMS_ROSTER[contact.name]) {
+        sel.value = contact.name;
+      }
+    }
+  }
+
+  if (opts.autoCheck && chkId) {
+    const chk = document.getElementById(chkId);
+    if (chk) {
+      chk.checked = true;
+      if (typeof window.togglePMEmail === 'function' && emailId) {
+        window.togglePMEmail(true, emailId, btnId);
+      }
+    }
+  }
+
+  return { ok: true, taker, contact, email: contact.email };
+};
+
+/** Lookup customer (and cache insights) from Prophet21 for an SO/PO typed in site forms. */
+window.lookupP21ForSoField = async function(soRaw) {
+  const soKey = window.normalizeP21So(soRaw);
+  if (!soKey) return { ok: false, customer: '', orderNo: '', taker: '', payload: null };
+  try {
+    const result = await window.fetchP21OrderInsights(soKey, { refresh: true });
+    if (!result?.ok || !result.data?.found) {
+      return { ok: false, customer: '', orderNo: soKey, taker: '', payload: result?.data || null, message: result?.message || result?.data?.message };
+    }
+    const h = result.data.header || {};
+    const s = result.data.summary || {};
+    const taker = window.extractP21TakerName(result.data);
+    return {
+      ok: true,
+      customer: String(h.customerName || s.customer || '').trim(),
+      orderNo: String(h.orderNo || soKey).trim(),
+      taker,
+      contact: window.findContactByPmName(taker),
+      payload: result.data
+    };
+  } catch (e) {
+    return { ok: false, customer: '', orderNo: soKey, taker: '', message: e.message || String(e) };
+  }
 };
