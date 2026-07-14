@@ -20,7 +20,7 @@ function Load-DotEnv($path) {
 }
 
 $cfg = Load-DotEnv $envFile
-$BaseUrl = if ($cfg['P21_BASE_URL']) { $cfg['P21_BASE_URL'] } else { 'https://swiftsupply.epicordistribution.com' }
+$BaseUrl = if ($cfg['P21_BASE_URL']) { $cfg['P21_BASE_URL'] } else { 'https://swiftsupply-api.epicordistribution.com' }
 $BaseUrl = $BaseUrl.TrimEnd('/')
 $Username = $cfg['P21_USERNAME']
 $Password = $cfg['P21_PASSWORD']

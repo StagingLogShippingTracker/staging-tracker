@@ -44,4 +44,5 @@ foreach ($c in $checks) {
 }
 
 Write-Host ''
-Write-Host 'If OData/Transaction fail with 404 on Swift WiFi, connect FortiClient VPN and/or ask IT for the internal middleware URL and OData permissions.'
+Write-Host 'If OData fails with 401 "not authorized", enable Allow OData API Service + Dataservice permissions in P21 User/Role Maintenance.'
+Write-Host 'See docs/P21-API-SETUP.md. API host should be https://swiftsupply-api.epicordistribution.com (not the UI host).'

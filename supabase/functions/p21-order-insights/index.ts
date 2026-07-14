@@ -72,7 +72,7 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({
       found: false,
       cached: false,
-      message: 'Prophet21 data not synced yet. Run sync-to-supabase.ps1 on the Swift network.',
+      message: 'Prophet21 data unavailable. Set Edge secrets (P21_BASE_URL=https://swiftsupply-api.epicordistribution.com, username, password) and enable Allow OData API Service for that user. See docs/P21-API-SETUP.md.',
     }), {
       status: 404,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

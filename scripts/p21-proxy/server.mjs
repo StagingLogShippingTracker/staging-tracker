@@ -27,7 +27,7 @@ loadEnvFile(path.join(__dirname, '.env'));
 
 const PORT = Number(process.env.P21_PROXY_PORT || 8787);
 const config = {
-  baseUrl: process.env.P21_BASE_URL || 'https://swiftsupply.epicordistribution.com',
+  baseUrl: process.env.P21_BASE_URL || 'https://swiftsupply-api.epicordistribution.com',
   username: process.env.P21_USERNAME || '',
   password: process.env.P21_PASSWORD || ''
 };

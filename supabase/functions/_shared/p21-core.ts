@@ -34,7 +34,10 @@ export function serviceClient() {
 }
 
 export function canFetchLiveP21(cfg: Record<string, string>) {
-  return Boolean(cfg.P21_CONNECTOR_URL?.trim()) || Deno.env.get('P21_ALLOW_CLOUD_LIVE') === '1';
+  if (cfg.P21_CONNECTOR_URL?.trim()) return true;
+  if (Deno.env.get('P21_ALLOW_CLOUD_LIVE') === '0') return false;
+  if (Deno.env.get('P21_ALLOW_CLOUD_LIVE') === '1') return true;
+  return Boolean(cfg.P21_USERNAME && cfg.P21_PASSWORD);
 }
 
 export function loadP21Config(): Record<string, string> {
@@ -141,7 +144,7 @@ export async function fetchLiveInsights(soRaw: string, cfg: Record<string, strin
     return { ...data, source: 'connector' };
   }
 
-  const baseUrl = (cfg.P21_BASE_URL || 'https://swiftsupply.epicordistribution.com').replace(/\/+$/, '');
+  const baseUrl = (cfg.P21_BASE_URL || 'https://swiftsupply-api.epicordistribution.com').replace(/\/+$/, '');
   const username = cfg.P21_USERNAME || '';
   const password = cfg.P21_PASSWORD || '';
   if (!username || !password) throw new Error('P21 credentials are not configured on the server.');
