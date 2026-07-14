@@ -48,7 +48,7 @@
     <div class="modal-field"><label>Location <span class="req-mark">*</span></label><input id="pn_loc" list="dl_locations" /></div>
     <div class="modal-field"><label>Total Weight (In lbs)</label><input id="pn_weight" oninput="window.formatWeight(this)" /></div>
     <div class="modal-field"><label>Received By <span class="req-mark">*</span></label><div class="by-field-row"><input id="pn_received_by" list="dl_stagers" /></div></div>
-    <div class="modal-field"><label>Notify PM</label><select id="pn_pm_email" class="pm-sms-select"><option value="">— Select PM —</option></select></div>
+    <div class="modal-field"><label>PM E-mail <span class="req-mark">*</span></label><input id="pn_pm_email" list="dl_employeeEmails" placeholder="Type name or email..." /></div>
     <div class="modal-field"><label>Comments</label><textarea id="pn_comments" rows="2" class="field-textarea"></textarea></div>
     <button id="pn_submitBtn" class="btn btn-info btn-block" onclick="window.submitPoNotification()">Submit PO Notification</button>
   </div>
