@@ -395,11 +395,19 @@ window.lookupP21ForSoField = async function(soRaw) {
     }
     const h = result.data.header || {};
     const s = result.data.summary || {};
+    // The summary uses "—" as an empty placeholder; treat that (and blanks) as no value.
+    const clean = (v) => {
+      const t = String(v == null ? '' : v).trim();
+      return (t === '—' || t === '-') ? '' : t;
+    };
     const taker = window.extractP21TakerName(result.data);
     return {
       ok: true,
-      customer: String(h.customerName || s.customer || '').trim(),
-      orderNo: String(h.orderNo || soKey).trim(),
+      customer: clean(h.customerName || s.customer),
+      orderNo: clean(h.orderNo) || soKey,
+      linkedSo: clean(h.linkedSo || s.linkedSo),
+      soCustomer: clean(h.soCustomer || s.soCustomer),
+      purchasePo: !!(result.data.matchedBy === 'purchase_po' || h.purchasePo || s.purchasePo),
       taker,
       contact: window.findContactByPmName(taker),
       payload: result.data

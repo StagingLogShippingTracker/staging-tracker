@@ -570,6 +570,17 @@ window.submitPoNotification = async function() {
   $('#pn_submitBtn').disabled = true; $('#pn_submitBtn').textContent = 'Sending Notification...';
 
   try {
+    // Link the Sales Order (SO) attached to this PO in Prophet21. Use the value already
+    // resolved when the PO field was looked up; otherwise resolve it now. Best-effort:
+    // if P21 is unreachable or has no linked SO, fall through with no linked SO.
+    let linkedSo = ($('#pn_po') && $('#pn_po').dataset.linkedSo || '').trim();
+    if (!linkedSo && typeof window.lookupP21ForSoField === 'function') {
+      try {
+        const poHit = await window.lookupP21ForSoField(poVal);
+        if (poHit && poHit.ok && poHit.linkedSo) linkedSo = poHit.linkedSo;
+      } catch (_) { /* P21 unavailable — proceed without linked SO */ }
+    }
+
     const dynamicType = window.getDynamicType('pn');
     const weightVal = $('#pn_weight').value.trim();
     const commentsVal = $('#pn_comments').value.trim();
@@ -590,10 +601,11 @@ window.submitPoNotification = async function() {
     }
 
     const currentTimeStamp = new Date().toLocaleString();
-    const emailSubject = `PO NOTIFICATION: PO ${poVal} - ${custVal}`;
+    const emailSubject = `PO NOTIFICATION: PO ${poVal}${linkedSo ? ` / SO ${linkedSo}` : ''} - ${custVal}`;
     let emailBody = `A new PO has been received. Details below:<br><br>
     ----------------------------------------------------------------------<br>
     <b>PO#</b>                    | ${poVal}<br>
+    <b>Linked SO#</b>            | ${linkedSo || '—'}<br>
     <b>Customer</b>              | ${custVal}<br>
     <b>Container(s)</b>          | ${dynamicType || 'None'}<br>
     <b>Location</b>              | ${locVal}<br>
@@ -615,7 +627,7 @@ window.submitPoNotification = async function() {
       has_attachments: attachmentUrls.length > 0
     });
 
-    window.logAction('staging', `Sent Automated PO Notification for PO: ${poVal} (PM: ${finalPmEmail})`);
+    window.logAction('staging', `Sent Automated PO Notification for PO: ${poVal}${linkedSo ? ` (SO ${linkedSo})` : ''} (PM: ${finalPmEmail})`);
     if (typeof window.showNotification === 'function') window.showNotification('PO Notification Sent Successfully');
     if (typeof window.rememberPersonBy === 'function') window.rememberPersonBy(receivedByVal);
     window.closeModal('poNotifyModal');
@@ -1096,7 +1108,11 @@ window.getSoCustomerPairs = function() {
     { so: 'ra_so', cust: 'ra_cust' },
     { so: 'qs_so', cust: 'qs_cust', pm: { emailId: 'qs_pm_email', chkId: 'qs_pm_chk', btnId: 'qs_pm_email_btn' } },
     { so: 'e_so', cust: 'e_cust', pm: { emailId: 'e_pm' } },
-    { so: 'nr_so', cust: 'nr_cust', pm: { emailId: 'nr_pm_email' } }
+    { so: 'nr_so', cust: 'nr_cust', pm: { emailId: 'nr_pm_email' } },
+    // PO Notification: PO# field mirrors the SO fields (click -> prompt -> Prophet21
+    // customer/PM autofill). isPo keeps the typed PO in the field and stashes the
+    // linked SO (from P21) on the input's dataset for the notification submit.
+    { so: 'pn_po', cust: 'pn_cust', pm: { emailId: 'pn_pm_email' }, isPo: true }
   ];
 };
 
@@ -1140,7 +1156,7 @@ window.applyPmContactToFields = function(contact, pmOpts) {
 
 window.initSoCustomerAutofill = function() {
   const pairs = window.getSoCustomerPairs();
-  pairs.forEach(({ so, cust, pm }) => {
+  pairs.forEach(({ so, cust, pm, isPo }) => {
     const soEl = document.getElementById(so);
     const custEl = document.getElementById(cust);
     if (!soEl || soEl.readOnly || soEl.disabled) return;
@@ -1158,10 +1174,11 @@ window.initSoCustomerAutofill = function() {
     soEl.addEventListener('click', async (ev) => {
       if (soEl.readOnly || soEl.disabled) return;
       // Ignore synthetic clicks from non-pointer sources if needed
-      const entered = prompt('Enter exact SO# (or PO#):', soEl.value || '');
+      const entered = prompt(isPo ? 'Enter exact PO# (or SO#):' : 'Enter exact SO# (or PO#):', soEl.value || '');
       if (entered === null) return; // Cancel — do not overwrite
       const soVal = String(entered).trim();
       soEl.value = soVal;
+      if (isPo) delete soEl.dataset.linkedSo;
       if (!soVal) {
         if (custEl) {
           custEl.value = '';
@@ -1184,14 +1201,21 @@ window.initSoCustomerAutofill = function() {
         if (typeof window.lookupP21ForSoField === 'function') {
           hit = await window.lookupP21ForSoField(soVal);
           if (hit?.ok) {
-            customer = hit.customer || '';
-            if (hit.orderNo && hit.orderNo !== soVal) {
-              // Prefer canonical order number when user typed a PO
-              soEl.value = hit.orderNo;
+            if (isPo) {
+              // For a PO, keep the PO in the field, remember the linked SO, and prefer
+              // the end-customer (soCustomer) over the supplier/vendor name.
+              customer = hit.soCustomer || hit.customer || '';
+              if (hit.linkedSo) soEl.dataset.linkedSo = hit.linkedSo;
+            } else {
+              customer = hit.customer || '';
+              if (hit.orderNo && hit.orderNo !== soVal) {
+                // Prefer canonical order number when user typed a PO
+                soEl.value = hit.orderNo;
+              }
             }
             if (pm && hit.contact) window.applyPmContactToFields(hit.contact, pm);
             else if (pm && typeof window.autofillPmEmailFromSo === 'function') {
-              await window.autofillPmEmailFromSo(soEl.value.trim(), pm).catch(() => {});
+              await window.autofillPmEmailFromSo((hit.linkedSo || soEl.value).trim(), pm).catch(() => {});
             }
           }
         }
