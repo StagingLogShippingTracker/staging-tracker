@@ -262,7 +262,11 @@ window.submitReportAddEntry = async function() {
         appData.staging.push(record);
         window.injectIntoReportQueue(record);
       }
-      if ($('#reportAddModal')) $('#reportAddModal').style.display = 'none';
+      // Use closeModal (not a raw display='none') so the modal scroll-lock is released.
+      // A raw hide leaves document.body.modal-open set, which freezes scrolling/clicks
+      // after the "Multiple Locations Detected" -> "Proceed Anyway" flow.
+      if (typeof window.closeModal === 'function') window.closeModal('reportAddModal');
+      else if ($('#reportAddModal')) $('#reportAddModal').style.display = 'none';
       if (window.activeReportMode && typeof window.renderNextReportItem === 'function') {
         window.renderNextReportItem();
       }

@@ -805,10 +805,24 @@ window.checkSoConflict = async function(so, excludeId) {
       if ($('#conflict_content')) $('#conflict_content').innerHTML = html;
       if (!(await window.openModal('soConflictModal', { zIndex: 4000 }))) { resolve(true); return; }
 
+      let settled = false;
+      const finish = (val) => {
+        if (settled) return;
+        settled = true;
+        document.removeEventListener('keydown', onEsc, true);
+        window.closeModal('soConflictModal');
+        resolve(val);
+      };
+      const onEsc = (e) => { if (e.key === 'Escape') finish(false); };
+      document.addEventListener('keydown', onEsc, true);
+
       const cancelBtn = $('#conflictCancelBtn');
       const proceedBtn = $('#conflictProceedBtn');
-      if (cancelBtn) cancelBtn.onclick = () => { window.closeModal('soConflictModal'); resolve(false); };
-      if (proceedBtn) proceedBtn.onclick = () => { window.closeModal('soConflictModal'); resolve(true); };
+      const closeX = $('#soConflictModal') ? $('#soConflictModal').querySelector('.modal-close-x') : null;
+      if (cancelBtn) cancelBtn.onclick = () => finish(false);
+      if (proceedBtn) proceedBtn.onclick = () => finish(true);
+      // Closing via the X (or its normalized handler) should also unblock the pending insert.
+      if (closeX) closeX.addEventListener('click', () => finish(false), { once: true });
     });
   }
   return true;
