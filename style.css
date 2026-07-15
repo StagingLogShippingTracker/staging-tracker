@@ -507,6 +507,25 @@ button[onclick*="banishMemory"]:hover {
 .actions { display: flex; gap: var(--space-sm); margin-bottom: var(--space-md); align-items: center; flex-wrap: wrap; }
 .action-stack { display: flex; flex-direction: column; gap: var(--space-md); }
 
+.search-order-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
+}
+
+.search-order-status {
+  min-height: 1.2em;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin: 0 0 var(--space-sm);
+}
+
+.search-order-results .-insights-card {
+  margin-bottom: 0;
+}
+
 .toolbar-row { display: flex; gap: var(--space-sm); align-items: center; flex-wrap: wrap; justify-content: flex-end; }
 
 .select-sort,
