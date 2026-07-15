@@ -1920,18 +1920,8 @@ input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; margin: 0; 
 
 @media (min-width: 768px) {
   .nav-brand-logo {
-    height: 96px;
-    max-width: min(100%, 520px);
-  }
-}
-
-/* Landscape phones/tablets (wide but short viewport) report width >= 768px and would
-   otherwise use the desktop banner size, which looks oversized. Shrink it there without
-   affecting true desktops (which are much taller) or mobile portrait. */
-@media (min-width: 768px) and (max-height: 500px) {
-  .nav-brand-logo {
-    height: 64px;
-    max-width: min(100%, 340px);
+    height: 128px;
+    max-width: min(100%, 680px);
   }
 }
 
@@ -2456,8 +2446,9 @@ body.modal-open {
     display: none !important;
   }
 
-  /* Visibility of the Show More button is controlled by JS (updateMobileCardMoreButtons):
-     it is only shown when more cards remain to load. Do not force it visible here. */
+  .mobile-card-show-more {
+    display: block !important;
+  }
 
   .contacts-table-wrap .tbl-scroller {
     overflow-x: hidden;
