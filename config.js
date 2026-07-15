@@ -7,7 +7,7 @@ window.REMOVED = window.REMOVED || 'http://127.0.0.1:8787';
 window.REMOVED = window.REMOVED || 'https://swiftsupply.example.invalid//#/';
 
 window.APP_ASSET_VERSIONS = {
-  config: '4.12',
+  config: '4.13',
   partials: '1.4',
   style: '10.20',
   ui: '7.11',
@@ -22,7 +22,7 @@ window.APP_ASSET_VERSIONS = {
   autoscan: '3.0',
   employees: '3.3',
   contacts: '1.1',
-  : '3.6'
+  : '3.7'
 };
 
 window.buildEmailNotificationFooter = function() {
