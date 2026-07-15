@@ -387,6 +387,32 @@ window.insertStagingEntry = async function({
   }
 };
 
+window.clearStagingEntryForm = function() {
+  const textIds = ['so', 'customer', 'loc', 'weight', 'comments', 'staged_by'];
+  textIds.forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  const status = document.getElementById('status');
+  if (status) status.value = 'Partial';
+  ['c_skid', 'c_box', 'c_crate', 'c_pipe', 'c_other'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.value = '0';
+  });
+  ['main_cameraFile', 'main_uploadFile'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  if (typeof window.clearPhotoBlobs === 'function') {
+    window.clearPhotoBlobs('main');
+  } else {
+    try { mainPhotoBlobs = []; } catch (_) { /* ignore */ }
+    if (typeof window.renderMainPhotoStrip === 'function') window.renderMainPhotoStrip();
+  }
+  const soEl = document.getElementById('so');
+  if (soEl) soEl.focus();
+};
+
 window.submitStagingEntry = async function() {
   const result = await window.insertStagingEntry({
     fields: {
@@ -407,19 +433,7 @@ window.submitStagingEntry = async function() {
     logMessage: `Added new entry for SO: ${($('#so') ? $('#so').value : '').trim()}`,
     submitBtn: $('#add'),
     onSuccess: () => {
-      if ($('#so')) $('#so').value = '';
-      if ($('#customer')) $('#customer').value = '';
-      if ($('#loc')) $('#loc').value = '';
-      if ($('#staged_by')) $('#staged_by').value = '';
-      if ($('#weight')) $('#weight').value = '';
-      if ($('#c_skid')) $('#c_skid').value = 0;
-      if ($('#c_box')) $('#c_box').value = 0;
-      if ($('#c_crate')) $('#c_crate').value = 0;
-      if ($('#c_pipe')) $('#c_pipe').value = 0;
-      if ($('#c_other')) $('#c_other').value = 0;
-      if ($('#comments')) $('#comments').value = '';
-      mainPhotoBlobs = [];
-      if (typeof window.renderMainPhotoStrip === 'function') window.renderMainPhotoStrip();
+      if (typeof window.clearStagingEntryForm === 'function') window.clearStagingEntryForm();
     }
   });
   if (result && !result.ok && $('#add')) {
