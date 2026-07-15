@@ -18,7 +18,7 @@ window.APP_ASSET_VERSIONS = {
   batch: '6.2',
   media: '5.4',
   autoscan: '3.0',
-  employees: '3.4',
+  employees: '3.5',
   contacts: '1.1'
 };
 
