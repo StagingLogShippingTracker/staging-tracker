@@ -293,16 +293,15 @@ window.renderStagingTableBody = function({ tableId, query, sortMode, includeBatc
   const canEdit = !!currentUser;
   const filtered = window.filterLogByQuickSearch(appData.staging, query);
   const sorted = window.sortStagingEntries(filtered, sortMode || 'urgency');
-  const useMainTableLimits = tableId === 'tblStaging';
-  const limit = useMainTableLimits && typeof window.getTableRenderLimit === 'function'
+  const limit = typeof window.getTableRenderLimit === 'function'
     ? window.getTableRenderLimit(tableId, !!isDashPreview)
     : (isDashPreview ? 20 : 999999);
   const rows = sorted.slice(0, limit);
 
   sBody.innerHTML = rows.map(o => window.buildStagingRowHtml(o, { canEdit, includeBatch: !!includeBatch })).join('');
 
-  if (tableId === 'tblStaging' && typeof window.updateMobileCardMoreButtons === 'function') {
-    window.updateMobileCardMoreButtons('tblStaging', rows.length, sorted.length, !!isDashPreview);
+  if (typeof window.updateMobileCardMoreButtons === 'function') {
+    window.updateMobileCardMoreButtons(tableId, rows.length, sorted.length, !!isDashPreview);
   }
 
   return { total: sorted.length, shown: rows.length };
@@ -317,16 +316,15 @@ window.renderShippedTableBody = function({ tableId, query, sortMode, includeBatc
   const canEdit = !!currentUser;
   const filtered = window.filterLogByQuickSearch(appData.shipped, query);
   const sorted = window.sortShippedEntries(filtered, sortMode || 'default');
-  const useMainTableLimits = tableId === 'tblShipped';
-  const limit = useMainTableLimits && typeof window.getTableRenderLimit === 'function'
+  const limit = typeof window.getTableRenderLimit === 'function'
     ? window.getTableRenderLimit(tableId, !!isDashPreview)
     : (isDashPreview ? 20 : 999999);
   const rows = sorted.slice(0, limit);
 
   shBody.innerHTML = rows.map(o => window.buildShippedRowHtml(o, { canEdit, includeBatch: !!includeBatch })).join('');
 
-  if (tableId === 'tblShipped' && typeof window.updateMobileCardMoreButtons === 'function') {
-    window.updateMobileCardMoreButtons('tblShipped', rows.length, sorted.length, !!isDashPreview);
+  if (typeof window.updateMobileCardMoreButtons === 'function') {
+    window.updateMobileCardMoreButtons(tableId, rows.length, sorted.length, !!isDashPreview);
   }
 
   return { total: sorted.length, shown: rows.length };
@@ -886,6 +884,7 @@ window.openStagingExpandedModal = async function(startInBatchMode = false) {
     window.open(startInBatchMode ? 'stage.html?batch=true' : 'stage.html', '_blank');
     return;
   }
+  if (window.mobileCardVisible) window.mobileCardVisible.tblStagingExpanded = window.MOBILE_CARD_INITIAL;
   window.syncExpandedLogControls();
   window.renderStagingStatusLegend();
   if (!startInBatchMode && typeof window.isBatchActiveFor === 'function' && window.isBatchActiveFor('tblStagingExpanded')) {
@@ -927,6 +926,7 @@ window.openShippedExpandedModal = async function(startInBatchMode = false) {
     window.open(startInBatchMode ? 'ship.html?batch=true' : 'ship.html', '_blank');
     return;
   }
+  if (window.mobileCardVisible) window.mobileCardVisible.tblShippedExpanded = window.MOBILE_CARD_INITIAL;
   window.syncExpandedLogControls();
   if (!startInBatchMode && typeof window.isBatchActiveFor === 'function' && window.isBatchActiveFor('tblShippedExpanded')) {
     window.batchCancel();

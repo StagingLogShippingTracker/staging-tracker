@@ -2446,9 +2446,8 @@ body.modal-open {
     display: none !important;
   }
 
-  .mobile-card-show-more {
-    display: block !important;
-  }
+  /* Visibility of the Show More button is controlled by JS (updateMobileCardMoreButtons):
+     it is only shown when more cards remain to load. Do not force it visible here. */
 
   .contacts-table-wrap .tbl-scroller {
     overflow-x: hidden;
