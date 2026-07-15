@@ -400,6 +400,9 @@ window.lookupP21ForSoField = async function(soRaw) {
       ok: true,
       customer: String(h.customerName || s.customer || '').trim(),
       orderNo: String(h.orderNo || soKey).trim(),
+      linkedSo: String(h.linkedSo || s.linkedSo || '').trim(),
+      soCustomer: String(h.soCustomer || s.soCustomer || '').trim(),
+      purchasePo: !!(result.data.matchedBy === 'purchase_po' || h.purchasePo || s.purchasePo),
       taker,
       contact: window.findContactByPmName(taker),
       payload: result.data
