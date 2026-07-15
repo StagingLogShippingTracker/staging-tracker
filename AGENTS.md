@@ -12,7 +12,6 @@ SLST — Staging Log & Shipping Tracker: a **static HTML/JS PWA** (vanilla JS, n
 
 ### Live production backend — be careful
 - `config.js` hardcodes the **live production** Supabase URL + anon key. Create/edit/ship/delete actions write to **real** production data, and shipping/notification flows can trigger **real PM SMS/email** via the Make.com webhook (`config.js` `MAKE_EMAIL_WEBHOOK_URL`, with real phone numbers in `PM_SMS_ROSTER`). Keep testing **read-only** unless you have explicit approval and credentials. Anonymous users are read-only; create/edit is gated behind Supabase email/password sign-in (no test credentials are provisioned in this environment).
-- Console shows `502 / "Missing authorization header"` from the `removed-fn` edge function. This is the **optional**  (/Epicor ERP) enrichment and does **not** affect core staging/shipping functionality.
 
 ### Auth notes (non-obvious)
 - The create/edit UI is gated **client-side** (`auth.js` `updateAuthUI` toggles `currentUser` / `#entryFormCard`). The `staging` table's RLS currently permits **anonymous** insert/delete via the anon key — so writes can hit production even without a real Supabase session. Do not write to production casually.
@@ -23,7 +22,5 @@ SLST — Staging Log & Shipping Tracker: a **static HTML/JS PWA** (vanilla JS, n
 - Closest native check: `python3 scripts/audit-handlers.py` (verifies inline `on*=` handlers resolve to a loaded script). Note it currently reports pre-existing false positives (`MISSING: open` = the native `window.open` browser API) and exits non-zero — not caused by your changes.
 - No build step — asset cache-busting is manual via `window.APP_ASSET_VERSIONS` in `config.js`.
 
-### Optional / internal-network-only services (not needed for core testing)
-- `supabase/functions/*` — Deno edge functions ( ERP), deployed via Supabase.
-- `scripts/removed-proxy/-ui-publisher.py` — Playwright + Interactive UI publisher into `removed_table` (Swift/ credentials in local `.env`; see `scripts/removed-proxy/README.md`).
+### Optional tooling
 - PowerShell scripts under `scripts/` are Windows/Swift-network tooling.

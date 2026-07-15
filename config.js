@@ -3,27 +3,23 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const MAKE_EMAIL_WEBHOOK_URL = 'https://hook.us2.make.com/cxvgao3s4lwnrmntk762j25qct6bkkft';
 const TRACKER_SITE_URL = 'https://staginglogshippingtracker.github.io/staging-tracker/';
 const TRACKER_LOGO_URL = `${TRACKER_SITE_URL}staging-shipping-logo.png?v=4`;
-window.REMOVED = window.REMOVED || 'http://127.0.0.1:8787';
-window.REMOVED = window.REMOVED || 'https://swiftsupply.example.invalid//#/';
 
 window.APP_ASSET_VERSIONS = {
-  config: '4.15',
+  config: '4.16',
   partials: '1.4',
-  style: '10.21',
-  ui: '7.11',
+  style: '10.22',
+  ui: '7.12',
   app: '6.4',
   auth: '3.4',
-  history: '3.9',
+  history: '3.10',
   split: '3.7',
   reports: '3.8',
-  operations: '5.12',
+  operations: '5.13',
   batch: '6.2',
   media: '5.4',
   autoscan: '3.0',
-  employees: '3.3',
-  contacts: '1.1',
-  : '3.7',
-  searchOrder: '1.0'
+  employees: '3.4',
+  contacts: '1.1'
 };
 
 window.buildEmailNotificationFooter = function() {

@@ -55,9 +55,6 @@ window.loadCloudData = async function() {
     window.renderTables(); 
     if(typeof window.initUniversalDropdowns === 'function') window.initUniversalDropdowns();
     if(typeof window.checkOverdueShipments === 'function') window.checkOverdueShipments();
-    if (typeof window.warmP21CacheForOrders === 'function') {
-      window.warmP21CacheForOrders(allData.map(x => x.so).filter(Boolean));
-    }
   } catch(e) { console.error("Data load failed:", e); }
 };
 
@@ -105,7 +102,6 @@ window.submitReturnToStock = async function() {
     window.logAction('shipped', `Added Return to Stock log for SO: ${editTargetRecord.so}`);
     if(typeof window.showNotification === 'function') window.showNotification('Returned to Stock Successfully');
     if (typeof window.rememberPersonBy === 'function') window.rememberPersonBy(pickedBy, returnedBy);
-    if (typeof window.warmP21AfterSubmit === 'function') window.warmP21AfterSubmit(editTargetRecord.so);
 
     if(pmChecked && finalPmEmail) {
       const cachedSubject = `RETURN TO STOCK: SO ${editTargetRecord.so} - ${$('#e_cust').value.trim()}`;
@@ -258,7 +254,6 @@ window.submitFreightDispatch = async function() {
     if(typeof window.showNotification === 'function') window.showNotification('Freight Dispatched Successfully');
     if (typeof window.rememberPersonBy === 'function') window.rememberPersonBy(dispatcher);
     if (typeof window.rememberCarrier === 'function') window.rememberCarrier($('#m_carrier').value.trim());
-    if (typeof window.warmP21AfterSubmit === 'function') window.warmP21AfterSubmit(activeShipTargetItem.so);
 
     if(pmChecked && finalPmEmail) {
       const currentTimeStamp = new Date().toLocaleString();
@@ -371,7 +366,6 @@ window.insertStagingEntry = async function({
     if (typeof window.rememberPersonBy === 'function' && payload.staged_by) {
       window.rememberPersonBy(payload.staged_by);
     }
-    if (typeof window.warmP21AfterSubmit === 'function') window.warmP21AfterSubmit(soVal);
 
     if (onSuccess) onSuccess(insertedData && insertedData[0] ? insertedData[0] : null);
     window.loadCloudData();
@@ -584,16 +578,7 @@ window.submitPoNotification = async function() {
   $('#pn_submitBtn').disabled = true; $('#pn_submitBtn').textContent = 'Sending Notification...';
 
   try {
-    // Link the Sales Order (SO) attached to this PO in . Use the value already
-    // resolved when the PO field was looked up; otherwise resolve it now. Best-effort:
-    // if  is unreachable or has no linked SO, fall through with no linked SO.
     let linkedSo = ($('#pn_po') && $('#pn_po').dataset.linkedSo || '').trim();
-    if (!linkedSo && typeof window.lookupP21ForSoField === 'function') {
-      try {
-        const poHit = await window.lookupP21ForSoField(poVal);
-        if (poHit && poHit.ok && poHit.linkedSo) linkedSo = poHit.linkedSo;
-      } catch (_) { /*  unavailable — proceed without linked SO */ }
-    }
 
     const dynamicType = window.getDynamicType('pn');
     const weightVal = $('#pn_weight').value.trim();
@@ -797,7 +782,6 @@ window.submitQuickShip = async function() {
     if(typeof window.showNotification === 'function') window.showNotification('Quick Ship Successful');
     if (typeof window.rememberPersonBy === 'function') window.rememberPersonBy(dispatcher);
     if (typeof window.rememberCarrier === 'function') window.rememberCarrier($('#qs_carrier').value.trim());
-    if (typeof window.warmP21AfterSubmit === 'function') window.warmP21AfterSubmit(soVal);
 
     if(pmChecked && finalPmEmail) {
       const currentTimeStamp = new Date().toLocaleString();
@@ -1123,16 +1107,15 @@ window.getSoCustomerPairs = function() {
     { so: 'qs_so', cust: 'qs_cust', pm: { emailId: 'qs_pm_email', chkId: 'qs_pm_chk', btnId: 'qs_pm_email_btn' } },
     { so: 'e_so', cust: 'e_cust', pm: { emailId: 'e_pm' } },
     { so: 'nr_so', cust: 'nr_cust', pm: { emailId: 'nr_pm_email' } },
-    // PO Notification: PO# field mirrors the SO fields (click -> prompt -> 
-    // customer/PM autofill). isPo keeps the typed PO in the field and stashes the
-    // linked SO (from ) on the input's dataset for the notification submit.
+    // PO Notification: PO# field mirrors the SO fields (click -> prompt ->
+    // customer autofill from site history). isPo keeps the typed PO in the field.
     { so: 'pn_po', cust: 'pn_cust', pm: { emailId: 'pn_pm_email' }, isPo: true }
   ];
 };
 
 /**
  * Clicking an SO field opens a prompt (same idea as Quick Consolidate).
- * OK → write SO, pull  Order Entry, autofill customer (editable).
+ * OK → write SO, autofill customer from prior staging/shipped history (editable).
  * Cancel → leave fields alone.
  * Clicking SO again and confirming overwrites prior autofill/manual customer.
  */
@@ -1185,7 +1168,7 @@ window.initSoCustomerAutofill = function() {
       });
     }
 
-    soEl.addEventListener('click', async (ev) => {
+    soEl.addEventListener('click', (ev) => {
       if (soEl.readOnly || soEl.disabled) return;
       // Ignore synthetic clicks from non-pointer sources if needed
       const entered = prompt(isPo ? 'Enter exact PO# (or SO#):' : 'Enter exact SO# (or PO#):', soEl.value || '');
@@ -1202,61 +1185,20 @@ window.initSoCustomerAutofill = function() {
         return;
       }
 
-      // Give  time: show busy state while looking up
-      const prevCust = custEl ? custEl.value : '';
+      const customer = window.lookupCustomerBySo(soEl.value.trim()) || '';
       if (custEl) {
-        custEl.value = 'Loading from …';
-        custEl.disabled = true;
+        custEl.value = customer || '';
+        if (customer) {
+          custEl.dataset.autoFilled = '1';
+          delete custEl.dataset.manualCustomer; // re-entry overwrites prior manual
+        } else {
+          delete custEl.dataset.autoFilled;
+        }
       }
-      soEl.disabled = true;
-      try {
-        let customer = '';
-        let hit = null;
-        if (typeof window.lookupP21ForSoField === 'function') {
-          hit = await window.lookupP21ForSoField(soVal);
-          if (hit?.ok) {
-            if (isPo) {
-              // For a PO, keep the PO in the field, remember the linked SO, and prefer
-              // the end-customer (soCustomer) over the supplier/vendor name.
-              customer = hit.soCustomer || hit.customer || '';
-              if (hit.linkedSo) soEl.dataset.linkedSo = hit.linkedSo;
-            } else {
-              customer = hit.customer || '';
-              if (hit.orderNo && hit.orderNo !== soVal) {
-                // Prefer canonical order number when user typed a PO
-                soEl.value = hit.orderNo;
-              }
-            }
-            if (pm && hit.contact) window.applyPmContactToFields(hit.contact, pm);
-            else if (pm && typeof window.autofillPmEmailFromSo === 'function') {
-              await window.autofillPmEmailFromSo((hit.linkedSo || soEl.value).trim(), pm).catch(() => {});
-            }
-          }
-        }
-        if (!customer) {
-          customer = window.lookupCustomerBySo(soEl.value.trim()) || '';
-        }
-        if (custEl) {
-          custEl.value = customer || '';
-          if (customer) {
-            custEl.dataset.autoFilled = '1';
-            delete custEl.dataset.manualCustomer; // re-entry overwrites prior manual
-          } else {
-            custEl.value = prevCust && prevCust !== 'Loading from …' ? '' : '';
-            delete custEl.dataset.autoFilled;
-          }
-        }
-        if (!customer && typeof window.showNotification === 'function') {
-          window.showNotification(' customer not found — enter customer manually');
-        }
-      } catch (e) {
-        if (custEl) custEl.value = '';
-        alert(' lookup failed: ' + (e.message || e));
-      } finally {
-        soEl.disabled = false;
-        if (custEl) custEl.disabled = false;
-        soEl.focus();
+      if (!customer && typeof window.showNotification === 'function') {
+        window.showNotification('Customer not found in site history — enter customer manually');
       }
+      soEl.focus();
     });
   });
 };

@@ -461,12 +461,6 @@ window.openUniversalEditor = async function(table, id) {
     if($('#e_pm')) $('#e_pm').value = o.pmd_email || '';
   }
 
-  if (o.so && typeof window.autofillPmEmailFromSo === 'function') {
-    const pmEl = $('#e_pm');
-    if (pmEl && !String(pmEl.value || '').trim()) {
-      window.autofillPmEmailFromSo(o.so, { emailId: 'e_pm' }).catch(() => {});
-    }
-  }
   
   window.renderEditPhotoStrip();
 };
@@ -476,10 +470,6 @@ window.triggerReturnModal = async function() {
   window.closeModal('editModal');
   if($('#r_picked_by')) $('#r_picked_by').value = ''; if($('#r_returned_by')) $('#r_returned_by').value = ''; if($('#r_reason')) $('#r_reason').value = ''; 
   if($('#r_pm_chk')) $('#r_pm_chk').checked = false; window.togglePMEmail(false, 'r_pm_email', 'r_pm_email_btn'); if($('#r_pm_email')) $('#r_pm_email').value = '';
-  const so = (typeof editTargetRecord !== 'undefined' && editTargetRecord && editTargetRecord.so) ? editTargetRecord.so : '';
-  if (so && typeof window.autofillPmEmailFromSo === 'function') {
-    window.autofillPmEmailFromSo(so, { emailId: 'r_pm_email', chkId: 'r_pm_chk', btnId: 'r_pm_email_btn', autoCheck: false }).catch(() => {});
-  }
 };
 
 window.openCommentModal = async function(table, id) {
@@ -494,19 +484,6 @@ window.openCommentModal = async function(table, id) {
 
 window.togglePMEmail = function(isChecked, inputId, btnId) {
   if($('#'+inputId)) $('#'+inputId).disabled = !isChecked; if($('#'+btnId)) $('#'+btnId).disabled = !isChecked;
-  if (!isChecked || !inputId) return;
-  const input = $('#'+inputId);
-  if (!input || input.value.trim()) return;
-  const soMap = {
-    m_pm_email: 'm_so',
-    r_pm_email: () => (typeof editTargetRecord !== 'undefined' && editTargetRecord ? editTargetRecord.so : ''),
-    qs_pm_email: 'qs_so'
-  };
-  const soSrc = soMap[inputId];
-  const so = typeof soSrc === 'function' ? soSrc() : (soSrc && $('#'+soSrc) ? $('#'+soSrc).value : '');
-  if (so && typeof window.autofillPmEmailFromSo === 'function') {
-    window.autofillPmEmailFromSo(so, { emailId: inputId, chkId: null, btnId, autoCheck: false }).catch(() => {});
-  }
 };
 
 window.triggerShipModal = async function(id) {
@@ -524,9 +501,6 @@ window.triggerShipModal = async function(id) {
   if($('#m_comments')) $('#m_comments').value = item.comments || ''; 
   
   if($('#m_pm_chk')) $('#m_pm_chk').checked = false; window.togglePMEmail(false, 'm_pm_email', 'm_pm_email_btn'); if($('#m_pm_email')) $('#m_pm_email').value = '';
-  if (item.so && typeof window.autofillPmEmailFromSo === 'function') {
-    window.autofillPmEmailFromSo(item.so, { emailId: 'm_pm_email', chkId: 'm_pm_chk', btnId: 'm_pm_email_btn', autoCheck: false }).catch(() => {});
-  }
   window.renderPhotoStrip();
 };
 

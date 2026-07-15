@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#D93223" />
 <link rel="manifest" href="manifest.webmanifest?v=2" />
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<link rel="stylesheet" href="style.css?v=10.21" />
+<link rel="stylesheet" href="style.css?v=10.22" />
 </head>
 <body class="log-page">
 <div id="shared-datalists-host"></div>
@@ -29,7 +29,6 @@
           <a href="stage.html" class="indented">&#8627; Staging Entries Log</a>
           <a href="ship.html" class="indented">&#8627; Shipped Log</a>
           <a href="reports.html"><b>Reports</b></a>
-          <a href="index.html"><b>Search Order</b></a>
           <a href="notifications.html"><b>Notifications</b></a>
           <a href="contacts.html"><b>Contacts</b></a>
         </div>
@@ -271,16 +270,15 @@
 <div id="statDetailModal" class="modal-overlay"><div class="modal-window" style="max-width: 600px;"><button class="modal-close-x" onclick="document.querySelector('#statDetailModal').style.display='none'">&times;</button><div class="split" style="margin-bottom:12px;"><h3 id="statDetailTitle" style="margin:0;">Active Staging Orders</h3><div class="toolbar-row"><select id="sortStatDetail" class="select-sort" onchange="window.renderStatDetailModal()"></select></div></div><div class="search-with-clear" style="margin-bottom:12px;"><input id="searchStatDetail" autocomplete="off" spellcheck="false" placeholder="Quick Search SO or Customer..." oninput="window.filterStatDetailModal()"/><button type="button" class="search-clear-btn is-empty" aria-label="Clear search" onclick="window.clearSearchField('searchStatDetail')">Clear</button></div><div class="table-wrap" style="max-height: 400px; overflow-y: auto;"><table id="tblStatDetail" style="min-width: 480px; width: 100%;"><thead><tr><th>SO</th><th colspan="3">Details</th></tr></thead><tbody></tbody></table></div></div></div>
 </script>
     
-<script src="employees.js?v=3.3"></script>
-<script src="config.js?v=4.15"></script>
+<script src="employees.js?v=3.4"></script>
+<script src="config.js?v=4.16"></script>
 <script src="partials-loader.js?v=1.5"></script>
 <script src="auth.js?v=3.4"></script>
-<script src="ui.js?v=7.11"></script>
-<script src=".js?v=3.7"></script>
-<script src="history.js?v=3.9"></script>
+<script src="ui.js?v=7.12"></script>
+<script src="history.js?v=3.10"></script>
 <script src="split.js?v=3.8"></script>
 <script src="reports.js?v=3.10"></script>
-<script src="operations.js?v=5.12"></script>
+<script src="operations.js?v=5.13"></script>
 <script src="batch.js?v=6.4"></script>
 <script src="autoscan.js?v=3.0"></script>
 <script src="media.js?v=5.4"></script>

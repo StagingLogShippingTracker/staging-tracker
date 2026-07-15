@@ -32,18 +32,13 @@ Or use full Git after installing [Git for Windows](https://git-scm.com/download/
 
 Open `index.html` in a browser, or use a simple static server. Hard-refresh after JS/CSS changes (cache-bust query strings on assets).
 
-##  sync (Swift network)
-
-See [scripts/removed-proxy/README.md](scripts/removed-proxy/README.md).
-
 ## Secrets (never commit)
 
-- `scripts/removed-proxy/.env` —  + Supabase sync key (gitignored)
-- Supabase Edge Function secrets — set in Supabase Dashboard
+- `.env` files with credentials (gitignored)
 
 ## Integrations
 
-- **Supabase** — `plugin-supabase-supabase` MCP (database, edge functions)
+- **Supabase** — `plugin-supabase-supabase` MCP (database)
 - **Make.com** — `.cursor/mcp.json` + OAuth sign-in (scenarios, webhooks). See [docs/MAKE-MCP-SETUP.md](docs/MAKE-MCP-SETUP.md)
 
 ## Remote
