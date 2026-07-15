@@ -14,7 +14,7 @@ window.APP_ASSET_VERSIONS = {
   history: '3.10',
   split: '3.7',
   reports: '3.8',
-  operations: '5.13',
+  operations: '5.14',
   batch: '6.2',
   media: '5.4',
   autoscan: '3.0',

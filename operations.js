@@ -1322,3 +1322,59 @@ window.closeReportAddModal = function() {
   window.closeModal('reportAddModal');
   if (window.activeReportMode) window.openModal('reportMainModal', { requireShared: false });
 };
+
+window.purgeAllRemnantData = async function() {
+  if (!currentUser) {
+    const msg = 'Sign in required to purge remaining data.';
+    if (typeof window.showNotification === 'function') window.showNotification(msg);
+    else alert(msg);
+    return { ok: false, error: 'not_signed_in' };
+  }
+  if (!confirm('Permanently delete all dropdown roster entries and all freight photos? This cannot be undone.')) {
+    return { ok: false, error: 'cancelled' };
+  }
+
+  const result = { dropdown_deleted: 0, photos_deleted: 0, errors: [] };
+
+  const { data: rosterRows, error: rosterFetchErr } = await supabaseClient
+    .from('dropdown_roster')
+    .select('id');
+  if (rosterFetchErr) {
+    result.errors.push(`dropdown_roster fetch: ${rosterFetchErr.message}`);
+  } else if (rosterRows && rosterRows.length) {
+    const { error: rosterDeleteErr } = await supabaseClient
+      .from('dropdown_roster')
+      .delete()
+      .in('id', rosterRows.map(row => row.id));
+    if (rosterDeleteErr) result.errors.push(`dropdown_roster delete: ${rosterDeleteErr.message}`);
+    else result.dropdown_deleted = rosterRows.length;
+  }
+
+  let offset = 0;
+  while (true) {
+    const { data: files, error: listErr } = await supabaseClient.storage
+      .from('freight-photos')
+      .list('', { limit: 1000, offset, sortBy: { column: 'name', order: 'asc' } });
+    if (listErr) {
+      result.errors.push(`freight-photos list: ${listErr.message}`);
+      break;
+    }
+    const names = (files || []).map(file => file.name).filter(Boolean);
+    if (!names.length) break;
+    const { error: removeErr } = await supabaseClient.storage.from('freight-photos').remove(names);
+    if (removeErr) {
+      result.errors.push(`freight-photos delete: ${removeErr.message}`);
+      break;
+    }
+    result.photos_deleted += names.length;
+    if (names.length < 1000) break;
+    offset += 1000;
+  }
+
+  if (typeof window.loadCloudRosters === 'function') await window.loadCloudRosters();
+  result.ok = result.errors.length === 0;
+  const summary = `Purged ${result.dropdown_deleted} dropdown entries and ${result.photos_deleted} photos.`;
+  if (typeof window.showNotification === 'function') window.showNotification(summary);
+  else alert(summary);
+  return result;
+};
