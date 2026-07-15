@@ -20,10 +20,10 @@ SLST — Staging Log & Shipping Tracker: a **static HTML/JS PWA** (vanilla JS, n
 
 ### Lint / test / build
 - There is **no** `package.json`, bundler, formal test suite, or CI in this repo.
-- Closest native check: `python3 scripts/audit-handlers.py` (verifies inline `on*=` handlers resolve to a loaded script). Note it currently reports pre-existing false positives (`MISSING: open` = the native `window.open` browser API) and exits non-zero — not caused by your changes. The `.mjs` sibling (`scripts/audit-handlers.mjs`) has a path bug and errors out; prefer the Python version.
+- Closest native check: `python3 scripts/audit-handlers.py` (verifies inline `on*=` handlers resolve to a loaded script). Note it currently reports pre-existing false positives (`MISSING: open` = the native `window.open` browser API) and exits non-zero — not caused by your changes.
 - No build step — asset cache-busting is manual via `window.APP_ASSET_VERSIONS` in `config.js`.
 
 ### Optional / internal-network-only services (not needed for core testing)
 - `supabase/functions/*` — Deno edge functions ( ERP), deployed via Supabase.
-- `scripts/removed-proxy/server.mjs` — Node connector to  (port 8787), Swift VPN only.
+- `scripts/removed-proxy/-ui-publisher.py` — Playwright + Interactive UI publisher into `removed_table` (Swift/ credentials in local `.env`; see `scripts/removed-proxy/README.md`).
 - PowerShell scripts under `scripts/` are Windows/Swift-network tooling.
