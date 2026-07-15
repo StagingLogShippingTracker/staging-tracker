@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<script>try{var t=localStorage.getItem('swift_theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}</script>
+<title>SLST - Staging Log & Shipping Tracker - Search Order</title>
+<meta name="theme-color" content="#D93223" />
+<link rel="manifest" href="manifest.webmanifest?v=2" />
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="stylesheet" href="style.css?v=10.20" />
+</head>
+<body>
+<div id="shared-datalists-host"></div>
+<script type="text/plain" id="tpl-shared-datalists">
+<datalist id="dl_customers"></datalist>
+<datalist id="dl_locations"></datalist>
+<datalist id="dl_stagers"></datalist>
+<datalist id="dl_pastEmails"></datalist>
+<datalist id="dl_sos"></datalist>
+</script>
+
+<div class="wrap">
+  <header class="site-header">
+    <div class="site-header__start">
+      <div class="dropdown">
+        <button class="hamburger-btn" onclick="window.toggleMenu(event)">☰</button>
+        <div class="dropdown-content">
+          <a href="index.html"><b>Index</b> (Dashboard)</a>
+          <a href="stage.html" class="indented">↳ Staging Entries Log</a>
+          <a href="ship.html" class="indented">↳ Shipped Log</a>
+          <a href="reports.html"><b>Reports</b></a>
+          <a href="search-order.html"><b>Search Order</b></a>
+          <a href="notifications.html"><b>Notifications</b></a>
+          <a href="contacts.html"><b>Contacts</b></a>
+        </div>
+      </div>
+    </div>
+    <div class="site-header__title-wrap">
+      <img src="brand/staging-shipping-logo-transparent.png?v=1" alt="" class="site-header__title-logo" aria-hidden="true" draggable="false" />
+      <h1 class="site-header__title">Search Order</h1>
+    </div>
+    <div class="site-header__end"><div id="authStatus" class="auth-status"></div></div>
+  </header>
+
+  <div class="card">
+    <div class="split"><h3>Search SO Details</h3></div>
+    <p class="card-desc">Look up Prophet21 sales order (SO) details — customer, PO, status, and line items — without pairing to a staged order.</p>
+    <div class="search-with-clear" style="margin-bottom:12px;">
+      <input id="search_so_input" autocomplete="off" spellcheck="false" placeholder="Enter SO number (e.g. 1289039)..." />
+      <button type="button" class="btn btn-info" onclick="window.runOrderSearch('so')">Search SO</button>
+    </div>
+    <div id="search_so_result" class="history-section" style="display:none;">
+      <h4 class="section-p21">Prophet21 Order Insights</h4>
+      <div id="search_so_content"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="split"><h3>Search PO Details</h3></div>
+    <p class="card-desc">Look up Prophet21 purchase order (PO) details, including the linked sales order when Prophet21 has one.</p>
+    <div class="search-with-clear" style="margin-bottom:12px;">
+      <input id="search_po_input" autocomplete="off" spellcheck="false" placeholder="Enter PO number (e.g. 4276832)..." />
+      <button type="button" class="btn btn-info" onclick="window.runOrderSearch('po')">Search PO</button>
+    </div>
+    <div id="search_po_result" class="history-section" style="display:none;">
+      <h4 class="section-p21">Prophet21 Order Insights</h4>
+      <div id="search_po_content"></div>
+    </div>
+  </div>
+</div>
+
+<div id="shared-modals-host"></div>
+
+<script src="employees.js?v=3.3"></script>
+<script src="config.js?v=4.10"></script>
+<script src="partials-loader.js?v=1.5"></script>
+<script src="auth.js?v=3.4"></script>
+<script src="ui.js?v=7.10"></script>
+<script src="p21.js?v=3.4"></script>
+<script src="history.js?v=3.9"></script>
+<script src="split.js?v=3.8"></script>
+<script src="reports.js?v=3.11"></script>
+<script src="operations.js?v=5.10"></script>
+<script src="batch.js?v=6.4"></script>
+<script src="autoscan.js?v=3.0"></script>
+<script src="media.js?v=5.4"></script>
+<script src="search-order.js?v=1.0"></script>
+<script src="app.js?v=6.3"></script>
+</body>
+</html>
