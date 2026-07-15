@@ -68,14 +68,23 @@ window.isMobileCardView = function() {
 
 window.MOBILE_CARD_INITIAL = 5;
 window.MOBILE_CARD_STEP = 5;
-window.mobileCardVisible = { tblStaging: 5, tblShipped: 5 };
+
+// Tables that use the mobile "stacking card" 5-at-a-time pagination, mapped to their
+// "Show More" button IDs. Covers both dashboard/standalone logs and the expanded-log modals.
+window.MOBILE_CARD_TABLES = {
+  tblStaging: 'stagingShowMore',
+  tblShipped: 'shippedShowMore',
+  tblStagingExpanded: 'stagingExpandedShowMore',
+  tblShippedExpanded: 'shippedExpandedShowMore'
+};
 
 window.resetMobileCardVisible = function() {
-  window.mobileCardVisible = {
-    tblStaging: window.MOBILE_CARD_INITIAL,
-    tblShipped: window.MOBILE_CARD_INITIAL
-  };
+  window.mobileCardVisible = {};
+  Object.keys(window.MOBILE_CARD_TABLES).forEach(id => {
+    window.mobileCardVisible[id] = window.MOBILE_CARD_INITIAL;
+  });
 };
+window.resetMobileCardVisible();
 
 window.showMoreMobileCards = function(tableId) {
   if (!window.mobileCardVisible) window.resetMobileCardVisible();
@@ -88,27 +97,27 @@ window.getTableRenderLimit = function(tableId, isDashboardPreview) {
     if (!window.mobileCardVisible) window.resetMobileCardVisible();
     return window.mobileCardVisible[tableId] || window.MOBILE_CARD_INITIAL;
   }
-  if (isDashboardPreview) return 20;
+  // Desktop/tablet: no cap. The mobile 5-card pagination is the only limiter now,
+  // so dashboards no longer truncate to 20 on wider screens.
   return 999999;
 };
 
 window.updateMobileCardMoreButtons = function(tableId, shownCount, totalCount, isDashboardPreview) {
-  const isStaging = tableId === 'tblStaging';
-  const btn = document.getElementById(isStaging ? 'stagingShowMore' : 'shippedShowMore');
-  const notice = document.getElementById(isStaging ? 'stageLimitNotice' : 'shippedLimitNotice');
+  const btnId = (window.MOBILE_CARD_TABLES && window.MOBILE_CARD_TABLES[tableId]) || null;
+  const btn = btnId ? document.getElementById(btnId) : null;
+  const noticeId = tableId === 'tblStaging' ? 'stageLimitNotice' : (tableId === 'tblShipped' ? 'shippedLimitNotice' : null);
+  const notice = noticeId ? document.getElementById(noticeId) : null;
+
+  // Legacy "Showing first 20" notice is retired now that dashboards show all rows on desktop.
+  if (notice) notice.style.display = 'none';
 
   if (window.isMobileCardView()) {
-    if (notice) notice.style.display = 'none';
+    // Only show "Show More" when there are additional cards left to reveal.
     if (btn) btn.style.display = shownCount < totalCount ? 'block' : 'none';
     return;
   }
 
   if (btn) btn.style.display = 'none';
-  if (notice && isDashboardPreview) {
-    notice.style.display = totalCount > 20 ? 'block' : 'none';
-  } else if (notice) {
-    notice.style.display = 'none';
-  }
 };
 
 window.syncMobileCardBatchMode = function() {
