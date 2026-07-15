@@ -68,46 +68,73 @@ window.isMobileCardView = function() {
 
 window.MOBILE_CARD_INITIAL = 5;
 window.MOBILE_CARD_STEP = 5;
-window.mobileCardVisible = { tblStaging: 5, tblShipped: 5 };
+window.MOBILE_CARD_TABLES = ['tblStaging', 'tblShipped', 'tblStagingExpanded', 'tblShippedExpanded'];
+window.MOBILE_CARD_MORE_BTNS = {
+  tblStaging: 'stagingShowMore',
+  tblShipped: 'shippedShowMore',
+  tblStagingExpanded: 'stagingExpandedShowMore',
+  tblShippedExpanded: 'shippedExpandedShowMore'
+};
 
-window.resetMobileCardVisible = function() {
-  window.mobileCardVisible = {
-    tblStaging: window.MOBILE_CARD_INITIAL,
-    tblShipped: window.MOBILE_CARD_INITIAL
-  };
+window.resetMobileCardVisible = function(tableId) {
+  const initial = window.MOBILE_CARD_INITIAL;
+  if (!window.mobileCardVisible) {
+    window.mobileCardVisible = {};
+  }
+  const targets = tableId ? [tableId] : window.MOBILE_CARD_TABLES;
+  targets.forEach((id) => {
+    window.mobileCardVisible[id] = initial;
+  });
+};
+
+window.mobileCardVisible = {
+  tblStaging: 5,
+  tblShipped: 5,
+  tblStagingExpanded: 5,
+  tblShippedExpanded: 5
 };
 
 window.showMoreMobileCards = function(tableId) {
   if (!window.mobileCardVisible) window.resetMobileCardVisible();
   window.mobileCardVisible[tableId] = (window.mobileCardVisible[tableId] || window.MOBILE_CARD_INITIAL) + window.MOBILE_CARD_STEP;
+  if (tableId === 'tblStagingExpanded' && typeof window.renderStagingExpandedModal === 'function') {
+    window.renderStagingExpandedModal();
+    return;
+  }
+  if (tableId === 'tblShippedExpanded' && typeof window.renderShippedExpandedModal === 'function') {
+    window.renderShippedExpandedModal();
+    return;
+  }
   if (typeof window.renderTables === 'function') window.renderTables();
 };
 
-window.getTableRenderLimit = function(tableId, isDashboardPreview) {
-  if (window.isMobileCardView()) {
+window.getTableRenderLimit = function(tableId) {
+  // Mobile stacking cards: batches of 5. Desktop / landscape tables: show full list.
+  if (window.isMobileCardView() && window.MOBILE_CARD_TABLES.includes(tableId)) {
     if (!window.mobileCardVisible) window.resetMobileCardVisible();
     return window.mobileCardVisible[tableId] || window.MOBILE_CARD_INITIAL;
   }
-  if (isDashboardPreview) return 20;
   return 999999;
 };
 
-window.updateMobileCardMoreButtons = function(tableId, shownCount, totalCount, isDashboardPreview) {
-  const isStaging = tableId === 'tblStaging';
-  const btn = document.getElementById(isStaging ? 'stagingShowMore' : 'shippedShowMore');
-  const notice = document.getElementById(isStaging ? 'stageLimitNotice' : 'shippedLimitNotice');
+window.updateMobileCardMoreButtons = function(tableId, shownCount, totalCount) {
+  const btnId = window.MOBILE_CARD_MORE_BTNS[tableId];
+  const btn = btnId ? document.getElementById(btnId) : null;
 
-  if (window.isMobileCardView()) {
-    if (notice) notice.style.display = 'none';
-    if (btn) btn.style.display = shownCount < totalCount ? 'block' : 'none';
+  if (window.isMobileCardView() && window.MOBILE_CARD_TABLES.includes(tableId)) {
+    if (btn) {
+      const hasMore = shownCount < totalCount;
+      btn.classList.toggle('is-visible', hasMore);
+      btn.hidden = !hasMore;
+      btn.style.display = '';
+    }
     return;
   }
 
-  if (btn) btn.style.display = 'none';
-  if (notice && isDashboardPreview) {
-    notice.style.display = totalCount > 20 ? 'block' : 'none';
-  } else if (notice) {
-    notice.style.display = 'none';
+  if (btn) {
+    btn.classList.remove('is-visible');
+    btn.hidden = true;
+    btn.style.display = '';
   }
 };
 

@@ -284,7 +284,7 @@ window.buildShippedRowHtml = function(o, { canEdit, includeBatch }) {
   </tr>`;
 };
 
-window.renderStagingTableBody = function({ tableId, query, sortMode, includeBatch, isDashPreview }) {
+window.renderStagingTableBody = function({ tableId, query, sortMode, includeBatch }) {
   const table = document.getElementById(tableId);
   if (!table) return { total: 0, shown: 0 };
   const sBody = table.querySelector('tbody');
@@ -293,22 +293,21 @@ window.renderStagingTableBody = function({ tableId, query, sortMode, includeBatc
   const canEdit = !!currentUser;
   const filtered = window.filterLogByQuickSearch(appData.staging, query);
   const sorted = window.sortStagingEntries(filtered, sortMode || 'urgency');
-  const useMainTableLimits = tableId === 'tblStaging';
-  const limit = useMainTableLimits && typeof window.getTableRenderLimit === 'function'
-    ? window.getTableRenderLimit(tableId, !!isDashPreview)
-    : (isDashPreview ? 20 : 999999);
+  const limit = typeof window.getTableRenderLimit === 'function'
+    ? window.getTableRenderLimit(tableId)
+    : 999999;
   const rows = sorted.slice(0, limit);
 
   sBody.innerHTML = rows.map(o => window.buildStagingRowHtml(o, { canEdit, includeBatch: !!includeBatch })).join('');
 
-  if (tableId === 'tblStaging' && typeof window.updateMobileCardMoreButtons === 'function') {
-    window.updateMobileCardMoreButtons('tblStaging', rows.length, sorted.length, !!isDashPreview);
+  if (typeof window.updateMobileCardMoreButtons === 'function') {
+    window.updateMobileCardMoreButtons(tableId, rows.length, sorted.length);
   }
 
   return { total: sorted.length, shown: rows.length };
 };
 
-window.renderShippedTableBody = function({ tableId, query, sortMode, includeBatch, isDashPreview }) {
+window.renderShippedTableBody = function({ tableId, query, sortMode, includeBatch }) {
   const table = document.getElementById(tableId);
   if (!table) return { total: 0, shown: 0 };
   const shBody = table.querySelector('tbody');
@@ -317,16 +316,15 @@ window.renderShippedTableBody = function({ tableId, query, sortMode, includeBatc
   const canEdit = !!currentUser;
   const filtered = window.filterLogByQuickSearch(appData.shipped, query);
   const sorted = window.sortShippedEntries(filtered, sortMode || 'default');
-  const useMainTableLimits = tableId === 'tblShipped';
-  const limit = useMainTableLimits && typeof window.getTableRenderLimit === 'function'
-    ? window.getTableRenderLimit(tableId, !!isDashPreview)
-    : (isDashPreview ? 20 : 999999);
+  const limit = typeof window.getTableRenderLimit === 'function'
+    ? window.getTableRenderLimit(tableId)
+    : 999999;
   const rows = sorted.slice(0, limit);
 
   shBody.innerHTML = rows.map(o => window.buildShippedRowHtml(o, { canEdit, includeBatch: !!includeBatch })).join('');
 
-  if (tableId === 'tblShipped' && typeof window.updateMobileCardMoreButtons === 'function') {
-    window.updateMobileCardMoreButtons('tblShipped', rows.length, sorted.length, !!isDashPreview);
+  if (typeof window.updateMobileCardMoreButtons === 'function') {
+    window.updateMobileCardMoreButtons(tableId, rows.length, sorted.length);
   }
 
   return { total: sorted.length, shown: rows.length };
@@ -367,8 +365,7 @@ window.renderTables = function() {
       tableId: 'tblStaging',
       query: q,
       sortMode,
-      includeBatch: window.isBatchActiveFor('tblStaging'),
-      isDashPreview: !!$('#stageLimitNotice')
+      includeBatch: window.isBatchActiveFor('tblStaging')
     });
   }
 
@@ -378,8 +375,7 @@ window.renderTables = function() {
       tableId: 'tblShipped',
       query: q,
       sortMode: shippedSortMode,
-      includeBatch: window.isBatchActiveFor('tblShipped'),
-      isDashPreview: !!$('#shippedLimitNotice')
+      includeBatch: window.isBatchActiveFor('tblShipped')
     });
   }
 
@@ -871,13 +867,16 @@ window.filterOrdersModal = window.filterStatDetailModal;
 
 window.renderStagingExpandedModal = function() {
   const q = ($('#searchStagingExpanded') ? $('#searchStagingExpanded').value : '').toLowerCase();
+  if (window._renderStagingExpandedSearchKey !== q) {
+    if (typeof window.resetMobileCardVisible === 'function') window.resetMobileCardVisible('tblStagingExpanded');
+    window._renderStagingExpandedSearchKey = q;
+  }
   const sortMode = $('#sortStagingExpanded') ? $('#sortStagingExpanded').value : 'urgency';
   window.renderStagingTableBody({
     tableId: 'tblStagingExpanded',
     query: q,
     sortMode,
-    includeBatch: window.isBatchActiveFor('tblStagingExpanded'),
-    isDashPreview: false
+    includeBatch: window.isBatchActiveFor('tblStagingExpanded')
   });
 };
 
@@ -888,6 +887,8 @@ window.openStagingExpandedModal = async function(startInBatchMode = false) {
   }
   window.syncExpandedLogControls();
   window.renderStagingStatusLegend();
+  if (typeof window.resetMobileCardVisible === 'function') window.resetMobileCardVisible('tblStagingExpanded');
+  window._renderStagingExpandedSearchKey = undefined;
   if (!startInBatchMode && typeof window.isBatchActiveFor === 'function' && window.isBatchActiveFor('tblStagingExpanded')) {
     window.batchCancel();
   }
@@ -912,13 +913,16 @@ window.closeStagingExpandedModal = function() {
 
 window.renderShippedExpandedModal = function() {
   const q = ($('#searchShippedExpanded') ? $('#searchShippedExpanded').value : '').toLowerCase();
+  if (window._renderShippedExpandedSearchKey !== q) {
+    if (typeof window.resetMobileCardVisible === 'function') window.resetMobileCardVisible('tblShippedExpanded');
+    window._renderShippedExpandedSearchKey = q;
+  }
   const sortMode = $('#sortShippedExpanded') ? $('#sortShippedExpanded').value : 'default';
   window.renderShippedTableBody({
     tableId: 'tblShippedExpanded',
     query: q,
     sortMode,
-    includeBatch: window.isBatchActiveFor('tblShippedExpanded'),
-    isDashPreview: false
+    includeBatch: window.isBatchActiveFor('tblShippedExpanded')
   });
 };
 
@@ -928,6 +932,8 @@ window.openShippedExpandedModal = async function(startInBatchMode = false) {
     return;
   }
   window.syncExpandedLogControls();
+  if (typeof window.resetMobileCardVisible === 'function') window.resetMobileCardVisible('tblShippedExpanded');
+  window._renderShippedExpandedSearchKey = undefined;
   if (!startInBatchMode && typeof window.isBatchActiveFor === 'function' && window.isBatchActiveFor('tblShippedExpanded')) {
     window.batchCancel();
   }

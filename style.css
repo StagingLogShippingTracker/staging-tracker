@@ -1051,6 +1051,10 @@ th[style*="position:sticky"], td[style*="position:sticky"] { background: var(--s
   letter-spacing: 0.02em;
 }
 
+.mobile-card-show-more[hidden] {
+  display: none !important;
+}
+
 .mobile-card-show-more:hover {
   background: var(--brand-soft);
   border-color: var(--brand-light);
@@ -2446,7 +2450,8 @@ body.modal-open {
     display: none !important;
   }
 
-  .mobile-card-show-more {
+  /* Only show when JS marks more cards available */
+  .mobile-card-show-more.is-visible:not([hidden]) {
     display: block !important;
   }
 
@@ -2456,7 +2461,8 @@ body.modal-open {
 }
 
 @media (min-width: 768px) {
-  .mobile-card-show-more {
+  .mobile-card-show-more,
+  .mobile-card-show-more.is-visible {
     display: none !important;
   }
 }
