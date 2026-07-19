@@ -5,6 +5,7 @@ import '../../core/theme.dart';
 import '../../data/app_state.dart';
 import '../../domain/models.dart';
 import '../../platform/photo_picker.dart';
+import '../scanner/scanner_screen.dart';
 import '../shared/entry_suggestion_fields.dart';
 import '../shared/widgets.dart';
 
@@ -134,13 +135,23 @@ class _ShipDialogState extends ConsumerState<ShipDialog> {
               ),
               Align(
                 alignment: Alignment.centerLeft,
-                child: TextButton.icon(
-                  onPressed: () async {
-                    final files = await _picker.pickPreferred();
-                    setState(() => _photos.addAll(files));
-                  },
-                  icon: const Icon(Icons.add_a_photo),
-                  label: Text('Add photos (${_photos.length})'),
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    TextButton.icon(
+                      onPressed: () async {
+                        final files = await _picker.pickPreferred();
+                        setState(() => _photos.addAll(files));
+                      },
+                      icon: const Icon(Icons.add_a_photo),
+                      label: Text('Add photos (${_photos.length})'),
+                    ),
+                    ScanDocumentButton(
+                      onScanned: (pages) =>
+                          setState(() => _photos.addAll(pages)),
+                    ),
+                  ],
                 ),
               ),
             ],

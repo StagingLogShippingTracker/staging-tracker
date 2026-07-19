@@ -6,6 +6,7 @@ import '../../data/app_state.dart';
 import '../../domain/models.dart';
 import '../../domain/status.dart';
 import '../../platform/photo_picker.dart';
+import '../scanner/scanner_screen.dart';
 import '../shared/widgets.dart';
 
 Future<void> showStagingFormSheet(
@@ -137,7 +138,7 @@ class _StagingFormSheetState extends ConsumerState<StagingFormSheet> {
         if (await ops.soConflict(_so.text, ignoreId: widget.existing!.id)) {
           throw Exception('SO ${_so.text} already exists in Staging.');
         }
-        await ops.updateStaging(widget.existing!.id, {
+        await ops.updateStagingWithPhotos(widget.existing!, {
           'so': _so.text.trim(),
           'customer': _customer.text.trim(),
           'location': _location.text.trim(),
@@ -150,7 +151,7 @@ class _StagingFormSheetState extends ConsumerState<StagingFormSheet> {
           'weight': _weight.text.trim(),
           'comments': _comments.text.trim(),
           'staged_by': _stagedBy.text.trim(),
-        });
+        }, _photos);
       }
       if (mounted) {
         Navigator.pop(context);
@@ -276,30 +277,32 @@ class _StagingFormSheetState extends ConsumerState<StagingFormSheet> {
               decoration: const InputDecoration(labelText: 'Comments'),
               maxLines: 3,
             ),
-            if (widget.existing == null) ...[
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                children: [
-                  OutlinedButton.icon(
-                    onPressed: () async {
-                      final files = await _picker.pickPreferred();
-                      setState(() => _photos.addAll(files));
-                    },
-                    icon: const Icon(Icons.photo_library),
-                    label: Text('Photos (${_photos.length})'),
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: () async {
-                      final shot = await _picker.captureCamera();
-                      if (shot != null) setState(() => _photos.add(shot));
-                    },
-                    icon: const Icon(Icons.photo_camera),
-                    label: const Text('Camera'),
-                  ),
-                ],
-              ),
-            ],
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    final files = await _picker.pickPreferred();
+                    setState(() => _photos.addAll(files));
+                  },
+                  icon: const Icon(Icons.photo_library),
+                  label: Text('Photos (${_photos.length})'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    final shot = await _picker.captureCamera();
+                    if (shot != null) setState(() => _photos.add(shot));
+                  },
+                  icon: const Icon(Icons.photo_camera),
+                  label: const Text('Camera'),
+                ),
+                ScanDocumentButton(
+                  onScanned: (pages) => setState(() => _photos.addAll(pages)),
+                ),
+              ],
+            ),
             const SizedBox(height: 16),
             FilledButton(
               style: FilledButton.styleFrom(

@@ -12,6 +12,40 @@ Uses the existing hosted Supabase project for Auth, Postgres, Storage, and the `
 - Riverpod (state), GoRouter (navigation)
 - `supabase_flutter` (Auth, Database, Storage, Functions)
 - Make.com notifications via authenticated Edge Function `notify-pm` (webhook URL is **not** embedded in the app)
+- Production document scanner with shared Dart image processing and native offline OCR
+
+## Offline document scanner
+
+Every photo attachment surface includes **Scan document** without removing the
+normal Camera/Gallery/File choices. The scanner supports automatic edge
+detection with confidence diagnostics, draggable four-corner correction,
+perspective warp, 90-degree rotation, Original/Color/Document/Grayscale/B&W
+enhancement, before/after review, and multi-page add/reorder/delete/replace.
+Processed pages remain JPEG images and return through the existing attachment
+flow. OCR text is selectable and can be copied, but is never silently written
+into an order field.
+
+Scanning, enhancement, and OCR run on the device. No scanner image or recognized
+text is transmitted unless the user later completes an existing attachment,
+shipping, or notification action.
+
+### Scanner components and licenses
+
+- [`image` 4.8.x](https://pub.dev/packages/image), MIT: deterministic Dart
+  decoding, perspective correction, and enhancement in a background isolate.
+- [`flutter_ocr_native` 0.3.0](https://pub.dev/packages/flutter_ocr_native),
+  MIT: maintained Flutter bridge to on-device OCR.
+- Android OCR is Google ML Kit Text Recognition
+  `com.google.mlkit:text-recognition:16.0.1` (Google Android SDK terms). Its
+  Latin model is bundled by Gradle inside the APK, so first-run model download
+  is not required.
+- Windows OCR is the inbox `Windows.Media.Ocr` API (Windows SDK terms). It uses
+  the installed Windows language pack and requires Windows 10 or newer.
+
+There are no separately downloaded scanner model files to regenerate or
+checksum: model packaging is deterministic from `pubspec.lock` plus the pinned
+Android Maven coordinate above, while Windows supplies its signed system model.
+`flutter pub get` and the packaging scripts reproduce the runtime payload.
 
 ## Prerequisites
 
@@ -62,7 +96,7 @@ PM SMS routing lives **only** inside `supabase/functions/notify-pm`.
 .\scripts\packaging\build-windows-portable.ps1
 ```
 
-Output: `dist/slst-windows-portable.zip`
+Output: `dist/SLST-Windows-Portable.zip`
 
 ### Windows per-user installer (no admin)
 
@@ -80,7 +114,12 @@ Output: `dist/SLST-Setup-User.exe` (installs under `%LOCALAPPDATA%\Programs\SLST
 .\scripts\packaging\build-android-apk.ps1
 ```
 
-For release signing, create `android/key.properties` (gitignored) pointing at a keystore. Without it, the script builds a debug APK suitable for internal sideload testing.
+Output: `dist/SLST-Android.apk`. For production signing, create
+`android/key.properties` (gitignored) pointing at a keystore. Without it, the
+release build is debug-key signed for internal sideload testing.
+
+After packaging, `dist/SHA256SUMS.txt` contains lowercase SHA-256 hashes for the
+portable ZIP, installer, and APK.
 
 ## CI
 

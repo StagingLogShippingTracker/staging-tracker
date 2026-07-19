@@ -16,12 +16,13 @@ if (-not (Test-Path $release)) {
 
 $dist = Join-Path $root 'dist'
 New-Item -ItemType Directory -Force -Path $dist | Out-Null
-$stage = Join-Path $dist 'slst-windows-portable'
+$stage = Join-Path $dist '.slst-windows-portable-stage'
 if (Test-Path $stage) { Remove-Item -Recurse -Force $stage }
 New-Item -ItemType Directory -Force -Path $stage | Out-Null
 Copy-Item -Recurse -Force (Join-Path $release '*') $stage
 
-$zip = Join-Path $dist 'slst-windows-portable.zip'
+$zip = Join-Path $dist 'SLST-Windows-Portable.zip'
 if (Test-Path $zip) { Remove-Item -Force $zip }
 Compress-Archive -Path (Join-Path $stage '*') -DestinationPath $zip
+Remove-Item -Recurse -Force $stage
 Write-Host "Wrote $zip"

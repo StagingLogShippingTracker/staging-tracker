@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme.dart';
 import '../../data/app_state.dart';
 import '../../platform/photo_picker.dart';
+import '../scanner/scanner_screen.dart';
 import '../shared/entry_suggestion_fields.dart';
 import '../shared/widgets.dart';
 
@@ -175,6 +176,7 @@ class _QuickShipSheetState extends ConsumerState<QuickShipSheet> {
             ),
             Wrap(
               spacing: 8,
+              runSpacing: 8,
               children: [
                 OutlinedButton.icon(
                   onPressed: () async {
@@ -191,6 +193,9 @@ class _QuickShipSheetState extends ConsumerState<QuickShipSheet> {
                   },
                   icon: const Icon(Icons.photo_camera),
                   label: const Text('Camera'),
+                ),
+                ScanDocumentButton(
+                  onScanned: (pages) => setState(() => _photos.addAll(pages)),
                 ),
               ],
             ),

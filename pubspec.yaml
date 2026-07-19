@@ -22,9 +22,15 @@ dependencies:
   collection: ^1.19.1
   url_launcher: ^6.3.1
   http: ^1.4.0
+  image: ^4.8.0
+  flutter_ocr_native:
+    path: third_party/flutter_ocr_native
+  path_provider: ^2.1.6
 
 dev_dependencies:
   flutter_test:
+    sdk: flutter
+  integration_test:
     sdk: flutter
   flutter_lints: ^6.0.0
 

@@ -489,6 +489,20 @@ class OperationsService {
     await _ref.read(appDataProvider.notifier).refresh();
   }
 
+  Future<void> updateStagingWithPhotos(
+    StagingEntry entry,
+    Map<String, dynamic> payload,
+    List<PhotoBytes> photos,
+  ) async {
+    final paths = [...entry.photoUrls];
+    for (final photo in photos) {
+      paths.add(
+        await _photos.uploadBytes(bytes: photo.bytes, fileName: photo.name),
+      );
+    }
+    await updateStaging(entry.id, {...payload, 'photo_urls': paths});
+  }
+
   Future<void> updateShipped(String id, Map<String, dynamic> payload) async {
     await _shipped.update(id, payload);
     final carrier = payload['carrier']?.toString();
