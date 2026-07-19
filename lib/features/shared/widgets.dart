@@ -979,8 +979,10 @@ class BrandFooter extends StatelessWidget {
           Text(
             'SLST — STAGING LOG & SHIPPING TRACKER',
             textAlign: TextAlign.center,
+            // Oswald, not the SLSTBrand display font: SLSTBrand is missing
+            // glyphs for the em dash / ampersand and renders them garbled.
             style: TextStyle(
-              fontFamily: kBrandFontFamily,
+              fontFamily: kBodyFontFamily,
               fontSize: 11,
               letterSpacing: 1.5,
               color: scheme.onSurfaceVariant,
