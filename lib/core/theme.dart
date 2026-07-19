@@ -1,44 +1,55 @@
 import 'package:flutter/material.dart';
 
-/// Brand palette ported from the legacy web app's style.css custom properties.
+/// SLST brand tokens carried over from the legacy web app (style.css).
+///
+/// The Windows and Android redesigns evolved slightly different names for the
+/// same palette; both naming schemes are kept here as aliases so every screen
+/// (desktop-dense tables and touch-first Material 3 surfaces alike) resolves to
+/// an identical colour.
 class SlstColors {
-  // Brand reds
+  // Brand reds.
   static const brand = Color(0xFFD93223);
   static const brandHover = Color(0xFFB92820);
+  static const brandDark = Color(0xFFB92820); // alias of brandHover (Android)
   static const brandLight = Color(0xFFBF4F45);
-  static const brandSoft = Color(0x14D93223); // rgba(217,50,35,.08)
+  static const brandSoft = Color(0x14D93223); // rgba(217,50,35,0.08)
 
-  // Light surfaces
-  static const surface = Color(0xFFFFFFFF);
+  // Light surfaces.
+  static const surface = Color(0xFFFFFFFF); // white cards
+  static const card = Color(0xFFFFFFFF); // alias of surface (Android)
   static const surfaceMuted = Color(0xFFF8FAFC);
   static const surfaceSubtle = Color(0xFFF3F5F8);
+  static const surfaceAlt = Color(0xFFF3F5F8); // alias of surfaceSubtle (Android)
   static const border = Color(0xFFE2E8F0);
   static const borderStrong = Color(0xFFCBD5E1);
 
-  // Dark surfaces
+  // Dark surfaces.
   static const darkSurface = Color(0xFF1E293B);
   static const darkSurfaceMuted = Color(0xFF334155);
   static const darkSurfaceSubtle = Color(0xFF0F172A);
   static const darkBorder = Color(0xFF475569);
   static const darkBorderStrong = Color(0xFF64748B);
 
-  // Text
+  // Text.
   static const ink = Color(0xFF1E293B);
   static const muted = Color(0xFF64748B);
   static const subtle = Color(0xFF94A3B8);
   static const darkInk = Color(0xFFF1F5F9);
   static const darkMuted = Color(0xFF94A3B8);
 
-  // Action colors (web .btn-* classes)
+  // Action colours (legacy web .btn-* classes).
   static const danger = Color(0xFFDC2626);
   static const success = Color(0xFF059669);
+  static const green = Color(0xFF059669); // alias of success (Android)
   static const info = Color(0xFF0284C7);
+  static const blue = Color(0xFF0284C7); // alias of info (Android)
+  static const blueBright = Color(0xFF3B82F6);
+  static const notify = Color(0xFF3B82F6); // alias of blueBright
   static const purple = Color(0xFF7C3AED);
-  static const notify = Color(0xFF3B82F6);
   static const slate = Color(0xFF475569);
   static const warning = Color(0xFFF59E0B);
 
-  // Staging status row colors (light theme)
+  // Staging status row colours (light theme).
   static const statusPartial = Color(0xFFFFEDD5);
   static const statusToday = Color(0xFFFEE2E2);
   static const statusTomorrow = Color(0xFFFEF9C3);
@@ -46,158 +57,292 @@ class SlstColors {
   static const statusCorpPick = Color(0xFFDCFCE7);
   static const statusCustomerPick = Color(0xFFF3E8FF);
 
-  // Staging status row colors (dark theme)
+  // Staging status row colours (dark theme).
   static const statusPartialDark = Color(0x33F97316);
   static const statusTodayDark = Color(0x33EF4444);
   static const statusTomorrowDark = Color(0x33EAB308);
   static const statusFutureDark = Color(0x333B82F6);
   static const statusCorpPickDark = Color(0x3322C55E);
   static const statusCustomerPickDark = Color(0x33A855F7);
+
+  // Legacy status fills used by [statusStyleFor] (Android chip/card tints).
+  static const shipToday = Color(0xFFFEE2E2);
+  static const shipTomorrow = Color(0xFFFEF3C7);
+  static const partial = Color(0xFFFFEDD5);
+  static const future = Color(0xFFDBEAFE);
+  static const ready = Color(0xFFDCFCE7);
+  static const pickup = Color(0xFFF3E8FF);
+  static const hold = Color(0xFFE2E8F0);
 }
 
-const kBrandFontFamily = 'SLST Brand';
+/// Resolved colours + icon for one staging status, adapted to light/dark.
+class StatusStyle {
+  const StatusStyle({
+    required this.label,
+    required this.fill,
+    required this.accent,
+    required this.icon,
+  });
+
+  final String label;
+
+  /// Soft background tint (chip fill / card wash).
+  final Color fill;
+
+  /// Strong foreground (text, icon, accent bar).
+  final Color accent;
+
+  final IconData icon;
+}
+
+StatusStyle statusStyleFor({
+  required String uiLabel,
+  required bool isDateStatus,
+  required bool overdue,
+  required Brightness brightness,
+}) {
+  final dark = brightness == Brightness.dark;
+
+  StatusStyle build(String label, Color lightFill, Color accent, IconData icon) {
+    if (!dark) {
+      return StatusStyle(label: label, fill: lightFill, accent: accent, icon: icon);
+    }
+    final hsl = HSLColor.fromColor(accent);
+    final darkAccent =
+        hsl.withLightness((hsl.lightness + 0.28).clamp(0.0, 1.0)).toColor();
+    return StatusStyle(
+      label: label,
+      fill: darkAccent.withValues(alpha: 0.16),
+      accent: darkAccent,
+      icon: icon,
+    );
+  }
+
+  final lower = uiLabel.toLowerCase();
+  if (overdue) {
+    return build('Overdue', SlstColors.shipToday, const Color(0xFF991B1B),
+        Icons.warning_amber_rounded);
+  }
+  if (lower == 'ship today') {
+    return build('Ship Today', SlstColors.shipToday, const Color(0xFFB91C1C),
+        Icons.local_shipping);
+  }
+  if (lower == 'ship tomorrow') {
+    return build('Ship Tomorrow', SlstColors.shipTomorrow,
+        const Color(0xFFA16207), Icons.wb_twilight);
+  }
+  if (lower == 'partial') {
+    return build('Partial', SlstColors.partial, const Color(0xFFC2410C),
+        Icons.donut_large);
+  }
+  if (isDateStatus) {
+    return build(uiLabel, SlstColors.future, const Color(0xFF1D4ED8),
+        Icons.event);
+  }
+  if (lower.contains('corp pick')) {
+    return build('Corp Pick', SlstColors.ready, const Color(0xFF047857),
+        Icons.store_mall_directory);
+  }
+  if (lower.contains('customer pick')) {
+    return build('Customer Pick-Up', SlstColors.pickup,
+        const Color(0xFF7E22CE), Icons.hail);
+  }
+  if (lower.contains('awaiting')) {
+    return build('Awaiting Instructions', SlstColors.hold,
+        const Color(0xFF475569), Icons.hourglass_empty);
+  }
+  return build(uiLabel, SlstColors.surfaceAlt, SlstColors.muted,
+      Icons.inventory_2_outlined);
+}
+
+TextTheme _brandTextTheme(TextTheme base) {
+  TextStyle? oswald(TextStyle? s, {FontWeight? weight}) => s?.copyWith(
+        fontFamily: kBodyFontFamily,
+        fontWeight: weight ?? s.fontWeight,
+        letterSpacing: 0.2,
+      );
+  return base.copyWith(
+    displayLarge: oswald(base.displayLarge, weight: FontWeight.w600),
+    displayMedium: oswald(base.displayMedium, weight: FontWeight.w600),
+    displaySmall: oswald(base.displaySmall, weight: FontWeight.w600),
+    headlineLarge: oswald(base.headlineLarge, weight: FontWeight.w600),
+    headlineMedium: oswald(base.headlineMedium, weight: FontWeight.w600),
+    headlineSmall: oswald(base.headlineSmall, weight: FontWeight.w600),
+    titleLarge: oswald(base.titleLarge, weight: FontWeight.w600),
+    titleMedium: oswald(base.titleMedium, weight: FontWeight.w500),
+  );
+}
+
+const kBrandFontFamily = 'SLSTBrand';
 const kBodyFontFamily = 'Oswald';
 
 ThemeData buildSlstTheme({required bool dark}) {
-  final colorScheme = dark
+  final scheme = dark
       ? ColorScheme.fromSeed(
           seedColor: SlstColors.brand,
           brightness: Brightness.dark,
-          primary: SlstColors.brandLight,
-          surface: SlstColors.darkSurface,
-          error: SlstColors.danger,
+        ).copyWith(
+          tertiary: const Color(0xFFC4B5FD),
+          secondary: const Color(0xFF7DD3FC),
         )
       : ColorScheme.fromSeed(
           seedColor: SlstColors.brand,
           brightness: Brightness.light,
+        ).copyWith(
           primary: SlstColors.brand,
+          onPrimary: Colors.white,
+          primaryContainer: const Color(0xFFFFDAD5),
+          onPrimaryContainer: const Color(0xFF73150C),
+          secondary: SlstColors.blue,
+          onSecondary: Colors.white,
+          secondaryContainer: const Color(0xFFDBEFFB),
+          onSecondaryContainer: const Color(0xFF075985),
+          tertiary: SlstColors.purple,
+          onTertiary: Colors.white,
+          tertiaryContainer: const Color(0xFFEDE9FE),
+          onTertiaryContainer: const Color(0xFF5B21B6),
           surface: SlstColors.surface,
-          error: SlstColors.danger,
+          onSurface: SlstColors.ink,
+          onSurfaceVariant: SlstColors.muted,
+          surfaceContainerLowest: Colors.white,
+          surfaceContainerLow: Colors.white,
+          surfaceContainer: SlstColors.surfaceAlt,
+          surfaceContainerHigh: const Color(0xFFECEFF3),
+          surfaceContainerHighest: const Color(0xFFE5E9EF),
+          outlineVariant: const Color(0xFFE2E8F0),
         );
 
-  final ink = dark ? SlstColors.darkInk : SlstColors.ink;
-  final muted = dark ? SlstColors.darkMuted : SlstColors.muted;
-  final border = dark ? SlstColors.darkBorder : SlstColors.border;
-  final scaffold = dark ? SlstColors.darkSurfaceSubtle : SlstColors.surfaceSubtle;
-  final card = dark ? SlstColors.darkSurface : SlstColors.surface;
+  final base = ThemeData(colorScheme: scheme, useMaterial3: true);
+  final textTheme = _brandTextTheme(base.textTheme);
 
-  final base = ThemeData(
-    useMaterial3: true,
-    colorScheme: colorScheme,
-    fontFamily: kBodyFontFamily,
-    scaffoldBackgroundColor: scaffold,
-  );
-
-  final textTheme = base.textTheme.apply(
-    fontFamily: kBodyFontFamily,
-    bodyColor: ink,
-    displayColor: ink,
-  );
-
+  // Desktop density: keep the touch-first Material 3 look on mobile while
+  // giving the Windows shell tighter tables, always-visible scrollbars and
+  // tooltips.
   return base.copyWith(
-    textTheme: textTheme.copyWith(
-      titleLarge: textTheme.titleLarge?.copyWith(
-        fontWeight: FontWeight.w600,
-        letterSpacing: 0.2,
-      ),
-      titleMedium: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-      labelLarge: textTheme.labelLarge?.copyWith(
-        fontWeight: FontWeight.w600,
-        letterSpacing: 0.4,
+    textTheme: textTheme,
+    // The M3 scheme surface (F8FAFC) reads as the light "muted" backdrop; use
+    // it for the scaffold so cards (white) still stand out on both platforms.
+    scaffoldBackgroundColor: dark ? scheme.surface : SlstColors.surfaceMuted,
+    appBarTheme: AppBarTheme(
+      backgroundColor: scheme.surface,
+      foregroundColor: scheme.onSurface,
+      elevation: 0,
+      scrolledUnderElevation: 2,
+      surfaceTintColor: scheme.surfaceTint,
+      centerTitle: false,
+      titleTextStyle: textTheme.titleLarge?.copyWith(
+        fontSize: 20,
+        color: scheme.onSurface,
       ),
     ),
-    appBarTheme: AppBarTheme(
-      backgroundColor: card,
-      foregroundColor: ink,
-      elevation: 0,
-      centerTitle: false,
-      titleTextStyle: TextStyle(
-        fontFamily: kBodyFontFamily,
-        fontWeight: FontWeight.w600,
-        fontSize: 18,
-        color: ink,
+    navigationBarTheme: NavigationBarThemeData(
+      backgroundColor: dark ? null : Colors.white,
+      indicatorColor: dark ? scheme.primaryContainer : SlstColors.brandSoft,
+      iconTheme: WidgetStateProperty.resolveWith(
+        (states) => IconThemeData(
+          color: states.contains(WidgetState.selected)
+              ? (dark ? scheme.onPrimaryContainer : SlstColors.brand)
+              : scheme.onSurfaceVariant,
+        ),
+      ),
+      labelTextStyle: WidgetStateProperty.resolveWith(
+        (states) => TextStyle(
+          fontSize: 12,
+          fontWeight: states.contains(WidgetState.selected)
+              ? FontWeight.w700
+              : FontWeight.w500,
+          color: states.contains(WidgetState.selected)
+              ? (dark ? scheme.onSurface : SlstColors.brand)
+              : scheme.onSurfaceVariant,
+        ),
+      ),
+    ),
+    navigationRailTheme: NavigationRailThemeData(
+      backgroundColor: dark ? null : Colors.white,
+      indicatorColor: dark ? scheme.primaryContainer : SlstColors.brandSoft,
+      selectedIconTheme: IconThemeData(
+        color: dark ? scheme.onPrimaryContainer : SlstColors.brand,
+      ),
+      selectedLabelTextStyle: TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w700,
+        color: dark ? scheme.onSurface : SlstColors.brand,
+      ),
+      unselectedLabelTextStyle: TextStyle(
+        fontSize: 12,
+        color: scheme.onSurfaceVariant,
+      ),
+    ),
+    floatingActionButtonTheme: FloatingActionButtonThemeData(
+      backgroundColor: SlstColors.brand,
+      foregroundColor: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: dark ? scheme.surfaceContainerHighest : Colors.white,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: scheme.outlineVariant),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: scheme.outlineVariant),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: scheme.primary, width: 2),
       ),
     ),
     cardTheme: CardThemeData(
       elevation: 0,
-      color: card,
-      margin: EdgeInsets.zero,
+      color: dark ? scheme.surfaceContainerLow : Colors.white,
+      surfaceTintColor: Colors.transparent,
+      margin: const EdgeInsets.symmetric(vertical: 4),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
-        side: BorderSide(color: border),
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: scheme.outlineVariant),
       ),
-      shadowColor: Colors.transparent,
     ),
-    dividerTheme: DividerThemeData(color: border, thickness: 1, space: 1),
-    inputDecorationTheme: InputDecorationTheme(
-      isDense: true,
-      filled: true,
-      fillColor: dark ? SlstColors.darkSurfaceMuted : SlstColors.surface,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: BorderSide(color: border),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: BorderSide(color: border),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: SlstColors.brand, width: 1.6),
-      ),
-      hintStyle: TextStyle(color: muted, fontWeight: FontWeight.w400),
-      labelStyle: TextStyle(color: muted),
+    chipTheme: base.chipTheme.copyWith(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      side: BorderSide(color: scheme.outlineVariant),
     ),
-    filledButtonTheme: FilledButtonThemeData(
-      style: FilledButton.styleFrom(
-        backgroundColor: SlstColors.brand,
-        foregroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        textStyle: const TextStyle(
-          fontFamily: kBodyFontFamily,
-          fontWeight: FontWeight.w600,
-          letterSpacing: 0.4,
+    segmentedButtonTheme: SegmentedButtonThemeData(
+      style: ButtonStyle(
+        visualDensity: VisualDensity.standard,
+        backgroundColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? (dark ? scheme.primaryContainer : SlstColors.brandSoft)
+              : Colors.transparent,
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      ),
-    ),
-    outlinedButtonTheme: OutlinedButtonThemeData(
-      style: OutlinedButton.styleFrom(
-        foregroundColor: ink,
-        side: BorderSide(color: dark ? SlstColors.darkBorderStrong : SlstColors.borderStrong),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        textStyle: const TextStyle(
-          fontFamily: kBodyFontFamily,
-          fontWeight: FontWeight.w600,
-          letterSpacing: 0.4,
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      ),
-    ),
-    textButtonTheme: TextButtonThemeData(
-      style: TextButton.styleFrom(
-        foregroundColor: SlstColors.brand,
-        textStyle: const TextStyle(
-          fontFamily: kBodyFontFamily,
-          fontWeight: FontWeight.w600,
+        foregroundColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? (dark ? scheme.onPrimaryContainer : SlstColors.brandDark)
+              : scheme.onSurfaceVariant,
         ),
       ),
     ),
-    checkboxTheme: CheckboxThemeData(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-      side: BorderSide(color: dark ? SlstColors.darkBorderStrong : SlstColors.borderStrong, width: 1.4),
+    snackBarTheme: SnackBarThemeData(
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    ),
+    dividerTheme: DividerThemeData(color: scheme.outlineVariant, thickness: 1),
+    listTileTheme: const ListTileThemeData(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(12)),
+      ),
+    ),
+    bottomSheetTheme: BottomSheetThemeData(
+      backgroundColor: dark ? scheme.surfaceContainerLow : Colors.white,
+      showDragHandle: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
     ),
     dialogTheme: DialogThemeData(
-      backgroundColor: card,
-      surfaceTintColor: Colors.transparent,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      titleTextStyle: TextStyle(
-        fontFamily: kBodyFontFamily,
-        fontWeight: FontWeight.w600,
-        fontSize: 20,
-        color: ink,
-      ),
+      backgroundColor: dark ? scheme.surfaceContainerLow : Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
     ),
     tooltipTheme: TooltipThemeData(
       textStyle: const TextStyle(
@@ -206,18 +351,9 @@ ThemeData buildSlstTheme({required bool dark}) {
         fontSize: 12,
       ),
       decoration: BoxDecoration(
-        color: SlstColors.ink,
+        color: dark ? SlstColors.darkSurfaceMuted : SlstColors.ink,
         borderRadius: BorderRadius.circular(6),
       ),
-    ),
-    snackBarTheme: SnackBarThemeData(
-      backgroundColor: dark ? SlstColors.darkSurfaceMuted : SlstColors.ink,
-      contentTextStyle: const TextStyle(
-        fontFamily: kBodyFontFamily,
-        color: Colors.white,
-      ),
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     ),
     scrollbarTheme: ScrollbarThemeData(
       thumbVisibility: const WidgetStatePropertyAll(true),
@@ -233,12 +369,12 @@ ThemeData buildSlstTheme({required bool dark}) {
         fontWeight: FontWeight.w600,
         fontSize: 12,
         letterSpacing: 0.8,
-        color: muted,
+        color: dark ? SlstColors.darkMuted : SlstColors.muted,
       ),
       dataTextStyle: TextStyle(
         fontFamily: kBodyFontFamily,
         fontSize: 13.5,
-        color: ink,
+        color: dark ? SlstColors.darkInk : SlstColors.ink,
       ),
       dividerThickness: 1,
       headingRowColor: WidgetStatePropertyAll(

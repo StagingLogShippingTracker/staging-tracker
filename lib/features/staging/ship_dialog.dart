@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/theme.dart';
 import '../../data/app_state.dart';
 import '../../domain/models.dart';
 import '../../platform/photo_picker.dart';
@@ -173,9 +174,14 @@ class _ShipDialogState extends ConsumerState<ShipDialog> {
           onPressed: _busy ? null : () => Navigator.pop(context),
           child: const Text('Cancel'),
         ),
-        FilledButton(
+        FilledButton.icon(
+          style: FilledButton.styleFrom(
+            backgroundColor: SlstColors.green,
+            foregroundColor: Colors.white,
+          ),
           onPressed: _busy ? null : _submit,
-          child: Text(_busy ? 'Shipping…' : 'Confirm Ship'),
+          icon: const Icon(Icons.local_shipping, size: 18),
+          label: Text(_busy ? 'Shipping…' : 'Confirm Ship'),
         ),
       ],
     );

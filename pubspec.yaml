@@ -46,6 +46,6 @@ flutter:
           weight: 600
         - asset: assets/fonts/Oswald-Bold.ttf
           weight: 700
-    - family: SLST Brand
+    - family: SLSTBrand
       fonts:
         - asset: assets/fonts/SLSTBrand-Regular.ttf
