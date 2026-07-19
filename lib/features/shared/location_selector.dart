@@ -137,8 +137,10 @@ class _LocationSelectorDialogState
                   Expanded(
                     child: Text(
                       _category?.label ?? 'SELECT LOCATION',
+                      // Oswald, not the SLSTBrand display font: SLSTBrand only
+                      // covers a tiny glyph set and renders garbled here.
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontFamily: kBrandFontFamily,
+                        fontFamily: kBodyFontFamily,
                         letterSpacing: 0.5,
                       ),
                     ),
@@ -205,7 +207,7 @@ class _LocationSelectorDialogState
                           child: Text(
                             category.label,
                             style: const TextStyle(
-                              fontFamily: kBrandFontFamily,
+                              fontFamily: kBodyFontFamily,
                               fontSize: 17,
                             ),
                           ),
