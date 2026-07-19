@@ -6,6 +6,7 @@ import 'package:slst/core/theme.dart';
 import 'package:slst/data/app_state.dart';
 import 'package:slst/domain/models.dart';
 import 'package:slst/domain/status.dart';
+import 'package:slst/features/reports/verification_audit.dart';
 import 'package:slst/features/shared/log_tables.dart';
 import 'package:slst/features/shared/widgets.dart';
 
@@ -69,6 +70,48 @@ void main() {
     expect(c.total, 3);
     expect(c.typeLabel, contains('2 Skids'));
     expect(c.typeLabel, contains('1 Box'));
+  });
+
+  test('ContainerCounts.parse round-trips type labels', () {
+    final c = ContainerCounts.parse('2 Skids, 1 Box, 3 Pipe/Rod');
+    expect(c.skids, 2);
+    expect(c.boxes, 1);
+    expect(c.pipe, 3);
+    expect(c.crates, 0);
+    expect(c.total, 6);
+  });
+
+  test('Verification audit walks the warehouse in location order', () {
+    StagingEntry at(String id, String loc) => StagingEntry(
+          id: id,
+          so: 'SO-$id',
+          customer: 'C',
+          status: 'Partial',
+          location: loc,
+          type: '1 Skid',
+          qty: 1,
+        );
+    final entries = [
+      at('1', 'CORP DROP'),
+      at('2', 'A-02-B-1'),
+      at('3', 'W-1 SHIPPING'),
+      at('4', 'BOX SHELF 3'),
+      at('5', 'A-02-A-2'),
+      at('6', 'PARTIAL BOX SHELF'),
+      at('7', 'SOUTH WALL'),
+    ]..sort(compareAuditLocations);
+    expect(
+      entries.map((e) => e.location).toList(),
+      [
+        'BOX SHELF 3',
+        'PARTIAL BOX SHELF',
+        'A-02-A-2',
+        'A-02-B-1',
+        'SOUTH WALL',
+        'W-1 SHIPPING',
+        'CORP DROP',
+      ],
+    );
   });
 
   test('Overdue detection', () {

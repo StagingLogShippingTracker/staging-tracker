@@ -183,6 +183,35 @@ class ContainerCounts {
 
   int get total => skids + boxes + crates + pipe + other;
 
+  /// Parses a stored type label like "2 Skids, 1 Box, 3 Pipe/Rod" back into
+  /// per-category counts (mirrors the legacy web parser).
+  factory ContainerCounts.parse(String type) {
+    var skids = 0, boxes = 0, crates = 0, pipe = 0, other = 0;
+    for (final part in type.split(',')) {
+      final seg = part.trim().toLowerCase();
+      if (seg.isEmpty) continue;
+      final n = int.tryParse(RegExp(r'^\d+').stringMatch(seg) ?? '') ?? 1;
+      if (seg.contains('skid')) {
+        skids += n;
+      } else if (seg.contains('box')) {
+        boxes += n;
+      } else if (seg.contains('crate')) {
+        crates += n;
+      } else if (seg.contains('pipe') || seg.contains('rod')) {
+        pipe += n;
+      } else {
+        other += n;
+      }
+    }
+    return ContainerCounts(
+      skids: skids,
+      boxes: boxes,
+      crates: crates,
+      pipe: pipe,
+      other: other,
+    );
+  }
+
   String get typeLabel {
     final parts = <String>[];
     if (skids > 0) parts.add(_fmt(skids, 'Skid'));

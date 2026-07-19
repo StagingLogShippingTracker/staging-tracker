@@ -6,6 +6,7 @@ import '../../data/app_state.dart';
 import '../../domain/status.dart';
 import '../shared/log_tables.dart';
 import '../shared/widgets.dart';
+import 'verification_audit.dart';
 
 class ReportsScreen extends ConsumerStatefulWidget {
   const ReportsScreen({super.key});
@@ -72,6 +73,64 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
               ],
             );
           },
+        ),
+        const SizedBox(height: 16),
+        SectionCard(
+          title: 'Staging Verification',
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Run system diagnostics and verify staging location accuracy '
+                'to resolve discrepancies and keep the warehouse inventory '
+                'synced. Progress is saved automatically — you can pause and '
+                'resume an audit at any time.',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  height: 1.5,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? SlstColors.darkMuted
+                      : SlstColors.muted,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  PillButton(
+                    label: 'Staging Verification Report (All)',
+                    icon: Icons.checklist_rtl,
+                    color: SlstColors.purple,
+                    onPressed: () =>
+                        startVerificationAudit(context, ref, AuditMode.all),
+                  ),
+                  PillButton(
+                    label: 'Aisle Locations Only',
+                    icon: Icons.view_week_outlined,
+                    color: SlstColors.info,
+                    onPressed: () =>
+                        startVerificationAudit(context, ref, AuditMode.aisle),
+                  ),
+                  PillButton(
+                    label: 'Shipping Locations Only',
+                    icon: Icons.local_shipping_outlined,
+                    color: SlstColors.warning,
+                    onPressed: () => startVerificationAudit(
+                        context, ref, AuditMode.nonAisle),
+                  ),
+                  PillButton(
+                    label: 'Discrepancies Report',
+                    icon: Icons.report_gmailerrorred,
+                    color: SlstColors.danger,
+                    onPressed: () => startVerificationAudit(
+                        context, ref, AuditMode.discrepancies),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: 16),
         SectionCard(

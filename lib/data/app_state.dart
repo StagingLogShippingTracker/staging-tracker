@@ -189,6 +189,18 @@ class LocalPrefs {
     final next = {...overdueHandled, id}.toList();
     await _prefs.setStringList('swift_overdue_handled', next);
   }
+
+  // Staging verification audit (legacy web key names kept for parity).
+
+  String? get reportState => _prefs.getString('swift_report_state');
+  Future<void> setReportState(String json) =>
+      _prefs.setString('swift_report_state', json);
+  Future<void> clearReportState() => _prefs.remove('swift_report_state');
+
+  List<String> get discrepancyIds =>
+      _prefs.getStringList('swift_discrepancies') ?? const [];
+  Future<void> setDiscrepancyIds(List<String> ids) =>
+      _prefs.setStringList('swift_discrepancies', ids);
 }
 
 final prefsProvider = FutureProvider<LocalPrefs>((ref) async {

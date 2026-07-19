@@ -65,8 +65,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   children: [
                     Center(
                       child: Image.asset(
-                        'assets/staging-shipping-logo.png',
-                        height: 84,
+                        'assets/slst-mark.png',
+                        height: 96,
                         fit: BoxFit.contain,
                         errorBuilder: (_, _, _) => const Icon(
                           Icons.local_shipping,
@@ -76,28 +76,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    const Center(
-                      child: Text(
-                        'SLST',
-                        style: TextStyle(
-                          fontFamily: 'SLSTBrand',
-                          fontSize: 26,
-                          letterSpacing: 2,
-                          color: SlstColors.brand,
-                        ),
-                      ),
-                    ),
-                    Center(
-                      child: Text(
-                        'Staging Log & Shipping Tracker',
-                        style: TextStyle(
-                          fontFamily: 'Oswald',
-                          fontSize: 14,
-                          letterSpacing: 0.5,
-                          color: scheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ),
+                    const Center(child: BrandWordmark(height: 40)),
                     const SizedBox(height: 24),
                     Card(
                       margin: EdgeInsets.zero,

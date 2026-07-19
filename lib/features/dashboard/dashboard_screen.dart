@@ -7,6 +7,7 @@ import '../../data/app_state.dart';
 import '../shared/log_tables.dart';
 import '../shared/widgets.dart';
 import '../shipping/quick_ship_sheet.dart';
+import 'stat_detail_dialog.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -47,15 +48,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       return hay.contains(_q);
     }).toList();
 
-    const kpis = [
-      (key: 'orders', label: 'Orders', icon: Icons.description_outlined),
-      (key: 'containers', label: 'Containers', icon: Icons.widgets_outlined),
-      (key: 'skids', label: 'Skids', icon: Icons.pallet),
-      (key: 'boxes', label: 'Boxes', icon: Icons.inventory_2_outlined),
-      (key: 'crates', label: 'Crates', icon: Icons.dataset_outlined),
-      (key: 'pipe', label: 'Pipe/Rod', icon: Icons.horizontal_rule),
-      (key: 'other', label: 'Other', icon: Icons.category_outlined),
-      (key: 'shipped', label: 'Shipped', icon: Icons.local_shipping_outlined),
+    // detail: which stat-detail window the card opens (legacy web parity);
+    // the Shipped card jumps to the Shipped Log instead.
+    final kpis = [
+      (key: 'orders', label: 'Orders', icon: Icons.description_outlined, detail: StatDetailMode.orders),
+      (key: 'containers', label: 'Containers', icon: Icons.widgets_outlined, detail: StatDetailMode.containers),
+      (key: 'skids', label: 'Skids', icon: Icons.pallet, detail: StatDetailMode.skid),
+      (key: 'boxes', label: 'Boxes', icon: Icons.inventory_2_outlined, detail: StatDetailMode.box),
+      (key: 'crates', label: 'Crates', icon: Icons.dataset_outlined, detail: StatDetailMode.crate),
+      (key: 'pipe', label: 'Pipe/Rod', icon: Icons.horizontal_rule, detail: StatDetailMode.pipe),
+      (key: 'other', label: 'Other', icon: Icons.category_outlined, detail: StatDetailMode.other),
+      (key: 'shipped', label: 'Shipped', icon: Icons.local_shipping_outlined, detail: null),
     ];
 
     return RefreshIndicator(
@@ -99,6 +102,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         label: k.label,
                         value: totals[k.key] ?? 0,
                         icon: k.icon,
+                        onTap: k.detail == null
+                            ? () => context.go('/shipped')
+                            : () => showStatDetailDialog(context, k.detail!),
                       ),
                     ),
                 ],

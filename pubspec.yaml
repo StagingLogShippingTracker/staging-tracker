@@ -32,7 +32,8 @@ flutter:
   uses-material-design: true
   assets:
     - assets/contacts.json
-    - assets/staging-shipping-logo.png
+    - assets/slst-mark.png
+    - assets/slst-wordmark.png
   fonts:
     - family: Oswald
       fonts:

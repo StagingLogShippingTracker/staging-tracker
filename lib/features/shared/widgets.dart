@@ -16,6 +16,36 @@ StatusStyle statusStyleOf(BuildContext context, String dbStatus) {
   );
 }
 
+/// SLST wordmark image ("SLST — Staging Log & Shipping Tracker").
+///
+/// The source art is charcoal on transparent; in dark mode it is tinted to the
+/// light ink colour so it stays legible.
+class BrandWordmark extends StatelessWidget {
+  const BrandWordmark({super.key, required this.height});
+
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return Image.asset(
+      'assets/slst-wordmark.png',
+      height: height,
+      fit: BoxFit.contain,
+      alignment: Alignment.centerLeft,
+      color: dark ? SlstColors.darkInk : null,
+      errorBuilder: (_, _, _) => Text(
+        'SLST',
+        style: TextStyle(
+          fontFamily: kBrandFontFamily,
+          fontSize: height * 0.8,
+          color: SlstColors.brand,
+        ),
+      ),
+    );
+  }
+}
+
 // ---------------------------------------------------------------------------
 // KPI stat card (Windows: white card with red top accent + Win11 concept icon)
 // ---------------------------------------------------------------------------
@@ -26,32 +56,18 @@ class KpiCard extends StatelessWidget {
     required this.label,
     required this.value,
     required this.icon,
+    this.onTap,
   });
 
   final String label;
   final int value;
   final IconData icon;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      decoration: BoxDecoration(
-        color: dark ? SlstColors.darkSurface : SlstColors.surface,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: dark ? SlstColors.darkBorder : SlstColors.border),
-        boxShadow: dark
-            ? null
-            : const [
-                BoxShadow(
-                  color: Color(0x0A0F172A),
-                  blurRadius: 20,
-                  offset: Offset(0, 6),
-                ),
-              ],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
+    final body = Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Container(height: 3.5, color: SlstColors.brand),
@@ -97,7 +113,30 @@ class KpiCard extends StatelessWidget {
             ),
           ),
         ],
+    );
+
+    return Container(
+      decoration: BoxDecoration(
+        color: dark ? SlstColors.darkSurface : SlstColors.surface,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: dark ? SlstColors.darkBorder : SlstColors.border),
+        boxShadow: dark
+            ? null
+            : const [
+                BoxShadow(
+                  color: Color(0x0A0F172A),
+                  blurRadius: 20,
+                  offset: Offset(0, 6),
+                ),
+              ],
       ),
+      clipBehavior: Clip.antiAlias,
+      child: onTap == null
+          ? body
+          : Material(
+              color: Colors.transparent,
+              child: InkWell(onTap: onTap, child: body),
+            ),
     );
   }
 }
@@ -628,7 +667,7 @@ class SiteFooter extends StatelessWidget {
             child: Opacity(
               opacity: dark ? 0.35 : 0.75,
               child: Image.asset(
-                'assets/staging-shipping-logo.png',
+                'assets/slst-mark.png',
                 fit: BoxFit.contain,
                 errorBuilder: (_, _, _) =>
                     const Icon(Icons.local_shipping, color: SlstColors.subtle),

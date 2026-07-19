@@ -96,6 +96,9 @@ GitHub Pages is **not** used.
 
 ## Brand assets
 
-- `assets/staging-shipping-logo.png`
+- `assets/slst-mark.png` — forklift-in-tire brand mark (transparent background)
+- `assets/slst-wordmark.png` — "SLST / Staging Log & Shipping Tracker" wordmark
+- `assets/staging-shipping-logo.png` — legacy horizontal logo (kept for reference, not bundled)
 - `assets/contacts.json` (employee directory)
+- Regenerate app icons / splash logos with `python scripts/generate-app-icons.py`
 - Additional brand files under `brand/`

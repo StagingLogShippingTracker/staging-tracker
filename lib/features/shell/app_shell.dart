@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/app_config.dart';
 import '../../core/theme.dart';
 import '../../data/app_state.dart';
+import '../shared/widgets.dart';
 
 /// One shell destination, shared by the desktop sidebar and the phone bottom
 /// bar. Carries both a full [label] (sidebar / header bar) and a compact
@@ -176,16 +177,16 @@ class AppShell extends ConsumerWidget {
       title: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(4),
+            padding: const EdgeInsets.all(3),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(10),
               border: Border.all(color: scheme.outlineVariant),
             ),
             child: Image.asset(
-              'assets/staging-shipping-logo.png',
-              width: 30,
-              height: 30,
+              'assets/slst-mark.png',
+              width: 32,
+              height: 32,
               fit: BoxFit.contain,
               errorBuilder: (_, _, _) => const Icon(
                 Icons.local_shipping,
@@ -200,16 +201,8 @@ class AppShell extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text(
-                  'SLST',
-                  style: TextStyle(
-                    fontFamily: kBrandFontFamily,
-                    fontSize: 17,
-                    height: 1.1,
-                    letterSpacing: 1.5,
-                    color: SlstColors.brand,
-                  ),
-                ),
+                const BrandWordmark(height: 16),
+                const SizedBox(height: 2),
                 Text(
                   _titleFor(location),
                   maxLines: 1,
@@ -415,9 +408,9 @@ class _Sidebar extends ConsumerWidget {
             child: Row(
               children: [
                 Container(
-                  width: 42,
-                  height: 42,
-                  padding: const EdgeInsets.all(4),
+                  width: 46,
+                  height: 46,
+                  padding: const EdgeInsets.all(3),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(10),
                     color: dark
@@ -428,7 +421,7 @@ class _Sidebar extends ConsumerWidget {
                     ),
                   ),
                   child: Image.asset(
-                    'assets/staging-shipping-logo.png',
+                    'assets/slst-mark.png',
                     fit: BoxFit.contain,
                     errorBuilder: (_, _, _) => const Icon(
                       Icons.local_shipping,
@@ -437,30 +430,10 @@ class _Sidebar extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'SLST',
-                        style: TextStyle(
-                          fontFamily: kBrandFontFamily,
-                          fontSize: 22,
-                          height: 1.0,
-                          color: dark ? SlstColors.darkInk : SlstColors.ink,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'STAGING & SHIPPING',
-                        style: TextStyle(
-                          fontSize: 9.5,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 1.4,
-                          color: dark ? SlstColors.darkMuted : SlstColors.muted,
-                        ),
-                      ),
-                    ],
+                const Expanded(
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: BrandWordmark(height: 34),
                   ),
                 ),
               ],
