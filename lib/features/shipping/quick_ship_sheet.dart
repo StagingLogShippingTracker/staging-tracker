@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/theme.dart';
 import '../../data/app_state.dart';
 import '../../platform/photo_picker.dart';
 import '../shared/widgets.dart';
@@ -104,7 +105,14 @@ class _QuickShipSheetState extends ConsumerState<QuickShipSheet> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Quick Ship', style: Theme.of(context).textTheme.titleLarge),
+            Row(
+              children: [
+                const Icon(Icons.bolt, color: SlstColors.green),
+                const SizedBox(width: 8),
+                Text('Quick Ship',
+                    style: Theme.of(context).textTheme.titleLarge),
+              ],
+            ),
             const SizedBox(height: 12),
             TextField(
               controller: _so,
@@ -183,9 +191,15 @@ class _QuickShipSheetState extends ConsumerState<QuickShipSheet> {
               ],
             ),
             const SizedBox(height: 16),
-            FilledButton(
+            FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: SlstColors.green,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
               onPressed: _busy ? null : _save,
-              child: Text(_busy ? 'Shipping…' : 'Quick Ship'),
+              icon: const Icon(Icons.bolt),
+              label: Text(_busy ? 'Shipping…' : 'Quick Ship'),
             ),
           ],
         ),

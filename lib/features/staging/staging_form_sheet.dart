@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/theme.dart';
 import '../../data/app_state.dart';
 import '../../domain/models.dart';
 import '../../domain/status.dart';
@@ -153,9 +154,22 @@ class _StagingFormSheetState extends ConsumerState<StagingFormSheet> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              widget.existing == null ? 'New Staging Entry' : 'Edit Staging Entry',
-              style: Theme.of(context).textTheme.titleLarge,
+            Row(
+              children: [
+                Icon(
+                  widget.existing == null
+                      ? Icons.add_box_outlined
+                      : Icons.edit_outlined,
+                  color: SlstColors.brand,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  widget.existing == null
+                      ? 'New Staging Entry'
+                      : 'Edit Staging Entry',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+              ],
             ),
             const SizedBox(height: 12),
             TextField(
@@ -261,8 +275,11 @@ class _StagingFormSheetState extends ConsumerState<StagingFormSheet> {
             ],
             const SizedBox(height: 16),
             FilledButton(
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
               onPressed: _busy ? null : _save,
-              child: Text(_busy ? 'Saving…' : 'Save'),
+              child: Text(_busy ? 'Saving…' : 'Save Entry'),
             ),
           ],
         ),

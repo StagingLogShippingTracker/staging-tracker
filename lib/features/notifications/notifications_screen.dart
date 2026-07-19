@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/theme.dart';
 import '../../data/app_state.dart';
 import '../../platform/photo_picker.dart';
 import '../shared/widgets.dart';
@@ -78,78 +79,128 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
+    final scheme = Theme.of(context).colorScheme;
+
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        Text('PM Notifications', style: Theme.of(context).textTheme.headlineSmall),
-        const SizedBox(height: 8),
-        const Text(
-          'Notifications are sent through an authenticated server function. '
-          'Webhook credentials never ship inside the app binary.',
+        Card(
+          margin: EdgeInsets.zero,
+          color: SlstColors.blue.withValues(alpha: 0.08),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(color: SlstColors.blue.withValues(alpha: 0.25)),
+          ),
+          child: const ListTile(
+            leading: Icon(Icons.shield_outlined, color: SlstColors.blue),
+            title: Text(
+              'Secure delivery',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
+            subtitle: Text(
+              'Notifications are sent through an authenticated server function. '
+              'Webhook credentials never ship inside the app binary.',
+            ),
+          ),
         ),
         const SizedBox(height: 16),
         SegmentedButton<bool>(
           segments: const [
-            ButtonSegment(value: false, label: Text('PO notify')),
-            ButtonSegment(value: true, label: Text('Return notify')),
-          ],
-          selected: {_returnMode},
-          onSelectionChanged: (s) => setState(() => _returnMode = s.first),
-        ),
-        const SizedBox(height: 12),
-        if (!_returnMode)
-          TextField(
-            controller: _po,
-            decoration: const InputDecoration(labelText: 'PO #'),
-          ),
-        if (!_returnMode) const SizedBox(height: 8),
-        TextField(
-          controller: _so,
-          decoration: InputDecoration(
-            labelText: _returnMode ? 'SO #' : 'Linked SO (optional)',
-          ),
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: _customer,
-          decoration: const InputDecoration(labelText: 'Customer'),
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: _pmEmail,
-          decoration: const InputDecoration(labelText: 'PM email'),
-          keyboardType: TextInputType.emailAddress,
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: _details,
-          decoration: const InputDecoration(labelText: 'Details'),
-          maxLines: 4,
-        ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          children: [
-            OutlinedButton.icon(
-              onPressed: () async {
-                final files = await _picker.pickPreferred();
-                setState(() => _photos.addAll(files));
-              },
-              icon: const Icon(Icons.attach_file),
-              label: Text('Attach photos (${_photos.length})'),
+            ButtonSegment(
+              value: false,
+              icon: Icon(Icons.receipt_long),
+              label: Text('PO notify'),
+            ),
+            ButtonSegment(
+              value: true,
+              icon: Icon(Icons.keyboard_return),
+              label: Text('Return notify'),
             ),
           ],
+          selected: {_returnMode},
+          showSelectedIcon: false,
+          onSelectionChanged: (s) => setState(() => _returnMode = s.first),
+        ),
+        const SizedBox(height: 16),
+        Card(
+          margin: EdgeInsets.zero,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (!_returnMode) ...[
+                  TextField(
+                    controller: _po,
+                    decoration: const InputDecoration(labelText: 'PO #'),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                TextField(
+                  controller: _so,
+                  decoration: InputDecoration(
+                    labelText: _returnMode ? 'SO #' : 'Linked SO (optional)',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _customer,
+                  decoration: const InputDecoration(labelText: 'Customer'),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _pmEmail,
+                  decoration: const InputDecoration(labelText: 'PM email'),
+                  keyboardType: TextInputType.emailAddress,
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _details,
+                  decoration: const InputDecoration(labelText: 'Details'),
+                  maxLines: 4,
+                ),
+                const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      final files = await _picker.pickPreferred();
+                      setState(() => _photos.addAll(files));
+                    },
+                    icon: const Icon(Icons.attach_file),
+                    label: Text('Attach photos (${_photos.length})'),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
         const SizedBox(height: 16),
         FilledButton.icon(
+          style: FilledButton.styleFrom(
+            backgroundColor: SlstColors.blue,
+            foregroundColor: Colors.white,
+            disabledBackgroundColor: scheme.surfaceContainerHighest,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+          ),
           onPressed: (_busy || user == null) ? null : _send,
-          icon: const Icon(Icons.send),
+          icon: _busy
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : const Icon(Icons.send),
           label: Text(
             user == null
                 ? 'Sign in to send'
                 : (_busy ? 'Sending…' : 'Send notification'),
           ),
         ),
+        const BrandFooter(),
       ],
     );
   }
