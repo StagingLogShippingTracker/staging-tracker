@@ -144,10 +144,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                TextField(
-                  controller: _customer,
-                  decoration: const InputDecoration(labelText: 'Customer'),
-                ),
+                CustomerSuggestionField(controller: _customer),
                 const SizedBox(height: 12),
                 ContactEmailField(controller: _pmEmail),
                 const SizedBox(height: 12),

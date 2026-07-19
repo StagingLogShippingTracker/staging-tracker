@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme.dart';
 import '../../data/app_state.dart';
+import '../../domain/location_intelligence.dart';
 import '../../platform/photo_picker.dart';
 import '../shared/entry_suggestion_fields.dart';
+import '../shared/location_selector.dart';
 import '../shared/widgets.dart';
 
 Future<void> showQuickShipSheet(BuildContext context, WidgetRef ref) {
@@ -31,7 +33,7 @@ class _QuickShipSheetState extends ConsumerState<QuickShipSheet> {
   final _weight = TextEditingController();
   final _comments = TextEditingController();
   final _pmEmail = TextEditingController();
-  final _skids = TextEditingController(text: '1');
+  final _skids = TextEditingController();
   final _boxes = TextEditingController();
   final _crates = TextEditingController();
   final _pipe = TextEditingController();
@@ -40,6 +42,7 @@ class _QuickShipSheetState extends ConsumerState<QuickShipSheet> {
   bool _busy = false;
   final _photos = <PhotoBytes>[];
   final _picker = PhotoPickerService();
+  LocationCategory? _locationCategory;
 
   @override
   void dispose() {
@@ -86,6 +89,7 @@ class _QuickShipSheetState extends ConsumerState<QuickShipSheet> {
             pmEmail: _pmEmail.text.trim().isEmpty ? null : _pmEmail.text.trim(),
             notifyPm: _notify,
             photos: _photos,
+            locationCategory: _locationCategory,
           );
       if (mounted) {
         Navigator.pop(context);
@@ -129,21 +133,16 @@ class _QuickShipSheetState extends ConsumerState<QuickShipSheet> {
               decoration: const InputDecoration(labelText: 'SO #'),
             ),
             const SizedBox(height: 8),
-            TextField(
-              controller: _customer,
-              decoration: const InputDecoration(labelText: 'Customer'),
-            ),
+            CustomerSuggestionField(controller: _customer),
             const SizedBox(height: 8),
             CarrierSuggestionField(controller: _carrier),
             const SizedBox(height: 8),
-            TextField(
-              controller: _shippedBy,
-              decoration: const InputDecoration(labelText: 'Shipped by'),
-            ),
+            PersonSuggestionField(controller: _shippedBy, label: 'Shipped by'),
             const SizedBox(height: 8),
-            TextField(
+            LocationSelectorField(
               controller: _location,
-              decoration: const InputDecoration(labelText: 'Location'),
+              soController: _so,
+              onCategoryChanged: (value) => _locationCategory = value,
             ),
             const SizedBox(height: 8),
             ContainerInputs(

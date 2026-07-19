@@ -25,12 +25,12 @@ class SplitDialog extends ConsumerStatefulWidget {
 }
 
 class _SplitDialogState extends ConsumerState<SplitDialog> {
-  final _aSkids = TextEditingController(text: '1');
+  final _aSkids = TextEditingController();
   final _aBoxes = TextEditingController();
   final _aCrates = TextEditingController();
   final _aPipe = TextEditingController();
   final _aOther = TextEditingController();
-  final _bSkids = TextEditingController(text: '1');
+  final _bSkids = TextEditingController();
   final _bBoxes = TextEditingController();
   final _bCrates = TextEditingController();
   final _bPipe = TextEditingController();
@@ -55,7 +55,9 @@ class _SplitDialogState extends ConsumerState<SplitDialog> {
   Future<void> _submit() async {
     setState(() => _busy = true);
     try {
-      await ref.read(operationsProvider).splitStaging(
+      await ref
+          .read(operationsProvider)
+          .splitStaging(
             entry: widget.entry,
             first: countsFromControllers(
               skids: _aSkids,

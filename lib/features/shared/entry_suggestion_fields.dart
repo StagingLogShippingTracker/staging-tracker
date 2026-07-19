@@ -4,6 +4,149 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/app_state.dart';
 import '../../domain/models.dart';
 
+enum RememberedEntryKind { customer, person }
+
+class RememberedEntryField extends ConsumerStatefulWidget {
+  const RememberedEntryField({
+    super.key,
+    required this.controller,
+    required this.kind,
+    required this.label,
+  });
+
+  final TextEditingController controller;
+  final RememberedEntryKind kind;
+  final String label;
+
+  @override
+  ConsumerState<RememberedEntryField> createState() =>
+      _RememberedEntryFieldState();
+}
+
+class _RememberedEntryFieldState extends ConsumerState<RememberedEntryField> {
+  final _focusNode = FocusNode();
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final suggestions = widget.kind == RememberedEntryKind.customer
+        ? ref.watch(customerSuggestionsProvider).valueOrNull ?? const <String>[]
+        : ref.watch(personSuggestionsProvider).valueOrNull ?? const <String>[];
+    final noun = widget.kind == RememberedEntryKind.customer
+        ? 'customer'
+        : widget.label.toLowerCase();
+    final icon = widget.kind == RememberedEntryKind.customer
+        ? Icons.business_outlined
+        : Icons.person_outline;
+
+    return LayoutBuilder(
+      builder: (context, constraints) => RawAutocomplete<String>(
+        textEditingController: widget.controller,
+        focusNode: _focusNode,
+        optionsBuilder: (value) {
+          final query = value.text.trim().toLowerCase();
+          if (query.isEmpty) return suggestions;
+          return suggestions.where(
+            (suggestion) => suggestion.toLowerCase().contains(query),
+          );
+        },
+        onSelected: (value) {
+          widget.controller.value = TextEditingValue(
+            text: value,
+            selection: TextSelection.collapsed(offset: value.length),
+          );
+        },
+        fieldViewBuilder: (context, controller, focusNode, onSubmitted) {
+          return TextField(
+            controller: controller,
+            focusNode: focusNode,
+            textInputAction: TextInputAction.next,
+            decoration: InputDecoration(
+              labelText: widget.label,
+              helperText: 'Select a remembered $noun or type a new one',
+              suffixIcon: const Icon(Icons.arrow_drop_down),
+            ),
+            onSubmitted: (_) => onSubmitted(),
+          );
+        },
+        optionsViewBuilder: (context, onSelected, options) {
+          final visible = options.take(30).toList();
+          return Align(
+            alignment: Alignment.topLeft,
+            child: Material(
+              elevation: 8,
+              clipBehavior: Clip.antiAlias,
+              borderRadius: BorderRadius.circular(12),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: constraints.maxWidth,
+                  maxHeight: 260,
+                ),
+                child: ListView.builder(
+                  padding: EdgeInsets.zero,
+                  shrinkWrap: true,
+                  itemCount: visible.length,
+                  itemBuilder: (context, index) => ListTile(
+                    dense: true,
+                    leading: Icon(icon),
+                    title: Text(
+                      visible[index],
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    onTap: () => onSelected(visible[index]),
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class CustomerSuggestionField extends StatelessWidget {
+  const CustomerSuggestionField({
+    super.key,
+    required this.controller,
+    this.label = 'Customer',
+  });
+
+  final TextEditingController controller;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => RememberedEntryField(
+    controller: controller,
+    kind: RememberedEntryKind.customer,
+    label: label,
+  );
+}
+
+class PersonSuggestionField extends StatelessWidget {
+  const PersonSuggestionField({
+    super.key,
+    required this.controller,
+    required this.label,
+  });
+
+  final TextEditingController controller;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => RememberedEntryField(
+    controller: controller,
+    kind: RememberedEntryKind.person,
+    label: label,
+  );
+}
+
 class ContactEmailField extends ConsumerStatefulWidget {
   const ContactEmailField({
     super.key,
