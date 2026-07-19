@@ -47,21 +47,6 @@ class _ShipDialogState extends ConsumerState<ShipDialog> {
   bool _busy = false;
   final _photos = <PhotoBytes>[];
   final _picker = PhotoPickerService();
-  List<String> _people = const [];
-
-  @override
-  void initState() {
-    super.initState();
-    _loadRoster();
-  }
-
-  Future<void> _loadRoster() async {
-    final roster = ref.read(rosterRepoProvider);
-    final people = await roster.valuesFor('person_by');
-    if (mounted) {
-      setState(() => _people = people);
-    }
-  }
 
   @override
   void dispose() {
@@ -107,23 +92,9 @@ class _ShipDialogState extends ConsumerState<ShipDialog> {
             children: [
               CarrierSuggestionField(controller: _carrier),
               const SizedBox(height: 8),
-              Autocomplete<String>(
-                optionsBuilder: (v) {
-                  final q = v.text.toLowerCase();
-                  return _people.where((c) => c.toLowerCase().contains(q));
-                },
-                onSelected: (v) => _shippedBy.text = v,
-                fieldViewBuilder: (context, controller, focus, onSubmit) {
-                  controller.text = _shippedBy.text;
-                  controller.addListener(
-                    () => _shippedBy.text = controller.text,
-                  );
-                  return TextField(
-                    controller: controller,
-                    focusNode: focus,
-                    decoration: const InputDecoration(labelText: 'Shipped by'),
-                  );
-                },
+              PersonSuggestionField(
+                controller: _shippedBy,
+                label: 'Shipped by',
               ),
               const SizedBox(height: 8),
               ContactEmailField(controller: _pmEmail, optional: true),
@@ -236,14 +207,11 @@ class _ReturnDialogState extends ConsumerState<ReturnDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(
-                controller: _pickedBy,
-                decoration: const InputDecoration(labelText: 'Picked by'),
-              ),
+              PersonSuggestionField(controller: _pickedBy, label: 'Picked by'),
               const SizedBox(height: 8),
-              TextField(
+              PersonSuggestionField(
                 controller: _returnedBy,
-                decoration: const InputDecoration(labelText: 'Returned by'),
+                label: 'Returned by',
               ),
               const SizedBox(height: 8),
               TextField(

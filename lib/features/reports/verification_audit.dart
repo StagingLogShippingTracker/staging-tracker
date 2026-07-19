@@ -9,8 +9,10 @@ import 'package:intl/intl.dart';
 
 import '../../core/theme.dart';
 import '../../data/app_state.dart';
+import '../../domain/location_intelligence.dart';
 import '../../domain/models.dart';
 import '../../domain/status.dart';
+import '../shared/location_selector.dart';
 import '../shared/widgets.dart';
 import '../staging/ship_dialog.dart';
 import '../staging/split_dialog.dart';
@@ -25,7 +27,7 @@ import '../staging/staging_form_sheet.dart';
 
 enum AuditMode { all, aisle, nonAisle, discrepancies }
 
-final _aisleRe = RegExp(r'^[A-Z]-\d{2}-[A-Z]-(1|2|1\+2)$', caseSensitive: false);
+final _aisleRe = aisleLocationPattern;
 final _dateFmt = DateFormat('M/d/yy h:mm a');
 
 String _auditModeName(AuditMode m) => switch (m) {
@@ -326,11 +328,37 @@ class _AuditDialogState extends ConsumerState<_AuditDialog> {
       case 'edit':
         await showStagingFormSheet(context, ref, existing: item);
       case 'change_loc':
-        final newLoc = await _promptNewLocation(item);
-        if (newLoc == null || newLoc.isEmpty) return;
+        final selection = await showLocationSelector(
+          context,
+          ref,
+          initialValue: item.location,
+          so: item.so,
+          ignoreEntryId: item.id,
+        );
+        if (selection == null || !mounted) return;
+        final decision = await confirmLocationAdvisory(
+          context,
+          ref,
+          location: selection.value,
+          so: item.so,
+          ignoreEntryId: item.id,
+        );
+        if (decision == LocationAdvisoryDecision.cancel) return;
         try {
-          await ops.updateStaging(item.id, {'so': item.so, 'location': newLoc});
-          _record(item, 'Fixed via Location Change ($newLoc)');
+          await ops.updateStaging(
+            item.id,
+            {'so': item.so, 'location': selection.value},
+            locationCategory: selection.category,
+          );
+          if (decision == LocationAdvisoryDecision.consolidate) {
+            final matches = ref
+                .read(appDataProvider)
+                .staging
+                .where((entry) => orderKey(entry.so) == orderKey(item.so))
+                .toList();
+            if (matches.length > 1) await ops.consolidateStaging(matches);
+          }
+          _record(item, 'Fixed via Location Change (${selection.value})');
         } catch (e) {
           if (mounted) showError(context, e);
         }
@@ -388,36 +416,6 @@ class _AuditDialogState extends ConsumerState<_AuditDialog> {
         _record(item, 'Discrepancy - Unresolved');
     }
     if (mounted) setState(() {});
-  }
-
-  Future<String?> _promptNewLocation(StagingEntry item) {
-    final controller = TextEditingController();
-    return showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Change Location'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          textCapitalization: TextCapitalization.characters,
-          decoration: InputDecoration(
-            labelText: 'New Location',
-            hintText: 'Current: ${item.location}',
-          ),
-          onSubmitted: (v) => Navigator.pop(ctx, v.trim()),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-            child: const Text('Save & Continue'),
-          ),
-        ],
-      ),
-    );
   }
 
   // -------------------------------------------------------------------------

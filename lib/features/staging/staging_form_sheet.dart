@@ -3,10 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme.dart';
 import '../../data/app_state.dart';
+import '../../domain/location_intelligence.dart';
 import '../../domain/models.dart';
 import '../../domain/status.dart';
 import '../../platform/photo_picker.dart';
 import '../scanner/scanner_screen.dart';
+import '../shared/entry_suggestion_fields.dart';
+import '../shared/location_selector.dart';
 import '../shared/widgets.dart';
 
 Future<void> showStagingFormSheet(
@@ -49,7 +52,7 @@ class _StagingFormSheetState extends ConsumerState<StagingFormSheet> {
   final _weight = TextEditingController();
   final _comments = TextEditingController();
   final _stagedBy = TextEditingController();
-  final _skids = TextEditingController(text: '1');
+  final _skids = TextEditingController();
   final _boxes = TextEditingController();
   final _crates = TextEditingController();
   final _pipe = TextEditingController();
@@ -59,6 +62,7 @@ class _StagingFormSheetState extends ConsumerState<StagingFormSheet> {
   final _photos = <PhotoBytes>[];
   bool _busy = false;
   final _picker = PhotoPickerService();
+  LocationCategory? _locationCategory;
 
   @override
   void initState() {
@@ -71,6 +75,13 @@ class _StagingFormSheetState extends ConsumerState<StagingFormSheet> {
       _weight.text = e.weight ?? '';
       _comments.text = e.comments ?? '';
       _stagedBy.text = e.stagedBy ?? '';
+      final counts = ContainerCounts.parse(e.type);
+      _skids.text = counts.skids == 0 ? '' : '${counts.skids}';
+      _boxes.text = counts.boxes == 0 ? '' : '${counts.boxes}';
+      _crates.text = counts.crates == 0 ? '' : '${counts.crates}';
+      _pipe.text = counts.pipe == 0 ? '' : '${counts.pipe}';
+      _other.text = counts.other == 0 ? '' : '${counts.other}';
+      _locationCategory = classifyLocation(e.location);
       _statusUi = StatusRules.formatUi(e.status);
       if (StatusRules.isYmd(e.status) &&
           e.status != StatusRules.todayYmd() &&
@@ -117,6 +128,17 @@ class _StagingFormSheetState extends ConsumerState<StagingFormSheet> {
         other: _other,
       );
       final ops = ref.read(operationsProvider);
+      if (counts.total <= 0) {
+        throw Exception('At least one container is required.');
+      }
+      final locationDecision = await confirmLocationAdvisory(
+        context,
+        ref,
+        location: _location.text,
+        so: _so.text,
+        ignoreEntryId: widget.existing?.id,
+      );
+      if (locationDecision == LocationAdvisoryDecision.cancel) return;
       if (widget.existing == null) {
         await ops.createStaging(
           so: _so.text,
@@ -129,7 +151,13 @@ class _StagingFormSheetState extends ConsumerState<StagingFormSheet> {
           stagedBy: _stagedBy.text,
           futureDateYmd: _ymd(_futureDate),
           photos: _photos,
-          allowExistingSo: widget.allowExistingSo,
+          allowExistingSo:
+              widget.allowExistingSo ||
+              ref
+                  .read(appDataProvider)
+                  .staging
+                  .any((entry) => orderKey(entry.so) == orderKey(_so.text)),
+          locationCategory: _locationCategory,
         );
       } else {
         if (counts.total <= 0) {
@@ -138,20 +166,33 @@ class _StagingFormSheetState extends ConsumerState<StagingFormSheet> {
         if (await ops.soConflict(_so.text, ignoreId: widget.existing!.id)) {
           throw Exception('SO ${_so.text} already exists in Staging.');
         }
-        await ops.updateStagingWithPhotos(widget.existing!, {
-          'so': _so.text.trim(),
-          'customer': _customer.text.trim(),
-          'location': _location.text.trim(),
-          'status': StatusRules.toDb(
-            _statusUi,
-            futureDateYmd: _ymd(_futureDate),
-          ),
-          'type': counts.typeLabel,
-          'qty': counts.total,
-          'weight': _weight.text.trim(),
-          'comments': _comments.text.trim(),
-          'staged_by': _stagedBy.text.trim(),
-        }, _photos);
+        await ops.updateStagingWithPhotos(
+          widget.existing!,
+          {
+            'so': _so.text.trim(),
+            'customer': _customer.text.trim(),
+            'location': _location.text.trim(),
+            'status': StatusRules.toDb(
+              _statusUi,
+              futureDateYmd: _ymd(_futureDate),
+            ),
+            'type': counts.typeLabel,
+            'qty': counts.total,
+            'weight': _weight.text.trim(),
+            'comments': _comments.text.trim(),
+            'staged_by': _stagedBy.text.trim(),
+          },
+          _photos,
+          locationCategory: _locationCategory,
+        );
+      }
+      if (locationDecision == LocationAdvisoryDecision.consolidate) {
+        final matches = ref
+            .read(appDataProvider)
+            .staging
+            .where((entry) => orderKey(entry.so) == orderKey(_so.text))
+            .toList();
+        if (matches.length > 1) await ops.consolidateStaging(matches);
       }
       if (mounted) {
         Navigator.pop(context);
@@ -206,16 +247,14 @@ class _StagingFormSheetState extends ConsumerState<StagingFormSheet> {
               textCapitalization: TextCapitalization.characters,
             ),
             const SizedBox(height: 8),
-            TextField(
-              controller: _customer,
-              decoration: const InputDecoration(labelText: 'Customer'),
-            ),
+            CustomerSuggestionField(controller: _customer),
             const SizedBox(height: 8),
-            TextField(
+            LocationSelectorField(
               controller: _location,
-              decoration: const InputDecoration(
-                labelText: 'Location (e.g. A-01-A-1)',
-              ),
+              soController: _so,
+              ignoreEntryId: widget.existing?.id,
+              label: 'Location (e.g. A-01-A-1)',
+              onCategoryChanged: (value) => _locationCategory = value,
             ),
             const SizedBox(height: 8),
             InputDecorator(
@@ -267,10 +306,7 @@ class _StagingFormSheetState extends ConsumerState<StagingFormSheet> {
               decoration: const InputDecoration(labelText: 'Weight (optional)'),
             ),
             const SizedBox(height: 8),
-            TextField(
-              controller: _stagedBy,
-              decoration: const InputDecoration(labelText: 'Staged by'),
-            ),
+            PersonSuggestionField(controller: _stagedBy, label: 'Staged by'),
             const SizedBox(height: 8),
             TextField(
               controller: _comments,

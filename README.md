@@ -133,6 +133,34 @@ GitHub Pages is **not** used.
 - RLS: anonymous **select** only; writes require authenticated session
 - No Prophet21 / Epicor / Search Order integration
 
+## Remembered entry fields and locations
+
+Customer, Staged By, Shipped By, Carrier, and other person-by fields accept
+either a searchable remembered value or free text. A new value is written to
+`dropdown_roster` only after the business operation succeeds. Values hidden in
+local memory and operational sentinels such as `CONSOLIDATED` and
+`RETURNED TO STOCK` are excluded from suggestions.
+
+Every editable location uses a drill-in selector with four categories:
+
+- **Aisle Location** — normalized aisle bins such as `A-01-A-1`,
+  `A-01-A-2`, and `A-01-A-1+2`
+- **Floor Locations**
+- **Stage for Shipping**
+- **Outside**
+
+Existing values are classified deterministically. The category selected by the
+user is retained for a newly typed ambiguous value through category-specific
+`dropdown_roster` entries; no database schema change is required.
+
+Location occupancy is calculated only from current `staging` rows. Shipped
+records and recent movement/history data are displayed as context but never
+mark a bin occupied. Before assigning a conflicting bin, the app refreshes its
+read model and presents an advisory with proceed or authenticated consolidation
+choices. This is intentionally not a transactional lock: another user can
+change staging between the advisory and the eventual save, so warehouse users
+must still resolve concurrent conflicts when warned.
+
 ## Brand assets
 
 - `assets/slst-mark.png` — forklift-in-tire brand mark (transparent background)

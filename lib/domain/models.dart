@@ -45,17 +45,17 @@ class StagingEntry {
   }
 
   Map<String, dynamic> toInsertMap() => {
-        'so': so,
-        'customer': customer,
-        'status': status,
-        'location': location,
-        'type': type,
-        'qty': qty,
-        'weight': weight,
-        'comments': comments,
-        'staged_by': stagedBy,
-        'photo_urls': photoUrls,
-      };
+    'so': so,
+    'customer': customer,
+    'status': status,
+    'location': location,
+    'type': type,
+    'qty': qty,
+    'weight': weight,
+    'comments': comments,
+    'staged_by': stagedBy,
+    'photo_urls': photoUrls,
+  };
 }
 
 class ShippedEntry {
@@ -219,15 +219,15 @@ class ContainerCounts {
     if (crates > 0) parts.add(_fmt(crates, 'Crate'));
     if (pipe > 0) parts.add(_fmt(pipe, 'Pipe/Rod'));
     if (other > 0) parts.add(_fmt(other, 'Other'));
-    return parts.isEmpty ? '1 Skid' : parts.join(', ');
+    return parts.join(', ');
   }
 
   static String _fmt(int n, String singular) {
     final plural = singular == 'Pipe/Rod'
         ? 'Pipe/Rod'
         : singular == 'Other'
-            ? 'Other'
-            : '${singular}s';
+        ? 'Other'
+        : '${singular}s';
     return n == 1 ? '1 $singular' : '$n $plural';
   }
 }

@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../domain/models.dart';
+import '../domain/location_intelligence.dart';
 import '../domain/status.dart';
 import 'supabase_repositories.dart';
 
@@ -119,9 +120,12 @@ class AppData {
 }
 
 class AppDataNotifier extends StateNotifier<AppData> {
-  AppDataNotifier(this._ref) : super(const AppData(loading: true)) {
-    refresh();
-    _bindRealtime();
+  AppDataNotifier(this._ref, {bool initialize = true})
+    : super(AppData(loading: initialize)) {
+    if (initialize) {
+      refresh();
+      _bindRealtime();
+    }
   }
 
   final Ref _ref;
@@ -210,32 +214,14 @@ final prefsProvider = FutureProvider<LocalPrefs>((ref) async {
 });
 
 const carrierRosterType = 'carrier';
-const _carrierMemorySkipValues = {
-  'returned to stock',
-  'consolidated',
-  'unassigned carrier',
-};
+const customerRosterType = 'customer';
+const personRosterType = 'person_by';
 
 List<String> filterCarrierSuggestions(
   Iterable<String> values, {
   Iterable<String> hidden = const [],
 }) {
-  final hiddenKeys = hidden.map((value) => value.trim().toLowerCase()).toSet();
-  final seen = <String>{};
-  final result = <String>[];
-  for (final raw in values) {
-    final value = raw.trim();
-    final key = value.toLowerCase();
-    if (value.isEmpty ||
-        _carrierMemorySkipValues.contains(key) ||
-        hiddenKeys.contains(key) ||
-        !seen.add(key)) {
-      continue;
-    }
-    result.add(value);
-  }
-  result.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
-  return result;
+  return filterRememberedValues(values, hidden: hidden);
 }
 
 final carrierSuggestionsProvider = FutureProvider<List<String>>((ref) async {
@@ -244,6 +230,59 @@ final carrierSuggestionsProvider = FutureProvider<List<String>>((ref) async {
       .valuesFor(carrierRosterType);
   final prefs = await ref.watch(prefsProvider.future);
   return filterCarrierSuggestions(values, hidden: prefs.hiddenMemory);
+});
+
+final personSuggestionsProvider = FutureProvider<List<String>>((ref) async {
+  final values = await ref
+      .watch(rosterRepoProvider)
+      .valuesFor(personRosterType);
+  final prefs = await ref.watch(prefsProvider.future);
+  return filterRememberedValues(values, hidden: prefs.hiddenMemory);
+});
+
+final customerSuggestionsProvider = FutureProvider<List<String>>((ref) async {
+  final roster = await ref
+      .watch(rosterRepoProvider)
+      .valuesFor(customerRosterType);
+  final data = ref.watch(appDataProvider);
+  final prefs = await ref.watch(prefsProvider.future);
+  return filterRememberedValues([
+    ...roster,
+    ...data.staging.map((entry) => entry.customer),
+    ...data.shipped.map((entry) => entry.customer),
+  ], hidden: prefs.hiddenMemory);
+});
+
+final locationSuggestionsProvider =
+    FutureProvider.family<List<String>, LocationCategory>((
+      ref,
+      category,
+    ) async {
+      final roster = await ref
+          .watch(rosterRepoProvider)
+          .valuesFor(category.rosterType);
+      final data = ref.watch(appDataProvider);
+      final prefs = await ref.watch(prefsProvider.future);
+      final fromRecords = [
+        ...data.staging.map((entry) => entry.location),
+        ...data.shipped.map((entry) => entry.location),
+      ].where((value) => classifyLocation(value) == category);
+      return filterRememberedValues([
+        ...roster,
+        ...fromRecords,
+      ], hidden: prefs.hiddenMemory);
+    });
+
+final recentBinMovementsProvider = FutureProvider<List<ChangelogEntry>>((
+  ref,
+) async {
+  final rows = await ref.watch(changelogRepoProvider).recent(limit: 150);
+  return rows
+      .where(
+        (entry) =>
+            entry.action.trimLeft().toLowerCase().startsWith('bin movement:'),
+      )
+      .toList();
 });
 
 final darkModeProvider = StateProvider<bool>((ref) => false);
@@ -280,6 +319,7 @@ class OperationsService {
     String? futureDateYmd,
     List<PhotoBytes> photos = const [],
     bool allowExistingSo = false,
+    LocationCategory? locationCategory,
   }) async {
     if (containers.total <= 0) {
       throw Exception('At least one container is required.');
@@ -304,9 +344,12 @@ class OperationsService {
       'staged_by': stagedBy?.trim(),
       'photo_urls': paths,
     });
-    if (stagedBy != null && stagedBy.trim().isNotEmpty) {
-      await _roster.remember('person_by', stagedBy.trim());
-    }
+    await _rememberEntryValues(
+      customer: customer,
+      person: stagedBy,
+      location: location,
+      locationCategory: locationCategory,
+    );
     await _log.log('staging', 'Added new entry for SO: ${so.trim()}');
     await _ref.read(appDataProvider.notifier).refresh();
   }
@@ -338,7 +381,11 @@ class OperationsService {
       'photo_urls': paths,
     });
     await _staging.delete(entry.id);
-    await _roster.remember('person_by', shippedBy.trim());
+    await _rememberEntryValues(
+      customer: entry.customer,
+      person: shippedBy,
+      location: entry.location,
+    );
     await _rememberCarrier(carrier);
     await _log.log('staging', 'Ship Confirmed SO: ${entry.so}');
     await _log.log('shipped', 'Added via Ship Confirm: SO: ${entry.so}');
@@ -373,6 +420,7 @@ class OperationsService {
     String? pmEmail,
     bool notifyPm = false,
     List<PhotoBytes> photos = const [],
+    LocationCategory? locationCategory,
   }) async {
     final paths = <String>[];
     for (final p in photos) {
@@ -392,6 +440,12 @@ class OperationsService {
       'photo_urls': paths,
     });
     await _rememberCarrier(carrier);
+    await _rememberEntryValues(
+      customer: customer,
+      person: shippedBy,
+      location: location,
+      locationCategory: locationCategory,
+    );
     await _log.log('shipped', 'Added via Quick Ship: SO: ${so.trim()}');
     if (notifyPm && pmEmail != null && pmEmail.contains('@')) {
       await _notify.sendPmNotification({
@@ -429,6 +483,11 @@ class OperationsService {
       'photo_urls': entry.photoUrls,
     });
     await _staging.delete(entry.id);
+    await _rememberEntryValues(
+      customer: entry.customer,
+      people: [pickedBy, returnedBy],
+      location: entry.location,
+    );
     await _log.log('staging', 'Returned to Stock SO: ${entry.so}');
     await _log.log('shipped', 'Added Return to Stock log for SO: ${entry.so}');
     if (notifyPm && pmEmail != null && pmEmail.contains('@')) {
@@ -483,30 +542,65 @@ class OperationsService {
     await _ref.read(appDataProvider.notifier).refresh();
   }
 
-  Future<void> updateStaging(String id, Map<String, dynamic> payload) async {
+  Future<void> updateStaging(
+    String id,
+    Map<String, dynamic> payload, {
+    LocationCategory? locationCategory,
+  }) async {
+    StagingEntry? previous;
+    for (final entry in _ref.read(appDataProvider).staging) {
+      if (entry.id == id) {
+        previous = entry;
+        break;
+      }
+    }
     await _staging.update(id, payload);
+    await _rememberEntryValues(
+      customer: payload['customer']?.toString(),
+      person: payload['staged_by']?.toString(),
+      location: payload['location']?.toString(),
+      locationCategory: locationCategory,
+    );
     await _log.log('staging', 'Edited SO ${payload['so'] ?? id}');
+    final nextLocation = payload['location']?.toString().trim();
+    if (previous != null &&
+        nextLocation != null &&
+        locationKey(previous.location) != locationKey(nextLocation)) {
+      await _log.log(
+        'staging',
+        'Bin Movement: Relocated — SO ${payload['so'] ?? previous.so} moved from ${previous.location.isEmpty ? 'Unknown' : previous.location} to $nextLocation',
+      );
+    }
     await _ref.read(appDataProvider.notifier).refresh();
   }
 
   Future<void> updateStagingWithPhotos(
     StagingEntry entry,
     Map<String, dynamic> payload,
-    List<PhotoBytes> photos,
-  ) async {
+    List<PhotoBytes> photos, {
+    LocationCategory? locationCategory,
+  }) async {
     final paths = [...entry.photoUrls];
     for (final photo in photos) {
       paths.add(
         await _photos.uploadBytes(bytes: photo.bytes, fileName: photo.name),
       );
     }
-    await updateStaging(entry.id, {...payload, 'photo_urls': paths});
+    await updateStaging(entry.id, {
+      ...payload,
+      'photo_urls': paths,
+    }, locationCategory: locationCategory);
   }
 
   Future<void> updateShipped(String id, Map<String, dynamic> payload) async {
     await _shipped.update(id, payload);
     final carrier = payload['carrier']?.toString();
     if (carrier != null) await _rememberCarrier(carrier);
+    await _rememberEntryValues(
+      customer: payload['customer']?.toString(),
+      person: payload['shipped_by']?.toString(),
+      location: payload['location']?.toString(),
+    );
     await _log.log('shipped', 'Edited SO ${payload['so'] ?? id}');
     await _ref.read(appDataProvider.notifier).refresh();
   }
@@ -553,12 +647,12 @@ class OperationsService {
     var skids = 0, boxes = 0, crates = 0, pipe = 0, other = 0;
     final photos = <String>{...keep.photoUrls};
     for (final e in entries) {
-      final t = e.type.toLowerCase();
-      if (t.contains('skid')) skids += e.qty;
-      if (t.contains('box')) boxes += e.qty;
-      if (t.contains('crate')) crates += e.qty;
-      if (t.contains('pipe')) pipe += e.qty;
-      if (t.contains('other')) other += e.qty;
+      final parsed = ContainerCounts.parse(e.type);
+      skids += parsed.skids;
+      boxes += parsed.boxes;
+      crates += parsed.crates;
+      pipe += parsed.pipe;
+      other += parsed.other;
       photos.addAll(e.photoUrls);
     }
     // Fallback when type labels are mixed: keep summed qty under a combined label.
@@ -612,6 +706,7 @@ class OperationsService {
       'attachments': paths,
       'notification_type': 'po_notification',
     });
+    await _rememberEntryValues(customer: customer);
     await _log.log(
       'staging',
       'Sent Automated PO Notification for PO: $po${linkedSo == null ? '' : ' (SO $linkedSo)'} (PM: $pmEmail)',
@@ -638,6 +733,7 @@ class OperationsService {
       'attachments': paths,
       'notification_type': 'return_notification',
     });
+    await _rememberEntryValues(customer: customer);
     await _log.log('staging', 'Sent Automated Return Notification for SO: $so');
   }
 
@@ -655,6 +751,42 @@ class OperationsService {
     if (values.isEmpty) return;
     await _roster.remember(carrierRosterType, values.single);
     _ref.invalidate(carrierSuggestionsProvider);
+  }
+
+  Future<void> _rememberEntryValues({
+    String? customer,
+    String? person,
+    Iterable<String> people = const [],
+    String? location,
+    LocationCategory? locationCategory,
+  }) async {
+    final prefs = await _ref.read(prefsProvider.future);
+    Future<void> remember(String type, String? raw) async {
+      if (raw == null) return;
+      final values = filterRememberedValues([raw], hidden: prefs.hiddenMemory);
+      if (values.isEmpty) return;
+      try {
+        await _roster.remember(type, values.single);
+      } catch (_) {
+        // The primary record has already saved. Roster memory is best effort
+        // and must never make a successful operation appear to have failed.
+      }
+    }
+
+    await remember(customerRosterType, customer);
+    await remember(personRosterType, person);
+    for (final value in people) {
+      await remember(personRosterType, value);
+    }
+    if (location != null && location.trim().isNotEmpty) {
+      final category = locationCategory ?? classifyLocation(location);
+      await remember(category.rosterType, location);
+    }
+    _ref.invalidate(customerSuggestionsProvider);
+    _ref.invalidate(personSuggestionsProvider);
+    for (final category in LocationCategory.values) {
+      _ref.invalidate(locationSuggestionsProvider(category));
+    }
   }
 }
 
