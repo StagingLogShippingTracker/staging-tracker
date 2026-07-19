@@ -6,6 +6,7 @@ import '../../core/theme.dart';
 import '../../data/app_state.dart';
 import '../../domain/models.dart';
 import '../../domain/status.dart';
+import '../shared/order_history_dialog.dart';
 import '../shared/widgets.dart';
 
 /// Detail windows attached to the dashboard KPI stat cards, restored from the
@@ -13,7 +14,12 @@ import '../shared/widgets.dart';
 /// entries — either grouped by SO or expanded per physical container.
 enum StatDetailMode { orders, containers, skid, box, crate, pipe, other }
 
-typedef _ModeConfig = ({String title, String entryLabel, bool flat, String? filter});
+typedef _ModeConfig = ({
+  String title,
+  String entryLabel,
+  bool flat,
+  String? filter,
+});
 
 const Map<StatDetailMode, _ModeConfig> _modeConfigs = {
   StatDetailMode.orders: (
@@ -72,10 +78,7 @@ const _sortLabels = [
   (_StatSort.customer, 'Sort: Customer A-Z'),
 ];
 
-Future<void> showStatDetailDialog(
-  BuildContext context,
-  StatDetailMode mode,
-) {
+Future<void> showStatDetailDialog(BuildContext context, StatDetailMode mode) {
   return showDialog<void>(
     context: context,
     builder: (context) => _StatDetailDialog(mode: mode),
@@ -129,24 +132,29 @@ class _StatDetailDialogState extends ConsumerState<_StatDetailDialog> {
   int _compare(StagingEntry a, StagingEntry b) {
     switch (_sort) {
       case _StatSort.dateDesc:
-        return (b.entryDate ?? DateTime(1970))
-            .compareTo(a.entryDate ?? DateTime(1970));
+        return (b.entryDate ?? DateTime(1970)).compareTo(
+          a.entryDate ?? DateTime(1970),
+        );
       case _StatSort.dateAsc:
-        return (a.entryDate ?? DateTime(1970))
-            .compareTo(b.entryDate ?? DateTime(1970));
+        return (a.entryDate ?? DateTime(1970)).compareTo(
+          b.entryDate ?? DateTime(1970),
+        );
       case _StatSort.customer:
         return a.customer.toLowerCase().compareTo(b.customer.toLowerCase());
       case _StatSort.location:
         return a.location.toLowerCase().compareTo(b.location.toLowerCase());
       case _StatSort.status:
-        return StatusRules.formatUi(a.status)
-            .compareTo(StatusRules.formatUi(b.status));
+        return StatusRules.formatUi(
+          a.status,
+        ).compareTo(StatusRules.formatUi(b.status));
       case _StatSort.urgency:
-        final u = StatusRules.urgencyWeight(b.status) -
+        final u =
+            StatusRules.urgencyWeight(b.status) -
             StatusRules.urgencyWeight(a.status);
         if (u != 0) return u;
-        return (b.entryDate ?? DateTime(1970))
-            .compareTo(a.entryDate ?? DateTime(1970));
+        return (b.entryDate ?? DateTime(1970)).compareTo(
+          a.entryDate ?? DateTime(1970),
+        );
       case _StatSort.so:
         return compareNatural(a.so, b.so);
     }
@@ -160,7 +168,9 @@ class _StatDetailDialogState extends ConsumerState<_StatDetailDialog> {
     for (var i = 0; i < am.length && i < bm.length; i++) {
       final as = am[i].group(0)!, bs = bm[i].group(0)!;
       final an = int.tryParse(as), bn = int.tryParse(bs);
-      final c = (an != null && bn != null) ? an.compareTo(bn) : as.compareTo(bs);
+      final c = (an != null && bn != null)
+          ? an.compareTo(bn)
+          : as.compareTo(bs);
       if (c != 0) return c;
     }
     return am.length.compareTo(bm.length);
@@ -172,18 +182,58 @@ class _StatDetailDialogState extends ConsumerState<_StatDetailDialog> {
         e.customer.toLowerCase().contains(_q);
   }
 
+  Widget _historyLink(String so) {
+    return Tooltip(
+      message: 'Open Order History for SO $so',
+      child: TextButton(
+        style: TextButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 2),
+          minimumSize: const Size(0, 32),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          foregroundColor: SlstColors.brand,
+          textStyle: const TextStyle(
+            fontWeight: FontWeight.w700,
+            decoration: TextDecoration.underline,
+          ),
+        ),
+        onPressed: () => showOrderHistoryDialog(context, ref, so: so),
+        child: Text(so),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final cfg = _modeConfigs[widget.mode]!;
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final staging =
-        ref.watch(appDataProvider).staging.where(_matches).toList();
+    final narrow = MediaQuery.sizeOf(context).width < 600;
+    final staging = ref.watch(appDataProvider).staging.where(_matches).toList();
+    final sortPicker = DropdownButtonFormField<_StatSort>(
+      initialValue: _sort,
+      isExpanded: true,
+      decoration: const InputDecoration(labelText: 'Sort', isDense: true),
+      style: TextStyle(
+        fontFamily: kBodyFontFamily,
+        fontSize: 13,
+        fontWeight: FontWeight.w600,
+        color: dark ? SlstColors.darkInk : SlstColors.ink,
+      ),
+      items: [
+        for (final (v, label) in _sortLabels)
+          DropdownMenuItem(value: v, child: Text(label)),
+      ],
+      onChanged: (v) => setState(() => _sort = v ?? _StatSort.so),
+    );
 
     return Dialog(
+      insetPadding: EdgeInsets.symmetric(
+        horizontal: narrow ? 16 : 40,
+        vertical: 24,
+      ),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 680, maxHeight: 620),
         child: Padding(
-          padding: const EdgeInsets.all(18),
+          padding: EdgeInsets.all(narrow ? 16 : 18),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -193,36 +243,31 @@ class _StatDetailDialogState extends ConsumerState<_StatDetailDialog> {
                   Expanded(
                     child: Text(
                       cfg.title,
+                      maxLines: narrow ? 2 : 1,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
-                  DropdownButton<_StatSort>(
-                    value: _sort,
-                    isDense: true,
-                    underline: const SizedBox.shrink(),
-                    style: TextStyle(
-                      fontFamily: kBodyFontFamily,
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w600,
-                      color: dark ? SlstColors.darkInk : SlstColors.ink,
-                    ),
-                    items: [
-                      for (final (v, label) in _sortLabels)
-                        DropdownMenuItem(value: v, child: Text(label)),
-                    ],
-                    onChanged: (v) =>
-                        setState(() => _sort = v ?? _StatSort.so),
-                  ),
                   IconButton(
+                    tooltip: 'Close',
                     onPressed: () => Navigator.pop(context),
                     icon: const Icon(Icons.close),
                   ),
                 ],
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 8),
+              if (narrow) ...[
+                sortPicker,
+                const SizedBox(height: 10),
+              ] else
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: SizedBox(width: 220, child: sortPicker),
+                ),
+              if (!narrow) const SizedBox(height: 10),
               SearchField(
                 controller: _search,
                 hint: 'Quick Search SO or Customer…',
@@ -267,23 +312,26 @@ class _StatDetailDialogState extends ConsumerState<_StatDetailDialog> {
           ],
           rows: [
             for (final r in rows)
-              DataRow(cells: [
-                DataCell(Text(
-                  r.entry.so,
-                  style: const TextStyle(fontWeight: FontWeight.w700),
-                )),
-                DataCell(Text(r.entry.customer)),
-                DataCell(Text(r.containerLabel)),
-                DataCell(Text(
-                  r.entry.location,
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                )),
-                DataCell(Text(
-                  r.entry.entryDate == null
-                      ? '—'
-                      : _dateFmt.format(r.entry.entryDate!.toLocal()),
-                )),
-              ]),
+              DataRow(
+                cells: [
+                  DataCell(_historyLink(r.entry.so)),
+                  DataCell(Text(r.entry.customer)),
+                  DataCell(Text(r.containerLabel)),
+                  DataCell(
+                    Text(
+                      r.entry.location,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  DataCell(
+                    Text(
+                      r.entry.entryDate == null
+                          ? '—'
+                          : _dateFmt.format(r.entry.entryDate!.toLocal()),
+                    ),
+                  ),
+                ],
+              ),
           ],
         ),
       ),
@@ -297,7 +345,9 @@ class _StatDetailDialogState extends ConsumerState<_StatDetailDialog> {
           ? <_DetailItem>[(entry: e, containerLabel: e.type)]
           : _expand(e, cfg.filter);
       if (items.isEmpty) continue;
-      groups.putIfAbsent(e.so.isEmpty ? 'Unknown SO' : e.so, () => []).addAll(items);
+      groups
+          .putIfAbsent(e.so.isEmpty ? 'Unknown SO' : e.so, () => [])
+          .addAll(items);
     }
     if (groups.isEmpty) return const _EmptyNote();
 
@@ -305,7 +355,9 @@ class _StatDetailDialogState extends ConsumerState<_StatDetailDialog> {
     if (_sort == _StatSort.so) {
       keys.sort(compareNatural);
     } else {
-      keys.sort((a, b) => _compare(groups[a]!.first.entry, groups[b]!.first.entry));
+      keys.sort(
+        (a, b) => _compare(groups[a]!.first.entry, groups[b]!.first.entry),
+      );
     }
 
     return ListView(
@@ -318,19 +370,16 @@ class _StatDetailDialogState extends ConsumerState<_StatDetailDialog> {
             shape: const Border(),
             title: Row(
               children: [
-                Text(
-                  so,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 14.5,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Text(
-                  '${groups[so]!.length} ${cfg.entryLabel}(s)',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: SlstColors.muted,
+                Flexible(child: _historyLink(so)),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    '${groups[so]!.length} ${cfg.entryLabel}(s)',
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: SlstColors.muted,
+                    ),
                   ),
                 ),
               ],

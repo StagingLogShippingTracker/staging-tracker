@@ -12,18 +12,30 @@ Future<void> showStagingFormSheet(
   BuildContext context,
   WidgetRef ref, {
   StagingEntry? existing,
+  String? initialSo,
+  bool allowExistingSo = false,
 }) {
-  return showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    useSafeArea: true,
-    builder: (_) => StagingFormSheet(existing: existing),
+  return showAdaptivePopup<void>(
+    context,
+    maxWidth: 680,
+    builder: (_) => StagingFormSheet(
+      existing: existing,
+      initialSo: initialSo,
+      allowExistingSo: allowExistingSo,
+    ),
   );
 }
 
 class StagingFormSheet extends ConsumerStatefulWidget {
-  const StagingFormSheet({super.key, this.existing});
+  const StagingFormSheet({
+    super.key,
+    this.existing,
+    this.initialSo,
+    this.allowExistingSo = false,
+  });
   final StagingEntry? existing;
+  final String? initialSo;
+  final bool allowExistingSo;
 
   @override
   ConsumerState<StagingFormSheet> createState() => _StagingFormSheetState();
@@ -65,6 +77,8 @@ class _StagingFormSheetState extends ConsumerState<StagingFormSheet> {
         _statusUi = 'Ship On Future Date';
         _futureDate = DateTime.tryParse(e.status);
       }
+    } else if (widget.initialSo != null) {
+      _so.text = widget.initialSo!;
     }
   }
 
@@ -114,6 +128,7 @@ class _StagingFormSheetState extends ConsumerState<StagingFormSheet> {
           stagedBy: _stagedBy.text,
           futureDateYmd: _ymd(_futureDate),
           photos: _photos,
+          allowExistingSo: widget.allowExistingSo,
         );
       } else {
         if (counts.total <= 0) {
@@ -126,7 +141,10 @@ class _StagingFormSheetState extends ConsumerState<StagingFormSheet> {
           'so': _so.text.trim(),
           'customer': _customer.text.trim(),
           'location': _location.text.trim(),
-          'status': StatusRules.toDb(_statusUi, futureDateYmd: _ymd(_futureDate)),
+          'status': StatusRules.toDb(
+            _statusUi,
+            futureDateYmd: _ymd(_futureDate),
+          ),
           'type': counts.typeLabel,
           'qty': counts.total,
           'weight': _weight.text.trim(),
@@ -136,7 +154,10 @@ class _StagingFormSheetState extends ConsumerState<StagingFormSheet> {
       }
       if (mounted) {
         Navigator.pop(context);
-        showOk(context, widget.existing == null ? 'Entry created' : 'Entry updated');
+        showOk(
+          context,
+          widget.existing == null ? 'Entry created' : 'Entry updated',
+        );
       }
     } catch (e) {
       if (mounted) showError(context, e);
@@ -169,6 +190,14 @@ class _StagingFormSheetState extends ConsumerState<StagingFormSheet> {
                       : 'Edit Staging Entry',
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
+                if (usesDesktopPopupChrome(context)) ...[
+                  const Spacer(),
+                  IconButton(
+                    tooltip: 'Close',
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
               ],
             ),
             const SizedBox(height: 12),

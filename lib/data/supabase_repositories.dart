@@ -62,8 +62,11 @@ class ShippedRepository {
   }
 
   Future<ShippedEntry?> getById(String id) async {
-    final row =
-        await _client.from('shipped').select().eq('id', id).maybeSingle();
+    final row = await _client
+        .from('shipped')
+        .select()
+        .eq('id', id)
+        .maybeSingle();
     if (row == null) return null;
     return ShippedEntry.fromMap(Map<String, dynamic>.from(row));
   }
@@ -95,6 +98,20 @@ class ChangelogRepository {
         .map((e) => ChangelogEntry.fromMap(Map<String, dynamic>.from(e as Map)))
         .toList();
   }
+
+  /// Legacy Order History lookup: all changelog actions containing this SO,
+  /// newest first. This is intentionally read-only and available through RLS
+  /// to the same anonymous users who can read staging and shipped records.
+  Future<List<ChangelogEntry>> forOrder(String so) async {
+    final rows = await _client
+        .from('changelog')
+        .select()
+        .ilike('action', '%$so%')
+        .order('created_at', ascending: false);
+    return (rows as List)
+        .map((e) => ChangelogEntry.fromMap(Map<String, dynamic>.from(e as Map)))
+        .toList();
+  }
 }
 
 class RosterRepository {
@@ -116,10 +133,10 @@ class RosterRepository {
   Future<void> remember(String rosterType, String value) async {
     final v = value.trim();
     if (v.isEmpty) return;
-    await _client.from('dropdown_roster').upsert(
-      {'roster_type': rosterType, 'value': v},
-      onConflict: 'roster_type,value',
-    );
+    await _client.from('dropdown_roster').upsert({
+      'roster_type': rosterType,
+      'value': v,
+    }, onConflict: 'roster_type,value');
   }
 }
 
@@ -134,11 +151,17 @@ class PhotoStorage {
     String folder = 'uploads',
   }) async {
     final safe = fileName.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
-    final path = '$folder/${DateTime.now().millisecondsSinceEpoch}_${_uuid.v4()}_$safe';
-    await _client.storage.from(AppConfig.freightPhotosBucket).uploadBinary(
+    final path =
+        '$folder/${DateTime.now().millisecondsSinceEpoch}_${_uuid.v4()}_$safe';
+    await _client.storage
+        .from(AppConfig.freightPhotosBucket)
+        .uploadBinary(
           path,
           bytes,
-          fileOptions: const FileOptions(upsert: false, contentType: 'image/jpeg'),
+          fileOptions: const FileOptions(
+            upsert: false,
+            contentType: 'image/jpeg',
+          ),
         );
     return path;
   }

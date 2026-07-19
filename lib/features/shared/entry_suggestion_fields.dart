@@ -1,0 +1,249 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../data/app_state.dart';
+import '../../domain/models.dart';
+
+class ContactEmailField extends ConsumerStatefulWidget {
+  const ContactEmailField({
+    super.key,
+    required this.controller,
+    this.label = 'PM email',
+    this.optional = false,
+  });
+
+  final TextEditingController controller;
+  final String label;
+  final bool optional;
+
+  @override
+  ConsumerState<ContactEmailField> createState() => _ContactEmailFieldState();
+}
+
+class _ContactEmailFieldState extends ConsumerState<ContactEmailField> {
+  final _focusNode = FocusNode();
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final contacts = ref.watch(contactsProvider).valueOrNull ?? const [];
+    final emailContacts =
+        contacts.where((contact) => _isEmail(contact.email)).toList()..sort(
+          (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+        );
+
+    return LayoutBuilder(
+      builder: (context, constraints) => RawAutocomplete<ContactPerson>(
+        textEditingController: widget.controller,
+        focusNode: _focusNode,
+        displayStringForOption: (contact) => contact.email,
+        optionsBuilder: (value) {
+          final query = value.text.trim().toLowerCase();
+          if (query.isEmpty) return emailContacts;
+          return emailContacts.where((contact) {
+            final identity =
+                '${contact.name} ${contact.designation} ${contact.email} '
+                        '${contact.branch}'
+                    .toLowerCase();
+            return identity.contains(query);
+          });
+        },
+        onSelected: (contact) {
+          widget.controller.value = TextEditingValue(
+            text: contact.email,
+            selection: TextSelection.collapsed(offset: contact.email.length),
+          );
+        },
+        fieldViewBuilder: (context, controller, focusNode, onSubmitted) {
+          return TextField(
+            controller: controller,
+            focusNode: focusNode,
+            keyboardType: TextInputType.emailAddress,
+            textInputAction: TextInputAction.next,
+            decoration: InputDecoration(
+              labelText: widget.optional
+                  ? '${widget.label} (optional)'
+                  : widget.label,
+              helperText: 'Search contacts by name, role, branch, or email',
+              suffixIcon: const Icon(Icons.contact_mail_outlined),
+            ),
+            onSubmitted: (_) => onSubmitted(),
+          );
+        },
+        optionsViewBuilder: (context, onSelected, options) {
+          final visible = options.take(30).toList();
+          return Align(
+            alignment: Alignment.topLeft,
+            child: Material(
+              elevation: 8,
+              clipBehavior: Clip.antiAlias,
+              borderRadius: BorderRadius.circular(12),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: constraints.maxWidth,
+                  maxHeight: 300,
+                ),
+                child: ListView.builder(
+                  padding: EdgeInsets.zero,
+                  shrinkWrap: true,
+                  itemCount: visible.length,
+                  itemBuilder: (context, index) {
+                    final contact = visible[index];
+                    return InkWell(
+                      onTap: () => onSelected(contact),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 10,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              contact.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.titleSmall,
+                            ),
+                            Text(
+                              contact.designation,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                            Text(
+                              contact.email,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.primary,
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class CarrierSuggestionField extends ConsumerStatefulWidget {
+  const CarrierSuggestionField({
+    super.key,
+    required this.controller,
+    this.label = 'Carrier',
+  });
+
+  final TextEditingController controller;
+  final String label;
+
+  @override
+  ConsumerState<CarrierSuggestionField> createState() =>
+      _CarrierSuggestionFieldState();
+}
+
+class _CarrierSuggestionFieldState
+    extends ConsumerState<CarrierSuggestionField> {
+  final _focusNode = FocusNode();
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final carriers =
+        ref.watch(carrierSuggestionsProvider).valueOrNull ?? const [];
+
+    return LayoutBuilder(
+      builder: (context, constraints) => RawAutocomplete<String>(
+        textEditingController: widget.controller,
+        focusNode: _focusNode,
+        optionsBuilder: (value) {
+          final query = value.text.trim().toLowerCase();
+          if (query.isEmpty) return carriers;
+          return carriers.where(
+            (carrier) => carrier.toLowerCase().contains(query),
+          );
+        },
+        onSelected: (carrier) {
+          widget.controller.value = TextEditingValue(
+            text: carrier,
+            selection: TextSelection.collapsed(offset: carrier.length),
+          );
+        },
+        fieldViewBuilder: (context, controller, focusNode, onSubmitted) {
+          return TextField(
+            controller: controller,
+            focusNode: focusNode,
+            textInputAction: TextInputAction.next,
+            decoration: InputDecoration(
+              labelText: widget.label,
+              helperText: 'Select a remembered carrier or type a new one',
+              suffixIcon: const Icon(Icons.arrow_drop_down),
+            ),
+            onSubmitted: (_) => onSubmitted(),
+          );
+        },
+        optionsViewBuilder: (context, onSelected, options) {
+          final visible = options.take(30).toList();
+          return Align(
+            alignment: Alignment.topLeft,
+            child: Material(
+              elevation: 8,
+              clipBehavior: Clip.antiAlias,
+              borderRadius: BorderRadius.circular(12),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: constraints.maxWidth,
+                  maxHeight: 260,
+                ),
+                child: ListView.builder(
+                  padding: EdgeInsets.zero,
+                  shrinkWrap: true,
+                  itemCount: visible.length,
+                  itemBuilder: (context, index) {
+                    final carrier = visible[index];
+                    return ListTile(
+                      dense: true,
+                      leading: const Icon(Icons.local_shipping_outlined),
+                      title: Text(
+                        carrier,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      onTap: () => onSelected(carrier),
+                    );
+                  },
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+bool _isEmail(String value) {
+  final email = value.trim();
+  return email.contains('@') && email.contains('.');
+}

@@ -8,6 +8,7 @@ import 'package:slst/domain/models.dart';
 import 'package:slst/domain/status.dart';
 import 'package:slst/features/reports/verification_audit.dart';
 import 'package:slst/features/shared/log_tables.dart';
+import 'package:slst/features/shared/order_history_dialog.dart';
 import 'package:slst/features/shared/widgets.dart';
 
 StagingEntry _staging({
@@ -83,14 +84,14 @@ void main() {
 
   test('Verification audit walks the warehouse in location order', () {
     StagingEntry at(String id, String loc) => StagingEntry(
-          id: id,
-          so: 'SO-$id',
-          customer: 'C',
-          status: 'Partial',
-          location: loc,
-          type: '1 Skid',
-          qty: 1,
-        );
+      id: id,
+      so: 'SO-$id',
+      customer: 'C',
+      status: 'Partial',
+      location: loc,
+      type: '1 Skid',
+      qty: 1,
+    );
     final entries = [
       at('1', 'CORP DROP'),
       at('2', 'A-02-B-1'),
@@ -100,18 +101,15 @@ void main() {
       at('6', 'PARTIAL BOX SHELF'),
       at('7', 'SOUTH WALL'),
     ]..sort(compareAuditLocations);
-    expect(
-      entries.map((e) => e.location).toList(),
-      [
-        'BOX SHELF 3',
-        'PARTIAL BOX SHELF',
-        'A-02-A-2',
-        'A-02-B-1',
-        'SOUTH WALL',
-        'W-1 SHIPPING',
-        'CORP DROP',
-      ],
-    );
+    expect(entries.map((e) => e.location).toList(), [
+      'BOX SHELF 3',
+      'PARTIAL BOX SHELF',
+      'A-02-A-2',
+      'A-02-B-1',
+      'SOUTH WALL',
+      'W-1 SHIPPING',
+      'CORP DROP',
+    ]);
   });
 
   test('Overdue detection', () {
@@ -120,11 +118,51 @@ void main() {
   });
 
   test('Container totals include a true containers sum', () {
-    final data = AppData(staging: [_staging(), _staging(id: '2', so: 'SO-1')]);
+    final data = AppData(
+      staging: [
+        _staging(),
+        _staging(id: '2', so: 'SO-1'),
+      ],
+    );
     final totals = data.containerTotals;
     expect(totals['containers'], 6);
     expect(totals['orders'], 2);
     expect(totals['skids'], 4);
+  });
+
+  test('Order History separates and deduplicates bin movements', () {
+    final at = DateTime(2026, 7, 3, 10);
+    final result = buildOrderHistoryLogData([
+      ChangelogEntry(
+        id: '1',
+        tableName: 'staging',
+        action:
+            'Bin Movement: To Shipped Log — SO SO-1001 moved from Staging Log to Shipped Log',
+        userEmail: 'brice',
+        createdAt: at,
+      ),
+      ChangelogEntry(
+        id: '2',
+        tableName: 'staging',
+        action: 'Ship Confirmed SO: SO-1001',
+        userEmail: 'brice',
+        createdAt: at.add(const Duration(seconds: 1)),
+      ),
+      ChangelogEntry(
+        id: '3',
+        tableName: 'staging',
+        action: 'Edited SO SO-1001',
+        userEmail: 'brice',
+        createdAt: at.subtract(const Duration(minutes: 1)),
+      ),
+    ], 'SO-1001');
+
+    expect(result.movements, hasLength(1));
+    expect(result.movements.single.label, 'To Shipped');
+    expect(result.movements.single.summary, contains('SO SO-1001 moved'));
+    expect(result.changelog.map((entry) => entry.action), [
+      'Edited SO SO-1001',
+    ]);
   });
 
   testWidgets('KPI card renders label, value and red accent', (tester) async {
@@ -150,8 +188,9 @@ void main() {
     }
   });
 
-  testWidgets('Staging table shows entry columns while signed out',
-      (tester) async {
+  testWidgets('Staging table shows entry columns while signed out', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(1920, 1200);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
@@ -175,7 +214,10 @@ void main() {
     await tester.pumpWidget(
       _wrap(
         ShippedLogCard(
-          entries: [_shipped(), _shipped(id: '10', carrier: 'RETURNED TO STOCK')],
+          entries: [
+            _shipped(),
+            _shipped(id: '10', carrier: 'RETURNED TO STOCK'),
+          ],
           expanded: true,
         ),
       ),
@@ -184,5 +226,45 @@ void main() {
     expect(find.text('Shipped Log'), findsOneWidget);
     expect(find.text('Day & Ross'), findsOneWidget);
     expect(find.text('RETURNED TO STOCK'), findsOneWidget);
+  });
+
+  testWidgets('Order History is complete and fits a phone', (tester) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final active = _staging();
+    final shipped = ShippedEntry(
+      id: 'ship-1',
+      so: active.so,
+      customer: active.customer,
+      carrier: 'Day & Ross',
+      location: active.location,
+      type: '1 Skid',
+      qty: 1,
+      shippedBy: 'Brice',
+      shippedAt: DateTime(2026, 7, 2, 15, 45),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildSlstTheme(dark: false),
+        home: OrderHistoryDialog(
+          so: active.so,
+          activeEntries: [active],
+          shippedEntries: [shipped],
+          historyFuture: Future.value(const []),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Order History:'), findsOneWidget);
+    expect(find.byKey(const Key('order-history-close')), findsOneWidget);
+    expect(find.text('Current Active Staging'), findsOneWidget);
+    expect(find.text('Past Shipments'), findsOneWidget);
+    expect(find.text('Bin Movements'), findsOneWidget);
+    expect(find.text('Changelog History'), findsOneWidget);
+    expect(find.textContaining('Shipped via Day & Ross'), findsOneWidget);
+    expect(find.text('Add Entry'), findsNothing);
+    expect(tester.takeException(), isNull);
   });
 }

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme.dart';
 import '../../data/app_state.dart';
 import '../../platform/photo_picker.dart';
+import '../shared/entry_suggestion_fields.dart';
 import '../shared/widgets.dart';
 
 class NotificationsScreen extends ConsumerStatefulWidget {
@@ -148,11 +149,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                   decoration: const InputDecoration(labelText: 'Customer'),
                 ),
                 const SizedBox(height: 12),
-                TextField(
-                  controller: _pmEmail,
-                  decoration: const InputDecoration(labelText: 'PM email'),
-                  keyboardType: TextInputType.emailAddress,
-                ),
+                ContactEmailField(controller: _pmEmail),
                 const SizedBox(height: 12),
                 TextField(
                   controller: _details,

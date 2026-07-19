@@ -5,6 +5,7 @@ import '../../core/theme.dart';
 import '../../data/app_state.dart';
 import '../../domain/models.dart';
 import '../../platform/photo_picker.dart';
+import '../shared/entry_suggestion_fields.dart';
 import '../shared/widgets.dart';
 
 Future<void> showShipDialog(
@@ -45,7 +46,6 @@ class _ShipDialogState extends ConsumerState<ShipDialog> {
   bool _busy = false;
   final _photos = <PhotoBytes>[];
   final _picker = PhotoPickerService();
-  List<String> _carriers = const [];
   List<String> _people = const [];
 
   @override
@@ -56,13 +56,9 @@ class _ShipDialogState extends ConsumerState<ShipDialog> {
 
   Future<void> _loadRoster() async {
     final roster = ref.read(rosterRepoProvider);
-    final carriers = await roster.valuesFor('carrier');
     final people = await roster.valuesFor('person_by');
     if (mounted) {
-      setState(() {
-        _carriers = carriers;
-        _people = people;
-      });
+      setState(() => _people = people);
     }
   }
 
@@ -77,7 +73,9 @@ class _ShipDialogState extends ConsumerState<ShipDialog> {
   Future<void> _submit() async {
     setState(() => _busy = true);
     try {
-      await ref.read(operationsProvider).shipEntry(
+      await ref
+          .read(operationsProvider)
+          .shipEntry(
             entry: widget.entry,
             carrier: _carrier.text,
             shippedBy: _shippedBy.text,
@@ -106,22 +104,7 @@ class _ShipDialogState extends ConsumerState<ShipDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Autocomplete<String>(
-                optionsBuilder: (v) {
-                  final q = v.text.toLowerCase();
-                  return _carriers.where((c) => c.toLowerCase().contains(q));
-                },
-                onSelected: (v) => _carrier.text = v,
-                fieldViewBuilder: (context, controller, focus, onSubmit) {
-                  controller.text = _carrier.text;
-                  controller.addListener(() => _carrier.text = controller.text);
-                  return TextField(
-                    controller: controller,
-                    focusNode: focus,
-                    decoration: const InputDecoration(labelText: 'Carrier'),
-                  );
-                },
-              ),
+              CarrierSuggestionField(controller: _carrier),
               const SizedBox(height: 8),
               Autocomplete<String>(
                 optionsBuilder: (v) {
@@ -131,8 +114,9 @@ class _ShipDialogState extends ConsumerState<ShipDialog> {
                 onSelected: (v) => _shippedBy.text = v,
                 fieldViewBuilder: (context, controller, focus, onSubmit) {
                   controller.text = _shippedBy.text;
-                  controller
-                      .addListener(() => _shippedBy.text = controller.text);
+                  controller.addListener(
+                    () => _shippedBy.text = controller.text,
+                  );
                   return TextField(
                     controller: controller,
                     focusNode: focus,
@@ -141,13 +125,7 @@ class _ShipDialogState extends ConsumerState<ShipDialog> {
                 },
               ),
               const SizedBox(height: 8),
-              TextField(
-                controller: _pmEmail,
-                decoration: const InputDecoration(
-                  labelText: 'PM email (optional)',
-                ),
-                keyboardType: TextInputType.emailAddress,
-              ),
+              ContactEmailField(controller: _pmEmail, optional: true),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 title: const Text('Notify PM'),
@@ -216,7 +194,9 @@ class _ReturnDialogState extends ConsumerState<ReturnDialog> {
   Future<void> _submit() async {
     setState(() => _busy = true);
     try {
-      await ref.read(operationsProvider).returnToStock(
+      await ref
+          .read(operationsProvider)
+          .returnToStock(
             entry: widget.entry,
             pickedBy: _pickedBy.text,
             returnedBy: _returnedBy.text,
@@ -261,10 +241,7 @@ class _ReturnDialogState extends ConsumerState<ReturnDialog> {
                 maxLines: 2,
               ),
               const SizedBox(height: 8),
-              TextField(
-                controller: _pmEmail,
-                decoration: const InputDecoration(labelText: 'PM email'),
-              ),
+              ContactEmailField(controller: _pmEmail),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 title: const Text('Notify PM'),

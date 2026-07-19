@@ -164,8 +164,9 @@ class AppDataNotifier extends StateNotifier<AppData> {
   }
 }
 
-final appDataProvider =
-    StateNotifierProvider<AppDataNotifier, AppData>((ref) => AppDataNotifier(ref));
+final appDataProvider = StateNotifierProvider<AppDataNotifier, AppData>(
+  (ref) => AppDataNotifier(ref),
+);
 
 class LocalPrefs {
   LocalPrefs(this._prefs);
@@ -208,6 +209,43 @@ final prefsProvider = FutureProvider<LocalPrefs>((ref) async {
   return LocalPrefs(prefs);
 });
 
+const carrierRosterType = 'carrier';
+const _carrierMemorySkipValues = {
+  'returned to stock',
+  'consolidated',
+  'unassigned carrier',
+};
+
+List<String> filterCarrierSuggestions(
+  Iterable<String> values, {
+  Iterable<String> hidden = const [],
+}) {
+  final hiddenKeys = hidden.map((value) => value.trim().toLowerCase()).toSet();
+  final seen = <String>{};
+  final result = <String>[];
+  for (final raw in values) {
+    final value = raw.trim();
+    final key = value.toLowerCase();
+    if (value.isEmpty ||
+        _carrierMemorySkipValues.contains(key) ||
+        hiddenKeys.contains(key) ||
+        !seen.add(key)) {
+      continue;
+    }
+    result.add(value);
+  }
+  result.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+  return result;
+}
+
+final carrierSuggestionsProvider = FutureProvider<List<String>>((ref) async {
+  final values = await ref
+      .watch(rosterRepoProvider)
+      .valuesFor(carrierRosterType);
+  final prefs = await ref.watch(prefsProvider.future);
+  return filterCarrierSuggestions(values, hidden: prefs.hiddenMemory);
+});
+
 final darkModeProvider = StateProvider<bool>((ref) => false);
 
 class OperationsService {
@@ -241,11 +279,12 @@ class OperationsService {
     String? stagedBy,
     String? futureDateYmd,
     List<PhotoBytes> photos = const [],
+    bool allowExistingSo = false,
   }) async {
     if (containers.total <= 0) {
       throw Exception('At least one container is required.');
     }
-    if (await soConflict(so)) {
+    if (!allowExistingSo && await soConflict(so)) {
       throw Exception('SO $so already exists in Staging.');
     }
     final paths = <String>[];
@@ -300,7 +339,7 @@ class OperationsService {
     });
     await _staging.delete(entry.id);
     await _roster.remember('person_by', shippedBy.trim());
-    await _roster.remember('carrier', carrier.trim());
+    await _rememberCarrier(carrier);
     await _log.log('staging', 'Ship Confirmed SO: ${entry.so}');
     await _log.log('shipped', 'Added via Ship Confirm: SO: ${entry.so}');
     await _log.log(
@@ -352,6 +391,7 @@ class OperationsService {
       'pmd_email': _pmDisplay(pmEmail),
       'photo_urls': paths,
     });
+    await _rememberCarrier(carrier);
     await _log.log('shipped', 'Added via Quick Ship: SO: ${so.trim()}');
     if (notifyPm && pmEmail != null && pmEmail.contains('@')) {
       await _notify.sendPmNotification({
@@ -422,7 +462,10 @@ class OperationsService {
     });
     await _shipped.delete(entry.id);
     await _log.log('shipped', 'Undo Shipment Action for SO: ${entry.so}');
-    await _log.log('staging', 'Restored to Staging via Undo for SO: ${entry.so}');
+    await _log.log(
+      'staging',
+      'Restored to Staging via Undo for SO: ${entry.so}',
+    );
     await _ref.read(appDataProvider.notifier).refresh();
   }
 
@@ -448,6 +491,8 @@ class OperationsService {
 
   Future<void> updateShipped(String id, Map<String, dynamic> payload) async {
     await _shipped.update(id, payload);
+    final carrier = payload['carrier']?.toString();
+    if (carrier != null) await _rememberCarrier(carrier);
     await _log.log('shipped', 'Edited SO ${payload['so'] ?? id}');
     await _ref.read(appDataProvider.notifier).refresh();
   }
@@ -524,7 +569,10 @@ class OperationsService {
     for (final e in entries.skip(1)) {
       await _staging.delete(e.id);
     }
-    await _log.log('staging', 'Consolidated ${entries.length} rows for SO ${keep.so}');
+    await _log.log(
+      'staging',
+      'Consolidated ${entries.length} rows for SO ${keep.so}',
+    );
     await _ref.read(appDataProvider.notifier).refresh();
   }
 
@@ -543,7 +591,8 @@ class OperationsService {
     await _notify.sendPmNotification({
       'to': pmEmail,
       'cc': 'warehouse1@swiftsupply.ca',
-      'subject': 'PO Notification: $po${linkedSo == null ? '' : ' (SO $linkedSo)'}',
+      'subject':
+          'PO Notification: $po${linkedSo == null ? '' : ' (SO $linkedSo)'}',
       'body':
           'PO Notification<br><br><b>PO#</b> | $po<br><b>Customer</b> | $customer${linkedSo == null ? '' : '<br><b>SO#</b> | $linkedSo'}${details == null || details.isEmpty ? '' : '<br><br>$details'}',
       'attachments': paths,
@@ -584,6 +633,14 @@ class OperationsService {
     final local = email.split('@').first.split('.').first;
     if (local.isEmpty) return email;
     return local[0].toUpperCase() + local.substring(1);
+  }
+
+  Future<void> _rememberCarrier(String raw) async {
+    final prefs = await _ref.read(prefsProvider.future);
+    final values = filterCarrierSuggestions([raw], hidden: prefs.hiddenMemory);
+    if (values.isEmpty) return;
+    await _roster.remember(carrierRosterType, values.single);
+    _ref.invalidate(carrierSuggestionsProvider);
   }
 }
 

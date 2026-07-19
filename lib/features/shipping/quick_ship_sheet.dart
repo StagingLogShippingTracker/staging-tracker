@@ -4,13 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme.dart';
 import '../../data/app_state.dart';
 import '../../platform/photo_picker.dart';
+import '../shared/entry_suggestion_fields.dart';
 import '../shared/widgets.dart';
 
 Future<void> showQuickShipSheet(BuildContext context, WidgetRef ref) {
-  return showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    useSafeArea: true,
+  return showAdaptivePopup<void>(
+    context,
+    maxWidth: 680,
     builder: (_) => const QuickShipSheet(),
   );
 }
@@ -72,7 +72,9 @@ class _QuickShipSheetState extends ConsumerState<QuickShipSheet> {
       if (counts.total <= 0) {
         throw Exception('At least one container is required.');
       }
-      await ref.read(operationsProvider).quickShip(
+      await ref
+          .read(operationsProvider)
+          .quickShip(
             so: _so.text,
             customer: _customer.text,
             carrier: _carrier.text,
@@ -109,8 +111,18 @@ class _QuickShipSheetState extends ConsumerState<QuickShipSheet> {
               children: [
                 const Icon(Icons.bolt, color: SlstColors.green),
                 const SizedBox(width: 8),
-                Text('Quick Ship',
-                    style: Theme.of(context).textTheme.titleLarge),
+                Text(
+                  'Quick Ship',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                if (usesDesktopPopupChrome(context)) ...[
+                  const Spacer(),
+                  IconButton(
+                    tooltip: 'Close',
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
               ],
             ),
             const SizedBox(height: 12),
@@ -124,10 +136,7 @@ class _QuickShipSheetState extends ConsumerState<QuickShipSheet> {
               decoration: const InputDecoration(labelText: 'Customer'),
             ),
             const SizedBox(height: 8),
-            TextField(
-              controller: _carrier,
-              decoration: const InputDecoration(labelText: 'Carrier'),
-            ),
+            CarrierSuggestionField(controller: _carrier),
             const SizedBox(height: 8),
             TextField(
               controller: _shippedBy,
@@ -159,10 +168,7 @@ class _QuickShipSheetState extends ConsumerState<QuickShipSheet> {
               maxLines: 2,
             ),
             const SizedBox(height: 8),
-            TextField(
-              controller: _pmEmail,
-              decoration: const InputDecoration(labelText: 'PM email'),
-            ),
+            ContactEmailField(controller: _pmEmail),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               title: const Text('Notify PM'),

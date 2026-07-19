@@ -9,6 +9,7 @@ import '../../domain/status.dart';
 import '../staging/ship_dialog.dart';
 import '../staging/split_dialog.dart';
 import '../staging/staging_form_sheet.dart';
+import 'order_history_dialog.dart';
 import 'widgets.dart';
 
 final _dateFmt = DateFormat('M/d/yy h:mm a');
@@ -46,6 +47,38 @@ Widget _photosButton(BuildContext context, String so, List<String> paths) {
         showPhotosDialog(context, title: 'Photos — SO $so', paths: paths),
     icon: const Icon(Icons.photo_library_outlined, size: 16),
     label: Text('${paths.length}'),
+  );
+}
+
+Widget _soHistoryLink(
+  BuildContext context,
+  WidgetRef ref,
+  String so, {
+  double maxWidth = 110,
+}) {
+  return Tooltip(
+    message: 'Open Order History for SO $so',
+    child: TextButton(
+      style: TextButton.styleFrom(
+        padding: EdgeInsets.zero,
+        minimumSize: const Size(0, 32),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        foregroundColor: SlstColors.brand,
+        textStyle: const TextStyle(
+          fontWeight: FontWeight.w700,
+          decoration: TextDecoration.underline,
+        ),
+      ),
+      onPressed: () => showOrderHistoryDialog(context, ref, so: so),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: maxWidth),
+        child: Text(
+          so.isEmpty ? '—' : so,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
+    ),
   );
 }
 
@@ -119,7 +152,9 @@ Future<void> showChangelogDialog(
                       if (snap.hasError) {
                         return Padding(
                           padding: const EdgeInsets.all(16),
-                          child: Text('Failed to load changelog: ${snap.error}'),
+                          child: Text(
+                            'Failed to load changelog: ${snap.error}',
+                          ),
                         );
                       }
                       final rows = (snap.data ?? const <ChangelogEntry>[])
@@ -149,8 +184,9 @@ Future<void> showChangelogDialog(
                                   ),
                                   decoration: BoxDecoration(
                                     color: r.tableName == 'shipped'
-                                        ? SlstColors.success
-                                            .withValues(alpha: 0.14)
+                                        ? SlstColors.success.withValues(
+                                            alpha: 0.14,
+                                          )
                                         : SlstColors.brandSoft,
                                     borderRadius: BorderRadius.circular(20),
                                   ),
@@ -366,20 +402,27 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
     switch (_sort) {
       case StagingSort.urgency:
         list.sort((a, b) {
-          final u = StatusRules.urgencyWeight(b.status) -
+          final u =
+              StatusRules.urgencyWeight(b.status) -
               StatusRules.urgencyWeight(a.status);
           if (u != 0) return u;
-          return (b.entryDate ?? DateTime(1970))
-              .compareTo(a.entryDate ?? DateTime(1970));
+          return (b.entryDate ?? DateTime(1970)).compareTo(
+            a.entryDate ?? DateTime(1970),
+          );
         });
       case StagingSort.newest:
-        list.sort((a, b) => (b.entryDate ?? DateTime(1970))
-            .compareTo(a.entryDate ?? DateTime(1970)));
+        list.sort(
+          (a, b) => (b.entryDate ?? DateTime(1970)).compareTo(
+            a.entryDate ?? DateTime(1970),
+          ),
+        );
       case StagingSort.so:
         list.sort((a, b) => a.so.compareTo(b.so));
       case StagingSort.customer:
-        list.sort((a, b) =>
-            a.customer.toLowerCase().compareTo(b.customer.toLowerCase()));
+        list.sort(
+          (a, b) =>
+              a.customer.toLowerCase().compareTo(b.customer.toLowerCase()),
+        );
     }
     return list;
   }
@@ -390,7 +433,8 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
     final ok = await confirmDialog(
       context,
       title: 'Delete selected?',
-      message: 'Delete ${picked.length} staging entries? This cannot be undone.',
+      message:
+          'Delete ${picked.length} staging entries? This cannot be undone.',
       confirmLabel: 'Delete',
     );
     if (!ok || !mounted) return;
@@ -523,8 +567,9 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
                   icon: Icons.delete_outline,
                   color: SlstColors.danger,
                   compact: true,
-                  onPressed:
-                      _selected.isEmpty ? null : () => _deleteSelected(sorted),
+                  onPressed: _selected.isEmpty
+                      ? null
+                      : () => _deleteSelected(sorted),
                 ),
               ],
             ),
@@ -589,14 +634,16 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
                             ),
                           if (canWrite)
                             DataCell(
-                              _editButton(() =>
-                                  showStagingFormSheet(context, ref, existing: e)),
+                              _editButton(
+                                () => showStagingFormSheet(
+                                  context,
+                                  ref,
+                                  existing: e,
+                                ),
+                              ),
                             ),
                           DataCell(_photosButton(context, e.so, e.photoUrls)),
-                          DataCell(
-                            _clipText(e.so,
-                                maxWidth: 110, weight: FontWeight.w700),
-                          ),
+                          DataCell(_soHistoryLink(context, ref, e.so)),
                           DataCell(_clipText(e.customer, maxWidth: 180)),
                           DataCell(Text(_fmtDate(e.entryDate))),
                           DataCell(_clipText(e.type, maxWidth: 170)),
@@ -633,9 +680,17 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
                                     onSelected: (v) {
                                       switch (v) {
                                         case 'split':
-                                          showSplitDialog(context, ref, entry: e);
+                                          showSplitDialog(
+                                            context,
+                                            ref,
+                                            entry: e,
+                                          );
                                         case 'return':
-                                          showReturnDialog(context, ref, entry: e);
+                                          showReturnDialog(
+                                            context,
+                                            ref,
+                                            entry: e,
+                                          );
                                         case 'delete':
                                           _deleteOne(e);
                                       }
@@ -722,16 +777,22 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
     final list = [...widget.entries];
     switch (_sort) {
       case ShippedSort.newest:
-        list.sort((a, b) => (b.shippedAt ?? DateTime(1970))
-            .compareTo(a.shippedAt ?? DateTime(1970)));
+        list.sort(
+          (a, b) => (b.shippedAt ?? DateTime(1970)).compareTo(
+            a.shippedAt ?? DateTime(1970),
+          ),
+        );
       case ShippedSort.so:
         list.sort((a, b) => a.so.compareTo(b.so));
       case ShippedSort.customer:
-        list.sort((a, b) =>
-            a.customer.toLowerCase().compareTo(b.customer.toLowerCase()));
+        list.sort(
+          (a, b) =>
+              a.customer.toLowerCase().compareTo(b.customer.toLowerCase()),
+        );
       case ShippedSort.carrier:
-        list.sort((a, b) =>
-            a.carrier.toLowerCase().compareTo(b.carrier.toLowerCase()));
+        list.sort(
+          (a, b) => a.carrier.toLowerCase().compareTo(b.carrier.toLowerCase()),
+        );
     }
     return list;
   }
@@ -742,7 +803,8 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
     final ok = await confirmDialog(
       context,
       title: 'Delete selected?',
-      message: 'Delete ${picked.length} shipped entries? This cannot be undone.',
+      message:
+          'Delete ${picked.length} shipped entries? This cannot be undone.',
       confirmLabel: 'Delete',
     );
     if (!ok || !mounted) return;
@@ -868,8 +930,9 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
                   icon: Icons.delete_outline,
                   color: SlstColors.danger,
                   compact: true,
-                  onPressed:
-                      _selected.isEmpty ? null : () => _deleteSelected(sorted),
+                  onPressed: _selected.isEmpty
+                      ? null
+                      : () => _deleteSelected(sorted),
                 ),
               ],
             )
@@ -935,10 +998,7 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
                               ),
                             ),
                           DataCell(_photosButton(context, e.so, e.photoUrls)),
-                          DataCell(
-                            _clipText(e.so,
-                                maxWidth: 110, weight: FontWeight.w700),
-                          ),
+                          DataCell(_soHistoryLink(context, ref, e.so)),
                           DataCell(_clipText(e.customer, maxWidth: 180)),
                           DataCell(_clipText(e.type, maxWidth: 170)),
                           DataCell(_clipText(e.carrier, maxWidth: 150)),
