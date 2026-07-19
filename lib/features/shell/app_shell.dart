@@ -128,24 +128,23 @@ class AppShell extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (usesDesktopPopupChrome(sheetContext))
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 8, 0),
-                child: Row(
-                  children: [
-                    Text(
-                      'More',
-                      style: Theme.of(sheetContext).textTheme.titleLarge,
-                    ),
-                    const Spacer(),
-                    IconButton(
-                      tooltip: 'Close',
-                      onPressed: () => Navigator.pop(sheetContext),
-                      icon: const Icon(Icons.close),
-                    ),
-                  ],
-                ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 8, 0),
+              child: Row(
+                children: [
+                  Text(
+                    'More',
+                    style: Theme.of(sheetContext).textTheme.titleLarge,
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    tooltip: 'Close',
+                    onPressed: () => Navigator.pop(sheetContext),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
               ),
+            ),
             for (final d in _destinations.skip(_phonePrimaryCount))
               ListTile(
                 leading: Icon(

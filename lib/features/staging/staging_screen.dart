@@ -51,7 +51,7 @@ class _StagingScreenState extends ConsumerState<StagingScreen> {
             )
           else
             StagingLogCard(entries: entries, expanded: true),
-          const SiteFooter(),
+          const BrandFooter(),
         ],
       ),
     );

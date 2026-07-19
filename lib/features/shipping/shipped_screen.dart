@@ -56,7 +56,7 @@ class _ShippedScreenState extends ConsumerState<ShippedScreen> {
               expanded: true,
               onQuickShip: () => showQuickShipSheet(context, ref),
             ),
-          const SiteFooter(),
+          const BrandFooter(),
         ],
       ),
     );

@@ -66,8 +66,9 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen> {
               }
               return ListView.builder(
                 padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                itemCount: filtered.length,
+                itemCount: filtered.length + 1,
                 itemBuilder: (context, i) {
+                  if (i == filtered.length) return const BrandFooter();
                   final c = filtered[i];
                   return Card(
                     child: Padding(

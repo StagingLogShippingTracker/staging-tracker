@@ -6,15 +6,15 @@ Inputs (checked into assets/):
 
 Outputs:
   assets/slst-mark.png / assets/slst-wordmark.png     (background made transparent, in place)
-  windows/runner/resources/app_icon.ico               (tight-cropped mark, minimal padding)
-  android/.../mipmap-*/ic_launcher.png                (tight-cropped mark, minimal padding)
+  windows/runner/resources/app_icon.ico               (rounded-square white icon, tight mark)
+  android/.../mipmap-*/ic_launcher.png                (rounded-square white icon, tight mark)
   android/.../mipmap-*/launch_image.png               (transparent mark for the splash screen)
 """
 
 from collections import deque
 from pathlib import Path
 
-from PIL import Image
+from PIL import Image, ImageDraw
 
 ROOT = Path(__file__).resolve().parents[1]
 ASSETS = ROOT / "assets"
@@ -22,6 +22,8 @@ RES = ROOT / "android" / "app" / "src" / "main" / "res"
 
 # Fraction of the icon canvas left as padding around the mark on each side.
 ICON_PADDING = 0.05
+# Corner radius as a fraction of the icon size (rounded-square launcher look).
+ICON_CORNER_RADIUS = 0.22
 TOLERANCE = 28  # per-channel distance treated as "background"
 
 
@@ -93,7 +95,27 @@ def icon_canvas(mark: Image.Image, size: int = 1024) -> Image.Image:
         scaled,
         ((size - scaled.width) // 2, (size - scaled.height) // 2),
     )
-    return canvas
+    return round_corners(canvas)
+
+
+def round_corners(icon: Image.Image, radius_frac: float = ICON_CORNER_RADIUS) -> Image.Image:
+    """Clip the square icon to a rounded rect (transparent corners).
+
+    The mask is drawn at 4x and downsampled for smooth anti-aliased edges.
+    """
+    size = icon.width
+    scale = 4
+    big = size * scale
+    mask = Image.new("L", (big, big), 0)
+    ImageDraw.Draw(mask).rounded_rectangle(
+        (0, 0, big - 1, big - 1),
+        radius=round(big * radius_frac),
+        fill=255,
+    )
+    mask = mask.resize((size, size), Image.Resampling.LANCZOS)
+    rounded = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    rounded.paste(icon, (0, 0), mask)
+    return rounded
 
 
 def main() -> None:

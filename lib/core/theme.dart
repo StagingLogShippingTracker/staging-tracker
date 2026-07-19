@@ -339,7 +339,9 @@ ThemeData buildSlstTheme({required bool dark}) {
     ),
     bottomSheetTheme: BottomSheetThemeData(
       backgroundColor: dark ? scheme.surfaceContainerLow : Colors.white,
-      showDragHandle: true,
+      // Sheets close via an explicit X button in their header row; the drag
+      // handle would be redundant chrome (swipe-down still works).
+      showDragHandle: false,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),

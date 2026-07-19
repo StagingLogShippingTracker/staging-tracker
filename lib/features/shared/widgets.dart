@@ -13,8 +13,9 @@ bool usesDesktopPopupChrome(BuildContext context) {
       platform == TargetPlatform.macOS;
 }
 
-/// Uses a conventional dialog with an explicit close control on desktop, and
-/// a swipeable bottom sheet on touch-first mobile platforms.
+/// Uses a conventional dialog on desktop and a bottom sheet on touch-first
+/// mobile platforms. Popup content is expected to render its own explicit X
+/// close control on every platform (sheets remain swipe-dismissible too).
 Future<T?> showAdaptivePopup<T>(
   BuildContext context, {
   required WidgetBuilder builder,
@@ -606,7 +607,7 @@ class SearchField extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Coming soon card + site footer (web parity)
+// Coming soon card (web parity)
 // ---------------------------------------------------------------------------
 
 class ComingSoonCard extends StatelessWidget {
@@ -643,72 +644,6 @@ class ComingSoonCard extends StatelessWidget {
             style: TextStyle(
               fontSize: 12.5,
               color: dark ? SlstColors.darkMuted : SlstColors.subtle,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class SiteFooter extends StatelessWidget {
-  const SiteFooter({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    final subtle = dark ? SlstColors.darkMuted : SlstColors.subtle;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 20),
-      child: Column(
-        children: [
-          Divider(color: dark ? SlstColors.darkBorder : SlstColors.border),
-          const SizedBox(height: 14),
-          Text(
-            'Designed, developed, and maintained by Brice Johnson.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 11.5,
-              color: dark ? SlstColors.darkMuted : SlstColors.muted,
-            ),
-          ),
-          const SizedBox(height: 4),
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 620),
-            child: Text(
-              'Open-source components are used under their respective licenses. '
-              'All other software, design, and content are the property of Brice Johnson. '
-              'All rights reserved. Unauthorized use, reproduction, or distribution is prohibited.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 10.5, height: 1.5, color: subtle),
-            ),
-          ),
-          const SizedBox(height: 14),
-          Container(
-            width: 52,
-            height: 52,
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
-              color: dark
-                  ? Colors.black.withValues(alpha: 0.28)
-                  : const Color(0xFFEDF0F4),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x1A0F172A),
-                  blurRadius: 6,
-                  offset: Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Opacity(
-              opacity: dark ? 0.35 : 0.75,
-              child: Image.asset(
-                'assets/slst-mark.png',
-                fit: BoxFit.contain,
-                errorBuilder: (_, _, _) =>
-                    const Icon(Icons.local_shipping, color: SlstColors.subtle),
-              ),
             ),
           ),
         ],

@@ -225,7 +225,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
             },
           ),
         ),
-        const SiteFooter(),
+        const BrandFooter(),
       ],
     );
   }

@@ -175,7 +175,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 'Live carrier tracking for outbound freight is on the roadmap. '
                 'Shipped entries will link directly to carrier tracking status.',
           ),
-          const SiteFooter(),
+          const BrandFooter(),
         ],
       ),
     );

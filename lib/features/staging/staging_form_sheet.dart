@@ -190,14 +190,12 @@ class _StagingFormSheetState extends ConsumerState<StagingFormSheet> {
                       : 'Edit Staging Entry',
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
-                if (usesDesktopPopupChrome(context)) ...[
-                  const Spacer(),
-                  IconButton(
-                    tooltip: 'Close',
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close),
-                  ),
-                ],
+                const Spacer(),
+                IconButton(
+                  tooltip: 'Close',
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close),
+                ),
               ],
             ),
             const SizedBox(height: 12),
