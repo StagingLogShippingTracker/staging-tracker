@@ -121,13 +121,31 @@ class AppShell extends ConsumerWidget {
 
   void _showMoreSheet(BuildContext context, WidgetRef ref) {
     final location = GoRouterState.of(context).uri.toString();
-    showModalBottomSheet<void>(
-      context: context,
-      useSafeArea: true,
+    showAdaptivePopup<void>(
+      context,
+      maxWidth: 460,
       builder: (sheetContext) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (usesDesktopPopupChrome(sheetContext))
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 8, 0),
+                child: Row(
+                  children: [
+                    Text(
+                      'More',
+                      style: Theme.of(sheetContext).textTheme.titleLarge,
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      tooltip: 'Close',
+                      onPressed: () => Navigator.pop(sheetContext),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+              ),
             for (final d in _destinations.skip(_phonePrimaryCount))
               ListTile(
                 leading: Icon(

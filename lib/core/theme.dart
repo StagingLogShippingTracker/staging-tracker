@@ -156,20 +156,20 @@ StatusStyle statusStyleFor({
 }
 
 TextTheme _brandTextTheme(TextTheme base) {
-  TextStyle? oswald(TextStyle? s, {FontWeight? weight}) => s?.copyWith(
-        fontFamily: kBodyFontFamily,
-        fontWeight: weight ?? s.fontWeight,
-        letterSpacing: 0.2,
-      );
-  return base.copyWith(
-    displayLarge: oswald(base.displayLarge, weight: FontWeight.w600),
-    displayMedium: oswald(base.displayMedium, weight: FontWeight.w600),
-    displaySmall: oswald(base.displaySmall, weight: FontWeight.w600),
-    headlineLarge: oswald(base.headlineLarge, weight: FontWeight.w600),
-    headlineMedium: oswald(base.headlineMedium, weight: FontWeight.w600),
-    headlineSmall: oswald(base.headlineSmall, weight: FontWeight.w600),
-    titleLarge: oswald(base.titleLarge, weight: FontWeight.w600),
-    titleMedium: oswald(base.titleMedium, weight: FontWeight.w500),
+  final oswald = base.apply(
+    fontFamily: kBodyFontFamily,
+    displayColor: base.bodyLarge?.color,
+    bodyColor: base.bodyLarge?.color,
+  );
+  return oswald.copyWith(
+    displayLarge: oswald.displayLarge?.copyWith(fontWeight: FontWeight.w600),
+    displayMedium: oswald.displayMedium?.copyWith(fontWeight: FontWeight.w600),
+    displaySmall: oswald.displaySmall?.copyWith(fontWeight: FontWeight.w600),
+    headlineLarge: oswald.headlineLarge?.copyWith(fontWeight: FontWeight.w600),
+    headlineMedium: oswald.headlineMedium?.copyWith(fontWeight: FontWeight.w600),
+    headlineSmall: oswald.headlineSmall?.copyWith(fontWeight: FontWeight.w600),
+    titleLarge: oswald.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+    titleMedium: oswald.titleMedium?.copyWith(fontWeight: FontWeight.w500),
   );
 }
 
@@ -212,7 +212,11 @@ ThemeData buildSlstTheme({required bool dark}) {
           outlineVariant: const Color(0xFFE2E8F0),
         );
 
-  final base = ThemeData(colorScheme: scheme, useMaterial3: true);
+  final base = ThemeData(
+    colorScheme: scheme,
+    useMaterial3: true,
+    fontFamily: kBodyFontFamily,
+  );
   final textTheme = _brandTextTheme(base.textTheme);
 
   // Desktop density: keep the touch-first Material 3 look on mobile while

@@ -6,6 +6,43 @@ import '../../core/theme.dart';
 import '../../domain/models.dart';
 import '../../domain/status.dart';
 
+bool usesDesktopPopupChrome(BuildContext context) {
+  final platform = Theme.of(context).platform;
+  return platform == TargetPlatform.windows ||
+      platform == TargetPlatform.linux ||
+      platform == TargetPlatform.macOS;
+}
+
+/// Uses a conventional dialog with an explicit close control on desktop, and
+/// a swipeable bottom sheet on touch-first mobile platforms.
+Future<T?> showAdaptivePopup<T>(
+  BuildContext context, {
+  required WidgetBuilder builder,
+  double maxWidth = 680,
+}) {
+  if (usesDesktopPopupChrome(context)) {
+    return showDialog<T>(
+      context: context,
+      builder: (dialogContext) => Dialog(
+        insetPadding: const EdgeInsets.all(24),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: maxWidth,
+            maxHeight: MediaQuery.sizeOf(dialogContext).height * 0.9,
+          ),
+          child: builder(dialogContext),
+        ),
+      ),
+    );
+  }
+  return showModalBottomSheet<T>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    builder: builder,
+  );
+}
+
 /// Resolves the [StatusStyle] for a raw DB status string.
 StatusStyle statusStyleOf(BuildContext context, String dbStatus) {
   return statusStyleFor(

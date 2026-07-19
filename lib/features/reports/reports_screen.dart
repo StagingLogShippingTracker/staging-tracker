@@ -21,6 +21,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   @override
   Widget build(BuildContext context) {
     final data = ref.watch(appDataProvider);
+    final narrow = MediaQuery.sizeOf(context).width < 600;
 
     final overdue =
         data.staging.where((e) => StatusRules.isOverdue(e.status)).toList();
@@ -43,7 +44,12 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     const gap = 10.0;
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
+      padding: EdgeInsets.fromLTRB(
+        narrow ? 16 : 24,
+        20,
+        narrow ? 16 : 24,
+        8,
+      ),
       children: [
         LayoutBuilder(
           builder: (context, constraints) {
@@ -144,24 +150,48 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
               onPressed: () => showChangelogDialog(context, ref),
             ),
           ],
-          subHeader: SegmentedButton<String>(
-            style: SegmentedButton.styleFrom(
-              textStyle: const TextStyle(
-                fontFamily: kBodyFontFamily,
-                fontSize: 12.5,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            segments: const [
-              ButtonSegment(value: 'all', label: Text('All Staging')),
-              ButtonSegment(value: 'overdue', label: Text('Overdue')),
-              ButtonSegment(value: 'today', label: Text('Ship Today')),
-              ButtonSegment(value: 'tomorrow', label: Text('Tomorrow')),
-              ButtonSegment(value: 'awaiting', label: Text('Awaiting')),
-            ],
-            selected: {_filter},
-            onSelectionChanged: (s) => setState(() => _filter = s.first),
-          ),
+          subHeader: narrow
+              ? DropdownButtonFormField<String>(
+                  initialValue: _filter,
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Staging category',
+                    isDense: true,
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'all', child: Text('All Staging')),
+                    DropdownMenuItem(value: 'overdue', child: Text('Overdue')),
+                    DropdownMenuItem(value: 'today', child: Text('Ship Today')),
+                    DropdownMenuItem(
+                      value: 'tomorrow',
+                      child: Text('Tomorrow'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'awaiting',
+                      child: Text('Awaiting'),
+                    ),
+                  ],
+                  onChanged: (v) => setState(() => _filter = v ?? _filter),
+                )
+              : SegmentedButton<String>(
+                  style: SegmentedButton.styleFrom(
+                    textStyle: const TextStyle(
+                      fontFamily: kBodyFontFamily,
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  segments: const [
+                    ButtonSegment(value: 'all', label: Text('All Staging')),
+                    ButtonSegment(value: 'overdue', label: Text('Overdue')),
+                    ButtonSegment(value: 'today', label: Text('Ship Today')),
+                    ButtonSegment(value: 'tomorrow', label: Text('Tomorrow')),
+                    ButtonSegment(value: 'awaiting', label: Text('Awaiting')),
+                  ],
+                  selected: {_filter},
+                  onSelectionChanged: (s) =>
+                      setState(() => _filter = s.first),
+                ),
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
           child: Builder(
             builder: (context) {

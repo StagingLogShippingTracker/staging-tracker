@@ -133,14 +133,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         ? null
                         : () => showQuickConsolidateDialog(context, ref),
                   ),
-                  PillButton(
-                    label: 'Quick Ship',
-                    icon: Icons.flash_on,
-                    color: SlstColors.success,
-                    onPressed: user == null
-                        ? null
-                        : () => showQuickShipSheet(context, ref),
-                  ),
                 ],
               );
               if (narrow) {
