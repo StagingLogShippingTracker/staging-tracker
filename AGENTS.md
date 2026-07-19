@@ -1,26 +1,52 @@
 # AGENTS.md
 
-## Cursor Cloud specific instructions
+## What this is
 
-### What this is
-SLST — Staging Log & Shipping Tracker: a **static HTML/JS PWA** (vanilla JS, no framework, **no build step**) backed by a **hosted Supabase** project. Production is served from GitHub Pages. See `README.md` for the human workflow.
+SLST — Staging Log & Shipping Tracker: a **Flutter** app (Windows + Android) backed by a **hosted Supabase** project. Make.com PM email/SMS is invoked only through the authenticated Edge Function `notify-pm`.
 
-### Running the app (dev)
-- Serve the repo root over HTTP (do **not** open via `file://` — `partials-loader.js` fetches `partials/*.html`, though it has inline `<script type="text/plain">` template fallbacks):
-  - `python3 -m http.server 8000` from the repo root, then open `http://127.0.0.1:8000/index.html`.
-- No dependencies to install: `python3` and `node` are pre-installed; the browser loads `@supabase/supabase-js@2` from the jsDelivr CDN, so **internet egress is required** at runtime.
+There is **no** web/PWA client and **no** Prophet21 / Epicor integration.
 
-### Live production backend — be careful
-- `config.js` hardcodes the **live production** Supabase URL + anon key. Create/edit/ship/delete actions write to **real** production data, and shipping/notification flows can trigger **real PM SMS/email** via the Make.com webhook (`config.js` `MAKE_EMAIL_WEBHOOK_URL`, with real phone numbers in `PM_SMS_ROSTER`). Keep testing **read-only** unless you have explicit approval and credentials. Anonymous users are read-only; create/edit is gated behind Supabase email/password sign-in (no test credentials are provisioned in this environment).
+## Dev commands
 
-### Auth notes (non-obvious)
-- The create/edit UI is gated **client-side** (`auth.js` `updateAuthUI` toggles `currentUser` / `#entryFormCard`). The `staging` table's RLS currently permits **anonymous** insert/delete via the anon key — so writes can hit production even without a real Supabase session. Do not write to production casually.
-- Sign-in uses Supabase email/password. New accounts require **email confirmation**; unconfirmed accounts fail `signInWithPassword` with `email_not_confirmed`. To test the genuine authenticated path you need an already-confirmed account (confirm via the email link, or an admin confirms the user in the Supabase dashboard / via service-role admin API).
+```powershell
+.\.tools\flutter\bin\flutter.bat pub get
+.\.tools\flutter\bin\flutter.bat run -d windows
+.\.tools\flutter\bin\flutter.bat test
+.\.tools\flutter\bin\flutter.bat analyze
+```
 
-### Lint / test / build
-- There is **no** `package.json`, bundler, formal test suite, or CI in this repo.
-- Closest native check: `python3 scripts/audit-handlers.py` (verifies inline `on*=` handlers resolve to a loaded script). Note it currently reports pre-existing false positives (`MISSING: open` = the native `window.open` browser API) and exits non-zero — not caused by your changes.
-- No build step — asset cache-busting is manual via `window.APP_ASSET_VERSIONS` in `config.js`.
+`.tools/` is gitignored. Document PATH/SDK setup in README if developers use a system Flutter install instead.
 
-### Optional tooling
-- PowerShell scripts under `scripts/` are Windows/Swift-network tooling.
+## Live production backend — be careful
+
+- `lib/core/app_config.dart` points at the **live** Supabase project.
+- Authenticated create/edit/ship/delete/notify writes affect real data and can trigger real PM email/SMS via Make.
+- Prefer read-only exploration unless you have explicit approval and a confirmed test account.
+- Anonymous clients can still **read** staging/shipped data; RLS blocks anonymous writes.
+
+## Auth
+
+- Email/password via Supabase Auth.
+- New accounts require email confirmation (`email_not_confirmed` until confirmed).
+- UI gates write actions on `currentUser`; RLS is the real enforcement.
+
+## Layout
+
+- `lib/features/` — screens (dashboard, staging, shipping, reports, notifications, contacts, auth, shell)
+- `lib/domain/` — models + status/container rules
+- `lib/data/` — repositories, Riverpod app state, operations service
+- `lib/platform/` — camera/file picker adapters
+- `lib/core/` — config, theme, router
+- `supabase/functions/notify-pm` — authenticated Make webhook proxy + PM SMS roster
+- `supabase/migrations/` — RLS + private secrets support
+- `scripts/packaging/` — portable ZIP / Inno Setup / APK helpers
+
+## Notifications
+
+Never put `MAKE_EMAIL_WEBHOOK_URL` or PM phone gateways in the Flutter client.
+Rotate the Make webhook via Edge secret or `private.app_secrets`.
+
+## Packaging
+
+See README for portable Windows ZIP, per-user Inno installer, and APK scripts.
+Signing secrets (`android/key.properties`, `*.jks`, `*.keystore`) must stay out of git.

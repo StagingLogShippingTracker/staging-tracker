@@ -11,7 +11,7 @@ description: >-
 ## When to use
 
 - User mentions **Make.com**, **Make scenarios**, **webhooks**, or **email notifications** from the tracker
-- Changing the shipping/PM email flow triggered by `sendPmEmailWebhook` in `config.js`
+- Changing the shipping/PM email flow invoked by Supabase Edge Function `notify-pm`
 - Inspecting or updating Make scenarios without manual UI work
 
 ## MCP connection
@@ -31,27 +31,23 @@ Token alternative (no OAuth): copy `.cursor/mcp.json.example`, set `MAKE_MCP_TOK
 | Item | Value |
 |------|--------|
 | Make zone | `us2` (webhook host: `hook.us2.make.com`) |
-| Email webhook (client) | `MAKE_EMAIL_WEBHOOK_URL` in `config.js` |
-| Client caller | `window.sendPmEmailWebhook()` in `config.js` |
-| Used from | `operations.js`, `batch.js`, ship/notify flows |
+| Webhook storage | Edge secret `MAKE_EMAIL_WEBHOOK_URL` **or** `private.app_secrets` |
+| Authenticated caller | Flutter app → `NotifyRepository` → Edge Function `notify-pm` |
+| PM SMS roster | Server-only inside `supabase/functions/notify-pm` |
 
-The app **POSTs JSON** to the webhook; the Make scenario handles email/SMS formatting and delivery.
+The Flutter client never embeds the Make webhook URL. The Edge Function validates the user JWT, then POSTs JSON to Make.
 
 ## Agent workflow
 
 1. **Discover** — Use Make MCP tools to list scenarios; find the SLST email/notification scenario
 2. **Read** — Inspect scenario inputs/outputs and module chain before editing
 3. **Change** — Update scenario via MCP management tools (paid plan) or guide user in Make UI
-4. **Sync code** — If webhook URL or payload shape changes, update `config.js` and callers
+4. **Sync secrets** — If the webhook URL changes, update the Edge secret and/or `private.app_secrets`
 5. **Verify** — Confirm scenario is **Active** or **On-demand** (required for MCP tools)
 
-## Payload contract (email webhook)
+## Payload contract
 
-`sendPmEmailWebhook` sends arbitrary JSON from callers. Common fields include PM email, SO, customer, and message body. When changing the scenario, keep backward compatibility or update all JS callers in the same change.
-
-### PO Notification email
-
-PO Notifications use the same Make webhook as other PM emails (`sendPmEmailWebhook`): HTML body to the PM, CC warehouse, including photo attachments when present. Email-to-SMS is not used for this flow.
+`notify-pm` forwards JSON from authenticated clients. Common fields: `to`, `cc`, `subject`, `body`, `attachments` (public photo URLs), `notification_type`, optional `sms_to` / `sms_plain` / `pm_name`.
 
 ## Docs
 

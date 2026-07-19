@@ -47,12 +47,13 @@ Zone for Swift: **us2** (`us2.make.com`).
 
 ## 5. SLST email scenario
 
-The site calls:
+The Flutter app calls authenticated Edge Function `notify-pm`, which POSTs to Make.
 
-- URL: `MAKE_EMAIL_WEBHOOK_URL` in `config.js`
-- Function: `sendPmEmailWebhook()` in `config.js`
+- Webhook URL: Edge secret `MAKE_EMAIL_WEBHOOK_URL` or `private.app_secrets`
+- Source: `supabase/functions/notify-pm/index.ts`
+- Client: `NotifyRepository.sendPmNotification` in Dart
 
-Keep the webhook URL in sync if you recreate the scenario in Make.
+Keep the webhook URL in sync if you recreate the scenario in Make. Do **not** put the webhook URL in the Flutter app.
 
 ## Troubleshooting
 

@@ -1,0 +1,74 @@
+name: Build SLST
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+
+  windows:
+    needs: test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter config --enable-windows-desktop
+      - run: flutter pub get
+      - run: flutter build windows --release
+      - name: Package portable ZIP
+        shell: pwsh
+        run: |
+          $release = "build\windows\x64\runner\Release"
+          $dist = "dist"
+          New-Item -ItemType Directory -Force -Path $dist | Out-Null
+          Compress-Archive -Path "$release\*" -DestinationPath "$dist\slst-windows-portable.zip" -Force
+      - uses: actions/upload-artifact@v4
+        with:
+          name: slst-windows-portable
+          path: dist/slst-windows-portable.zip
+
+  android:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Build APK
+        run: |
+          if [ -f android/key.properties ]; then
+            flutter build apk --release
+            mkdir -p dist
+            cp build/app/outputs/flutter-apk/app-release.apk dist/slst-release.apk
+          else
+            flutter build apk --debug
+            mkdir -p dist
+            cp build/app/outputs/flutter-apk/app-debug.apk dist/slst-debug.apk
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: slst-android-apk
+          path: dist/*.apk

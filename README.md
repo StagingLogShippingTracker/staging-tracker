@@ -1,47 +1,101 @@
-# SLST — Staging Log & Shipping Tracker
+# SLST — Staging Log & Shipping Tracker (Flutter)
 
-Static HTML/JS PWA backed by Supabase. Deployed to GitHub Pages at [staginglogshippingtracker.github.io/staging-tracker](https://staginglogshippingtracker.github.io/staging-tracker/).
+Native Flutter client for Swift Supply staging and shipping operations.
+Targets **Windows** (portable ZIP + per-user installer) and **Android** (sideload APK).
+Uses the existing hosted Supabase project for Auth, Postgres, Storage, and the `notify-pm` Edge Function (Make.com notifications).
 
-## Single-folder workflow
+> The previous GitHub Pages HTML/PWA app has been removed. Users need a packaged Windows or Android build.
 
-**Work only in this folder.** It is the git repo, local dev copy, and what gets pushed to GitHub.
+## Stack
 
-```
-C:\Users\Brice\Downloads\staging-tracker
-```
+- Flutter / Dart (Material 3)
+- Riverpod (state), GoRouter (navigation)
+- `supabase_flutter` (Auth, Database, Storage, Functions)
+- Make.com notifications via authenticated Edge Function `notify-pm` (webhook URL is **not** embedded in the app)
 
-Do not keep a second copy of app files in `Downloads\` — edit here, commit here, push from here.
+## Prerequisites
 
-## Daily commands
-
-Open PowerShell in this folder:
+- Flutter SDK 3.44+ (this repo may keep a local copy under `.tools/flutter`, which is gitignored)
+- For Windows builds: Visual Studio with **Desktop development with C++**
+- For Android builds: Android SDK + JDK 17
+- Optional: Inno Setup 6 for the per-user Windows installer
 
 ```powershell
-# Check status
-.\scripts\git.ps1 status
-
-# Commit & push
-.\scripts\git.ps1 add -A
-.\scripts\git.ps1 commit -m "Your message"
-.\scripts\git.ps1 push
+# From repo root, if using the vendored SDK:
+.\.tools\flutter\bin\flutter.bat doctor
+.\.tools\flutter\bin\flutter.bat pub get
 ```
 
-Or use full Git after installing [Git for Windows](https://git-scm.com/download/win) — then `git` works everywhere.
+## Run (dev)
 
-## Local preview
+```powershell
+.\.tools\flutter\bin\flutter.bat run -d windows
+# or
+.\.tools\flutter\bin\flutter.bat run -d android
+```
 
-Open `index.html` in a browser, or use a simple static server. Hard-refresh after JS/CSS changes (cache-bust query strings on assets).
+Anonymous users are **read-only**. Sign in with a confirmed Supabase email/password account to create/edit/ship/notify.
 
-## Secrets (never commit)
+## Configuration
 
-- `.env` files with credentials (gitignored)
+`lib/core/app_config.dart` holds the public Supabase URL + anon key (override with `--dart-define=SUPABASE_URL=...` / `SUPABASE_ANON_KEY=...` if needed).
 
-## Integrations
+Server-only Make webhook:
 
-- **Supabase** — `plugin-supabase-supabase` MCP (database)
-- **Make.com** — `.cursor/mcp.json` + OAuth sign-in (scenarios, webhooks). See [docs/MAKE-MCP-SETUP.md](docs/MAKE-MCP-SETUP.md)
+- Preferred: Edge Function secret `MAKE_EMAIL_WEBHOOK_URL`
+- Fallback: `private.app_secrets` row `MAKE_EMAIL_WEBHOOK_URL` (read by `public.get_app_secret` as `service_role` only)
 
-## Remote
+PM SMS routing lives **only** inside `supabase/functions/notify-pm`.
 
-- **GitHub:** https://github.com/StagingLogShippingTracker/staging-tracker
-- **Supabase project:** `gdrpdiwykmnybmkadlrv`
+## Tests
+
+```powershell
+.\.tools\flutter\bin\flutter.bat test
+.\.tools\flutter\bin\flutter.bat analyze
+```
+
+## Packaging
+
+### Windows portable ZIP
+
+```powershell
+.\scripts\packaging\build-windows-portable.ps1
+```
+
+Output: `dist/slst-windows-portable.zip`
+
+### Windows per-user installer (no admin)
+
+Requires [Inno Setup 6](https://jrsoftware.org/isinfo.php):
+
+```powershell
+.\scripts\packaging\build-windows-installer.ps1
+```
+
+Output: `dist/SLST-Setup-User.exe` (installs under `%LOCALAPPDATA%\Programs\SLST`)
+
+### Android APK
+
+```powershell
+.\scripts\packaging\build-android-apk.ps1
+```
+
+For release signing, create `android/key.properties` (gitignored) pointing at a keystore. Without it, the script builds a debug APK suitable for internal sideload testing.
+
+## CI
+
+GitHub Actions workflow `.github/workflows/build.yml` builds Windows and Android artifacts on push/tag.
+GitHub Pages is **not** used.
+
+## Backend notes
+
+- Tables: `staging`, `shipped`, `changelog`, `dropdown_roster`
+- Storage bucket: `freight-photos` (public read, authenticated write)
+- RLS: anonymous **select** only; writes require authenticated session
+- No Prophet21 / Epicor / Search Order integration
+
+## Brand assets
+
+- `assets/staging-shipping-logo.png`
+- `assets/contacts.json` (employee directory)
+- Additional brand files under `brand/`
