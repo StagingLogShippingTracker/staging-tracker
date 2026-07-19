@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/theme.dart';
 import '../../data/app_state.dart';
-import '../../domain/status.dart';
+import '../shared/log_tables.dart';
 import '../shared/widgets.dart';
-import '../staging/staging_form_sheet.dart';
+import '../shipping/quick_ship_sheet.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -29,136 +30,154 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final data = ref.watch(appDataProvider);
     final user = ref.watch(currentUserProvider);
     final totals = data.containerTotals;
+
     final staging = data.staging.where((e) {
       if (_q.isEmpty) return true;
       final hay =
-          '${e.so} ${e.customer} ${e.location} ${e.status}'.toLowerCase();
+          '${e.so} ${e.customer} ${e.location} ${e.status} ${e.comments ?? ''}'
+              .toLowerCase();
       return hay.contains(_q);
-    }).toList()
-      ..sort((a, b) {
-        final u = StatusRules.urgencyWeight(b.status) -
-            StatusRules.urgencyWeight(a.status);
-        if (u != 0) return u;
-        return (b.entryDate ?? DateTime(1970))
-            .compareTo(a.entryDate ?? DateTime(1970));
-      });
+    }).toList();
 
     final shipped = data.shipped.where((e) {
       if (_q.isEmpty) return true;
       final hay =
-          '${e.so} ${e.customer} ${e.carrier} ${e.location}'.toLowerCase();
+          '${e.so} ${e.customer} ${e.carrier} ${e.location} ${e.comments ?? ''}'
+              .toLowerCase();
       return hay.contains(_q);
-    }).take(20).toList();
+    }).toList();
+
+    const kpis = [
+      (key: 'orders', label: 'Orders', icon: Icons.description_outlined),
+      (key: 'containers', label: 'Containers', icon: Icons.widgets_outlined),
+      (key: 'skids', label: 'Skids', icon: Icons.pallet),
+      (key: 'boxes', label: 'Boxes', icon: Icons.inventory_2_outlined),
+      (key: 'crates', label: 'Crates', icon: Icons.dataset_outlined),
+      (key: 'pipe', label: 'Pipe/Rod', icon: Icons.horizontal_rule),
+      (key: 'other', label: 'Other', icon: Icons.category_outlined),
+      (key: 'shipped', label: 'Shipped', icon: Icons.local_shipping_outlined),
+    ];
 
     return RefreshIndicator(
       onRefresh: () => ref.read(appDataProvider.notifier).refresh(),
       child: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
         children: [
-          if (data.error != null)
+          if (data.error != null) ...[
             Card(
               color: Theme.of(context).colorScheme.errorContainer,
               child: ListTile(
+                leading: const Icon(Icons.error_outline),
                 title: const Text('Data load error'),
                 subtitle: Text(data.error!),
                 trailing: IconButton(
                   icon: const Icon(Icons.refresh),
-                  onPressed: () =>
-                      ref.read(appDataProvider.notifier).refresh(),
+                  onPressed: () => ref.read(appDataProvider.notifier).refresh(),
                 ),
               ),
             ),
-          SearchField(
-            controller: _search,
-            hint: 'Search SO, customer, location…',
-            onChanged: (v) => setState(() => _q = v.trim().toLowerCase()),
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final e in [
-                ('Orders', totals['orders']!),
-                ('Staging', totals['staging']!),
-                ('Skids', totals['skids']!),
-                ('Boxes', totals['boxes']!),
-                ('Crates', totals['crates']!),
-                ('Pipe', totals['pipe']!),
-                ('Other', totals['other']!),
-                ('Shipped', totals['shipped']!),
-              ])
-                SizedBox(
-                  width: 140,
-                  child: StatTile(label: e.$1, value: e.$2),
-                ),
-            ],
+            const SizedBox(height: 14),
+          ],
+          // KPI grid
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final cols = constraints.maxWidth >= 1100
+                  ? 8
+                  : constraints.maxWidth >= 720
+                      ? 4
+                      : 2;
+              const gap = 10.0;
+              final w = (constraints.maxWidth - gap * (cols - 1)) / cols;
+              return Wrap(
+                spacing: gap,
+                runSpacing: gap,
+                children: [
+                  for (final k in kpis)
+                    SizedBox(
+                      width: w,
+                      child: KpiCard(
+                        label: k.label,
+                        value: totals[k.key] ?? 0,
+                        icon: k.icon,
+                      ),
+                    ),
+                ],
+              );
+            },
           ),
           const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Staging Entries',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-              ),
-              if (user != null)
-                FilledButton.icon(
-                  onPressed: () => showStagingFormSheet(context, ref),
-                  icon: const Icon(Icons.add),
-                  label: const Text('New Entry'),
-                ),
-              TextButton(
-                onPressed: () => context.go('/staging'),
-                child: const Text('View all'),
-              ),
-            ],
+          // Quick search + quick actions row
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final narrow = constraints.maxWidth < 760;
+              final search = SearchField(
+                controller: _search,
+                hint: 'Quick search — SO, customer, carrier, location…',
+                onChanged: (v) => setState(() => _q = v.trim().toLowerCase()),
+              );
+              final actions = Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  PillButton(
+                    label: 'Quick Consolidate',
+                    icon: Icons.merge_type,
+                    color: SlstColors.purple,
+                    onPressed: user == null
+                        ? null
+                        : () => showQuickConsolidateDialog(context, ref),
+                  ),
+                  PillButton(
+                    label: 'Quick Ship',
+                    icon: Icons.flash_on,
+                    color: SlstColors.success,
+                    onPressed: user == null
+                        ? null
+                        : () => showQuickShipSheet(context, ref),
+                  ),
+                ],
+              );
+              if (narrow) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [search, const SizedBox(height: 10), actions],
+                );
+              }
+              return Row(
+                children: [
+                  Expanded(child: search),
+                  const SizedBox(width: 12),
+                  actions,
+                ],
+              );
+            },
           ),
-          if (data.loading && staging.isEmpty)
+          const SizedBox(height: 16),
+          if (data.loading && data.staging.isEmpty && data.shipped.isEmpty)
             const Padding(
-              padding: EdgeInsets.all(24),
+              padding: EdgeInsets.all(48),
               child: Center(child: CircularProgressIndicator()),
             )
-          else
-            ...staging.take(25).map(
-              (e) => EntryCard(
-                title: 'SO ${e.so}',
-                subtitle: e.customer,
-                details: [
-                  '${StatusRules.formatUi(e.status)} · ${e.location}',
-                  '${e.type} · qty ${e.qty}',
-                ],
-                color: statusColor(e.status),
-                onTap: () => context.go('/staging'),
-              ),
+          else ...[
+            StagingLogCard(
+              entries: staging,
+              onExpand: () => context.go('/staging'),
             ),
+            const SizedBox(height: 16),
+            ShippedLogCard(
+              entries: shipped,
+              onExpand: () => context.go('/shipped'),
+              onQuickShip: () => showQuickShipSheet(context, ref),
+            ),
+          ],
           const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Recent Shipped',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-              ),
-              TextButton(
-                onPressed: () => context.go('/shipped'),
-                child: const Text('View all'),
-              ),
-            ],
+          const ComingSoonCard(
+            title: 'Shipment Tracker — Coming Soon',
+            text:
+                'Live carrier tracking for outbound freight is on the roadmap. '
+                'Shipped entries will link directly to carrier tracking status.',
           ),
-          ...shipped.map(
-            (e) => EntryCard(
-              title: 'SO ${e.so}',
-              subtitle: e.customer,
-              details: [
-                '${e.carrier} · ${e.location}',
-                '${e.type} · qty ${e.qty}',
-              ],
-              onTap: () => context.go('/shipped'),
-            ),
-          ),
+          const SiteFooter(),
         ],
       ),
     );

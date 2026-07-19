@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/app_config.dart';
+import '../../core/theme.dart';
 import '../../data/app_state.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -59,13 +60,43 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Text(
-                    'SLST — Staging Log & Shipping Tracker',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                  Center(
+                    child: Image.asset(
+                      'assets/staging-shipping-logo.png',
+                      width: 72,
+                      height: 72,
+                      errorBuilder: (_, _, _) => const Icon(
+                        Icons.local_shipping,
+                        size: 48,
+                        color: SlstColors.brand,
+                      ),
+                    ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'SLST',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: kBrandFontFamily,
+                      fontSize: 34,
+                      height: 1.1,
+                    ),
+                  ),
+                  const Text(
+                    'STAGING LOG & SHIPPING TRACKER',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 1.6,
+                      color: SlstColors.muted,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
                   const Text(
                     'Sign in to create and edit staging/shipping records. Anonymous users remain read-only.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 12.5, color: SlstColors.muted),
                   ),
                   const SizedBox(height: 16),
                   TextField(

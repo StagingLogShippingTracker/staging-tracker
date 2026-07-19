@@ -85,15 +85,28 @@ class AppData {
   Map<String, int> get containerTotals {
     var skids = 0, boxes = 0, crates = 0, pipe = 0, other = 0;
     for (final e in staging) {
-      final t = e.type.toLowerCase();
-      if (t.contains('skid')) skids += e.qty;
-      if (t.contains('box')) boxes += e.qty;
-      if (t.contains('crate')) crates += e.qty;
-      if (t.contains('pipe')) pipe += e.qty;
-      if (t.contains('other')) other += e.qty;
+      // Type labels look like "2 Skids, 1 Box"; parse the count per segment
+      // so mixed entries don't over-count every category with the full qty.
+      for (final part in e.type.split(',')) {
+        final seg = part.trim().toLowerCase();
+        if (seg.isEmpty) continue;
+        final n = int.tryParse(RegExp(r'^\d+').stringMatch(seg) ?? '') ?? 1;
+        if (seg.contains('skid')) {
+          skids += n;
+        } else if (seg.contains('box')) {
+          boxes += n;
+        } else if (seg.contains('crate')) {
+          crates += n;
+        } else if (seg.contains('pipe') || seg.contains('rod')) {
+          pipe += n;
+        } else {
+          other += n;
+        }
+      }
     }
     return {
       'orders': orderCount,
+      'containers': staging.fold<int>(0, (sum, e) => sum + e.qty),
       'skids': skids,
       'boxes': boxes,
       'crates': crates,

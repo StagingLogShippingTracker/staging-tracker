@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/theme.dart';
 import '../../data/app_state.dart';
 import '../../domain/status.dart';
+import '../shared/log_tables.dart';
 import '../shared/widgets.dart';
 
 class ReportsScreen extends ConsumerStatefulWidget {
@@ -18,9 +20,9 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   @override
   Widget build(BuildContext context) {
     final data = ref.watch(appDataProvider);
-    final changelog = ref.watch(_changelogProvider);
 
-    final overdue = data.staging.where((e) => StatusRules.isOverdue(e.status)).toList();
+    final overdue =
+        data.staging.where((e) => StatusRules.isOverdue(e.status)).toList();
     final shipToday = data.staging
         .where((e) => StatusRules.formatUi(e.status) == 'Ship Today')
         .toList();
@@ -37,96 +39,105 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
         .where((e) => e.carrier.toUpperCase() == 'RETURNED TO STOCK')
         .toList();
 
+    const gap = 10.0;
+
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
       children: [
-        Text('Reports', style: Theme.of(context).textTheme.headlineSmall),
-        const SizedBox(height: 12),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            SizedBox(
-              width: 150,
-              child: StatTile(label: 'Overdue', value: overdue.length),
-            ),
-            SizedBox(
-              width: 150,
-              child: StatTile(label: 'Ship Today', value: shipToday.length),
-            ),
-            SizedBox(
-              width: 150,
-              child: StatTile(label: 'Tomorrow', value: shipTomorrow.length),
-            ),
-            SizedBox(
-              width: 150,
-              child: StatTile(label: 'Corp Pick', value: corpPick.length),
-            ),
-            SizedBox(
-              width: 150,
-              child: StatTile(label: 'Awaiting', value: awaiting.length),
-            ),
-            SizedBox(
-              width: 150,
-              child: StatTile(label: 'Returned', value: returned.length),
-            ),
-          ],
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final cols = constraints.maxWidth >= 900
+                ? 6
+                : constraints.maxWidth >= 600
+                    ? 3
+                    : 2;
+            final w = (constraints.maxWidth - gap * (cols - 1)) / cols;
+            final tiles = [
+              (label: 'Overdue', value: overdue.length, icon: Icons.warning_amber_outlined),
+              (label: 'Ship Today', value: shipToday.length, icon: Icons.today_outlined),
+              (label: 'Tomorrow', value: shipTomorrow.length, icon: Icons.event_outlined),
+              (label: 'Corp Pick', value: corpPick.length, icon: Icons.business_outlined),
+              (label: 'Awaiting', value: awaiting.length, icon: Icons.hourglass_empty),
+              (label: 'Returned', value: returned.length, icon: Icons.assignment_return_outlined),
+            ];
+            return Wrap(
+              spacing: gap,
+              runSpacing: gap,
+              children: [
+                for (final t in tiles)
+                  SizedBox(
+                    width: w,
+                    child: KpiCard(label: t.label, value: t.value, icon: t.icon),
+                  ),
+              ],
+            );
+          },
         ),
         const SizedBox(height: 16),
-        SegmentedButton<String>(
-          segments: const [
-            ButtonSegment(value: 'all', label: Text('All staging')),
-            ButtonSegment(value: 'overdue', label: Text('Overdue')),
-            ButtonSegment(value: 'today', label: Text('Today')),
-            ButtonSegment(value: 'awaiting', label: Text('Awaiting')),
-          ],
-          selected: {_filter},
-          onSelectionChanged: (s) => setState(() => _filter = s.first),
-        ),
-        const SizedBox(height: 12),
-        ...() {
-          final list = switch (_filter) {
-            'overdue' => overdue,
-            'today' => shipToday,
-            'awaiting' => awaiting,
-            _ => data.staging,
-          };
-          return list.map(
-            (e) => EntryCard(
-              title: 'SO ${e.so}',
-              subtitle: e.customer,
-              details: [
-                '${StatusRules.formatUi(e.status)} · ${e.location}',
-                e.type,
-              ],
-              color: statusColor(e.status),
+        SectionCard(
+          title: 'Staging Breakdown',
+          headerActions: [
+            PillButton(
+              label: 'Changelog',
+              icon: Icons.history,
+              color: SlstColors.info,
+              compact: true,
+              onPressed: () => showChangelogDialog(context, ref),
             ),
-          );
-        }(),
-        const SizedBox(height: 24),
-        Text('Changelog', style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: 8),
-        changelog.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Text('Failed to load changelog: $e'),
-          data: (rows) => Column(
-            children: [
-              for (final r in rows.take(50))
-                ListTile(
-                  dense: true,
-                  title: Text(r.action),
-                  subtitle: Text(
-                    '${r.tableName} · ${r.userEmail}${r.createdAt == null ? '' : ' · ${r.createdAt!.toLocal()}'}',
-                  ),
-                ),
+          ],
+          subHeader: SegmentedButton<String>(
+            style: SegmentedButton.styleFrom(
+              textStyle: const TextStyle(
+                fontFamily: kBodyFontFamily,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            segments: const [
+              ButtonSegment(value: 'all', label: Text('All Staging')),
+              ButtonSegment(value: 'overdue', label: Text('Overdue')),
+              ButtonSegment(value: 'today', label: Text('Ship Today')),
+              ButtonSegment(value: 'tomorrow', label: Text('Tomorrow')),
+              ButtonSegment(value: 'awaiting', label: Text('Awaiting')),
             ],
+            selected: {_filter},
+            onSelectionChanged: (s) => setState(() => _filter = s.first),
+          ),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+          child: Builder(
+            builder: (context) {
+              final list = switch (_filter) {
+                'overdue' => overdue,
+                'today' => shipToday,
+                'tomorrow' => shipTomorrow,
+                'awaiting' => awaiting,
+                _ => data.staging,
+              };
+              if (list.isEmpty) {
+                return const Padding(
+                  padding: EdgeInsets.all(20),
+                  child: Center(child: Text('No entries in this bucket.')),
+                );
+              }
+              return Column(
+                children: [
+                  for (final e in list)
+                    EntryCard(
+                      title: 'SO ${e.so}',
+                      subtitle: e.customer,
+                      details: [
+                        '${StatusRules.formatUi(e.status)} · ${e.location}',
+                        e.type,
+                      ],
+                      color: statusRowColor(context, e.status),
+                    ),
+                ],
+              );
+            },
           ),
         ),
+        const SiteFooter(),
       ],
     );
   }
 }
-
-final _changelogProvider = FutureProvider((ref) async {
-  return ref.watch(changelogRepoProvider).recent();
-});
