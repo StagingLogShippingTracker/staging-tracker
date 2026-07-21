@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -84,7 +85,10 @@ class _QuickShipSheetState extends ConsumerState<QuickShipSheet> {
       );
       if (!proceed) return;
       if (!mounted) return;
-      await ref
+      if (_notify && !_pmEmail.text.trim().contains('@')) {
+        throw Exception('Notify PM is on — enter a valid PM email, or turn notify off.');
+      }
+      final warning = await ref
           .read(operationsProvider)
           .quickShip(
             so: _so.text,
@@ -102,7 +106,11 @@ class _QuickShipSheetState extends ConsumerState<QuickShipSheet> {
           );
       if (mounted) {
         Navigator.pop(context);
-        showOk(context, 'Quick shipped SO ${_so.text.trim()}');
+        if (warning != null) {
+          showError(context, warning);
+        } else {
+          showOk(context, 'Quick shipped SO ${_so.text.trim()}');
+        }
       }
     } catch (e) {
       if (mounted) showError(context, e);
@@ -193,14 +201,16 @@ class _QuickShipSheetState extends ConsumerState<QuickShipSheet> {
                   icon: const Icon(Icons.photo_library),
                   label: Text('Photos (${_photos.length})'),
                 ),
-                OutlinedButton.icon(
-                  onPressed: () async {
-                    final shot = await _picker.captureCamera();
-                    if (shot != null) setState(() => _photos.add(shot));
-                  },
-                  icon: const Icon(Icons.photo_camera),
-                  label: const Text('Camera'),
-                ),
+                if (defaultTargetPlatform == TargetPlatform.android ||
+                    defaultTargetPlatform == TargetPlatform.iOS)
+                  OutlinedButton.icon(
+                    onPressed: () async {
+                      final shot = await _picker.captureCamera();
+                      if (shot != null) setState(() => _photos.add(shot));
+                    },
+                    icon: const Icon(Icons.photo_camera),
+                    label: const Text('Camera'),
+                  ),
                 ScanDocumentButton(
                   onScanned: (pages) => setState(() => _photos.addAll(pages)),
                 ),

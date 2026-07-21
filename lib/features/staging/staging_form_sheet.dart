@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -141,8 +142,9 @@ class _StagingFormSheetState extends ConsumerState<StagingFormSheet> {
       );
       if (locationDecision == LocationAdvisoryDecision.cancel) return;
       if (!mounted) return;
+      String? keepId = widget.existing?.id;
       if (widget.existing == null) {
-        await ops.createStaging(
+        final created = await ops.createStaging(
           so: _so.text,
           customer: _customer.text,
           location: _location.text,
@@ -161,6 +163,7 @@ class _StagingFormSheetState extends ConsumerState<StagingFormSheet> {
                   .any((entry) => orderKey(entry.so) == orderKey(_so.text)),
           locationCategory: _locationCategory,
         );
+        keepId = created.id;
       } else {
         if (counts.total <= 0) {
           throw Exception('At least one container is required.');
@@ -205,7 +208,11 @@ class _StagingFormSheetState extends ConsumerState<StagingFormSheet> {
             .staging
             .where((entry) => orderKey(entry.so) == orderKey(_so.text))
             .toList();
-        if (matches.length > 1) await ops.consolidateStaging(matches);
+        if (matches.length > 1 && keepId != null) {
+          final keep = matches.where((e) => e.id == keepId).toList();
+          final rest = matches.where((e) => e.id != keepId).toList();
+          await ops.consolidateStaging([...keep, ...rest]);
+        }
       }
       if (mounted) {
         Navigator.pop(context);
@@ -339,14 +346,16 @@ class _StagingFormSheetState extends ConsumerState<StagingFormSheet> {
                   icon: const Icon(Icons.photo_library),
                   label: Text('Photos (${_photos.length})'),
                 ),
-                OutlinedButton.icon(
-                  onPressed: () async {
-                    final shot = await _picker.captureCamera();
-                    if (shot != null) setState(() => _photos.add(shot));
-                  },
-                  icon: const Icon(Icons.photo_camera),
-                  label: const Text('Camera'),
-                ),
+                if (defaultTargetPlatform == TargetPlatform.android ||
+                    defaultTargetPlatform == TargetPlatform.iOS)
+                  OutlinedButton.icon(
+                    onPressed: () async {
+                      final shot = await _picker.captureCamera();
+                      if (shot != null) setState(() => _photos.add(shot));
+                    },
+                    icon: const Icon(Icons.photo_camera),
+                    label: const Text('Camera'),
+                  ),
                 ScanDocumentButton(
                   onScanned: (pages) => setState(() => _photos.addAll(pages)),
                 ),

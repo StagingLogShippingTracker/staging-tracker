@@ -26,7 +26,11 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     final overdue =
         data.staging.where((e) => StatusRules.isOverdue(e.status)).toList();
     final shipToday = data.staging
-        .where((e) => StatusRules.formatUi(e.status) == 'Ship Today')
+        .where(
+          (e) =>
+              StatusRules.formatUi(e.status) == 'Ship Today' &&
+              !StatusRules.isOverdue(e.status),
+        )
         .toList();
     final shipTomorrow = data.staging
         .where((e) => StatusRules.formatUi(e.status) == 'Ship Tomorrow')
@@ -44,12 +48,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     const gap = 10.0;
 
     return ListView(
-      padding: EdgeInsets.fromLTRB(
-        narrow ? 16 : 24,
-        20,
-        narrow ? 16 : 24,
-        8,
-      ),
+      padding: slstPagePadding(context),
       children: [
         LayoutBuilder(
           builder: (context, constraints) {

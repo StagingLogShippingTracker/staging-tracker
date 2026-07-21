@@ -183,6 +183,21 @@ class ContainerCounts {
 
   int get total => skids + boxes + crates + pipe + other;
 
+  bool sameCounts(ContainerCounts o) =>
+      skids == o.skids &&
+      boxes == o.boxes &&
+      crates == o.crates &&
+      pipe == o.pipe &&
+      other == o.other;
+
+  ContainerCounts operator +(ContainerCounts o) => ContainerCounts(
+        skids: skids + o.skids,
+        boxes: boxes + o.boxes,
+        crates: crates + o.crates,
+        pipe: pipe + o.pipe,
+        other: other + o.other,
+      );
+
   /// Parses a stored type label like "2 Skids, 1 Box, 3 Pipe/Rod" back into
   /// per-category counts (mirrors the legacy web parser).
   factory ContainerCounts.parse(String type) {

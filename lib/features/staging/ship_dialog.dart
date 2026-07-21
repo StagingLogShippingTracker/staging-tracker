@@ -67,7 +67,10 @@ class _ShipDialogState extends ConsumerState<ShipDialog> {
       );
       if (!proceed) return;
       if (!mounted) return;
-      await ref
+      if (_notify && !_pmEmail.text.trim().contains('@')) {
+        throw Exception('Notify PM is on — enter a valid PM email, or turn notify off.');
+      }
+      final warning = await ref
           .read(operationsProvider)
           .shipEntry(
             entry: widget.entry,
@@ -79,7 +82,11 @@ class _ShipDialogState extends ConsumerState<ShipDialog> {
           );
       if (mounted) {
         Navigator.pop(context);
-        showOk(context, 'Shipped SO ${widget.entry.so}');
+        if (warning != null) {
+          showError(context, warning);
+        } else {
+          showOk(context, 'Shipped SO ${widget.entry.so}');
+        }
       }
     } catch (e) {
       if (mounted) showError(context, e);
@@ -184,7 +191,10 @@ class _ReturnDialogState extends ConsumerState<ReturnDialog> {
   Future<void> _submit() async {
     setState(() => _busy = true);
     try {
-      await ref
+      if (_notify && !_pmEmail.text.trim().contains('@')) {
+        throw Exception('Notify PM is on — enter a valid PM email, or turn notify off.');
+      }
+      final warning = await ref
           .read(operationsProvider)
           .returnToStock(
             entry: widget.entry,
@@ -196,7 +206,11 @@ class _ReturnDialogState extends ConsumerState<ReturnDialog> {
           );
       if (mounted) {
         Navigator.pop(context);
-        showOk(context, 'Returned SO ${widget.entry.so}');
+        if (warning != null) {
+          showError(context, warning);
+        } else {
+          showOk(context, 'Returned SO ${widget.entry.so}');
+        }
       }
     } catch (e) {
       if (mounted) showError(context, e);

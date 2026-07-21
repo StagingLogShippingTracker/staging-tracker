@@ -54,10 +54,18 @@ StatusStyle statusStyleOf(BuildContext context, String dbStatus) {
   );
 }
 
+/// Shared page insets: 16 on narrow (phone / phone-width tablet), 24 on wide.
+EdgeInsets slstPagePadding(BuildContext context, {double top = 20, double bottom = 8}) {
+  final narrow = MediaQuery.sizeOf(context).width < 600;
+  final h = narrow ? 16.0 : 24.0;
+  return EdgeInsets.fromLTRB(h, top, h, bottom);
+}
+
 /// SLST wordmark image ("SLST — Staging Log & Shipping Tracker").
 ///
 /// The source art is charcoal on transparent; in dark mode it is tinted to the
-/// light ink colour so it stays legible.
+/// light ink colour so it stays legible. Asset-missing fallback uses Oswald —
+/// SLSTBrand is glyph-poor and must not render long / mixed copy.
 class BrandWordmark extends StatelessWidget {
   const BrandWordmark({super.key, required this.height});
 
@@ -75,9 +83,11 @@ class BrandWordmark extends StatelessWidget {
       errorBuilder: (_, _, _) => Text(
         'SLST',
         style: TextStyle(
-          fontFamily: kBrandFontFamily,
-          fontSize: height * 0.8,
-          color: SlstColors.brand,
+          fontFamily: kBodyFontFamily,
+          fontSize: height * 0.75,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 1.2,
+          color: dark ? SlstColors.darkInk : SlstColors.brand,
         ),
       ),
     );
@@ -175,78 +185,6 @@ class KpiCard extends StatelessWidget {
               color: Colors.transparent,
               child: InkWell(onTap: onTap, child: body),
             ),
-    );
-  }
-}
-
-/// KPI tile used on the touch-first (Material 3) dashboard/reports grids.
-class KpiTile extends StatelessWidget {
-  const KpiTile({
-    super.key,
-    required this.label,
-    required this.value,
-    required this.icon,
-    this.accent,
-    this.onTap,
-  });
-
-  final String label;
-  final int value;
-  final IconData icon;
-  final Color? accent;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final color = accent ?? scheme.primary;
-    return Card(
-      margin: EdgeInsets.zero,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, color: color, size: 22),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      '$value',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontSize: 22,
-                            height: 1.1,
-                          ),
-                    ),
-                    Text(
-                      label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }
@@ -482,46 +420,6 @@ class StagingStatusLegend extends StatelessWidget {
   }
 }
 
-/// Collapsible touch-first legend (Material 3 chips inside an ExpansionTile).
-class StatusLegend extends StatelessWidget {
-  const StatusLegend({super.key});
-
-  static const _statuses = [
-    'Partial',
-    'Ship Today',
-    'Ship Tomorrow',
-    '2099-12-31', // renders as a future-date sample
-    'Corp Pick',
-    'Customer Pick-Up',
-    'Awaiting Instructions',
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return ExpansionTile(
-      tilePadding: const EdgeInsets.symmetric(horizontal: 4),
-      shape: const Border(),
-      title: Text(
-        'Status legend',
-        style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 14),
-      ),
-      leading: const Icon(Icons.palette_outlined, size: 20),
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final s in _statuses) StatusChip(dbStatus: s, compact: true),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 /// Row highlight color for a staging status (theme aware).
 Color? statusRowColor(BuildContext context, String dbStatus) {
   final dark = Theme.of(context).brightness == Brightness.dark;
@@ -646,39 +544,6 @@ class ComingSoonCard extends StatelessWidget {
               color: dark ? SlstColors.darkMuted : SlstColors.subtle,
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Section title row with optional action buttons (touch-first screens).
-class SectionHeader extends StatelessWidget {
-  const SectionHeader({
-    super.key,
-    required this.title,
-    this.icon,
-    this.actions = const [],
-  });
-
-  final String title;
-  final IconData? icon;
-  final List<Widget> actions;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          if (icon != null) ...[
-            Icon(icon, size: 20, color: SlstColors.brand),
-            const SizedBox(width: 8),
-          ],
-          Expanded(
-            child: Text(title, style: Theme.of(context).textTheme.titleLarge),
-          ),
-          ...actions,
         ],
       ),
     );

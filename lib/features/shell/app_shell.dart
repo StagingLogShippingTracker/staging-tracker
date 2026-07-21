@@ -196,7 +196,10 @@ class AppShell extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.all(3),
             decoration: BoxDecoration(
-              color: Colors.white,
+              // Match sidebar mark plate — no hard white square in dark mode.
+              color: dark
+                  ? Colors.white.withValues(alpha: 0.06)
+                  : Colors.white,
               borderRadius: BorderRadius.circular(10),
               border: Border.all(color: scheme.outlineVariant),
             ),

@@ -36,7 +36,7 @@ class _StagingScreenState extends ConsumerState<StagingScreen> {
     return RefreshIndicator(
       onRefresh: () => ref.read(appDataProvider.notifier).refresh(),
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
+        padding: slstPagePadding(context),
         children: [
           SearchField(
             controller: _search,

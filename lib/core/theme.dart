@@ -182,8 +182,30 @@ ThemeData buildSlstTheme({required bool dark}) {
           seedColor: SlstColors.brand,
           brightness: Brightness.dark,
         ).copyWith(
-          tertiary: const Color(0xFFC4B5FD),
+          // Pin brand + slate tokens so seed drift doesn't wash out red or
+          // float surfaces away from the Windows/Android shared shell.
+          primary: SlstColors.brand,
+          onPrimary: Colors.white,
+          primaryContainer: const Color(0xFF7F1D1D),
+          onPrimaryContainer: const Color(0xFFFFDAD5),
           secondary: const Color(0xFF7DD3FC),
+          onSecondary: const Color(0xFF0C4A6E),
+          secondaryContainer: const Color(0xFF075985),
+          onSecondaryContainer: const Color(0xFFE0F2FE),
+          tertiary: const Color(0xFFC4B5FD),
+          onTertiary: const Color(0xFF4C1D95),
+          tertiaryContainer: const Color(0xFF5B21B6),
+          onTertiaryContainer: const Color(0xFFEDE9FE),
+          surface: SlstColors.darkSurfaceSubtle,
+          onSurface: SlstColors.darkInk,
+          onSurfaceVariant: SlstColors.darkMuted,
+          surfaceContainerLowest: const Color(0xFF0B1220),
+          surfaceContainerLow: SlstColors.darkSurface,
+          surfaceContainer: SlstColors.darkSurface,
+          surfaceContainerHigh: SlstColors.darkSurfaceMuted,
+          surfaceContainerHighest: const Color(0xFF3F4F63),
+          outline: SlstColors.darkBorderStrong,
+          outlineVariant: SlstColors.darkBorder,
         )
       : ColorScheme.fromSeed(
           seedColor: SlstColors.brand,
@@ -240,7 +262,7 @@ ThemeData buildSlstTheme({required bool dark}) {
       ),
     ),
     navigationBarTheme: NavigationBarThemeData(
-      backgroundColor: dark ? null : Colors.white,
+      backgroundColor: dark ? scheme.surfaceContainerLow : Colors.white,
       indicatorColor: dark ? scheme.primaryContainer : SlstColors.brandSoft,
       iconTheme: WidgetStateProperty.resolveWith(
         (states) => IconThemeData(
@@ -262,7 +284,7 @@ ThemeData buildSlstTheme({required bool dark}) {
       ),
     ),
     navigationRailTheme: NavigationRailThemeData(
-      backgroundColor: dark ? null : Colors.white,
+      backgroundColor: dark ? scheme.surfaceContainerLow : Colors.white,
       indicatorColor: dark ? scheme.primaryContainer : SlstColors.brandSoft,
       selectedIconTheme: IconThemeData(
         color: dark ? scheme.onPrimaryContainer : SlstColors.brand,

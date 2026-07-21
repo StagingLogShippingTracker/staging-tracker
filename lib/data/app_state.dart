@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -10,6 +11,8 @@ import '../domain/models.dart';
 import '../domain/location_intelligence.dart';
 import '../domain/status.dart';
 import 'supabase_repositories.dart';
+
+final _shipEmailDateFmt = DateFormat('M/d/yyyy, h:mm:ss a');
 
 typedef PhotoBytes = ({Uint8List bytes, String name});
 
@@ -130,14 +133,18 @@ class AppDataNotifier extends StateNotifier<AppData> {
 
   final Ref _ref;
   RealtimeChannel? _channel;
+  int _refreshGeneration = 0;
 
   Future<void> refresh() async {
+    final generation = ++_refreshGeneration;
     state = state.copyWith(loading: true, error: null);
     try {
       final staging = await _ref.read(stagingRepoProvider).fetchAll();
       final shipped = await _ref.read(shippedRepoProvider).fetchAll();
+      if (generation != _refreshGeneration) return;
       state = AppData(staging: staging, shipped: shipped);
     } catch (e) {
+      if (generation != _refreshGeneration) return;
       state = state.copyWith(loading: false, error: e.toString());
     }
   }
@@ -306,7 +313,7 @@ class OperationsService {
     );
   }
 
-  Future<void> createStaging({
+  Future<StagingEntry> createStaging({
     required String so,
     required String customer,
     required String location,
@@ -331,7 +338,7 @@ class OperationsService {
       paths.add(await _photos.uploadBytes(bytes: p.bytes, fileName: p.name));
     }
     final status = StatusRules.toDb(statusUi, futureDateYmd: futureDateYmd);
-    await _staging.insert({
+    final created = await _staging.insert({
       'so': so.trim(),
       'customer': customer.trim(),
       'location': location.trim(),
@@ -351,9 +358,11 @@ class OperationsService {
     );
     await _log.log('staging', 'Added new entry for SO: ${so.trim()}');
     await _ref.read(appDataProvider.notifier).refresh();
+    return created;
   }
 
-  Future<void> shipEntry({
+  /// Returns a warning when inventory moved but PM notify failed; null on full success.
+  Future<String?> shipEntry({
     required StagingEntry entry,
     required String carrier,
     required String shippedBy,
@@ -393,21 +402,34 @@ class OperationsService {
       'Bin Movement: To Shipped Log — SO ${entry.so}: ${entry.type} moved from Staging Log to Shipped Log (${entry.location})',
     );
 
-    if (notifyPm && pmEmail != null && pmEmail.contains('@')) {
-      await _notify.sendPmNotification({
+    final shippedAt = _shipEmailDateFmt.format(DateTime.now());
+    final notifyWarning = await _notifyPmIfRequested(
+      notifyPm: notifyPm,
+      pmEmail: pmEmail,
+      payload: {
         'to': pmEmail,
         'cc': 'warehouse1@swiftsupply.ca',
         'subject': 'SHIPPED: SO ${entry.so} - ${entry.customer}',
+        // Edge Function notify-pm replaces body with branded HTML for ship_confirm.
         'body':
             'Your order has shipped.<br><br><b>SO#</b> | ${entry.so}<br><b>Customer</b> | ${entry.customer}<br><b>Carrier</b> | ${carrier.trim()}<br><b>Containers</b> | ${entry.type}<br><b>Shipped By</b> | ${shippedBy.trim()}',
+        'so': entry.so,
+        'customer': entry.customer,
+        'carrier': carrier.trim(),
+        'shipped_at': shippedAt,
+        'shipped_by': shippedBy.trim(),
+        'containers': entry.type,
+        'weight': entry.weight?.trim() ?? '',
+        'comments': entry.comments?.trim() ?? '',
         'attachments': paths,
         'notification_type': 'ship_confirm',
-      });
-    }
+      },
+    );
     await _ref.read(appDataProvider.notifier).refresh();
+    return notifyWarning;
   }
 
-  Future<void> quickShip({
+  Future<String?> quickShip({
     required String so,
     required String customer,
     required String carrier,
@@ -446,21 +468,34 @@ class OperationsService {
       locationCategory: locationCategory,
     );
     await _log.log('shipped', 'Added via Quick Ship: SO: ${so.trim()}');
-    if (notifyPm && pmEmail != null && pmEmail.contains('@')) {
-      await _notify.sendPmNotification({
+    final shippedAt = _shipEmailDateFmt.format(DateTime.now());
+    final notifyWarning = await _notifyPmIfRequested(
+      notifyPm: notifyPm,
+      pmEmail: pmEmail,
+      payload: {
         'to': pmEmail,
         'cc': 'warehouse1@swiftsupply.ca',
         'subject': 'SHIPPED: SO ${so.trim()} - ${customer.trim()}',
+        // Edge Function notify-pm replaces body with branded HTML for quick_ship.
         'body':
             'Your order has shipped (Quick Ship).<br><br><b>SO#</b> | ${so.trim()}<br><b>Customer</b> | ${customer.trim()}<br><b>Carrier</b> | ${carrier.trim()}',
+        'so': so.trim(),
+        'customer': customer.trim(),
+        'carrier': carrier.trim(),
+        'shipped_at': shippedAt,
+        'shipped_by': shippedBy.trim(),
+        'containers': containers.typeLabel,
+        'weight': weight?.trim() ?? '',
+        'comments': comments?.trim() ?? '',
         'attachments': paths,
         'notification_type': 'quick_ship',
-      });
-    }
+      },
+    );
     await _ref.read(appDataProvider.notifier).refresh();
+    return notifyWarning;
   }
 
-  Future<void> returnToStock({
+  Future<String?> returnToStock({
     required StagingEntry entry,
     required String pickedBy,
     required String returnedBy,
@@ -489,8 +524,10 @@ class OperationsService {
     );
     await _log.log('staging', 'Returned to Stock SO: ${entry.so}');
     await _log.log('shipped', 'Added Return to Stock log for SO: ${entry.so}');
-    if (notifyPm && pmEmail != null && pmEmail.contains('@')) {
-      await _notify.sendPmNotification({
+    final notifyWarning = await _notifyPmIfRequested(
+      notifyPm: notifyPm,
+      pmEmail: pmEmail,
+      payload: {
         'to': pmEmail,
         'cc': 'warehouse1@swiftsupply.ca',
         'subject': 'RETURN TO STOCK: SO ${entry.so} - ${entry.customer}',
@@ -498,9 +535,10 @@ class OperationsService {
             'Returned to Stock.<br><br><b>Reason</b> | $reason<br><b>SO#</b> | ${entry.so}<br><b>Picked By</b> | $pickedBy<br><b>Returned By</b> | $returnedBy',
         'attachments': entry.photoUrls,
         'notification_type': 'return_to_stock',
-      });
-    }
+      },
+    );
     await _ref.read(appDataProvider.notifier).refresh();
+    return notifyWarning;
   }
 
   Future<void> undoShipment(
@@ -615,6 +653,20 @@ class OperationsService {
   }) async {
     if (first.total <= 0 || second.total <= 0) {
       throw Exception('Both split parts need at least one container.');
+    }
+    final original = ContainerCounts.parse(entry.type);
+    final combined = first + second;
+    if (original.total > 0) {
+      if (!combined.sameCounts(original)) {
+        throw Exception(
+          'Split parts must add up to the original containers '
+          '(${original.typeLabel}).',
+        );
+      }
+    } else if (combined.total != entry.qty) {
+      throw Exception(
+        'Split parts must add up to the original quantity (${entry.qty}).',
+      );
     }
     await _staging.update(entry.id, {
       'type': first.typeLabel,
@@ -737,6 +789,24 @@ class OperationsService {
     });
     await _rememberEntryValues(customer: customer);
     await _log.log('staging', 'Sent Automated Return Notification for SO: $so');
+  }
+
+  /// Sends PM notify when requested; never throws after inventory already moved.
+  Future<String?> _notifyPmIfRequested({
+    required bool notifyPm,
+    required String? pmEmail,
+    required Map<String, dynamic> payload,
+  }) async {
+    if (!notifyPm) return null;
+    if (pmEmail == null || !pmEmail.contains('@')) {
+      return 'Saved, but PM was not notified (no valid email).';
+    }
+    try {
+      await _notify.sendPmNotification(payload);
+      return null;
+    } catch (e) {
+      return 'Saved, but PM notification failed: $e';
+    }
   }
 
   String? _pmDisplay(String? email) {

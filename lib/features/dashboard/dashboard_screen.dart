@@ -64,7 +64,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     return RefreshIndicator(
       onRefresh: () => ref.read(appDataProvider.notifier).refresh(),
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
+        padding: slstPagePadding(context),
         children: [
           if (data.error != null) ...[
             Card(

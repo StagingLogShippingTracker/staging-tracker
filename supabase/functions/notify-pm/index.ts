@@ -1,5 +1,10 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import {
+  isShipConfirmationType,
+  renderShipConfirmationEmail,
+  shipDataFromPayload,
+} from "./email-templates/ship-confirmation.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -59,6 +64,24 @@ async function resolveWebhookUrl(): Promise<string | null> {
   return String(data);
 }
 
+/**
+ * For ship_confirm / quick_ship, replace the client HTML snippet with the
+ * branded template. Make continues to send `body` as the email HTML.
+ * SMS path is untouched (separate webhook POST with plain text).
+ */
+function enrichEmailBody(body: Record<string, unknown>): Record<string, unknown> {
+  const notificationType = String(body.notification_type ?? "");
+  if (!isShipConfirmationType(notificationType)) return body;
+
+  const html = renderShipConfirmationEmail(shipDataFromPayload(body));
+  return {
+    ...body,
+    body: html,
+    html,
+    html_body: html,
+  };
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -114,8 +137,10 @@ Deno.serve(async (req: Request) => {
       ? body.attachments.map((p: string) => publicPhotoUrl(String(p)))
       : [];
 
+    const enriched = enrichEmailBody({ ...body, to, attachments });
+
     const payload = {
-      ...body,
+      ...enriched,
       to,
       attachments,
       has_attachments: attachments.length > 0,

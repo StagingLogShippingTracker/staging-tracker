@@ -103,10 +103,14 @@ class ChangelogRepository {
   /// newest first. This is intentionally read-only and available through RLS
   /// to the same anonymous users who can read staging and shipped records.
   Future<List<ChangelogEntry>> forOrder(String so) async {
+    final needle = so.trim();
+    // Escape LIKE wildcards so SO values with %/_ do not broaden the match.
+    final pattern =
+        '%${needle.replaceAll(r'\', r'\\').replaceAll('%', r'\%').replaceAll('_', r'\_')}%';
     final rows = await _client
         .from('changelog')
         .select()
-        .ilike('action', '%$so%')
+        .ilike('action', pattern)
         .order('created_at', ascending: false);
     return (rows as List)
         .map((e) => ChangelogEntry.fromMap(Map<String, dynamic>.from(e as Map)))
@@ -158,13 +162,22 @@ class PhotoStorage {
         .uploadBinary(
           path,
           bytes,
-          fileOptions: const FileOptions(
+          fileOptions: FileOptions(
             upsert: false,
-            contentType: 'image/jpeg',
+            contentType: _imageContentType(fileName),
           ),
         );
     return path;
   }
+}
+
+String _imageContentType(String fileName) {
+  final lower = fileName.toLowerCase();
+  if (lower.endsWith('.png')) return 'image/png';
+  if (lower.endsWith('.webp')) return 'image/webp';
+  if (lower.endsWith('.gif')) return 'image/gif';
+  if (lower.endsWith('.bmp')) return 'image/bmp';
+  return 'image/jpeg';
 }
 
 class NotifyRepository {

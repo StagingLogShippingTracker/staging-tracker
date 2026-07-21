@@ -84,7 +84,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     final scheme = Theme.of(context).colorScheme;
 
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: slstPagePadding(context),
       children: [
         Card(
           margin: EdgeInsets.zero,

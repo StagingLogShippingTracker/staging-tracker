@@ -40,7 +40,7 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen> {
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+          padding: slstPagePadding(context, top: 12, bottom: 8),
           child: SearchField(
             controller: _search,
             hint: 'Search name, email, branch…',
@@ -65,7 +65,7 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen> {
                 return const Center(child: Text('No contacts match.'));
               }
               return ListView.builder(
-                padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                padding: slstPagePadding(context, top: 0, bottom: 12),
                 itemCount: filtered.length + 1,
                 itemBuilder: (context, i) {
                   if (i == filtered.length) return const BrandFooter();

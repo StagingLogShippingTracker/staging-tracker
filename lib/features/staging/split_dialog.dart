@@ -96,6 +96,11 @@ class _SplitDialogState extends ConsumerState<SplitDialog> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('Part A', style: Theme.of(context).textTheme.titleMedium),
+              Text(
+                'Original: ${widget.entry.type.isEmpty ? '${widget.entry.qty} total' : widget.entry.type}',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 8),
               ContainerInputs(
                 skids: _aSkids,
                 boxes: _aBoxes,

@@ -196,8 +196,11 @@ Future<void> showOrderHistoryDialog(
   required String so,
 }) {
   final data = ref.read(appDataProvider);
-  final active = data.staging.where((entry) => entry.so == so).toList();
-  final shipped = data.shipped.where((entry) => entry.so == so).toList();
+  final order = so.trim().toUpperCase();
+  final active =
+      data.staging.where((entry) => entry.so.trim().toUpperCase() == order).toList();
+  final shipped =
+      data.shipped.where((entry) => entry.so.trim().toUpperCase() == order).toList();
   final canWrite = ref.read(currentUserProvider) != null;
   return showDialog<void>(
     context: context,

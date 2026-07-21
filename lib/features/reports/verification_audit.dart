@@ -147,8 +147,9 @@ Future<void> startVerificationAudit(
   final source = switch (mode) {
     AuditMode.aisle =>
       staging.where((e) => _aisleRe.hasMatch(e.location)).toList(),
-    AuditMode.nonAisle =>
-      staging.where((e) => !_aisleRe.hasMatch(e.location)).toList(),
+    AuditMode.nonAisle => staging
+        .where((e) => classifyLocation(e.location) == LocationCategory.shipping)
+        .toList(),
     AuditMode.discrepancies => staging
         .where((e) => prefs.discrepancyIds.contains(e.id))
         .toList(),
@@ -253,9 +254,13 @@ class _AuditDialogState extends ConsumerState<_AuditDialog> {
     final known = _queue.toSet();
     final fresh = staging.where((e) {
       if (known.contains(e.id)) return false;
-      final isAisle = _aisleRe.hasMatch(e.location);
-      if (widget.mode == AuditMode.aisle && !isAisle) return false;
-      if (widget.mode == AuditMode.nonAisle && isAisle) return false;
+      if (widget.mode == AuditMode.aisle && !_aisleRe.hasMatch(e.location)) {
+        return false;
+      }
+      if (widget.mode == AuditMode.nonAisle &&
+          classifyLocation(e.location) != LocationCategory.shipping) {
+        return false;
+      }
       return true;
     }).toList();
     if (fresh.isEmpty) return;
@@ -356,7 +361,12 @@ class _AuditDialogState extends ConsumerState<_AuditDialog> {
                 .staging
                 .where((entry) => orderKey(entry.so) == orderKey(item.so))
                 .toList();
-            if (matches.length > 1) await ops.consolidateStaging(matches);
+            if (matches.length > 1) {
+              await ops.consolidateStaging([
+                item,
+                ...matches.where((e) => e.id != item.id),
+              ]);
+            }
           }
           _record(item, 'Fixed via Location Change (${selection.value})');
         } catch (e) {
