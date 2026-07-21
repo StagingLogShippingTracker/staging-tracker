@@ -8,6 +8,7 @@ import '../../platform/photo_picker.dart';
 import '../scanner/scanner_screen.dart';
 import '../shared/entry_suggestion_fields.dart';
 import '../shared/location_selector.dart';
+import '../shared/so_advisories.dart';
 import '../shared/widgets.dart';
 
 Future<void> showQuickShipSheet(BuildContext context, WidgetRef ref) {
@@ -76,6 +77,13 @@ class _QuickShipSheetState extends ConsumerState<QuickShipSheet> {
       if (counts.total <= 0) {
         throw Exception('At least one container is required.');
       }
+      final proceed = await confirmQuickShipStagingLeftoversIfNeeded(
+        context,
+        ref,
+        so: _so.text,
+      );
+      if (!proceed) return;
+      if (!mounted) return;
       await ref
           .read(operationsProvider)
           .quickShip(

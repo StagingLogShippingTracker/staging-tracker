@@ -300,10 +300,9 @@ class OperationsService {
 
   Future<bool> soConflict(String so, {String? ignoreId}) async {
     final data = _ref.read(appDataProvider);
+    final order = orderKey(so);
     return data.staging.any(
-      (e) =>
-          e.so.trim().toLowerCase() == so.trim().toLowerCase() &&
-          e.id != ignoreId,
+      (e) => orderKey(e.so) == order && e.id != ignoreId,
     );
   }
 
@@ -504,8 +503,11 @@ class OperationsService {
     await _ref.read(appDataProvider.notifier).refresh();
   }
 
-  Future<void> undoShipment(ShippedEntry entry) async {
-    if (await soConflict(entry.so)) {
+  Future<void> undoShipment(
+    ShippedEntry entry, {
+    bool allowExistingSo = false,
+  }) async {
+    if (!allowExistingSo && await soConflict(entry.so)) {
       throw Exception('Cannot undo: SO ${entry.so} already exists in Staging.');
     }
     await _staging.insert({

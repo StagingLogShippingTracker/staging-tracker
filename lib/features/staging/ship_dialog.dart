@@ -7,6 +7,7 @@ import '../../domain/models.dart';
 import '../../platform/photo_picker.dart';
 import '../scanner/scanner_screen.dart';
 import '../shared/entry_suggestion_fields.dart';
+import '../shared/so_advisories.dart';
 import '../shared/widgets.dart';
 
 Future<void> showShipDialog(
@@ -59,6 +60,13 @@ class _ShipDialogState extends ConsumerState<ShipDialog> {
   Future<void> _submit() async {
     setState(() => _busy = true);
     try {
+      final proceed = await confirmPartialShipIfNeeded(
+        context,
+        ref,
+        entry: widget.entry,
+      );
+      if (!proceed) return;
+      if (!mounted) return;
       await ref
           .read(operationsProvider)
           .shipEntry(

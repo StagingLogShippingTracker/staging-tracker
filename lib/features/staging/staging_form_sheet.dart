@@ -10,6 +10,7 @@ import '../../platform/photo_picker.dart';
 import '../scanner/scanner_screen.dart';
 import '../shared/entry_suggestion_fields.dart';
 import '../shared/location_selector.dart';
+import '../shared/so_advisories.dart';
 import '../shared/widgets.dart';
 
 Future<void> showStagingFormSheet(
@@ -139,6 +140,7 @@ class _StagingFormSheetState extends ConsumerState<StagingFormSheet> {
         ignoreEntryId: widget.existing?.id,
       );
       if (locationDecision == LocationAdvisoryDecision.cancel) return;
+      if (!mounted) return;
       if (widget.existing == null) {
         await ops.createStaging(
           so: _so.text,
@@ -163,8 +165,19 @@ class _StagingFormSheetState extends ConsumerState<StagingFormSheet> {
         if (counts.total <= 0) {
           throw Exception('At least one container is required.');
         }
-        if (await ops.soConflict(_so.text, ignoreId: widget.existing!.id)) {
-          throw Exception('SO ${_so.text} already exists in Staging.');
+        final siblings = siblingStagingEntries(
+          so: _so.text,
+          active: ref.read(appDataProvider).staging,
+          ignoreEntryId: widget.existing!.id,
+        );
+        if (siblings.isNotEmpty) {
+          final proceed = await confirmSoMultiEntryAdvisory(
+            context,
+            so: _so.text.trim(),
+            siblings: siblings,
+          );
+          if (!proceed) return;
+          if (!mounted) return;
         }
         await ops.updateStagingWithPhotos(
           widget.existing!,

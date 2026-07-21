@@ -10,6 +10,7 @@ import '../staging/ship_dialog.dart';
 import '../staging/split_dialog.dart';
 import '../staging/staging_form_sheet.dart';
 import 'order_history_dialog.dart';
+import 'so_advisories.dart';
 import 'widgets.dart';
 
 final _dateFmt = DateFormat('M/d/yy h:mm a');
@@ -830,7 +831,35 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
     );
     if (!ok || !mounted) return;
     try {
-      await ref.read(operationsProvider).undoShipment(e);
+      final ops = ref.read(operationsProvider);
+      await ref.read(appDataProvider.notifier).refresh();
+      if (!mounted) return;
+      final siblings = siblingStagingEntries(
+        so: e.so,
+        active: ref.read(appDataProvider).staging,
+      );
+      var allowExistingSo = false;
+      if (siblings.isNotEmpty) {
+        final locations = leftoverLocations(siblings);
+        final locationLine = locations.isEmpty
+            ? '${siblings.length} other staging ${siblings.length == 1 ? 'entry' : 'entries'}'
+            : locations.join(', ');
+        final proceed = await confirmSoMultiEntryAdvisory(
+          context,
+          so: e.so,
+          siblings: siblings,
+          title: 'SO already in Staging',
+          proceedLabel: 'Proceed anyway',
+          messageOverride:
+              'SO ${e.so} already has active staging at:\n\n'
+              '$locationLine\n\n'
+              'Undoing this shipment will add another staging row for the same SO. '
+              'Continue only if that is intentional.',
+        );
+        if (!proceed || !mounted) return;
+        allowExistingSo = true;
+      }
+      await ops.undoShipment(e, allowExistingSo: allowExistingSo);
       if (mounted) showOk(context, 'Restored SO ${e.so} to staging');
     } catch (err) {
       if (mounted) showError(context, err);
