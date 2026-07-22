@@ -191,7 +191,8 @@ class _StatDetailDialogState extends ConsumerState<_StatDetailDialog> {
           minimumSize: const Size(0, 32),
           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
           foregroundColor: SlstColors.brand,
-          textStyle: const TextStyle(
+          textStyle: TextStyle(
+            fontFamily: kBodyFontFamily,
             fontWeight: FontWeight.w700,
             decoration: TextDecoration.underline,
           ),

@@ -15,7 +15,13 @@ const CARD_SHELL = "#F7F5F1";
 const WHITE = "#FFFFFE";
 const ICON_WASH = "#FDECEA";
 const IMP = "!important";
-const ASSET_VERSION = "20260722f";
+const ASSET_VERSION = "20260722g";
+const FONT_STACK = "'Oswald', Arial, Helvetica, sans-serif";
+const FONT_LINK =
+  "https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&display=swap";
+
+const DISCLAIMER_HTML =
+  "SLST is an internal operations tool for Swift Nisku warehouse staff. It helps us record what is staged, what is ready to ship, and what has left the building—and to notify sales when orders depart. It is not a carrier tracking system, proof-of-delivery tool, or comprehensive order-tracking platform. Expectations beyond this operational purpose fall outside the scope of the application.";
 
 function bg(color: string): string {
   return `background-color:${color} ${IMP};`;
@@ -110,7 +116,7 @@ export function detailCard(opts: {
     .map(
       (r) => `
         <tr>
-          <td class="og-text" style="padding:0 0 10px 0;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.35;${whiteSurf}">
+          <td class="og-text" style="padding:0 0 10px 0;font-family:${FONT_STACK};font-size:14px;line-height:1.35;${whiteSurf}">
             <div class="og-text" style="font-weight:700;color:${INK};mso-line-height-rule:exactly;">
               ${esc(r.label)}
             </div>
@@ -141,7 +147,7 @@ export function detailCard(opts: {
                 </table>
               </td>
               <td valign="middle" class="og-brand" style="${whiteSurf}">
-                <div class="og-brand" style="font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${BRAND};mso-line-height-rule:exactly;">
+                <div class="og-brand" style="font-family:${FONT_STACK};font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${BRAND};mso-line-height-rule:exactly;">
                   ${esc(opts.title)}
                 </div>
               </td>
@@ -159,15 +165,22 @@ const LOGO_HALO =
   "filter:drop-shadow(0 0 2px #FFFFFF);-webkit-filter:drop-shadow(0 0 2px #FFFFFF);";
 
 export function headerLogosBlock(swiftLogoUrl: string, slstLogoUrl: string): string {
-  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" class="logo-row" style="margin:0 auto;">
+  const rowHeight = 124;
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" class="logo-row" style="margin:0 auto;width:100%;">
     <tr>
-      <td align="center" valign="middle" style="padding:0 20px 0 0;">
-        <img class="logo-swift" src="${esc(swiftLogoUrl)}" width="200" height="62" alt="Swift Supply"
-          style="display:block;border:0;outline:none;width:200px;max-width:38vw;height:auto;-ms-interpolation-mode:bicubic;${LOGO_HALO}" />
-      </td>
-      <td align="center" valign="middle" style="padding:0;">
-        <img class="logo-img" src="${esc(slstLogoUrl)}" width="260" height="124" alt="SLST — Staging Log &amp; Shipping Tracker"
-          style="display:block;border:0;outline:none;width:260px;max-width:46vw;height:auto;-ms-interpolation-mode:bicubic;${LOGO_HALO}" />
+      <td align="center" valign="middle" style="vertical-align:middle;text-align:center;padding:0;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto;">
+          <tr>
+            <td align="center" valign="middle" height="${rowHeight}" style="vertical-align:middle;text-align:center;padding:0 20px 0 0;height:${rowHeight}px;">
+              <img class="logo-swift" src="${esc(swiftLogoUrl)}" width="200" height="62" alt="Swift Supply"
+                style="display:block;margin:0 auto;border:0;outline:none;width:200px;max-width:38vw;height:auto;vertical-align:middle;-ms-interpolation-mode:bicubic;${LOGO_HALO}" />
+            </td>
+            <td align="center" valign="middle" height="${rowHeight}" style="vertical-align:middle;text-align:center;padding:0;height:${rowHeight}px;">
+              <img class="logo-img" src="${esc(slstLogoUrl)}" width="260" height="124" alt="SLST — Staging Log &amp; Shipping Tracker"
+                style="display:block;margin:0 auto;border:0;outline:none;width:260px;max-width:46vw;height:auto;vertical-align:middle;-ms-interpolation-mode:bicubic;${LOGO_HALO}" />
+            </td>
+          </tr>
+        </table>
       </td>
     </tr>
   </table>`;
@@ -247,16 +260,11 @@ export function renderBrandedEmail(opts: BrandedEmailOptions): string {
   const preview = esc(opts.preview);
   const year = opts.year ?? new Date().getFullYear();
   const emailContact = (opts.emailContact ?? "warehouse1@swiftsupply.ca").trim();
-  const websiteUrl = (opts.websiteUrl ?? "https://www.swiftsupply.ca").trim();
-  const ctaUrl = (opts.ctaUrl ?? websiteUrl).trim();
   const mailto = `mailto:${emailContact}`;
   const mail = emailAssetUrl("icon-mail", assetBase);
-  const globe = emailAssetUrl("icon-globe", assetBase);
-  const search = emailAssetUrl("icon-search", assetBase);
   const watermarkUrl = esc(emailAssetUrl("watermark-gears", assetBase));
   const pageSurf = `${surfaceBg(PAGE_BG)} background-image:url('${watermarkUrl}'),linear-gradient(${PAGE_BG},${PAGE_BG}) ${IMP}; background-repeat:no-repeat,repeat ${IMP}; background-position:center top,top left ${IMP}; background-size:600px auto,auto ${IMP};`;
   const shellSurf = surfaceBg(CARD_SHELL);
-  const ctaSurf = `${bg(BRAND)} background-image:linear-gradient(${BRAND},${BRAND_DARK}) ${IMP};`;
   const attachmentUrls = opts.attachmentUrls ?? [];
 
   const cardHtml = opts.cards.map((card, i) => {
@@ -283,20 +291,6 @@ export function renderBrandedEmail(opts: BrandedEmailOptions): string {
     .map(([, cols]) => `<tr>${cols.join("")}${cols.length === 1 ? '<td class="stack-col" width="50%" style="width:50%;padding:8px;"></td>' : ""}</tr>`)
     .join("");
 
-  const ctaBlock = opts.ctaUrl
-    ? `
-          <tr>
-            <td align="center" class="og-shell" style="padding:26px 36px 34px 36px;${shellSurf}">
-              <a class="og-cta" href="${esc(ctaUrl)}"
-                style="display:inline-block;${ctaSurf} border:10px solid transparent; color:${WHITE}; font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:700;letter-spacing:0.08em;text-decoration:none;padding:6px 24px;border-radius:999px;box-shadow:0 10px 24px rgba(217,50,35,0.35);mso-hide:all;">
-                <img src="${esc(search)}" width="16" height="16" alt=""
-                  style="display:inline-block;vertical-align:middle;margin-right:10px;border:0;" />
-                <span style="vertical-align:middle;font-weight:700;letter-spacing:0.08em;color:${WHITE};">${esc(opts.ctaLabel ?? "VIEW DETAILS")}</span>
-              </a>
-            </td>
-          </tr>`
-    : "";
-
   return `<!DOCTYPE html>
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office" style="color-scheme:light only;">
 <head>
@@ -307,6 +301,7 @@ export function renderBrandedEmail(opts: BrandedEmailOptions): string {
   <meta name="supported-color-schemes" content="light only" />
   <meta name="x-apple-disable-message-reformatting" />
   <title>${title}</title>
+  <link href="${FONT_LINK}" rel="stylesheet" type="text/css" />
   <!--[if mso]>
   <noscript>
     <xml>
@@ -318,7 +313,7 @@ export function renderBrandedEmail(opts: BrandedEmailOptions): string {
   </noscript>
   <style>
     table { border-collapse: collapse; }
-    td, th, div, p, a, span, strong, h1 { font-family: Arial, Helvetica, sans-serif !important; }
+    td, th, div, p, a, span, strong, h1 { font-family: ${FONT_STACK} !important; }
   </style>
   <![endif]-->
   <style type="text/css">
@@ -360,7 +355,7 @@ export function renderBrandedEmail(opts: BrandedEmailOptions): string {
           </tr>
           <tr>
             <td align="center" class="og-shell og-text" style="padding:26px 36px 6px 36px;${shellSurf}">
-              <h1 class="og-text" style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:28px;line-height:1.28;font-weight:700;color:${INK};">
+              <h1 class="og-text" style="margin:0;font-family:${FONT_STACK};font-size:28px;line-height:1.28;font-weight:700;color:${INK};">
                 ${title}
               </h1>
             </td>
@@ -368,7 +363,7 @@ export function renderBrandedEmail(opts: BrandedEmailOptions): string {
           ${subtitle ? `
           <tr>
             <td align="center" class="og-shell og-text" style="padding:8px 36px 26px 36px;${shellSurf}">
-              <p class="og-body" style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.4;color:${BODY};">
+              <p class="og-body" style="margin:0;font-family:${FONT_STACK};font-size:16px;line-height:1.4;color:${BODY};">
                 ${subtitle}
               </p>
             </td>
@@ -381,7 +376,14 @@ export function renderBrandedEmail(opts: BrandedEmailOptions): string {
             </td>
           </tr>
           ${attachmentsSection(attachmentUrls, assetBase)}
-          ${ctaBlock}
+          <tr>
+            <td class="og-shell" style="padding:8px 36px 18px 36px;${shellSurf}">
+              <p class="og-muted" style="margin:0;font-family:${FONT_STACK};font-size:11px;line-height:1.6;color:${MUTED};text-align:center;">
+                <strong class="og-text" style="font-weight:600;color:${INK};">About SLST</strong><br />
+                ${esc(DISCLAIMER_HTML)}
+              </p>
+            </td>
+          </tr>
           <tr>
             <td class="og-shell" style="padding:0 36px;${shellSurf}">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
@@ -396,23 +398,17 @@ export function renderBrandedEmail(opts: BrandedEmailOptions): string {
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
                 <tr>
                   <td class="stack-col og-text" valign="top"
-                    style="font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.55;${shellSurf}">
+                    style="font-family:${FONT_STACK};font-size:13px;line-height:1.55;${shellSurf}">
                     <strong class="og-text" style="font-weight:700;color:${INK};">Thank you for using SLST!</strong><br />
                     <span class="og-body" style="color:${BODY};">SLST - Staging Log &amp; Shipping Tracker</span><br />
                     <span class="og-muted" style="font-size:12px;color:${MUTED};">Copyright © ${year} SLST. All rights reserved.</span>
                   </td>
-                  <td class="stack-col footer-right" valign="top" align="right"
-                    style="font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.9;white-space:nowrap;${shellSurf}">
+                  <td class="stack-col footer-right" valign="middle" align="right"
+                    style="font-family:${FONT_STACK};font-size:13px;line-height:1.9;white-space:nowrap;${shellSurf}">
                     <a class="og-brand" href="${esc(mailto)}" style="text-decoration:underline;color:${BRAND};">
                       <img src="${esc(mail)}" width="14" height="14" alt=""
                         style="display:inline-block;vertical-align:middle;margin-right:5px;border:0;" />
                       Email
-                    </a>
-                    &nbsp;&nbsp;&nbsp;
-                    <a class="og-brand" href="${esc(websiteUrl)}" style="text-decoration:underline;color:${BRAND};">
-                      <img src="${esc(globe)}" width="14" height="14" alt=""
-                        style="display:inline-block;vertical-align:middle;margin-right:5px;border:0;" />
-                      Website
                     </a>
                   </td>
                 </tr>
@@ -423,7 +419,7 @@ export function renderBrandedEmail(opts: BrandedEmailOptions): string {
         <!--[if mso]>
         </td></tr></table>
         <![endif]-->
-        <div class="og-muted" style="font-family:Arial,Helvetica,sans-serif;font-size:11px;padding-top:18px;color:${MUTED};">
+        <div class="og-muted" style="font-family:${FONT_STACK};font-size:11px;padding-top:18px;color:${MUTED};">
           Sent via SLST · Swift Supply
         </div>
       </td>

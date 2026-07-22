@@ -49,7 +49,7 @@ for good in [
     "renderShipConfirmationEmail",
     "renderNotificationEmail",
     "renderBrandedEmail",
-    "20260722f",
+    "20260722g",
     "darkModeCss",
     "linear-gradient",
     "watermark-gears",

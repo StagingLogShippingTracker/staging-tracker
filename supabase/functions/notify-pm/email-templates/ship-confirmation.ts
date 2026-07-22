@@ -48,8 +48,6 @@ export function renderShipConfirmationEmail(
     preview: `SO# ${so} for ${customer} has shipped via ${carrier}.`,
     subtitle: "Order details:",
     attachmentUrls,
-    ctaUrl: data.ctaUrl ?? data.websiteUrl ?? "https://www.swiftsupply.ca",
-    ctaLabel: "VIEW FULL TRACKING DETAILS",
     emailContact: data.emailContact,
     websiteUrl: data.websiteUrl,
     year: data.year,
