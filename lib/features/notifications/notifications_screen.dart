@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme.dart';
 import '../../data/app_state.dart';
 import '../../platform/photo_picker.dart';
-import '../scanner/scanner_screen.dart';
 import '../shared/entry_suggestion_fields.dart';
 import '../shared/widgets.dart';
 
@@ -157,23 +156,15 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                 const SizedBox(height: 12),
                 Align(
                   alignment: Alignment.centerLeft,
-                  child: Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      OutlinedButton.icon(
-                        onPressed: () async {
-                          final files = await _picker.pickPreferred();
-                          setState(() => _photos.addAll(files));
-                        },
-                        icon: const Icon(Icons.attach_file),
-                        label: Text('Attach photos (${_photos.length})'),
-                      ),
-                      ScanDocumentButton(
-                        onScanned: (pages) =>
-                            setState(() => _photos.addAll(pages)),
-                      ),
-                    ],
+                  child: PhotoAttachButtons(
+                    picker: _picker,
+                    photos: _photos,
+                    attachLabel: 'Attach photos',
+                    onChanged: (next) => setState(() {
+                      _photos
+                        ..clear()
+                        ..addAll(next);
+                    }),
                   ),
                 ),
               ],

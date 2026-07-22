@@ -3,8 +3,11 @@ import 'package:flutter/services.dart';
 
 import '../../core/app_config.dart';
 import '../../core/theme.dart';
+import '../../data/app_state.dart';
 import '../../domain/models.dart';
 import '../../domain/status.dart';
+import '../../platform/photo_picker.dart';
+import '../scanner/scanner_screen.dart';
 
 bool usesDesktopPopupChrome(BuildContext context) {
   final platform = Theme.of(context).platform;
@@ -631,6 +634,62 @@ ContainerCounts countsFromControllers({
 // ---------------------------------------------------------------------------
 // Photos
 // ---------------------------------------------------------------------------
+
+/// Photos + Camera + Scan — always show all three capture options.
+class PhotoAttachButtons extends StatelessWidget {
+  const PhotoAttachButtons({
+    super.key,
+    required this.picker,
+    required this.photos,
+    required this.onChanged,
+    this.attachLabel,
+    this.scanLabel = 'Scan document',
+  });
+
+  final PhotoPickerService picker;
+  final List<PhotoBytes> photos;
+  final ValueChanged<List<PhotoBytes>> onChanged;
+  final String? attachLabel;
+  final String scanLabel;
+
+  Future<void> _attachPhotos() async {
+    final files = await picker.pickPreferred();
+    if (files.isNotEmpty) onChanged([...photos, ...files]);
+  }
+
+  Future<void> _captureCamera() async {
+    final shot = await picker.captureCamera();
+    if (shot != null) onChanged([...photos, shot]);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final count = photos.length;
+    final label = attachLabel ?? 'Photos ($count)';
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        OutlinedButton.icon(
+          onPressed: _attachPhotos,
+          icon: const Icon(Icons.photo_library_outlined),
+          label: Text(label.contains('(') ? label : '$label ($count)'),
+        ),
+        OutlinedButton.icon(
+          onPressed: _captureCamera,
+          icon: const Icon(Icons.photo_camera_outlined),
+          label: const Text('Camera'),
+        ),
+        ScanDocumentButton(
+          label: scanLabel,
+          onScanned: (pages) {
+            if (pages.isNotEmpty) onChanged([...photos, ...pages]);
+          },
+        ),
+      ],
+    );
+  }
+}
 
 class PhotoThumbRow extends StatelessWidget {
   const PhotoThumbRow({super.key, required this.paths});

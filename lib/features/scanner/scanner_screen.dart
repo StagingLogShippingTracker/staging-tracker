@@ -90,7 +90,9 @@ class _DocumentScannerScreenState extends State<DocumentScannerScreen> {
 
   Future<void> _replace() async {
     final index = _controller.selectedIndex;
-    if (defaultTargetPlatform == TargetPlatform.android) {
+    if (defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS ||
+        defaultTargetPlatform == TargetPlatform.windows) {
       await _camera(replace: index);
       return;
     }

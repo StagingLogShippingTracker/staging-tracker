@@ -1,4 +1,4 @@
-"""Build a single-file notify-pm bundle for MCP deploy."""
+"""Build a single-file notify-pm bundle (fallback). Prefer two-file deploy via prepare_two_file_deploy.py."""
 from pathlib import Path
 
 root = Path(__file__).resolve().parents[1] / "supabase" / "functions" / "notify-pm"

@@ -89,7 +89,7 @@ class ScanPage {
     required this.corners,
     required this.detectionConfidence,
     required this.diagnostics,
-    this.enhancement = ScanEnhancement.document,
+    this.enhancement = ScanEnhancement.original,
     this.rotation = 0,
     this.work = ScanWork.idle,
     this.ocr,

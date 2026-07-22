@@ -134,6 +134,10 @@ void FlutterOcrNativePlugin::EnsureInitialized() {
   ocr_engine_ = ocr::OcrEngine::TryCreateFromLanguage(
       globalization::Language(L"en-US"));
   if (!ocr_engine_) {
+    ocr_engine_ = ocr::OcrEngine::TryCreateFromLanguage(
+        globalization::Language(L"en-CA"));
+  }
+  if (!ocr_engine_) {
     ocr_engine_ = ocr::OcrEngine::TryCreateFromUserProfileLanguages();
   }
 }

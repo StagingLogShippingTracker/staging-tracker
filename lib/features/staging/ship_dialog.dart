@@ -5,7 +5,6 @@ import '../../core/theme.dart';
 import '../../data/app_state.dart';
 import '../../domain/models.dart';
 import '../../platform/photo_picker.dart';
-import '../scanner/scanner_screen.dart';
 import '../shared/entry_suggestion_fields.dart';
 import '../shared/so_advisories.dart';
 import '../shared/widgets.dart';
@@ -121,23 +120,15 @@ class _ShipDialogState extends ConsumerState<ShipDialog> {
               ),
               Align(
                 alignment: Alignment.centerLeft,
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    TextButton.icon(
-                      onPressed: () async {
-                        final files = await _picker.pickPreferred();
-                        setState(() => _photos.addAll(files));
-                      },
-                      icon: const Icon(Icons.add_a_photo),
-                      label: Text('Add photos (${_photos.length})'),
-                    ),
-                    ScanDocumentButton(
-                      onScanned: (pages) =>
-                          setState(() => _photos.addAll(pages)),
-                    ),
-                  ],
+                child: PhotoAttachButtons(
+                  picker: _picker,
+                  photos: _photos,
+                  attachLabel: 'Add photos',
+                  onChanged: (next) => setState(() {
+                    _photos
+                      ..clear()
+                      ..addAll(next);
+                  }),
                 ),
               ),
             ],
@@ -178,6 +169,8 @@ class _ReturnDialogState extends ConsumerState<ReturnDialog> {
   final _pmEmail = TextEditingController();
   bool _notify = true;
   bool _busy = false;
+  final _photos = <PhotoBytes>[];
+  final _picker = PhotoPickerService();
 
   @override
   void dispose() {
@@ -203,6 +196,7 @@ class _ReturnDialogState extends ConsumerState<ReturnDialog> {
             reason: _reason.text,
             pmEmail: _pmEmail.text.trim().isEmpty ? null : _pmEmail.text.trim(),
             notifyPm: _notify,
+            extraPhotos: _photos,
           );
       if (mounted) {
         Navigator.pop(context);
@@ -248,6 +242,19 @@ class _ReturnDialogState extends ConsumerState<ReturnDialog> {
                 title: const Text('Notify PM'),
                 value: _notify,
                 onChanged: (v) => setState(() => _notify = v),
+              ),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: PhotoAttachButtons(
+                  picker: _picker,
+                  photos: _photos,
+                  attachLabel: 'Add photos',
+                  onChanged: (next) => setState(() {
+                    _photos
+                      ..clear()
+                      ..addAll(next);
+                  }),
+                ),
               ),
             ],
           ),

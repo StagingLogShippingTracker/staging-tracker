@@ -5,6 +5,7 @@ import {
   renderShipConfirmationEmail,
   shipDataFromPayload,
 } from "./email-templates/ship-confirmation.ts";
+import { renderNotificationEmail } from "./email-templates/notification-email.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -64,22 +65,59 @@ async function resolveWebhookUrl(): Promise<string | null> {
   return String(data);
 }
 
-/**
- * For ship_confirm / quick_ship, replace the client HTML snippet with the
- * branded template. Make continues to send `body` as the email HTML.
- * SMS path is untouched (separate webhook POST with plain text).
- */
-function enrichEmailBody(body: Record<string, unknown>): Record<string, unknown> {
-  const notificationType = String(body.notification_type ?? "");
-  if (!isShipConfirmationType(notificationType)) return body;
+function normalizeAttachments(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((p) => publicPhotoUrl(String(p)))
+    .filter((url) => url.length > 0);
+}
 
-  const html = renderShipConfirmationEmail(shipDataFromPayload(body));
+function withAttachmentFields(
+  body: Record<string, unknown>,
+  attachmentUrls: string[],
+): Record<string, unknown> {
+  const first = attachmentUrls[0] ?? "";
   return {
     ...body,
+    attachments: attachmentUrls,
+    attachment_urls: attachmentUrls,
+    photo_urls: attachmentUrls,
+    public_photo_url: first,
+    publicPhotoUrl: first,
+    has_attachments: attachmentUrls.length > 0,
+    attachment_count: attachmentUrls.length,
+  };
+}
+
+/**
+ * Replace client HTML snippets with branded templates for all PM email types.
+ * Make continues to send `body` as the email HTML.
+ */
+function enrichEmailBody(
+  body: Record<string, unknown>,
+  attachmentUrls: string[],
+): Record<string, unknown> {
+  const notificationType = String(body.notification_type ?? "");
+  let html: string | null = null;
+  let logoUrl = String(body.logo_url ?? body.logoUrl ?? "");
+
+  if (isShipConfirmationType(notificationType)) {
+    const shipData = shipDataFromPayload(body);
+    html = renderShipConfirmationEmail(shipData, attachmentUrls);
+    logoUrl = shipData.logoUrl ?? logoUrl;
+  } else {
+    html = renderNotificationEmail(notificationType, body, attachmentUrls);
+  }
+
+  if (!html) return withAttachmentFields(body, attachmentUrls);
+
+  return withAttachmentFields({
+    ...body,
+    logo_url: logoUrl,
     body: html,
     html,
     html_body: html,
-  };
+  }, attachmentUrls);
 }
 
 Deno.serve(async (req: Request) => {
@@ -133,17 +171,12 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const attachments = Array.isArray(body.attachments)
-      ? body.attachments.map((p: string) => publicPhotoUrl(String(p)))
-      : [];
-
-    const enriched = enrichEmailBody({ ...body, to, attachments });
+    const attachments = normalizeAttachments(body.attachments);
+    const enriched = enrichEmailBody({ ...body, to, attachments }, attachments);
 
     const payload = {
       ...enriched,
       to,
-      attachments,
-      has_attachments: attachments.length > 0,
       sent_by: userData.user.email ?? userData.user.id,
     };
 

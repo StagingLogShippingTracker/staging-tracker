@@ -37,7 +37,17 @@ EdgeDetection detectDocument(Uint8List bytes) {
   if (decoded == null) {
     throw const FormatException('The selected file is not a supported image.');
   }
-  final source = im.bakeOrientation(decoded);
+  var source = im.bakeOrientation(decoded);
+  final maxDim = math.max(source.width, source.height);
+  if (maxDim > 1600) {
+    final scale = 1600 / maxDim;
+    source = im.copyResize(
+      source,
+      width: math.max(1, (source.width * scale).round()),
+      height: math.max(1, (source.height * scale).round()),
+      interpolation: im.Interpolation.average,
+    );
+  }
   final scale = math.min(1.0, 640 / math.max(source.width, source.height));
   final image = scale < 1
       ? im.copyResize(
@@ -242,6 +252,20 @@ Offset _normalize(Offset point, int width, int height) => Offset(
   (point.dy / height).clamp(0.0, 1.0),
 );
 
+const _maxProcessDimension = 2000;
+
+im.Image _limitDimensions(im.Image source) {
+  final longEdge = math.max(source.width, source.height);
+  if (longEdge <= _maxProcessDimension) return source;
+  final scale = _maxProcessDimension / longEdge;
+  return im.copyResize(
+    source,
+    width: math.max(1, (source.width * scale).round()),
+    height: math.max(1, (source.height * scale).round()),
+    interpolation: im.Interpolation.linear,
+  );
+}
+
 Uint8List processDocument({
   required Uint8List bytes,
   required DocumentCorners corners,
@@ -250,7 +274,26 @@ Uint8List processDocument({
 }) {
   final decoded = im.decodeImage(bytes);
   if (decoded == null) throw const FormatException('Unable to decode image.');
-  var source = im.bakeOrientation(decoded);
+  var source = _limitDimensions(im.bakeOrientation(decoded));
+  final turns = ((rotation ~/ 90) % 4 + 4) % 4;
+
+  // Skip expensive perspective warp when using the full frame unchanged.
+  if (enhancement == ScanEnhancement.original &&
+      turns == 0 &&
+      corners == DocumentCorners.full) {
+    final maxDim = math.max(source.width, source.height);
+    if (maxDim > 2400) {
+      final scale = 2400 / maxDim;
+      source = im.copyResize(
+        source,
+        width: math.max(1, (source.width * scale).round()),
+        height: math.max(1, (source.height * scale).round()),
+        interpolation: im.Interpolation.linear,
+      );
+    }
+    return Uint8List.fromList(im.encodeJpg(source, quality: 88));
+  }
+
   final points = corners.points
       .map((p) => Offset(p.dx * (source.width - 1), p.dy * (source.height - 1)))
       .toList();
@@ -258,16 +301,21 @@ Uint8List processDocument({
   final bottomWidth = (points[2] - points[3]).distance;
   final leftHeight = (points[3] - points[0]).distance;
   final rightHeight = (points[2] - points[1]).distance;
-  final outW = math.max(64, math.max(topWidth, bottomWidth).round());
-  final outH = math.max(64, math.max(leftHeight, rightHeight).round());
+  final outW = math.max(
+    64,
+    math.min(_maxProcessDimension, math.max(topWidth, bottomWidth).round()),
+  );
+  final outH = math.max(
+    64,
+    math.min(_maxProcessDimension, math.max(leftHeight, rightHeight).round()),
+  );
   source = _perspectiveWarp(source, points, outW, outH);
 
-  final turns = ((rotation ~/ 90) % 4 + 4) % 4;
   for (var i = 0; i < turns; i++) {
     source = im.copyRotate(source, angle: 90);
   }
   final enhanced = _enhance(source, enhancement);
-  return Uint8List.fromList(im.encodeJpg(enhanced, quality: 92));
+  return Uint8List.fromList(im.encodeJpg(enhanced, quality: 88));
 }
 
 im.Image _perspectiveWarp(

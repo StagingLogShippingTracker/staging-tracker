@@ -502,7 +502,12 @@ class OperationsService {
     required String reason,
     String? pmEmail,
     bool notifyPm = false,
+    List<PhotoBytes> extraPhotos = const [],
   }) async {
+    final paths = [...entry.photoUrls];
+    for (final p in extraPhotos) {
+      paths.add(await _photos.uploadBytes(bytes: p.bytes, fileName: p.name));
+    }
     await _shipped.insert({
       'so': entry.so,
       'customer': entry.customer,
@@ -514,7 +519,7 @@ class OperationsService {
       'comments': entry.comments,
       'shipped_by': returnedBy.trim(),
       'pmd_email': _pmDisplay(pmEmail) ?? pickedBy.trim(),
-      'photo_urls': entry.photoUrls,
+      'photo_urls': paths,
     });
     await _staging.delete(entry.id);
     await _rememberEntryValues(
@@ -533,7 +538,12 @@ class OperationsService {
         'subject': 'RETURN TO STOCK: SO ${entry.so} - ${entry.customer}',
         'body':
             'Returned to Stock.<br><br><b>Reason</b> | $reason<br><b>SO#</b> | ${entry.so}<br><b>Picked By</b> | $pickedBy<br><b>Returned By</b> | $returnedBy',
-        'attachments': entry.photoUrls,
+        'so': entry.so,
+        'customer': entry.customer,
+        'reason': reason.trim(),
+        'picked_by': pickedBy.trim(),
+        'returned_by': returnedBy.trim(),
+        'attachments': paths,
         'notification_type': 'return_to_stock',
       },
     );
@@ -757,6 +767,10 @@ class OperationsService {
           'PO Notification: $po${linkedSo == null ? '' : ' (SO $linkedSo)'}',
       'body':
           'PO Notification<br><br><b>PO#</b> | $po<br><b>Customer</b> | $customer${linkedSo == null ? '' : '<br><b>SO#</b> | $linkedSo'}${details == null || details.isEmpty ? '' : '<br><br>$details'}',
+      'po': po.trim(),
+      'customer': customer.trim(),
+      if (linkedSo != null && linkedSo.trim().isNotEmpty) 'so': linkedSo.trim(),
+      'details': details?.trim() ?? '',
       'attachments': paths,
       'notification_type': 'po_notification',
     });
@@ -784,6 +798,9 @@ class OperationsService {
       'subject': 'Return Notification: SO $so - $customer',
       'body':
           'Return Notification<br><br><b>SO#</b> | $so<br><b>Customer</b> | $customer${details == null || details.isEmpty ? '' : '<br><br>$details'}',
+      'so': so.trim(),
+      'customer': customer.trim(),
+      'details': details?.trim() ?? '',
       'attachments': paths,
       'notification_type': 'return_notification',
     });

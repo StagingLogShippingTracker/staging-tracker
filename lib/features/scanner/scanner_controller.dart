@@ -30,9 +30,8 @@ class ScannerController extends ChangeNotifier {
   );
 
   Future<void> addPhotos(List<PhotoBytes> photos) async {
-    for (final photo in photos) {
-      await addPhoto(photo);
-    }
+    // Detect edges in parallel; process each page after its detection finishes.
+    await Future.wait(photos.map(addPhoto));
   }
 
   Future<void> addPhoto(PhotoBytes photo, {int? replaceIndex}) async {
@@ -121,12 +120,18 @@ class ScannerController extends ChangeNotifier {
   Future<void> _reprocess(int index) async {
     final page = _pages[index];
     try {
-      final bytes = await _processing.process(
-        bytes: page.originalBytes,
-        corners: page.corners,
-        enhancement: page.enhancement,
-        rotation: page.rotation,
-      );
+      // Fast path: original framing with no rotation skips heavy warp/enhance.
+      final skipWarp = page.enhancement == ScanEnhancement.original &&
+          page.rotation == 0 &&
+          page.corners == DocumentCorners.full;
+      final bytes = skipWarp
+          ? page.originalBytes
+          : await _processing.process(
+              bytes: page.originalBytes,
+              corners: page.corners,
+              enhancement: page.enhancement,
+              rotation: page.rotation,
+            );
       if (index >= _pages.length || _pages[index].id != page.id) return;
       _pages[index] = _pages[index].copyWith(
         processedBytes: bytes,
@@ -160,9 +165,16 @@ class ScannerController extends ChangeNotifier {
       );
     } catch (error) {
       if (index < _pages.length && _pages[index].id == page.id) {
+        final message = error.toString();
+        final friendly = message.contains('NOT_INITIALIZED') ||
+                message.contains('Windows OCR language is not installed')
+            ? 'Offline OCR is unavailable. Install English OCR: '
+                'Settings → Time & language → Language & region → '
+                'Add English (United States) → Options → Optical character recognition.'
+            : 'OCR failed: $message';
         _pages[index] = _pages[index].copyWith(
           work: ScanWork.failed,
-          error: 'OCR failed: $error',
+          error: friendly,
         );
       }
     }

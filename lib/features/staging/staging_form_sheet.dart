@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -8,7 +7,6 @@ import '../../domain/location_intelligence.dart';
 import '../../domain/models.dart';
 import '../../domain/status.dart';
 import '../../platform/photo_picker.dart';
-import '../scanner/scanner_screen.dart';
 import '../shared/entry_suggestion_fields.dart';
 import '../shared/location_selector.dart';
 import '../shared/so_advisories.dart';
@@ -338,26 +336,14 @@ class _StagingFormSheetState extends ConsumerState<StagingFormSheet> {
               spacing: 8,
               runSpacing: 8,
               children: [
-                OutlinedButton.icon(
-                  onPressed: () async {
-                    final files = await _picker.pickPreferred();
-                    setState(() => _photos.addAll(files));
-                  },
-                  icon: const Icon(Icons.photo_library),
-                  label: Text('Photos (${_photos.length})'),
-                ),
-                if (defaultTargetPlatform == TargetPlatform.android ||
-                    defaultTargetPlatform == TargetPlatform.iOS)
-                  OutlinedButton.icon(
-                    onPressed: () async {
-                      final shot = await _picker.captureCamera();
-                      if (shot != null) setState(() => _photos.add(shot));
-                    },
-                    icon: const Icon(Icons.photo_camera),
-                    label: const Text('Camera'),
-                  ),
-                ScanDocumentButton(
-                  onScanned: (pages) => setState(() => _photos.addAll(pages)),
+                PhotoAttachButtons(
+                  picker: _picker,
+                  photos: _photos,
+                  onChanged: (next) => setState(() {
+                    _photos
+                      ..clear()
+                      ..addAll(next);
+                  }),
                 ),
               ],
             ),
