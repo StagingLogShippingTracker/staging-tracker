@@ -211,12 +211,17 @@ Future<void> showOrderHistoryDialog(
       historyFuture: ref.read(changelogRepoProvider).forOrder(so),
       onAddEntry: canWrite
           ? () {
+              final customer = active.isNotEmpty
+                  ? active.first.customer
+                  : (shipped.isNotEmpty ? shipped.first.customer : '');
               Navigator.pop(dialogContext);
               showStagingFormSheet(
                 context,
                 ref,
                 initialSo: so,
+                initialCustomer: customer,
                 allowExistingSo: true,
+                lockIdentity: true,
               );
             }
           : null,

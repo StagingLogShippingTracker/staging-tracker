@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../core/theme.dart';
 import '../../data/app_state.dart';
+import '../../data/log_view_mode.dart';
 import '../../domain/models.dart';
 import '../../domain/status.dart';
 import '../staging/ship_dialog.dart';
@@ -95,6 +96,67 @@ Widget _editButton(VoidCallback onPressed) {
     ),
     onPressed: onPressed,
     child: const Text('Edit'),
+  );
+}
+
+/// Side toggle between list (table) and card layouts.
+Widget _viewModeSideToggle(BuildContext context, WidgetRef ref) {
+  final mode = ref.watch(logViewModeProvider);
+  final isCard = mode == LogViewMode.card;
+  return Material(
+    elevation: 2,
+    color: Theme.of(context).colorScheme.surface,
+    borderRadius: const BorderRadius.horizontal(left: Radius.circular(10)),
+    child: InkWell(
+      borderRadius: const BorderRadius.horizontal(left: Radius.circular(10)),
+      onTap: () => ref.read(logViewModeProvider.notifier).toggle(),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isCard ? Icons.view_list : Icons.view_agenda_outlined,
+              size: 22,
+              color: SlstColors.brand,
+            ),
+            const SizedBox(height: 4),
+            RotatedBox(
+              quarterTurns: 1,
+              child: Text(
+                isCard ? 'List' : 'Cards',
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: SlstColors.brand,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+Widget _wrapWithViewToggle({
+  required BuildContext context,
+  required WidgetRef ref,
+  required Widget child,
+}) {
+  return Stack(
+    clipBehavior: Clip.none,
+    children: [
+      Padding(
+        padding: const EdgeInsets.only(right: 4),
+        child: child,
+      ),
+      Positioned(
+        right: 0,
+        top: 12,
+        child: _viewModeSideToggle(context, ref),
+      ),
+    ],
   );
 }
 
@@ -578,160 +640,244 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
           ],
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (rows.isEmpty)
-            const Padding(
-              padding: EdgeInsets.all(28),
-              child: Center(child: Text('No staging entries found.')),
-            )
-          else
-            Scrollbar(
-              controller: _hScroll,
-              child: SingleChildScrollView(
-                controller: _hScroll,
-                scrollDirection: Axis.horizontal,
-                child: DataTable(
-                  showCheckboxColumn: false,
-                  horizontalMargin: 16,
-                  columnSpacing: 20,
-                  headingRowHeight: 42,
-                  dataRowMinHeight: 44,
-                  dataRowMaxHeight: 52,
-                  columns: [
-                    if (_batch) const DataColumn(label: SizedBox(width: 24)),
-                    if (canWrite) const DataColumn(label: Text('EDIT')),
-                    const DataColumn(label: Text('PHOTOS')),
-                    const DataColumn(label: Text('SO')),
-                    const DataColumn(label: Text('CUSTOMER')),
-                    const DataColumn(label: Text('ENTRY DATE')),
-                    const DataColumn(label: Text('CONTAINERS')),
-                    const DataColumn(label: Text('LOCATION')),
-                    const DataColumn(label: Text('WEIGHT')),
-                    const DataColumn(label: Text('COMMENTS')),
-                    const DataColumn(label: Text('STATUS')),
-                    const DataColumn(label: Text('STAGED BY')),
-                    if (canWrite) const DataColumn(label: Text('ACTIONS')),
-                  ],
-                  rows: [
+      child: _wrapWithViewToggle(
+        context: context,
+        ref: ref,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (rows.isEmpty)
+              const Padding(
+                padding: EdgeInsets.all(28),
+                child: Center(child: Text('No staging entries found.')),
+              )
+            else if (ref.watch(logViewModeProvider) == LogViewMode.card)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 4, 36, 8),
+                child: Column(
+                  children: [
                     for (final e in rows)
-                      DataRow(
-                        color: WidgetStatePropertyAll(
-                          statusRowColor(context, e.status),
-                        ),
-                        cells: [
-                          if (_batch)
-                            DataCell(
-                              Checkbox(
-                                value: _selected.contains(e.id),
-                                onChanged: (v) => setState(() {
-                                  if (v == true) {
-                                    _selected.add(e.id);
-                                  } else {
-                                    _selected.remove(e.id);
+                      EntryCard(
+                        title: e.so,
+                        subtitle: e.customer,
+                        dbStatus: e.status,
+                        color: statusRowColor(context, e.status),
+                        details: [
+                          e.type,
+                          e.location,
+                          if ((e.weight ?? '').isNotEmpty) 'Wt: ${e.weight}',
+                          if ((e.stagedBy ?? '').isNotEmpty)
+                            'Staged by: ${e.stagedBy}',
+                          if ((e.comments ?? '').isNotEmpty) e.comments!,
+                        ],
+                        onTap: () =>
+                            showOrderHistoryDialog(context, ref, so: e.so),
+                        trailing: canWrite
+                            ? PopupMenuButton<String>(
+                                tooltip: 'Actions',
+                                icon: const Icon(Icons.more_vert, size: 20),
+                                onSelected: (v) {
+                                  switch (v) {
+                                    case 'edit':
+                                      showStagingFormSheet(
+                                        context,
+                                        ref,
+                                        existing: e,
+                                      );
+                                    case 'ship':
+                                      showShipDialog(context, ref, entry: e);
+                                    case 'split':
+                                      showSplitDialog(context, ref, entry: e);
+                                    case 'return':
+                                      showReturnDialog(context, ref, entry: e);
+                                    case 'delete':
+                                      _deleteOne(e);
                                   }
-                                }),
-                              ),
-                            ),
-                          if (canWrite)
-                            DataCell(
-                              _editButton(
-                                () => showStagingFormSheet(
-                                  context,
-                                  ref,
-                                  existing: e,
-                                ),
-                              ),
-                            ),
-                          DataCell(_photosButton(context, e.so, e.photoUrls)),
-                          DataCell(_soHistoryLink(context, ref, e.so)),
-                          DataCell(_clipText(e.customer, maxWidth: 180)),
-                          DataCell(Text(_fmtDate(e.entryDate))),
-                          DataCell(_clipText(e.type, maxWidth: 170)),
-                          DataCell(_clipText(e.location, maxWidth: 110)),
-                          DataCell(_clipText(e.weight ?? '', maxWidth: 90)),
-                          DataCell(_clipText(e.comments ?? '', maxWidth: 220)),
-                          DataCell(
-                            _clipText(
-                              StatusRules.isYmd(e.status) &&
-                                      StatusRules.formatUi(e.status) == e.status
-                                  ? 'Future: ${e.status}'
-                                  : StatusRules.formatUi(e.status),
-                              maxWidth: 150,
-                              weight: FontWeight.w600,
-                            ),
-                          ),
-                          DataCell(_clipText(e.stagedBy ?? '', maxWidth: 110)),
-                          if (canWrite)
-                            DataCell(
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  PillButton(
-                                    label: 'Ship',
-                                    color: SlstColors.success,
-                                    compact: true,
-                                    onPressed: () =>
-                                        showShipDialog(context, ref, entry: e),
+                                },
+                                itemBuilder: (context) => const [
+                                  PopupMenuItem(
+                                    value: 'edit',
+                                    child: Text('Edit'),
                                   ),
-                                  const SizedBox(width: 6),
-                                  PopupMenuButton<String>(
-                                    tooltip: 'More actions',
-                                    icon: const Icon(Icons.more_vert, size: 20),
-                                    onSelected: (v) {
-                                      switch (v) {
-                                        case 'split':
-                                          showSplitDialog(
-                                            context,
-                                            ref,
-                                            entry: e,
-                                          );
-                                        case 'return':
-                                          showReturnDialog(
-                                            context,
-                                            ref,
-                                            entry: e,
-                                          );
-                                        case 'delete':
-                                          _deleteOne(e);
-                                      }
-                                    },
-                                    itemBuilder: (context) => const [
-                                      PopupMenuItem(
-                                        value: 'split',
-                                        child: Text('Split Entry'),
-                                      ),
-                                      PopupMenuItem(
-                                        value: 'return',
-                                        child: Text('Return to Stock'),
-                                      ),
-                                      PopupMenuItem(
-                                        value: 'delete',
-                                        child: Text('Delete'),
-                                      ),
-                                    ],
+                                  PopupMenuItem(
+                                    value: 'ship',
+                                    child: Text('Ship'),
+                                  ),
+                                  PopupMenuItem(
+                                    value: 'split',
+                                    child: Text('Split Entry'),
+                                  ),
+                                  PopupMenuItem(
+                                    value: 'return',
+                                    child: Text('Return to Stock'),
+                                  ),
+                                  PopupMenuItem(
+                                    value: 'delete',
+                                    child: Text('Delete'),
                                   ),
                                 ],
-                              ),
-                            ),
-                        ],
+                              )
+                            : null,
                       ),
                   ],
                 ),
+              )
+            else
+              Scrollbar(
+                controller: _hScroll,
+                child: SingleChildScrollView(
+                  controller: _hScroll,
+                  scrollDirection: Axis.horizontal,
+                  child: DataTable(
+                    showCheckboxColumn: false,
+                    horizontalMargin: 16,
+                    columnSpacing: 20,
+                    headingRowHeight: 42,
+                    dataRowMinHeight: 44,
+                    dataRowMaxHeight: 52,
+                    columns: [
+                      if (_batch) const DataColumn(label: SizedBox(width: 24)),
+                      if (canWrite) const DataColumn(label: Text('EDIT')),
+                      const DataColumn(label: Text('PHOTOS')),
+                      const DataColumn(label: Text('SO')),
+                      const DataColumn(label: Text('CUSTOMER')),
+                      const DataColumn(label: Text('ENTRY DATE')),
+                      const DataColumn(label: Text('CONTAINERS')),
+                      const DataColumn(label: Text('LOCATION')),
+                      const DataColumn(label: Text('WEIGHT')),
+                      const DataColumn(label: Text('COMMENTS')),
+                      const DataColumn(label: Text('STATUS')),
+                      const DataColumn(label: Text('STAGED BY')),
+                      if (canWrite) const DataColumn(label: Text('ACTIONS')),
+                    ],
+                    rows: [
+                      for (final e in rows)
+                        DataRow(
+                          color: WidgetStatePropertyAll(
+                            statusRowColor(context, e.status),
+                          ),
+                          cells: [
+                            if (_batch)
+                              DataCell(
+                                Checkbox(
+                                  value: _selected.contains(e.id),
+                                  onChanged: (v) => setState(() {
+                                    if (v == true) {
+                                      _selected.add(e.id);
+                                    } else {
+                                      _selected.remove(e.id);
+                                    }
+                                  }),
+                                ),
+                              ),
+                            if (canWrite)
+                              DataCell(
+                                _editButton(
+                                  () => showStagingFormSheet(
+                                    context,
+                                    ref,
+                                    existing: e,
+                                  ),
+                                ),
+                              ),
+                            DataCell(_photosButton(context, e.so, e.photoUrls)),
+                            DataCell(_soHistoryLink(context, ref, e.so)),
+                            DataCell(_clipText(e.customer, maxWidth: 180)),
+                            DataCell(Text(_fmtDate(e.entryDate))),
+                            DataCell(_clipText(e.type, maxWidth: 170)),
+                            DataCell(_clipText(e.location, maxWidth: 110)),
+                            DataCell(_clipText(e.weight ?? '', maxWidth: 90)),
+                            DataCell(_clipText(e.comments ?? '', maxWidth: 220)),
+                            DataCell(
+                              _clipText(
+                                StatusRules.isYmd(e.status) &&
+                                        StatusRules.formatUi(e.status) ==
+                                            e.status
+                                    ? 'Future: ${e.status}'
+                                    : StatusRules.formatUi(e.status),
+                                maxWidth: 150,
+                                weight: FontWeight.w600,
+                              ),
+                            ),
+                            DataCell(
+                              _clipText(e.stagedBy ?? '', maxWidth: 110),
+                            ),
+                            if (canWrite)
+                              DataCell(
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    PillButton(
+                                      label: 'Ship',
+                                      color: SlstColors.success,
+                                      compact: true,
+                                      onPressed: () => showShipDialog(
+                                        context,
+                                        ref,
+                                        entry: e,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    PopupMenuButton<String>(
+                                      tooltip: 'More actions',
+                                      icon: const Icon(
+                                        Icons.more_vert,
+                                        size: 20,
+                                      ),
+                                      onSelected: (v) {
+                                        switch (v) {
+                                          case 'split':
+                                            showSplitDialog(
+                                              context,
+                                              ref,
+                                              entry: e,
+                                            );
+                                          case 'return':
+                                            showReturnDialog(
+                                              context,
+                                              ref,
+                                              entry: e,
+                                            );
+                                          case 'delete':
+                                            _deleteOne(e);
+                                        }
+                                      },
+                                      itemBuilder: (context) => const [
+                                        PopupMenuItem(
+                                          value: 'split',
+                                          child: Text('Split Entry'),
+                                        ),
+                                        PopupMenuItem(
+                                          value: 'return',
+                                          child: Text('Return to Stock'),
+                                        ),
+                                        PopupMenuItem(
+                                          value: 'delete',
+                                          child: Text('Delete'),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                          ],
+                        ),
+                    ],
+                  ),
+                ),
               ),
-            ),
-          if (!widget.expanded && sorted.length > rows.length)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-              child: Text(
-                'Showing ${rows.length} of ${sorted.length} — use Expand to view all.',
-                style: const TextStyle(fontSize: 12, color: SlstColors.muted),
-              ),
-            )
-          else
-            const SizedBox(height: 8),
-        ],
+            if (!widget.expanded && sorted.length > rows.length)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                child: Text(
+                  'Showing ${rows.length} of ${sorted.length} — use Expand to view all.',
+                  style: const TextStyle(fontSize: 12, color: SlstColors.muted),
+                ),
+              )
+            else
+              const SizedBox(height: 8),
+          ],
+        ),
       ),
     );
   }
@@ -967,95 +1113,44 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
               ],
             )
           : null,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (rows.isEmpty)
-            const Padding(
-              padding: EdgeInsets.all(28),
-              child: Center(child: Text('No shipped entries found.')),
-            )
-          else
-            Scrollbar(
-              controller: _hScroll,
-              child: SingleChildScrollView(
-                controller: _hScroll,
-                scrollDirection: Axis.horizontal,
-                child: DataTable(
-                  showCheckboxColumn: false,
-                  horizontalMargin: 16,
-                  columnSpacing: 20,
-                  headingRowHeight: 42,
-                  dataRowMinHeight: 44,
-                  dataRowMaxHeight: 52,
-                  columns: [
-                    if (_batch) const DataColumn(label: SizedBox(width: 24)),
-                    const DataColumn(label: Text('PHOTOS')),
-                    const DataColumn(label: Text('SO')),
-                    const DataColumn(label: Text('CUSTOMER')),
-                    const DataColumn(label: Text('CONTAINERS')),
-                    const DataColumn(label: Text('CARRIER')),
-                    const DataColumn(label: Text('LOCATION')),
-                    const DataColumn(label: Text('WEIGHT')),
-                    const DataColumn(label: Text('COMMENTS')),
-                    const DataColumn(label: Text('SHIPPED AT')),
-                    const DataColumn(label: Text('SHIPPED BY')),
-                    const DataColumn(label: Text("PM'D")),
-                    if (canWrite) const DataColumn(label: Text('ACTIONS')),
-                  ],
-                  rows: [
+      child: _wrapWithViewToggle(
+        context: context,
+        ref: ref,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (rows.isEmpty)
+              const Padding(
+                padding: EdgeInsets.all(28),
+                child: Center(child: Text('No shipped entries found.')),
+              )
+            else if (ref.watch(logViewModeProvider) == LogViewMode.card)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 4, 36, 8),
+                child: Column(
+                  children: [
                     for (final e in rows)
-                      DataRow(
+                      EntryCard(
+                        title: e.so,
+                        subtitle: e.customer,
                         color: e.carrier.toUpperCase() == 'RETURNED TO STOCK'
-                            ? WidgetStatePropertyAll(
-                                dark
-                                    ? SlstColors.statusPartialDark
-                                    : SlstColors.statusPartial,
-                              )
+                            ? (dark
+                                  ? SlstColors.statusPartialDark
+                                  : SlstColors.statusPartial)
                             : null,
-                        cells: [
-                          if (_batch)
-                            DataCell(
-                              Checkbox(
-                                value: _selected.contains(e.id),
-                                onChanged: (v) => setState(() {
-                                  if (v == true) {
-                                    _selected.add(e.id);
-                                  } else {
-                                    _selected.remove(e.id);
-                                  }
-                                }),
-                              ),
-                            ),
-                          DataCell(_photosButton(context, e.so, e.photoUrls)),
-                          DataCell(_soHistoryLink(context, ref, e.so)),
-                          DataCell(_clipText(e.customer, maxWidth: 180)),
-                          DataCell(_clipText(e.type, maxWidth: 170)),
-                          DataCell(_clipText(e.carrier, maxWidth: 150)),
-                          DataCell(_clipText(e.location, maxWidth: 110)),
-                          DataCell(_clipText(e.weight ?? '', maxWidth: 90)),
-                          DataCell(_clipText(e.comments ?? '', maxWidth: 220)),
-                          DataCell(Text(_fmtDate(e.shippedAt))),
-                          DataCell(_clipText(e.shippedBy ?? '', maxWidth: 110)),
-                          DataCell(
-                            (e.pmdEmail ?? '').isEmpty
-                                ? const Text('—')
-                                : Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Icon(
-                                        Icons.check_circle,
-                                        size: 15,
-                                        color: SlstColors.success,
-                                      ),
-                                      const SizedBox(width: 4),
-                                      _clipText(e.pmdEmail!, maxWidth: 100),
-                                    ],
-                                  ),
-                          ),
-                          if (canWrite)
-                            DataCell(
-                              PopupMenuButton<String>(
+                        details: [
+                          e.type,
+                          e.carrier,
+                          e.location,
+                          if ((e.weight ?? '').isNotEmpty) 'Wt: ${e.weight}',
+                          if ((e.shippedBy ?? '').isNotEmpty)
+                            'Shipped by: ${e.shippedBy}',
+                          if ((e.comments ?? '').isNotEmpty) e.comments!,
+                        ],
+                        onTap: () =>
+                            showOrderHistoryDialog(context, ref, so: e.so),
+                        trailing: canWrite
+                            ? PopupMenuButton<String>(
                                 tooltip: 'Actions',
                                 icon: const Icon(Icons.more_vert, size: 20),
                                 onSelected: (v) {
@@ -1078,25 +1173,137 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
                                     child: Text('Delete'),
                                   ),
                                 ],
-                              ),
-                            ),
-                        ],
+                              )
+                            : null,
                       ),
                   ],
                 ),
+              )
+            else
+              Scrollbar(
+                controller: _hScroll,
+                child: SingleChildScrollView(
+                  controller: _hScroll,
+                  scrollDirection: Axis.horizontal,
+                  child: DataTable(
+                    showCheckboxColumn: false,
+                    horizontalMargin: 16,
+                    columnSpacing: 20,
+                    headingRowHeight: 42,
+                    dataRowMinHeight: 44,
+                    dataRowMaxHeight: 52,
+                    columns: [
+                      if (_batch) const DataColumn(label: SizedBox(width: 24)),
+                      const DataColumn(label: Text('PHOTOS')),
+                      const DataColumn(label: Text('SO')),
+                      const DataColumn(label: Text('CUSTOMER')),
+                      const DataColumn(label: Text('CONTAINERS')),
+                      const DataColumn(label: Text('CARRIER')),
+                      const DataColumn(label: Text('LOCATION')),
+                      const DataColumn(label: Text('WEIGHT')),
+                      const DataColumn(label: Text('COMMENTS')),
+                      const DataColumn(label: Text('SHIPPED AT')),
+                      const DataColumn(label: Text('SHIPPED BY')),
+                      const DataColumn(label: Text("PM'D")),
+                      if (canWrite) const DataColumn(label: Text('ACTIONS')),
+                    ],
+                    rows: [
+                      for (final e in rows)
+                        DataRow(
+                          color: e.carrier.toUpperCase() == 'RETURNED TO STOCK'
+                              ? WidgetStatePropertyAll(
+                                  dark
+                                      ? SlstColors.statusPartialDark
+                                      : SlstColors.statusPartial,
+                                )
+                              : null,
+                          cells: [
+                            if (_batch)
+                              DataCell(
+                                Checkbox(
+                                  value: _selected.contains(e.id),
+                                  onChanged: (v) => setState(() {
+                                    if (v == true) {
+                                      _selected.add(e.id);
+                                    } else {
+                                      _selected.remove(e.id);
+                                    }
+                                  }),
+                                ),
+                              ),
+                            DataCell(_photosButton(context, e.so, e.photoUrls)),
+                            DataCell(_soHistoryLink(context, ref, e.so)),
+                            DataCell(_clipText(e.customer, maxWidth: 180)),
+                            DataCell(_clipText(e.type, maxWidth: 170)),
+                            DataCell(_clipText(e.carrier, maxWidth: 150)),
+                            DataCell(_clipText(e.location, maxWidth: 110)),
+                            DataCell(_clipText(e.weight ?? '', maxWidth: 90)),
+                            DataCell(_clipText(e.comments ?? '', maxWidth: 220)),
+                            DataCell(Text(_fmtDate(e.shippedAt))),
+                            DataCell(
+                              _clipText(e.shippedBy ?? '', maxWidth: 110),
+                            ),
+                            DataCell(
+                              (e.pmdEmail ?? '').isEmpty
+                                  ? const Text('—')
+                                  : Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(
+                                          Icons.check_circle,
+                                          size: 15,
+                                          color: SlstColors.success,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        _clipText(e.pmdEmail!, maxWidth: 100),
+                                      ],
+                                    ),
+                            ),
+                            if (canWrite)
+                              DataCell(
+                                PopupMenuButton<String>(
+                                  tooltip: 'Actions',
+                                  icon: const Icon(Icons.more_vert, size: 20),
+                                  onSelected: (v) {
+                                    switch (v) {
+                                      case 'undo':
+                                        _undo(e);
+                                      case 'delete':
+                                        _deleteOne(e);
+                                    }
+                                  },
+                                  itemBuilder: (context) => [
+                                    if (e.carrier.toUpperCase() !=
+                                        'RETURNED TO STOCK')
+                                      const PopupMenuItem(
+                                        value: 'undo',
+                                        child: Text('Undo Shipment'),
+                                      ),
+                                    const PopupMenuItem(
+                                      value: 'delete',
+                                      child: Text('Delete'),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                          ],
+                        ),
+                    ],
+                  ),
+                ),
               ),
-            ),
-          if (!widget.expanded && sorted.length > rows.length)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-              child: Text(
-                'Showing ${rows.length} of ${sorted.length} — use Expand to view all.',
-                style: const TextStyle(fontSize: 12, color: SlstColors.muted),
-              ),
-            )
-          else
-            const SizedBox(height: 8),
-        ],
+            if (!widget.expanded && sorted.length > rows.length)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                child: Text(
+                  'Showing ${rows.length} of ${sorted.length} — use Expand to view all.',
+                  style: const TextStyle(fontSize: 12, color: SlstColors.muted),
+                ),
+              )
+            else
+              const SizedBox(height: 8),
+          ],
+        ),
       ),
     );
   }

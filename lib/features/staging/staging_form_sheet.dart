@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme.dart';
 import '../../data/app_state.dart';
+import '../../data/consolidation_undo.dart';
 import '../../domain/location_intelligence.dart';
 import '../../domain/models.dart';
 import '../../domain/status.dart';
@@ -17,7 +18,9 @@ Future<void> showStagingFormSheet(
   WidgetRef ref, {
   StagingEntry? existing,
   String? initialSo,
+  String? initialCustomer,
   bool allowExistingSo = false,
+  bool lockIdentity = false,
 }) {
   return showAdaptivePopup<void>(
     context,
@@ -25,7 +28,9 @@ Future<void> showStagingFormSheet(
     builder: (_) => StagingFormSheet(
       existing: existing,
       initialSo: initialSo,
+      initialCustomer: initialCustomer,
       allowExistingSo: allowExistingSo,
+      lockIdentity: lockIdentity,
     ),
   );
 }
@@ -35,11 +40,15 @@ class StagingFormSheet extends ConsumerStatefulWidget {
     super.key,
     this.existing,
     this.initialSo,
+    this.initialCustomer,
     this.allowExistingSo = false,
+    this.lockIdentity = false,
   });
   final StagingEntry? existing;
   final String? initialSo;
+  final String? initialCustomer;
   final bool allowExistingSo;
+  final bool lockIdentity;
 
   @override
   ConsumerState<StagingFormSheet> createState() => _StagingFormSheetState();
@@ -57,7 +66,7 @@ class _StagingFormSheetState extends ConsumerState<StagingFormSheet> {
   final _crates = TextEditingController();
   final _pipe = TextEditingController();
   final _other = TextEditingController();
-  String _statusUi = 'Partial';
+  String? _statusUi;
   DateTime? _futureDate;
   final _photos = <PhotoBytes>[];
   bool _busy = false;
@@ -89,8 +98,13 @@ class _StagingFormSheetState extends ConsumerState<StagingFormSheet> {
         _statusUi = 'Ship On Future Date';
         _futureDate = DateTime.tryParse(e.status);
       }
-    } else if (widget.initialSo != null) {
-      _so.text = widget.initialSo!;
+    } else {
+      if (widget.initialSo != null) _so.text = widget.initialSo!;
+      if (widget.initialCustomer != null) {
+        _customer.text = widget.initialCustomer!;
+      }
+      // New entries start with a blank status (not Partial).
+      _statusUi = null;
     }
   }
 
@@ -117,9 +131,47 @@ class _StagingFormSheetState extends ConsumerState<StagingFormSheet> {
     return '${d.year}-$m-$day';
   }
 
+  ConsolidationUndoSnapshot? get _activeUndo {
+    final snap = ref.read(consolidationUndoProvider);
+    if (snap == null || !snap.isActive) return null;
+    if (widget.existing?.id != snap.keepId) return null;
+    return snap;
+  }
+
+  Future<void> _reverseConsolidation() async {
+    final snap = _activeUndo;
+    if (snap == null) return;
+    final ok = await confirmDialog(
+      context,
+      title: 'Reverse consolidation?',
+      message:
+          'Restore the ${snap.removed.length} merged staging '
+          '${snap.removed.length == 1 ? 'row' : 'rows'} for SO ${snap.keepBefore.so}?',
+      confirmLabel: 'Reverse',
+      confirmColor: SlstColors.purple,
+    );
+    if (!ok || !mounted) return;
+    setState(() => _busy = true);
+    try {
+      await ref.read(operationsProvider).reverseConsolidation(snap);
+      if (mounted) {
+        Navigator.pop(context);
+        showOk(context, 'Consolidation reversed');
+      }
+    } catch (e) {
+      if (mounted) showError(context, e);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   Future<void> _save() async {
     setState(() => _busy = true);
     try {
+      final statusUi = _statusUi;
+      if (statusUi == null || statusUi.isEmpty) {
+        throw Exception('Select a status before saving.');
+      }
       final counts = countsFromControllers(
         skids: _skids,
         boxes: _boxes,
@@ -146,7 +198,7 @@ class _StagingFormSheetState extends ConsumerState<StagingFormSheet> {
           so: _so.text,
           customer: _customer.text,
           location: _location.text,
-          statusUi: _statusUi,
+          statusUi: statusUi,
           containers: counts,
           weight: _weight.text,
           comments: _comments.text,
@@ -187,7 +239,7 @@ class _StagingFormSheetState extends ConsumerState<StagingFormSheet> {
             'customer': _customer.text.trim(),
             'location': _location.text.trim(),
             'status': StatusRules.toDb(
-              _statusUi,
+              statusUi,
               futureDateYmd: _ymd(_futureDate),
             ),
             'type': counts.typeLabel,
@@ -229,6 +281,9 @@ class _StagingFormSheetState extends ConsumerState<StagingFormSheet> {
   @override
   Widget build(BuildContext context) {
     final bottom = MediaQuery.viewInsetsOf(context).bottom;
+    final lockIdentity = widget.lockIdentity;
+    ref.watch(consolidationUndoProvider);
+    final undo = _activeUndo;
     return Padding(
       padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottom),
       child: SingleChildScrollView(
@@ -261,11 +316,27 @@ class _StagingFormSheetState extends ConsumerState<StagingFormSheet> {
             const SizedBox(height: 12),
             TextField(
               controller: _so,
-              decoration: const InputDecoration(labelText: 'SO #'),
+              readOnly: lockIdentity,
+              decoration: InputDecoration(
+                labelText: 'SO #',
+                helperText: lockIdentity
+                    ? 'Locked to this sales order from Order History'
+                    : null,
+              ),
               textCapitalization: TextCapitalization.characters,
             ),
             const SizedBox(height: 8),
-            CustomerSuggestionField(controller: _customer),
+            if (lockIdentity)
+              TextField(
+                controller: _customer,
+                readOnly: true,
+                decoration: const InputDecoration(
+                  labelText: 'Customer',
+                  helperText: 'Locked to this sales order from Order History',
+                ),
+              )
+            else
+              CustomerSuggestionField(controller: _customer),
             const SizedBox(height: 8),
             LocationSelectorField(
               controller: _location,
@@ -276,16 +347,22 @@ class _StagingFormSheetState extends ConsumerState<StagingFormSheet> {
             ),
             const SizedBox(height: 8),
             InputDecorator(
-              decoration: const InputDecoration(labelText: 'Status'),
+              decoration: InputDecoration(
+                labelText: 'Status',
+                errorText: _statusUi == null && _busy
+                    ? 'Select a status'
+                    : null,
+              ),
               child: DropdownButtonHideUnderline(
                 child: DropdownButton<String>(
                   isExpanded: true,
+                  hint: const Text('Select status'),
                   value: _statusUi,
                   items: [
                     for (final s in StatusRules.uiStatuses)
                       DropdownMenuItem(value: s, child: Text(s)),
                   ],
-                  onChanged: (v) => setState(() => _statusUi = v ?? _statusUi),
+                  onChanged: (v) => setState(() => _statusUi = v),
                 ),
               ),
             ),
@@ -347,6 +424,22 @@ class _StagingFormSheetState extends ConsumerState<StagingFormSheet> {
                 ),
               ],
             ),
+            if (undo != null) ...[
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: SlstColors.purple,
+                  side: const BorderSide(color: SlstColors.purple),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                onPressed: _busy ? null : _reverseConsolidation,
+                icon: const Icon(Icons.undo),
+                label: Text(
+                  'Reverse consolidation '
+                  '(${undo.remaining.inSeconds}s left)',
+                ),
+              ),
+            ],
             const SizedBox(height: 16),
             FilledButton(
               style: FilledButton.styleFrom(

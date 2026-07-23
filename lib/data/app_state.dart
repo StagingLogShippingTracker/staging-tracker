@@ -10,6 +10,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../domain/models.dart';
 import '../domain/location_intelligence.dart';
 import '../domain/status.dart';
+import 'consolidation_undo.dart';
 import 'supabase_repositories.dart';
 
 final _shipEmailDateFmt = DateFormat('M/d/yyyy, h:mm:ss a');
@@ -369,7 +370,13 @@ class OperationsService {
     String? pmEmail,
     bool notifyPm = false,
     List<PhotoBytes> extraPhotos = const [],
+    ContainerCounts? containers,
+    String? weight,
   }) async {
+    final counts = containers ?? ContainerCounts.parse(entry.type);
+    final typeLabel = counts.total > 0 ? counts.typeLabel : entry.type;
+    final qty = counts.total > 0 ? counts.total : entry.qty;
+    final weightValue = weight ?? entry.weight;
     final paths = [...entry.photoUrls];
     for (final p in extraPhotos) {
       paths.add(await _photos.uploadBytes(bytes: p.bytes, fileName: p.name));
@@ -378,11 +385,11 @@ class OperationsService {
     await _shipped.insert({
       'so': entry.so,
       'customer': entry.customer,
-      'type': entry.type,
-      'qty': entry.qty,
+      'type': typeLabel,
+      'qty': qty,
       'carrier': carrier.trim(),
       'location': entry.location,
-      'weight': entry.weight,
+      'weight': weightValue?.trim(),
       'comments': entry.comments,
       'shipped_by': shippedBy.trim(),
       'pmd_email': pmName,
@@ -399,7 +406,7 @@ class OperationsService {
     await _log.log('shipped', 'Added via Ship Confirm: SO: ${entry.so}');
     await _log.log(
       'staging',
-      'Bin Movement: To Shipped Log — SO ${entry.so}: ${entry.type} moved from Staging Log to Shipped Log (${entry.location})',
+      'Bin Movement: To Shipped Log — SO ${entry.so}: $typeLabel moved from Staging Log to Shipped Log (${entry.location})',
     );
 
     final shippedAt = _shipEmailDateFmt.format(DateTime.now());
@@ -412,14 +419,14 @@ class OperationsService {
         'subject': 'SHIPPED: SO ${entry.so} - ${entry.customer}',
         // Edge Function notify-pm replaces body with branded HTML for ship_confirm.
         'body':
-            'Your order has shipped.<br><br><b>SO#</b> | ${entry.so}<br><b>Customer</b> | ${entry.customer}<br><b>Carrier</b> | ${carrier.trim()}<br><b>Containers</b> | ${entry.type}<br><b>Shipped By</b> | ${shippedBy.trim()}',
+            'Your order has shipped.<br><br><b>SO#</b> | ${entry.so}<br><b>Customer</b> | ${entry.customer}<br><b>Carrier</b> | ${carrier.trim()}<br><b>Containers</b> | $typeLabel<br><b>Shipped By</b> | ${shippedBy.trim()}',
         'so': entry.so,
         'customer': entry.customer,
         'carrier': carrier.trim(),
         'shipped_at': shippedAt,
         'shipped_by': shippedBy.trim(),
-        'containers': entry.type,
-        'weight': entry.weight?.trim() ?? '',
+        'containers': typeLabel,
+        'weight': weightValue?.trim() ?? '',
         'comments': entry.comments?.trim() ?? '',
         'attachments': paths,
         'notification_type': 'ship_confirm',
@@ -708,6 +715,7 @@ class OperationsService {
       throw Exception('Consolidate requires the same SO on every row.');
     }
     final keep = entries.first;
+    final removed = entries.skip(1).toList();
     var skids = 0, boxes = 0, crates = 0, pipe = 0, other = 0;
     final photos = <String>{...keep.photoUrls};
     for (final e in entries) {
@@ -738,12 +746,43 @@ class OperationsService {
       'qty': qty,
       'photo_urls': photos.toList(),
     });
-    for (final e in entries.skip(1)) {
+    for (final e in removed) {
       await _staging.delete(e.id);
     }
+    _ref.read(consolidationUndoProvider.notifier).state =
+        ConsolidationUndoSnapshot(
+      keepId: keep.id,
+      keepBefore: keep,
+      removed: removed,
+      at: DateTime.now(),
+    );
     await _log.log(
       'staging',
       'Consolidated ${entries.length} rows for SO ${keep.so}',
+    );
+    await _ref.read(appDataProvider.notifier).refresh();
+  }
+
+  /// Restores rows removed by [consolidateStaging] within the undo window.
+  Future<void> reverseConsolidation(ConsolidationUndoSnapshot snap) async {
+    if (!snap.isActive) {
+      _ref.read(consolidationUndoProvider.notifier).state = null;
+      throw Exception(
+        'Consolidation can only be reversed within two minutes.',
+      );
+    }
+    await _staging.update(snap.keepId, {
+      'type': snap.keepBefore.type,
+      'qty': snap.keepBefore.qty,
+      'photo_urls': snap.keepBefore.photoUrls,
+    });
+    for (final e in snap.removed) {
+      await _staging.insert(e.toInsertMap());
+    }
+    _ref.read(consolidationUndoProvider.notifier).state = null;
+    await _log.log(
+      'staging',
+      'Reversed consolidation for SO ${snap.keepBefore.so}',
     );
     await _ref.read(appDataProvider.notifier).refresh();
   }

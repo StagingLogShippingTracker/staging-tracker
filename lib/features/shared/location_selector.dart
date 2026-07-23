@@ -355,6 +355,10 @@ Future<LocationAdvisoryDecision> confirmLocationAdvisory(
   required String so,
   String? ignoreEntryId,
 }) async {
+  // Loose floor / shipping / outside areas are freeflow — skip conflict UI.
+  if (classifyLocation(location) != LocationCategory.aisle) {
+    return LocationAdvisoryDecision.proceed;
+  }
   // Refresh immediately before confirmation where practical. A failure leaves
   // the existing realtime snapshot available; this remains advisory, not a lock.
   await ref.read(appDataProvider.notifier).refresh();
@@ -389,31 +393,45 @@ Future<LocationAdvisoryDecision> confirmLocationAdvisory(
       'SO $so is also active at ${assessment.sameOrderElsewhere.map((entry) => entry.location).toSet().join(', ')}.',
     'This warning is advisory; another user can change staging before save.',
   ];
+  final showConsolidate =
+      signedIn && assessment.hasConsolidationOpportunity;
   final result = await showDialog<LocationAdvisoryDecision>(
     context: context,
     builder: (dialogContext) => AlertDialog(
       title: const Text('Location assignment warning'),
-      content: Text(lines.join('\n\n')),
-      actions: [
-        TextButton(
-          onPressed: () =>
-              Navigator.pop(dialogContext, LocationAdvisoryDecision.cancel),
-          child: const Text('Cancel'),
-        ),
-        if (signedIn && assessment.hasConsolidationOpportunity)
-          OutlinedButton(
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(lines.join('\n\n')),
+          const SizedBox(height: 16),
+          FilledButton(
             onPressed: () => Navigator.pop(
               dialogContext,
-              LocationAdvisoryDecision.consolidate,
+              LocationAdvisoryDecision.proceed,
             ),
-            child: const Text('Save & consolidate'),
+            child: const Text('Proceed anyway'),
           ),
-        FilledButton(
-          onPressed: () =>
-              Navigator.pop(dialogContext, LocationAdvisoryDecision.proceed),
-          child: const Text('Proceed anyway'),
-        ),
-      ],
+          if (showConsolidate) ...[
+            const SizedBox(height: 8),
+            OutlinedButton(
+              onPressed: () => Navigator.pop(
+                dialogContext,
+                LocationAdvisoryDecision.consolidate,
+              ),
+              child: const Text('Save & consolidate'),
+            ),
+          ],
+          const SizedBox(height: 4),
+          TextButton(
+            onPressed: () => Navigator.pop(
+              dialogContext,
+              LocationAdvisoryDecision.cancel,
+            ),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
     ),
   );
   return result ?? LocationAdvisoryDecision.cancel;

@@ -43,22 +43,57 @@ class _ShipDialogState extends ConsumerState<ShipDialog> {
   final _carrier = TextEditingController();
   final _shippedBy = TextEditingController();
   final _pmEmail = TextEditingController();
+  final _weight = TextEditingController();
+  final _skids = TextEditingController();
+  final _boxes = TextEditingController();
+  final _crates = TextEditingController();
+  final _pipe = TextEditingController();
+  final _other = TextEditingController();
   bool _notify = true;
   bool _busy = false;
   final _photos = <PhotoBytes>[];
   final _picker = PhotoPickerService();
 
   @override
+  void initState() {
+    super.initState();
+    final e = widget.entry;
+    _weight.text = e.weight ?? '';
+    final counts = ContainerCounts.parse(e.type);
+    _skids.text = counts.skids == 0 ? '' : '${counts.skids}';
+    _boxes.text = counts.boxes == 0 ? '' : '${counts.boxes}';
+    _crates.text = counts.crates == 0 ? '' : '${counts.crates}';
+    _pipe.text = counts.pipe == 0 ? '' : '${counts.pipe}';
+    _other.text = counts.other == 0 ? '' : '${counts.other}';
+  }
+
+  @override
   void dispose() {
     _carrier.dispose();
     _shippedBy.dispose();
     _pmEmail.dispose();
+    _weight.dispose();
+    _skids.dispose();
+    _boxes.dispose();
+    _crates.dispose();
+    _pipe.dispose();
+    _other.dispose();
     super.dispose();
   }
 
   Future<void> _submit() async {
     setState(() => _busy = true);
     try {
+      final counts = countsFromControllers(
+        skids: _skids,
+        boxes: _boxes,
+        crates: _crates,
+        pipe: _pipe,
+        other: _other,
+      );
+      if (counts.total <= 0) {
+        throw Exception('At least one container is required.');
+      }
       final proceed = await confirmPartialShipIfNeeded(
         context,
         ref,
@@ -78,6 +113,8 @@ class _ShipDialogState extends ConsumerState<ShipDialog> {
             pmEmail: _pmEmail.text.trim().isEmpty ? null : _pmEmail.text.trim(),
             notifyPm: _notify,
             extraPhotos: _photos,
+            containers: counts,
+            weight: _weight.text,
           );
       if (mounted) {
         Navigator.pop(context);
@@ -99,11 +136,33 @@ class _ShipDialogState extends ConsumerState<ShipDialog> {
     return AlertDialog(
       title: Text('Ship SO ${widget.entry.so}'),
       content: SizedBox(
-        width: 420,
+        width: 440,
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  '${widget.entry.customer} · ${widget.entry.location}',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
+              const SizedBox(height: 12),
+              ContainerInputs(
+                skids: _skids,
+                boxes: _boxes,
+                crates: _crates,
+                pipe: _pipe,
+                other: _other,
+                onChanged: () => setState(() {}),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _weight,
+                decoration: const InputDecoration(labelText: 'Weight (optional)'),
+              ),
+              const SizedBox(height: 8),
               CarrierSuggestionField(controller: _carrier),
               const SizedBox(height: 8),
               PersonSuggestionField(

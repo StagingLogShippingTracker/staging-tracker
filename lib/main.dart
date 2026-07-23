@@ -7,6 +7,7 @@ import 'core/app_config.dart';
 import 'core/router.dart';
 import 'core/theme.dart';
 import 'data/app_state.dart';
+import 'data/log_view_mode.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -16,10 +17,14 @@ Future<void> main() async {
   );
   final prefs = await SharedPreferences.getInstance();
   final dark = prefs.getBool('swift_theme_dark') ?? false;
+  final logView = await loadLogViewMode(prefs);
   runApp(
     ProviderScope(
       overrides: [
         darkModeProvider.overrideWith((ref) => dark),
+        logViewModeProvider.overrideWith(
+          (ref) => LogViewModeNotifier(prefs, logView),
+        ),
       ],
       child: const SlstApp(),
     ),
