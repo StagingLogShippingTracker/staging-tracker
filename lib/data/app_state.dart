@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../core/app_config.dart';
 import '../domain/models.dart';
 import '../domain/location_intelligence.dart';
 import '../domain/status.dart';
@@ -472,6 +473,8 @@ class OperationsService {
         'comments': entry.comments?.trim() ?? '',
         'attachments': paths,
         'notification_type': 'ship_confirm',
+        'website_url': AppConfig.publicWebsiteUrl,
+        'cta_url': AppConfig.publicWebsiteUrl,
       },
     );
     await _ref.read(appDataProvider.notifier).refresh();
@@ -538,6 +541,8 @@ class OperationsService {
         'comments': comments?.trim() ?? '',
         'attachments': paths,
         'notification_type': 'quick_ship',
+        'website_url': AppConfig.publicWebsiteUrl,
+        'cta_url': AppConfig.publicWebsiteUrl,
       },
     );
     await _ref.read(appDataProvider.notifier).refresh();

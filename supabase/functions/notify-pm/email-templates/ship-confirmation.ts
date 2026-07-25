@@ -141,7 +141,8 @@ export function shipDataFromPayload(
     ctaUrl: pick("cta_url", "ctaUrl", "tracking_url", "trackingUrl") ||
       undefined,
     emailContact: pick("email_contact", "emailContact") || undefined,
-    websiteUrl: pick("website_url", "websiteUrl") || undefined,
+    websiteUrl: pick("website_url", "websiteUrl") ||
+      "https://www.swiftsupply.ca",
     assetBaseUrl: assetBase,
   };
 }

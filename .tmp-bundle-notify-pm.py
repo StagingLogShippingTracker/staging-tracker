@@ -1,53 +1,49 @@
-"""Bundle notify-pm into a single index.ts for Edge deploy."""
+"""Build a complete notify-pm Edge deploy payload (multi-file).
+
+Prefer multi-file deploy over a fragile single-file inline bundle so ship,
+return, PO, and bulk-PO templates all remain available at runtime.
+"""
 import json
-import pathlib
-import re
+from pathlib import Path
 
-root = pathlib.Path(r"C:\Users\Brice\Downloads\staging-tracker\supabase\functions\notify-pm")
-index = (root / "index.ts").read_text(encoding="utf-8")
-template = (root / "email-templates" / "ship-confirmation.ts").read_text(encoding="utf-8")
+root = Path(__file__).resolve().parent
+fn = root / "supabase" / "functions" / "notify-pm"
 
-# Strip export keywords from template (becomes local module body)
-templ_body = re.sub(r"^export\s+", "", template, flags=re.M)
-# Keep type export as type alias without export for bundling simplicity
-templ_body = templ_body.replace("export type ", "type ")
-templ_body = templ_body.replace("export function ", "function ")
-templ_body = templ_body.replace("export const ", "const ")
+files = [
+    ("index.ts", fn / "index.ts"),
+    ("email-templates/ship-confirmation.ts", fn / "email-templates" / "ship-confirmation.ts"),
+    ("email-templates/email-shared.ts", fn / "email-templates" / "email-shared.ts"),
+    ("email-templates/notification-email.ts", fn / "email-templates" / "notification-email.ts"),
+]
 
-# Remove the import of ship-confirmation from index
-bundled_index = re.sub(
-    r'import \{\s*isShipConfirmationType,\s*renderShipConfirmationEmail,\s*shipDataFromPayload,\s*\} from "\./email-templates/ship-confirmation\.ts";\s*',
-    "",
-    index,
-    count=1,
-)
+payload_files = []
+combined = ""
+for name, path in files:
+    content = path.read_text(encoding="utf-8")
+    assert "PLACEHOLDER" not in content, name
+    payload_files.append({"name": name, "content": content})
+    combined += content
 
-# Insert template after the supabase-js import
-marker = 'import { createClient } from "jsr:@supabase/supabase-js@2";\n'
-if marker not in bundled_index:
-    raise SystemExit("import marker not found")
-bundled = bundled_index.replace(
-    marker,
-    marker + "\n// --- inlined email-templates/ship-confirmation.ts ---\n" + templ_body + "\n// --- end inline ---\n",
-    1,
-)
+for required in [
+    "renderBrandedEmail",
+    "renderShipConfirmationEmail",
+    "renderNotificationEmail",
+    "isShipConfirmationType",
+    "https://www.swiftsupply.ca",
+    "VIEW FULL TRACKING DETAILS",
+]:
+    assert required in combined, required
 
 payload = {
     "project_id": "gdrpdiwykmnybmkadlrv",
     "name": "notify-pm",
     "entrypoint_path": "index.ts",
     "verify_jwt": True,
-    "files": [{"name": "index.ts", "content": bundled}],
+    "files": payload_files,
 }
-out = pathlib.Path(r"C:\Users\Brice\Downloads\staging-tracker\.tmp-deploy-notify-pm-bundled.json")
+
+out = root / ".tmp-deploy-notify-pm-bundled.json"
 out.write_text(json.dumps(payload), encoding="utf-8")
-print("bundled_bytes", len(bundled.encode("utf-8")))
+print("files", [f["name"] for f in payload_files])
 print("payload_bytes", out.stat().st_size)
-for c in [
-    'ASSET_VERSION = "20260722b"',
-    "email-assets",
-    'width="300"',
-    "watermark-gears",
-    "data-ogsc",
-]:
-    print(("OK" if c in bundled else "MISSING"), c)
+print("ok")

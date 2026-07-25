@@ -92,6 +92,8 @@ class ShipOperations {
         'comments': entry.comments?.trim() ?? '',
         'attachments': paths,
         'notification_type': 'ship_confirm',
+        'website_url': AppConfig.publicWebsiteUrl,
+        'cta_url': AppConfig.publicWebsiteUrl,
       },
     );
   }

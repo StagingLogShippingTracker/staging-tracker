@@ -277,7 +277,12 @@ export function renderBrandedEmail(opts: BrandedEmailOptions): string {
   const subtitle = esc(opts.subtitle ?? "Order details:");
   const preview = esc(opts.preview);
   const attachmentUrls = opts.attachmentUrls ?? [];
-  const ctaUrl = (opts.ctaUrl ?? "").trim();
+  // Prefer explicit tracking CTA; fall back to website (legacy ship emails always
+  // showed a button even when the client omitted cta_url).
+  const ctaUrl =
+    (opts.ctaUrl ?? "").trim() ||
+    (opts.websiteUrl ?? "").trim() ||
+    "https://www.swiftsupply.ca";
   const ctaLabel = esc(opts.ctaLabel ?? "VIEW FULL TRACKING DETAILS");
   const grid = opts.cardsGridHtml ?? cardsGridHtml(opts.cards);
 
@@ -286,8 +291,7 @@ export function renderBrandedEmail(opts: BrandedEmailOptions): string {
   const logoDarkStyle =
     'display: none; max-width: 160px; height: auto; border: 0; outline: none; -ms-interpolation-mode: bicubic;';
 
-  const ctaBlock = ctaUrl
-    ? `
+  const ctaBlock = `
           <tr>
             <td align="center" style="padding-bottom: 30px;">
               <table role="presentation" border="0" cellpadding="0" cellspacing="0">
@@ -300,8 +304,7 @@ export function renderBrandedEmail(opts: BrandedEmailOptions): string {
                 </tr>
               </table>
             </td>
-          </tr>`
-    : "";
+          </tr>`;
 
   return `<!DOCTYPE html>
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
