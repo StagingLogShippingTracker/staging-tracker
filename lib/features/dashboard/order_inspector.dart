@@ -10,6 +10,9 @@ import '../../domain/status.dart';
 import '../shared/industrial_widgets.dart';
 import '../shared/order_history_dialog.dart';
 import '../shared/widgets.dart';
+import '../staging/ship_dialog.dart';
+import '../staging/split_dialog.dart';
+import '../staging/staging_form_sheet.dart';
 
 /// Right-side Order Inspector for the dashboard card board.
 class OrderInspector extends ConsumerWidget {
@@ -27,6 +30,7 @@ class OrderInspector extends ConsumerWidget {
     final uiStatus = StatusRules.formatUi(entry.status);
     final urgent =
         uiStatus == 'Ship Today' || StatusRules.isOverdue(entry.status);
+    final canWrite = ref.watch(currentUserProvider) != null;
 
     return SlideOverInspector(
       title: 'ORDER INSPECTOR: ${entry.so}',
@@ -60,6 +64,37 @@ class OrderInspector extends ConsumerWidget {
                   ),
                 ),
               ],
+            ],
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              if (canWrite) ...[
+                OutlinedButton.icon(
+                  onPressed: () =>
+                      showStagingFormSheet(context, ref, existing: entry),
+                  icon: const Icon(Icons.edit_outlined, size: 16),
+                  label: const Text('Edit'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () => showShipDialog(context, ref, entry: entry),
+                  icon: const Icon(Icons.local_shipping_outlined, size: 16),
+                  label: const Text('Ship'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () => showSplitDialog(context, ref, entry: entry),
+                  icon: const Icon(Icons.call_split, size: 16),
+                  label: const Text('Split'),
+                ),
+              ],
+              OutlinedButton.icon(
+                onPressed: () =>
+                    showOrderHistoryDialog(context, ref, so: entry.so),
+                icon: const Icon(Icons.history, size: 16),
+                label: const Text('History'),
+              ),
             ],
           ),
           const SizedBox(height: 14),

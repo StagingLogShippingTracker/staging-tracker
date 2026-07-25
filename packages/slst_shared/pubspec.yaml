@@ -1,5 +1,5 @@
 name: slst_shared
-description: Shared SLST domain, Supabase data layer, and operations for the Windows client.
+description: Shared SLST domain, Supabase data layer, and operations for Windows, Android, and Wear clients.
 publish_to: 'none'
 version: 1.0.0
 

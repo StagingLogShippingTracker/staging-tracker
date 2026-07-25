@@ -7,6 +7,7 @@ import '../../core/app_config.dart';
 import '../../core/theme.dart';
 import '../../data/app_state.dart';
 import '../shared/widgets.dart';
+import 'pair_watch_card.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -117,6 +118,8 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
         ),
+        const SizedBox(height: 16),
+        const PairWatchCard(),
         const BrandFooter(),
       ],
     );

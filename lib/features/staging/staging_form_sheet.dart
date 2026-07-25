@@ -106,10 +106,34 @@ class _StagingFormSheetState extends ConsumerState<StagingFormSheet> {
       // New entries start with a blank status (not Partial).
       _statusUi = null;
     }
+    _so.addListener(_maybeAutofillCustomer);
+    if (widget.existing == null &&
+        (widget.initialCustomer == null ||
+            widget.initialCustomer!.trim().isEmpty)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _maybeAutofillCustomer();
+      });
+    }
+  }
+
+  void _maybeAutofillCustomer() {
+    if (widget.existing != null || widget.lockIdentity) return;
+    if (_customer.text.trim().isNotEmpty) return;
+    final so = _so.text.trim();
+    if (so.isEmpty) return;
+    final data = ref.read(appDataProvider);
+    final customer = mostRecentCustomerForSo(
+      staging: data.staging,
+      shipped: data.shipped,
+      so: so,
+    );
+    if (customer == null || customer.isEmpty) return;
+    _customer.text = customer;
   }
 
   @override
   void dispose() {
+    _so.removeListener(_maybeAutofillCustomer);
     _so.dispose();
     _customer.dispose();
     _location.dispose();
@@ -325,6 +349,7 @@ class _StagingFormSheetState extends ConsumerState<StagingFormSheet> {
                     : null,
               ),
               textCapitalization: TextCapitalization.characters,
+              onChanged: (_) => _maybeAutofillCustomer(),
             ),
             const SizedBox(height: 8),
             if (lockIdentity)

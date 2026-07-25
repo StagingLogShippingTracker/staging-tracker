@@ -100,8 +100,16 @@ class AppData {
     );
   }
 
-  int get orderCount =>
-      {...staging.map((e) => e.so), ...shipped.map((e) => e.so)}.length;
+  /// Unique SO numbers currently on the staging floor (legacy dashboard KPI).
+  int get orderCount => {...staging.map((e) => e.so)}.length;
+
+  /// True outbound ships only — excludes return-to-stock and consolidate markers.
+  static bool isTrueShip(ShippedEntry e) {
+    final c = e.carrier.trim().toUpperCase();
+    return c != 'RETURNED TO STOCK' && c != 'CONSOLIDATED';
+  }
+
+  int get shippedCount => shipped.where(isTrueShip).length;
 
   Map<String, int> get containerTotals {
     var skids = 0, boxes = 0, crates = 0, pipe = 0, other = 0;
@@ -133,7 +141,7 @@ class AppData {
       'crates': crates,
       'pipe': pipe,
       'other': other,
-      'shipped': shipped.length,
+      'shipped': shippedCount,
       'staging': staging.length,
     };
   }
@@ -241,6 +249,19 @@ final prefsProvider = FutureProvider<LocalPrefs>((ref) async {
   final prefs = await SharedPreferences.getInstance();
   return LocalPrefs(prefs);
 });
+
+/// Persist a hidden memory value and refresh suggestion providers.
+Future<void> hideRememberedMemory(WidgetRef ref, String value) async {
+  final prefs = await ref.read(prefsProvider.future);
+  await prefs.hideMemory(value);
+  ref.invalidate(prefsProvider);
+  ref.invalidate(customerSuggestionsProvider);
+  ref.invalidate(personSuggestionsProvider);
+  ref.invalidate(carrierSuggestionsProvider);
+  for (final category in LocationCategory.values) {
+    ref.invalidate(locationSuggestionsProvider(category));
+  }
+}
 
 const carrierRosterType = 'carrier';
 const customerRosterType = 'customer';

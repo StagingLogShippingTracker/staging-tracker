@@ -25,11 +25,22 @@ class RememberedEntryField extends ConsumerStatefulWidget {
 
 class _RememberedEntryFieldState extends ConsumerState<RememberedEntryField> {
   final _focusNode = FocusNode();
+  final _hiddenLocal = <String>{};
 
   @override
   void dispose() {
     _focusNode.dispose();
     super.dispose();
+  }
+
+  bool _isHidden(String value) =>
+      _hiddenLocal.contains(value.trim().toLowerCase());
+
+  Future<void> _hide(String value) async {
+    final key = value.trim().toLowerCase();
+    if (key.isEmpty) return;
+    setState(() => _hiddenLocal.add(key));
+    await hideRememberedMemory(ref, value);
   }
 
   @override
@@ -50,8 +61,9 @@ class _RememberedEntryFieldState extends ConsumerState<RememberedEntryField> {
         focusNode: _focusNode,
         optionsBuilder: (value) {
           final query = value.text.trim().toLowerCase();
-          if (query.isEmpty) return suggestions;
-          return suggestions.where(
+          final visible = suggestions.where((s) => !_isHidden(s));
+          if (query.isEmpty) return visible;
+          return visible.where(
             (suggestion) => suggestion.toLowerCase().contains(query),
           );
         },
@@ -75,7 +87,7 @@ class _RememberedEntryFieldState extends ConsumerState<RememberedEntryField> {
           );
         },
         optionsViewBuilder: (context, onSelected, options) {
-          final visible = options.take(30).toList();
+          final visible = options.where((s) => !_isHidden(s)).take(30).toList();
           return Align(
             alignment: Alignment.topLeft,
             child: Material(
@@ -91,16 +103,28 @@ class _RememberedEntryFieldState extends ConsumerState<RememberedEntryField> {
                   padding: EdgeInsets.zero,
                   shrinkWrap: true,
                   itemCount: visible.length,
-                  itemBuilder: (context, index) => ListTile(
-                    dense: true,
-                    leading: Icon(icon),
-                    title: Text(
-                      visible[index],
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    onTap: () => onSelected(visible[index]),
-                  ),
+                  itemBuilder: (context, index) {
+                    final suggestion = visible[index];
+                    return ListTile(
+                      dense: true,
+                      leading: Icon(icon),
+                      title: Text(
+                        suggestion,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      trailing: IconButton(
+                        tooltip: 'Forget this value',
+                        icon: const Icon(
+                          Icons.close,
+                          size: 18,
+                          color: Color(0xFFEF4444),
+                        ),
+                        onPressed: () => _hide(suggestion),
+                      ),
+                      onTap: () => onSelected(suggestion),
+                    );
+                  },
                 ),
               ),
             ),
@@ -304,11 +328,22 @@ class CarrierSuggestionField extends ConsumerStatefulWidget {
 class _CarrierSuggestionFieldState
     extends ConsumerState<CarrierSuggestionField> {
   final _focusNode = FocusNode();
+  final _hiddenLocal = <String>{};
 
   @override
   void dispose() {
     _focusNode.dispose();
     super.dispose();
+  }
+
+  bool _isHidden(String value) =>
+      _hiddenLocal.contains(value.trim().toLowerCase());
+
+  Future<void> _hide(String value) async {
+    final key = value.trim().toLowerCase();
+    if (key.isEmpty) return;
+    setState(() => _hiddenLocal.add(key));
+    await hideRememberedMemory(ref, value);
   }
 
   @override
@@ -322,8 +357,9 @@ class _CarrierSuggestionFieldState
         focusNode: _focusNode,
         optionsBuilder: (value) {
           final query = value.text.trim().toLowerCase();
-          if (query.isEmpty) return carriers;
-          return carriers.where(
+          final visible = carriers.where((c) => !_isHidden(c));
+          if (query.isEmpty) return visible;
+          return visible.where(
             (carrier) => carrier.toLowerCase().contains(query),
           );
         },
@@ -347,7 +383,7 @@ class _CarrierSuggestionFieldState
           );
         },
         optionsViewBuilder: (context, onSelected, options) {
-          final visible = options.take(30).toList();
+          final visible = options.where((c) => !_isHidden(c)).take(30).toList();
           return Align(
             alignment: Alignment.topLeft,
             child: Material(
@@ -372,6 +408,15 @@ class _CarrierSuggestionFieldState
                         carrier,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
+                      ),
+                      trailing: IconButton(
+                        tooltip: 'Forget this value',
+                        icon: const Icon(
+                          Icons.close,
+                          size: 18,
+                          color: Color(0xFFEF4444),
+                        ),
+                        onPressed: () => _hide(carrier),
                       ),
                       onTap: () => onSelected(carrier),
                     );

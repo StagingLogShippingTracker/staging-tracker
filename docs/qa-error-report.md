@@ -33,8 +33,10 @@ Status section refreshed 2026-07-25 against current `lib/` (see `docs/senior-ass
 | PL-2 | Wear client missing | **Done** — `apps/slst_wear` + Settings Pair Watch |
 | PL-3 | AGENTS.md Windows-only contradiction | **Done** — Win+Android+Wear docs |
 
-## Out of scope
+## Packaging note (this cloud environment)
 
-- Prophet21 / Epicor / Carmen
-- PWA republish
-- Shipment Tracker as a real product
+Windows Inno/ZIP and Android/Wear APK rebuilds require Windows + Android SDKs. This Linux agent run verified `flutter analyze` (no errors) and `flutter test` (all passed). Run packaging scripts on a Windows/dev machine with Flutter + VS/Android SDK:
+
+- `scripts/packaging/build-windows-installer.ps1`
+- `scripts/packaging/build-android-apk.ps1`
+- `scripts/packaging/build-wear-apk.ps1`

@@ -91,11 +91,19 @@ class _LocationSelectorDialogState
     extends ConsumerState<LocationSelectorDialog> {
   LocationCategory? _category;
   final _query = TextEditingController();
+  final _hiddenLocal = <String>{};
 
   @override
   void dispose() {
     _query.dispose();
     super.dispose();
+  }
+
+  Future<void> _hideMemory(String value) async {
+    final key = value.trim().toLowerCase();
+    if (key.isEmpty) return;
+    setState(() => _hiddenLocal.add(key));
+    await hideRememberedMemory(ref, value);
   }
 
   void _select(String value) {
@@ -229,7 +237,11 @@ class _LocationSelectorDialogState
         const <String>[];
     final query = _query.text.trim().toLowerCase();
     final visible = remembered
-        .where((value) => query.isEmpty || value.toLowerCase().contains(query))
+        .where(
+          (value) =>
+              !_hiddenLocal.contains(value.trim().toLowerCase()) &&
+              (query.isEmpty || value.toLowerCase().contains(query)),
+        )
         .toList();
 
     return Column(
@@ -333,6 +345,15 @@ class _LocationSelectorDialogState
                             : 'Vacant$history$movementText',
                         maxLines: 4,
                         overflow: TextOverflow.ellipsis,
+                      ),
+                      trailing: IconButton(
+                        tooltip: 'Forget this location',
+                        icon: const Icon(
+                          Icons.close,
+                          size: 18,
+                          color: Color(0xFFEF4444),
+                        ),
+                        onPressed: () => _hideMemory(value),
                       ),
                       onTap: () => _select(value),
                     );

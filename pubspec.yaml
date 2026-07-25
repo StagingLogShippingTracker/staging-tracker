@@ -1,5 +1,5 @@
 name: slst
-description: Staging Log & Shipping Tracker — Flutter Windows app (shared domain in packages/slst_shared).
+description: Staging Log & Shipping Tracker — Flutter Windows/Android client (shared domain in packages/slst_shared; Wear in apps/slst_wear).
 publish_to: 'none'
 version: 1.0.0+1
 

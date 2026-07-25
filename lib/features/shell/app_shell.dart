@@ -8,6 +8,9 @@ import '../../core/theme.dart';
 import '../../data/app_state.dart';
 import 'command_dock.dart';
 
+/// Width below which phone layout uses NavigationBar + Drawer instead of rail.
+const double kCompactShellBreakpoint = 700;
+
 /// When true, the left nav rail shrinks to icons-only (~64px).
 final railCollapsedProvider = StateProvider<bool>((ref) => false);
 
@@ -79,6 +82,15 @@ const List<NavDestinationInfo> _destinations = [
   ),
 ];
 
+/// Primary destinations shown on the compact bottom NavigationBar.
+const List<String> _compactBarPaths = [
+  '/',
+  '/staging',
+  '/shipped',
+  '/reports',
+  '/settings',
+];
+
 class AppShell extends ConsumerWidget {
   const AppShell({super.key, required this.child});
   final Widget child;
@@ -112,32 +124,291 @@ class AppShell extends ConsumerWidget {
     final location = GoRouterState.of(context).uri.toString();
     final path = _normalizePath(location);
     final current = _destinationFor(path);
+    final dockActions = ShellCommandDock.actionsFor(context, ref, location);
+    final compact =
+        MediaQuery.sizeOf(context).width < kCompactShellBreakpoint;
+
+    return CallbackShortcuts(
+      bindings: ShellCommandDock.shortcutBindings(dockActions),
+      child: Focus(
+        autofocus: true,
+        child: compact
+            ? _CompactShell(
+                selectedPath: current.path,
+                title: current.sectionTitle,
+                onRequestAccess: _requestAccess,
+                child: child,
+              )
+            : Scaffold(
+                backgroundColor: IndustrialTheme.darkBase,
+                body: Column(
+                  children: [
+                    Expanded(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _IndustrialRail(selectedPath: current.path),
+                          Expanded(
+                            child: Column(
+                              children: [
+                                _TopHeader(
+                                  title: current.sectionTitle,
+                                  onRequestAccess: _requestAccess,
+                                ),
+                                Expanded(child: child),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    ShellCommandDock(location: location),
+                  ],
+                ),
+              ),
+      ),
+    );
+  }
+}
+
+class _CompactShell extends ConsumerWidget {
+  const _CompactShell({
+    required this.selectedPath,
+    required this.title,
+    required this.onRequestAccess,
+    required this.child,
+  });
+
+  final String selectedPath;
+  final String title;
+  final Future<void> Function() onRequestAccess;
+  final Widget child;
+
+  int _barIndexFor(String path) {
+    final i = _compactBarPaths.indexOf(path);
+    if (i >= 0) return i;
+    // Secondary routes (notifications / contacts) highlight Settings.
+    return _compactBarPaths.indexOf('/settings');
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final barIndex = _barIndexFor(selectedPath);
+    final barDestinations = [
+      for (final p in _compactBarPaths)
+        _destinations.firstWhere((d) => d.path == p),
+    ];
 
     return Scaffold(
       backgroundColor: IndustrialTheme.darkBase,
-      body: Column(
-        children: [
-          Expanded(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _IndustrialRail(selectedPath: current.path),
-                Expanded(
-                  child: Column(
-                    children: [
-                      _TopHeader(
-                        title: current.sectionTitle,
-                        onRequestAccess: _requestAccess,
+      appBar: AppBar(
+        backgroundColor: IndustrialTheme.darkHeader,
+        foregroundColor: IndustrialTheme.textPrimary,
+        elevation: 0,
+        title: Text(
+          title,
+          style: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        actions: [
+          IconButton(
+            tooltip: 'Notifications',
+            onPressed: () => context.go('/notifications'),
+            icon: const Icon(Icons.notifications_outlined, size: 20),
+          ),
+          _AccountMenu(onRequestAccess: onRequestAccess),
+          const SizedBox(width: 4),
+        ],
+      ),
+      drawer: Drawer(
+        backgroundColor: IndustrialTheme.darkHeader,
+        child: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Padding(
+                padding: EdgeInsets.fromLTRB(20, 20, 20, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'SWIFT STAGING TRACKER',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.5,
+                        color: IndustrialTheme.textPrimary,
                       ),
-                      Expanded(child: child),
-                    ],
-                  ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'NISKU MAIN TERMINAL',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 1.0,
+                        color: IndustrialTheme.textMuted,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
+              const Divider(height: 1, color: IndustrialTheme.darkSurface),
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  children: [
+                    for (final d in _destinations)
+                      ListTile(
+                        selected: d.path == selectedPath,
+                        selectedTileColor:
+                            IndustrialTheme.skyBlue.withValues(alpha: 0.14),
+                        leading: Icon(
+                          d.path == selectedPath ? d.selectedIcon : d.icon,
+                          color: d.path == selectedPath
+                              ? IndustrialTheme.skyBlue
+                              : IndustrialTheme.textMuted,
+                        ),
+                        title: Text(
+                          d.label,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: d.path == selectedPath
+                                ? FontWeight.w700
+                                : FontWeight.w500,
+                            color: d.path == selectedPath
+                                ? IndustrialTheme.textPrimary
+                                : IndustrialTheme.textMuted,
+                          ),
+                        ),
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          context.go(d.path);
+                        },
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      body: child,
+      bottomNavigationBar: NavigationBar(
+        height: 64,
+        backgroundColor: IndustrialTheme.darkHeader,
+        indicatorColor: IndustrialTheme.skyBlue.withValues(alpha: 0.22),
+        selectedIndex: barIndex,
+        labelBehavior: NavigationDestinationLabelBehavior.alwaysHide,
+        onDestinationSelected: (i) => context.go(barDestinations[i].path),
+        destinations: [
+          for (final d in barDestinations)
+            NavigationDestination(
+              icon: Icon(d.icon, color: IndustrialTheme.textMuted),
+              selectedIcon: Icon(d.selectedIcon, color: IndustrialTheme.skyBlue),
+              label: d.label,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AccountMenu extends ConsumerWidget {
+  const _AccountMenu({required this.onRequestAccess});
+
+  final Future<void> Function() onRequestAccess;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(currentUserProvider);
+
+    return PopupMenuButton<String>(
+      tooltip: user?.email ?? 'Account',
+      onSelected: (v) async {
+        switch (v) {
+          case 'signin':
+            context.push('/login');
+          case 'signout':
+            await ref.read(supabaseClientProvider).auth.signOut();
+          case 'settings':
+            context.go('/settings');
+          case 'access':
+            await onRequestAccess();
+        }
+      },
+      itemBuilder: (_) => [
+        PopupMenuItem(
+          enabled: false,
+          child: Text(
+            user?.email ?? 'Signed out — read-only',
+            style: const TextStyle(fontSize: 12),
+          ),
+        ),
+        const PopupMenuDivider(),
+        if (user == null)
+          const PopupMenuItem(
+            value: 'signin',
+            child: ListTile(
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(Icons.login),
+              title: Text('Sign in'),
+            ),
+          )
+        else
+          const PopupMenuItem(
+            value: 'signout',
+            child: ListTile(
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(Icons.logout),
+              title: Text('Sign out'),
             ),
           ),
-          ShellCommandDock(location: location),
-        ],
+        const PopupMenuItem(
+          value: 'settings',
+          child: ListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.settings_outlined),
+            title: Text('Settings'),
+          ),
+        ),
+        const PopupMenuItem(
+          value: 'access',
+          child: ListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.mail_outline),
+            title: Text('Request access'),
+          ),
+        ),
+      ],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        child: CircleAvatar(
+          radius: 15,
+          backgroundColor: user == null
+              ? IndustrialTheme.darkSurface
+              : IndustrialTheme.skyBlue.withValues(alpha: 0.22),
+          child: user == null
+              ? const Icon(
+                  Icons.person_outline,
+                  size: 16,
+                  color: IndustrialTheme.textMuted,
+                )
+              : Text(
+                  user.email!.substring(0, 1).toUpperCase(),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 12,
+                    color: IndustrialTheme.skyBlue,
+                  ),
+                ),
+        ),
       ),
     );
   }
@@ -342,7 +613,6 @@ class _TopHeader extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final user = ref.watch(currentUserProvider);
     final loading = ref.watch(appDataProvider).loading;
 
     return Container(
@@ -410,89 +680,7 @@ class _TopHeader extends ConsumerWidget {
               color: IndustrialTheme.textMuted,
             ),
           ),
-          PopupMenuButton<String>(
-            tooltip: user?.email ?? 'Account',
-            onSelected: (v) async {
-              switch (v) {
-                case 'signin':
-                  context.push('/login');
-                case 'signout':
-                  await ref.read(supabaseClientProvider).auth.signOut();
-                case 'settings':
-                  context.go('/settings');
-                case 'access':
-                  await onRequestAccess();
-              }
-            },
-            itemBuilder: (_) => [
-              PopupMenuItem(
-                enabled: false,
-                child: Text(
-                  user?.email ?? 'Signed out — read-only',
-                  style: const TextStyle(fontSize: 12),
-                ),
-              ),
-              const PopupMenuDivider(),
-              if (user == null)
-                const PopupMenuItem(
-                  value: 'signin',
-                  child: ListTile(
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                    leading: Icon(Icons.login),
-                    title: Text('Sign in'),
-                  ),
-                )
-              else
-                const PopupMenuItem(
-                  value: 'signout',
-                  child: ListTile(
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                    leading: Icon(Icons.logout),
-                    title: Text('Sign out'),
-                  ),
-                ),
-              const PopupMenuItem(
-                value: 'settings',
-                child: ListTile(
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(Icons.settings_outlined),
-                  title: Text('Settings'),
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'access',
-                child: ListTile(
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(Icons.mail_outline),
-                  title: Text('Request access'),
-                ),
-              ),
-            ],
-            child: CircleAvatar(
-              radius: 15,
-              backgroundColor: user == null
-                  ? IndustrialTheme.darkSurface
-                  : IndustrialTheme.skyBlue.withValues(alpha: 0.22),
-              child: user == null
-                  ? const Icon(
-                      Icons.person_outline,
-                      size: 16,
-                      color: IndustrialTheme.textMuted,
-                    )
-                  : Text(
-                      user.email!.substring(0, 1).toUpperCase(),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 12,
-                        color: IndustrialTheme.skyBlue,
-                      ),
-                    ),
-            ),
-          ),
+          _AccountMenu(onRequestAccess: onRequestAccess),
         ],
       ),
     );

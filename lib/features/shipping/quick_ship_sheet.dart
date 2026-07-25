@@ -46,7 +46,28 @@ class _QuickShipSheetState extends ConsumerState<QuickShipSheet> {
   LocationCategory? _locationCategory;
 
   @override
+  void initState() {
+    super.initState();
+    _so.addListener(_maybeAutofillCustomer);
+  }
+
+  void _maybeAutofillCustomer() {
+    if (_customer.text.trim().isNotEmpty) return;
+    final so = _so.text.trim();
+    if (so.isEmpty) return;
+    final data = ref.read(appDataProvider);
+    final customer = mostRecentCustomerForSo(
+      staging: data.staging,
+      shipped: data.shipped,
+      so: so,
+    );
+    if (customer == null || customer.isEmpty) return;
+    _customer.text = customer;
+  }
+
+  @override
   void dispose() {
+    _so.removeListener(_maybeAutofillCustomer);
     _so.dispose();
     _customer.dispose();
     _carrier.dispose();
@@ -146,6 +167,8 @@ class _QuickShipSheetState extends ConsumerState<QuickShipSheet> {
             TextField(
               controller: _so,
               decoration: const InputDecoration(labelText: 'SO #'),
+              textCapitalization: TextCapitalization.characters,
+              onChanged: (_) => _maybeAutofillCustomer(),
             ),
             const SizedBox(height: 8),
             CustomerSuggestionField(controller: _customer),

@@ -121,7 +121,7 @@ class WarehouseFloorMap extends ConsumerWidget {
             header(),
             const SizedBox(height: 2),
             Text(
-              'Nisku terminal · click a bay for A–F / 1–2 slots',
+              'Nisku terminal · click bays, zones, or A–F / 1–2 slots',
               style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: 8),
@@ -641,6 +641,72 @@ class _Pane extends StatelessWidget {
   final bool muted;
   final bool verticalText;
 
+  void _openZone(BuildContext context) {
+    if (muted) return;
+    final title = label.replaceAll('\n', ' ');
+    showDialog<void>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          backgroundColor: IndustrialTheme.darkSurface,
+          title: Text(
+            title,
+            style: const TextStyle(
+              fontWeight: FontWeight.w800,
+              color: IndustrialTheme.textPrimary,
+            ),
+          ),
+          content: SizedBox(
+            width: 360,
+            child: entries.isEmpty
+                ? const Text(
+                    'No active staging in this zone.',
+                    style: TextStyle(color: IndustrialTheme.textMuted),
+                  )
+                : ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: entries.length,
+                    separatorBuilder: (_, _) => const Divider(height: 1),
+                    itemBuilder: (context, i) {
+                      final e = entries[i];
+                      return ListTile(
+                        dense: true,
+                        title: Text(
+                          e.so,
+                          style: IndustrialTheme.mono(
+                            fontWeight: FontWeight.w700,
+                            color: IndustrialTheme.textPrimary,
+                          ),
+                        ),
+                        subtitle: Text(
+                          '${e.customer} · ${e.location} · ${e.type}',
+                          style: const TextStyle(
+                            color: IndustrialTheme.textMuted,
+                            fontSize: 12,
+                          ),
+                        ),
+                        trailing: Text(
+                          StatusRules.formatUi(e.status),
+                          style: IndustrialTheme.mono(
+                            fontSize: 10,
+                            color: IndustrialTheme.skyBlue,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final occupied = entries.isNotEmpty && !muted;
@@ -652,9 +718,10 @@ class _Pane extends StatelessWidget {
     final tip = muted
         ? label.replaceAll('\n', ' ')
         : (entries.isEmpty
-            ? '${label.replaceAll('\n', ' ')} · empty'
+            ? '${label.replaceAll('\n', ' ')} · empty · click for details'
             : '${label.replaceAll('\n', ' ')} · ${entries.length} jobs · '
-                '${entries.fold<int>(0, (s, e) => s + e.qty)} containers');
+                '${entries.fold<int>(0, (s, e) => s + e.qty)} containers · '
+                'click for list');
 
     final text = Text(
       label.toUpperCase(),
@@ -670,17 +737,33 @@ class _Pane extends StatelessWidget {
       overflow: TextOverflow.ellipsis,
     );
 
+    final body = Container(
+      alignment: Alignment.center,
+      padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
+      decoration: BoxDecoration(
+        color: fill,
+        border: Border.all(color: border.withValues(alpha: 0.85)),
+      ),
+      child: verticalText ? RotatedBox(quarterTurns: 1, child: text) : text,
+    );
+
+    if (muted) {
+      return Tooltip(
+        message: tip,
+        waitDuration: const Duration(milliseconds: 350),
+        child: body,
+      );
+    }
+
     return Tooltip(
       message: tip,
       waitDuration: const Duration(milliseconds: 350),
-      child: Container(
-        alignment: Alignment.center,
-        padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
-        decoration: BoxDecoration(
-          color: fill,
-          border: Border.all(color: border.withValues(alpha: 0.85)),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _openZone(context),
+          child: body,
         ),
-        child: verticalText ? RotatedBox(quarterTurns: 1, child: text) : text,
       ),
     );
   }
@@ -860,33 +943,105 @@ class _SubSlotChip extends StatelessWidget {
   final String fullLocation;
   final List<StagingEntry> entries;
 
+  void _openSlot(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          backgroundColor: IndustrialTheme.darkSurface,
+          title: Text(
+            fullLocation,
+            style: IndustrialTheme.mono(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: IndustrialTheme.textPrimary,
+            ),
+          ),
+          content: SizedBox(
+            width: 340,
+            child: entries.isEmpty
+                ? const Text(
+                    'Empty slot — no active staging here.',
+                    style: TextStyle(color: IndustrialTheme.textMuted),
+                  )
+                : ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: entries.length,
+                    separatorBuilder: (_, _) => const Divider(height: 1),
+                    itemBuilder: (context, i) {
+                      final e = entries[i];
+                      return ListTile(
+                        dense: true,
+                        title: Text(
+                          e.so,
+                          style: IndustrialTheme.mono(
+                            fontWeight: FontWeight.w700,
+                            color: IndustrialTheme.textPrimary,
+                          ),
+                        ),
+                        subtitle: Text(
+                          '${e.customer} · ${e.type} · ${e.stagedBy}',
+                          style: const TextStyle(
+                            color: IndustrialTheme.textMuted,
+                            fontSize: 12,
+                          ),
+                        ),
+                        trailing: Text(
+                          StatusRules.formatUi(e.status),
+                          style: IndustrialTheme.mono(
+                            fontSize: 10,
+                            color: IndustrialTheme.skyBlue,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final fill = _colorForEntries(entries);
     final border = _borderForEntries(entries);
     final tip = entries.isEmpty
-        ? '$fullLocation · empty'
+        ? '$fullLocation · empty · click'
         : '$fullLocation · ${entries.length} jobs · '
-            '${entries.fold<int>(0, (s, e) => s + e.qty)} containers';
+            '${entries.fold<int>(0, (s, e) => s + e.qty)} containers · click';
 
     return Tooltip(
       message: tip,
-      child: Container(
-        height: 28,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: fill,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _openSlot(context),
           borderRadius: BorderRadius.circular(4),
-          border: Border.all(color: border),
-        ),
-        child: Text(
-          label,
-          style: IndustrialTheme.mono(
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-            color: entries.isEmpty
-                ? IndustrialTheme.textMuted
-                : IndustrialTheme.textPrimary,
+          child: Container(
+            height: 28,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: fill,
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: border),
+            ),
+            child: Text(
+              label,
+              style: IndustrialTheme.mono(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: entries.isEmpty
+                    ? IndustrialTheme.textMuted
+                    : IndustrialTheme.textPrimary,
+              ),
+            ),
           ),
         ),
       ),

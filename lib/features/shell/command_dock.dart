@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -6,16 +7,20 @@ import '../../core/theme.dart';
 import '../../data/app_state.dart';
 import '../../domain/models.dart';
 import '../shared/industrial_widgets.dart';
+import '../shared/log_tables.dart';
 import '../shipping/quick_ship_sheet.dart';
 import '../staging/staging_form_sheet.dart';
 
-/// Shell-level command dock: contextual F1–F4 labels + floor tallies.
+typedef DockAction = ({String key, String label, VoidCallback? onPressed});
+
+/// Shell-level command dock: contextual F1–F5 labels + floor tallies.
 class ShellCommandDock extends ConsumerWidget {
   const ShellCommandDock({super.key, required this.location});
 
   final String location;
 
-  static List<({String key, String label, VoidCallback? onPressed})> _actions(
+  /// Public so [AppShell] can bind the same callbacks to keyboard shortcuts.
+  static List<DockAction> actionsFor(
     BuildContext context,
     WidgetRef ref,
     String location,
@@ -46,6 +51,13 @@ class ShellCommandDock extends ConsumerWidget {
           ),
           (
             key: 'F4',
+            label: 'Quick Consolidate',
+            onPressed: signedIn
+                ? () => showQuickConsolidateDialog(context, ref)
+                : null,
+          ),
+          (
+            key: 'F5',
             label: 'Settings',
             onPressed: () => context.go('/settings'),
           ),
@@ -174,6 +186,7 @@ class ShellCommandDock extends ConsumerWidget {
           ),
         ];
       default:
+        // Dashboard and unknown routes.
         return [
           (
             key: 'F1',
@@ -191,16 +204,55 @@ class ShellCommandDock extends ConsumerWidget {
           ),
           (
             key: 'F3',
+            label: 'Quick Consolidate',
+            onPressed: signedIn
+                ? () => showQuickConsolidateDialog(context, ref)
+                : null,
+          ),
+          (
+            key: 'F4',
             label: 'Staging Log',
             onPressed: () => context.go('/staging'),
           ),
           (
-            key: 'F4',
+            key: 'F5',
             label: 'Reports',
             onPressed: () => context.go('/reports'),
           ),
         ];
     }
+  }
+
+  static LogicalKeyboardKey? logicalKeyFor(String hotkey) {
+    switch (hotkey.toUpperCase()) {
+      case 'F1':
+        return LogicalKeyboardKey.f1;
+      case 'F2':
+        return LogicalKeyboardKey.f2;
+      case 'F3':
+        return LogicalKeyboardKey.f3;
+      case 'F4':
+        return LogicalKeyboardKey.f4;
+      case 'F5':
+        return LogicalKeyboardKey.f5;
+      case 'F6':
+        return LogicalKeyboardKey.f6;
+      default:
+        return null;
+    }
+  }
+
+  static Map<ShortcutActivator, VoidCallback> shortcutBindings(
+    List<DockAction> actions,
+  ) {
+    final bindings = <ShortcutActivator, VoidCallback>{};
+    for (final action in actions) {
+      final key = logicalKeyFor(action.key);
+      final onPressed = action.onPressed;
+      if (key == null || onPressed == null) continue;
+      bindings[SingleActivator(key)] = onPressed;
+    }
+    return bindings;
   }
 
   static String floorTotalsText(List<StagingEntry> staging) {
@@ -215,7 +267,7 @@ class ShellCommandDock extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final staging = ref.watch(appDataProvider).staging;
-    final actions = _actions(context, ref, location);
+    final actions = actionsFor(context, ref, location);
 
     return CommandDock(
       floorTotalsText: floorTotalsText(staging),

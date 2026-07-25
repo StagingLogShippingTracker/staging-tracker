@@ -1,0 +1,18 @@
+# This file tracks properties of this Flutter project.
+# Used by Flutter tool to communicate with tools like IDEs.
+
+version:
+  revision: "slst-wear-restore"
+  channel: "stable"
+
+project_type: app
+
+migration:
+  platforms:
+    - platform: root
+      create_revision: slst-wear-restore
+      base_revision: slst-wear-restore
+    - platform: android
+      create_revision: slst-wear-restore
+      base_revision: slst-wear-restore
+  unreverted_migration_candidates: []

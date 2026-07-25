@@ -37,7 +37,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
         .where((e) => StatusRules.formatUi(e.status) == 'Ship Tomorrow')
         .toList();
     final awaiting = data.staging
-        .where((e) => e.status.toLowerCase() == 'awaiting instructions')
+        .where((e) => StatusRules.isAwaitingInstructions(e.status))
         .toList();
     final corpPick = data.staging
         .where((e) => e.status.toLowerCase().contains('corp pick'))
