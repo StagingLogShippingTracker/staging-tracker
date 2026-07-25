@@ -119,6 +119,7 @@ Future<void> startVerificationAudit(
       final queue = (saved['queue'] as List).map((e) => '$e').toList();
       final index = (saved['index'] as num?)?.toInt() ?? 0;
       if (queue.isNotEmpty && index < queue.length) {
+        if (!context.mounted) return;
         final resume = await showDialog<bool>(
           context: context,
           builder: (ctx) => AlertDialog(
@@ -149,6 +150,7 @@ Future<void> startVerificationAudit(
                   .toList() ??
               prefs.discrepancyIds;
           if (disc.isNotEmpty) await prefs.setDiscrepancyIds(disc);
+          if (!context.mounted) return;
           await showDialog<void>(
             context: context,
             barrierDismissible: false,
