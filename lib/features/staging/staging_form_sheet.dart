@@ -106,10 +106,34 @@ class _StagingFormSheetState extends ConsumerState<StagingFormSheet> {
       // New entries start with a blank status (not Partial).
       _statusUi = null;
     }
+    _so.addListener(_maybeAutofillCustomer);
+    if (widget.existing == null &&
+        (widget.initialCustomer == null ||
+            widget.initialCustomer!.trim().isEmpty)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _maybeAutofillCustomer();
+      });
+    }
+  }
+
+  void _maybeAutofillCustomer() {
+    if (widget.existing != null || widget.lockIdentity) return;
+    if (_customer.text.trim().isNotEmpty) return;
+    final so = _so.text.trim();
+    if (so.isEmpty) return;
+    final data = ref.read(appDataProvider);
+    final customer = mostRecentCustomerForSo(
+      staging: data.staging,
+      shipped: data.shipped,
+      so: so,
+    );
+    if (customer == null || customer.isEmpty) return;
+    _customer.text = customer;
   }
 
   @override
   void dispose() {
+    _so.removeListener(_maybeAutofillCustomer);
     _so.dispose();
     _customer.dispose();
     _location.dispose();
@@ -134,19 +158,20 @@ class _StagingFormSheetState extends ConsumerState<StagingFormSheet> {
   ConsolidationUndoSnapshot? get _activeUndo {
     final snap = ref.read(consolidationUndoProvider);
     if (snap == null || !snap.isActive) return null;
-    if (widget.existing?.id != snap.keepId) return null;
+    if (widget.existing?.id != snap.mergedId) return null;
     return snap;
   }
 
   Future<void> _reverseConsolidation() async {
     final snap = _activeUndo;
     if (snap == null) return;
+    final so = snap.sources.isNotEmpty ? snap.sources.first.so : '';
     final ok = await confirmDialog(
       context,
       title: 'Reverse consolidation?',
       message:
-          'Restore the ${snap.removed.length} merged staging '
-          '${snap.removed.length == 1 ? 'row' : 'rows'} for SO ${snap.keepBefore.so}?',
+          'Restore the ${snap.sources.length} merged staging '
+          '${snap.sources.length == 1 ? 'row' : 'rows'} for SO $so?',
       confirmLabel: 'Reverse',
       confirmColor: SlstColors.purple,
     );
@@ -324,6 +349,7 @@ class _StagingFormSheetState extends ConsumerState<StagingFormSheet> {
                     : null,
               ),
               textCapitalization: TextCapitalization.characters,
+              onChanged: (_) => _maybeAutofillCustomer(),
             ),
             const SizedBox(height: 8),
             if (lockIdentity)

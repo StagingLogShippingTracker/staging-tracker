@@ -1,10 +1,10 @@
 # SLST — Staging Log & Shipping Tracker (Flutter)
 
-Native Flutter client for Swift Supply staging and shipping operations.
-Targets **Windows** (portable ZIP + per-user installer) and **Android** (sideload APK).
-Uses the existing hosted Supabase project for Auth, Postgres, Storage, and the `notify-pm` Edge Function (Make.com notifications).
+Native Flutter clients for Swift Supply staging and shipping operations.
+Targets **Windows** (portable ZIP + per-user installer), **Android** (sideload APK), and **Wear OS** (`apps/slst_wear`).
+Uses the existing hosted Supabase project for Auth, Postgres, Storage, and the `notify-pm` Edge Function (Make.com notifications). Wear pairs via the `watch-pair` Edge Function.
 
-> The previous GitHub Pages HTML/PWA app has been removed. Users need a packaged Windows or Android build.
+> The previous GitHub Pages HTML/PWA app has been removed. There is no PWA and no Prophet21 / Epicor integration.
 
 ## Stack
 
@@ -66,9 +66,12 @@ Android Maven coordinate above, while Windows supplies its signed system model.
 .\.tools\flutter\bin\flutter.bat run -d windows
 # or
 .\.tools\flutter\bin\flutter.bat run -d android
+# Wear OS (see apps/slst_wear/README.md):
+.\.tools\flutter\bin\flutter.bat -C apps\slst_wear run -d <wear-device>
 ```
 
 Anonymous users are **read-only**. Sign in with a confirmed Supabase email/password account to create/edit/ship/notify.
+On Wear, open **Settings → Pair Watch** on Windows/Android, then enter the 6-digit code on the watch.
 
 ## Configuration
 
@@ -118,12 +121,21 @@ Output: `dist/SLST-Android.apk`. For production signing, create
 `android/key.properties` (gitignored) pointing at a keystore. Without it, the
 release build is debug-key signed for internal sideload testing.
 
+### Wear OS APK
+
+```powershell
+.\scripts\packaging\build-wear-apk.ps1
+```
+
+Output: `dist/SLST-Wear.apk`. Details: [`apps/slst_wear/README.md`](apps/slst_wear/README.md).
+
 After packaging, `dist/SHA256SUMS.txt` contains lowercase SHA-256 hashes for the
-portable ZIP, installer, and APK.
+portable ZIP, installer, and APKs when produced by the full packaging flow.
 
 ## CI
 
 GitHub Actions workflow `.github/workflows/build.yml` builds Windows and Android artifacts on push/tag.
+Wear APK is built via `scripts/packaging/build-wear-apk.ps1` (not yet a separate CI job).
 GitHub Pages is **not** used.
 
 ## Backend notes

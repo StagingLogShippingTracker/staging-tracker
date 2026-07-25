@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/app_config.dart';
-import '../../core/theme.dart';
 import '../../data/app_state.dart';
 import '../shared/widgets.dart';
 
@@ -63,20 +62,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Center(
-                      child: Image.asset(
-                        'assets/slst-mark.png',
-                        height: 96,
-                        fit: BoxFit.contain,
-                        errorBuilder: (_, _, _) => const Icon(
-                          Icons.local_shipping,
-                          size: 64,
-                          color: SlstColors.brand,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    const Center(child: BrandWordmark(height: 40)),
+                    const Center(child: BrandLogo(height: 110)),
                     const SizedBox(height: 24),
                     Card(
                       margin: EdgeInsets.zero,

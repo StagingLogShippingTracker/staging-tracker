@@ -57,7 +57,7 @@ StatusStyle statusStyleOf(BuildContext context, String dbStatus) {
   );
 }
 
-/// Shared page insets: 16 on narrow (phone / phone-width tablet), 24 on wide.
+/// Shared page insets: 16 on narrow widths, 24 on wide.
 EdgeInsets slstPagePadding(BuildContext context, {double top = 20, double bottom = 8}) {
   final narrow = MediaQuery.sizeOf(context).width < 600;
   final h = narrow ? 16.0 : 24.0;
@@ -67,8 +67,8 @@ EdgeInsets slstPagePadding(BuildContext context, {double top = 20, double bottom
 /// SLST wordmark image ("SLST — Staging Log & Shipping Tracker").
 ///
 /// The source art is charcoal on transparent; in dark mode it is tinted to the
-/// light ink colour so it stays legible. Asset-missing fallback uses Oswald —
-/// SLSTBrand is glyph-poor and must not render long / mixed copy.
+/// light ink colour so it stays legible. Asset-missing fallback uses the theme
+/// body font (Inter).
 class BrandWordmark extends StatelessWidget {
   const BrandWordmark({super.key, required this.height});
 
@@ -78,20 +78,63 @@ class BrandWordmark extends StatelessWidget {
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
     return Image.asset(
-      'assets/slst-wordmark.png',
+      dark ? 'assets/slst-wordmark-dark.png' : 'assets/slst-wordmark.png',
       height: height,
       fit: BoxFit.contain,
       alignment: Alignment.centerLeft,
-      color: dark ? SlstColors.darkInk : null,
       errorBuilder: (_, _, _) => Text(
         'SLST',
         style: TextStyle(
-          fontFamily: kBodyFontFamily,
           fontSize: height * 0.75,
           fontWeight: FontWeight.w700,
           letterSpacing: 1.2,
           color: dark ? SlstColors.darkInk : SlstColors.brand,
         ),
+      ),
+    );
+  }
+}
+
+/// Full SLST logo (light/dark) for login and large brand placements.
+class BrandLogo extends StatelessWidget {
+  const BrandLogo({super.key, this.height = 96});
+
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return Image.asset(
+      dark ? 'assets/slst-logo-dark.png' : 'assets/slst-logo-light.png',
+      height: height,
+      fit: BoxFit.contain,
+      errorBuilder: (_, _, _) => Icon(
+        Icons.local_shipping,
+        size: height * 0.7,
+        color: SlstColors.brand,
+      ),
+    );
+  }
+}
+
+/// Compact square-ish mark for app bars / nav.
+class BrandMark extends StatelessWidget {
+  const BrandMark({super.key, this.size = 32});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return Image.asset(
+      dark ? 'assets/slst-mark-dark.png' : 'assets/slst-mark.png',
+      width: size,
+      height: size,
+      fit: BoxFit.contain,
+      errorBuilder: (_, _, _) => Icon(
+        Icons.local_shipping,
+        color: SlstColors.brand,
+        size: size * 0.95,
       ),
     );
   }
@@ -225,7 +268,6 @@ class PillButton extends StatelessWidget {
       minimumSize: compact ? const Size(0, 34) : const Size(0, 42),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       textStyle: TextStyle(
-        fontFamily: kBodyFontFamily,
         fontWeight: FontWeight.w600,
         letterSpacing: 0.4,
         fontSize: compact ? 12.5 : 13.5,
@@ -293,6 +335,7 @@ class SectionCard extends StatelessWidget {
     this.subHeader,
     required this.child,
     this.padding = EdgeInsets.zero,
+    this.expandChild = false,
   });
 
   final String title;
@@ -300,10 +343,13 @@ class SectionCard extends StatelessWidget {
   final Widget? subHeader;
   final Widget child;
   final EdgeInsetsGeometry padding;
+  /// When true, [child] expands to fill leftover height (parent must be bounded).
+  final bool expandChild;
 
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
+    final body = Padding(padding: padding, child: child);
     return Container(
       decoration: BoxDecoration(
         color: dark ? SlstColors.darkSurface : SlstColors.surface,
@@ -355,7 +401,7 @@ class SectionCard extends StatelessWidget {
               child: subHeader!,
             ),
           const Divider(),
-          Padding(padding: padding, child: child),
+          if (expandChild) Expanded(child: body) else body,
         ],
       ),
     );
@@ -903,10 +949,7 @@ class BrandFooter extends StatelessWidget {
           Text(
             'SLST — STAGING LOG & SHIPPING TRACKER',
             textAlign: TextAlign.center,
-            // Oswald, not the SLSTBrand display font: SLSTBrand is missing
-            // glyphs for the em dash / ampersand and renders them garbled.
             style: TextStyle(
-              fontFamily: kBodyFontFamily,
               fontSize: 11,
               letterSpacing: 1.5,
               color: scheme.onSurfaceVariant,

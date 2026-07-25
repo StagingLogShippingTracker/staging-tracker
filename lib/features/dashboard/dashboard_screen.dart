@@ -4,10 +4,23 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/theme.dart';
 import '../../data/app_state.dart';
-import '../shared/log_tables.dart';
+import '../../domain/models.dart';
+import '../../domain/status.dart';
+import '../shared/industrial_widgets.dart';
 import '../shared/widgets.dart';
-import '../shipping/quick_ship_sheet.dart';
+import 'order_inspector.dart';
 import 'stat_detail_dialog.dart';
+import 'warehouse_floor_map.dart';
+
+enum _StagingBoardColumn {
+  shipToday,
+  shipTomorrow,
+  partial,
+  future,
+  corpPick,
+  customerPick,
+  awaiting,
+}
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -17,8 +30,35 @@ class DashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+  StagingEntry? _inspect;
   final _search = TextEditingController();
   String _q = '';
+  bool _overduePromptRunning = false;
+  final _overduePromptedIds = <String>{};
+
+  /// Preferred compact KPI card width at the content-column ceiling.
+  static const double _kpiPreferredCardWidth = 112;
+  static const double _kpiGap = 8;
+  static const int _kpiCount = 8;
+
+  /// Single source of truth: KPIs + map + staging share this max width.
+  /// `8 × 112 + 7 × 8 = 952`.
+  static const double _dashboardContentMaxWidth =
+      _kpiCount * _kpiPreferredCardWidth + (_kpiCount - 1) * _kpiGap;
+
+  /// Vertical rhythm between dashboard sections.
+  static const double _sectionGap = 18;
+
+  /// Below this content width, staging columns stack instead of 4-across.
+  static const double _boardStackBreakpoint = 720;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _maybeShowOverduePrompts();
+    });
+  }
 
   @override
   void dispose() {
@@ -26,42 +66,236 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     super.dispose();
   }
 
+  bool _matchesQuickSearch(StagingEntry e) {
+    if (_q.isEmpty) return true;
+    final ui = StatusRules.formatUi(e.status);
+    final hay =
+        '${e.so} ${e.customer} ${e.location} ${e.status} $ui'.toLowerCase();
+    return hay.contains(_q);
+  }
+
+  Future<void> _maybeShowOverduePrompts() async {
+    if (!mounted || _overduePromptRunning) return;
+    final data = ref.read(appDataProvider);
+    if (data.loading) return;
+
+    final prefs = await ref.read(prefsProvider.future);
+    if (!mounted) return;
+    final handled = prefs.overdueHandled;
+    final overdue = data.staging
+        .where(
+          (e) =>
+              StatusRules.isOverdue(e.status) &&
+              !handled.contains(e.id) &&
+              !_overduePromptedIds.contains(e.id),
+        )
+        .toList()
+      ..sort((a, b) => a.status.compareTo(b.status));
+    if (overdue.isEmpty) return;
+
+    _overduePromptRunning = true;
+    try {
+      for (final entry in overdue) {
+        if (!mounted) break;
+        _overduePromptedIds.add(entry.id);
+        final open = await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (dialogContext) => AlertDialog(
+            backgroundColor: IndustrialTheme.darkSurface,
+            title: Text(
+              'Overdue staging entry',
+              style: IndustrialTheme.mono(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: IndustrialTheme.textPrimary,
+              ),
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'SO ${entry.so}',
+                  style: IndustrialTheme.mono(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: IndustrialTheme.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  entry.customer,
+                  style: const TextStyle(color: IndustrialTheme.textPrimary),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Location: ${entry.location.isEmpty ? '—' : entry.location}',
+                  style: const TextStyle(color: IndustrialTheme.textMuted),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Ship date: ${entry.status}',
+                  style: IndustrialTheme.mono(
+                    fontSize: 12,
+                    color: IndustrialTheme.amber,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  'This entry is past its ship window.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: IndustrialTheme.textMuted,
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                style: TextButton.styleFrom(
+                  foregroundColor: IndustrialTheme.textMuted,
+                ),
+                child: const Text('Dismiss'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(dialogContext, true),
+                style: FilledButton.styleFrom(
+                  backgroundColor: IndustrialTheme.skyBlue,
+                  foregroundColor: IndustrialTheme.textPrimary,
+                ),
+                child: const Text('Open'),
+              ),
+            ],
+          ),
+        );
+        await prefs.markOverdueHandled(entry.id);
+        if (!mounted) break;
+        if (open == true) {
+          setState(() => _inspect = entry);
+          break;
+        }
+      }
+    } finally {
+      _overduePromptRunning = false;
+    }
+  }
+
+  _StagingBoardColumn _columnFor(StagingEntry e) {
+    final ui = StatusRules.formatUi(e.status);
+    if (ui == 'Ship Today' || StatusRules.isOverdue(e.status)) {
+      return _StagingBoardColumn.shipToday;
+    }
+    if (ui == 'Ship Tomorrow') return _StagingBoardColumn.shipTomorrow;
+    if (ui == 'Partial') return _StagingBoardColumn.partial;
+    if (ui == 'Corp Pick' || ui.toLowerCase().contains('corp pick')) {
+      return _StagingBoardColumn.corpPick;
+    }
+    if (ui == 'Customer Pick-Up' || ui.toLowerCase().contains('customer pick')) {
+      return _StagingBoardColumn.customerPick;
+    }
+    if (ui == 'Awaiting Instructions' ||
+        StatusRules.isAwaitingInstructions(e.status)) {
+      return _StagingBoardColumn.awaiting;
+    }
+    // Future YMD dates, TBD, Ship On Future Date → Future column.
+    if (ui == 'Ship On Future Date' ||
+        ui == 'TBD' ||
+        StatusRules.isYmd(e.status)) {
+      return _StagingBoardColumn.future;
+    }
+    return _StagingBoardColumn.awaiting;
+  }
+
+  List<StagingEntry> _bucket(
+    List<StagingEntry> staging,
+    _StagingBoardColumn column,
+  ) {
+    final list = staging.where((e) => _columnFor(e) == column).toList();
+    list.sort(
+      (a, b) =>
+          StatusRules.urgencyWeight(b.status) -
+          StatusRules.urgencyWeight(a.status),
+    );
+    return list;
+  }
+
   @override
   Widget build(BuildContext context) {
     final data = ref.watch(appDataProvider);
-    final user = ref.watch(currentUserProvider);
+    ref.listen<AppData>(appDataProvider, (prev, next) {
+      if (prev?.loading == true && !next.loading) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _maybeShowOverduePrompts();
+        });
+      }
+    });
     final totals = data.containerTotals;
+    final filteredStaging = data.staging.where(_matchesQuickSearch).toList();
 
-    final staging = data.staging.where((e) {
-      if (_q.isEmpty) return true;
-      final hay =
-          '${e.so} ${e.customer} ${e.location} ${e.status} ${e.comments ?? ''}'
-              .toLowerCase();
-      return hay.contains(_q);
-    }).toList();
-
-    final shipped = data.shipped.where((e) {
-      if (_q.isEmpty) return true;
-      final hay =
-          '${e.so} ${e.customer} ${e.carrier} ${e.location} ${e.comments ?? ''}'
-              .toLowerCase();
-      return hay.contains(_q);
-    }).toList();
-
-    // detail: which stat-detail window the card opens (legacy web parity);
-    // the Shipped card jumps to the Shipped Log instead.
     final kpis = [
-      (key: 'orders', label: 'Orders', icon: Icons.description_outlined, detail: StatDetailMode.orders),
-      (key: 'containers', label: 'Containers', icon: Icons.widgets_outlined, detail: StatDetailMode.containers),
-      (key: 'skids', label: 'Skids', icon: Icons.pallet, detail: StatDetailMode.skid),
-      (key: 'boxes', label: 'Boxes', icon: Icons.inventory_2_outlined, detail: StatDetailMode.box),
-      (key: 'crates', label: 'Crates', icon: Icons.dataset_outlined, detail: StatDetailMode.crate),
-      (key: 'pipe', label: 'Pipe/Rod', icon: Icons.horizontal_rule, detail: StatDetailMode.pipe),
-      (key: 'other', label: 'Other', icon: Icons.category_outlined, detail: StatDetailMode.other),
-      (key: 'shipped', label: 'Shipped', icon: Icons.local_shipping_outlined, detail: null),
+      (
+        key: 'orders',
+        label: 'Orders',
+        subtext: 'Unique SO',
+        detail: StatDetailMode.orders,
+      ),
+      (
+        key: 'containers',
+        label: 'Containers',
+        subtext: 'On floor',
+        detail: StatDetailMode.containers,
+      ),
+      (
+        key: 'skids',
+        label: 'Skids',
+        subtext: 'Active',
+        detail: StatDetailMode.skid,
+      ),
+      (
+        key: 'boxes',
+        label: 'Boxes',
+        subtext: 'Active',
+        detail: StatDetailMode.box,
+      ),
+      (
+        key: 'crates',
+        label: 'Crates',
+        subtext: 'Active',
+        detail: StatDetailMode.crate,
+      ),
+      (
+        key: 'pipe',
+        label: 'Pipe/Rod',
+        subtext: 'Active',
+        detail: StatDetailMode.pipe,
+      ),
+      (
+        key: 'other',
+        label: 'Other',
+        subtext: 'Active',
+        detail: StatDetailMode.other,
+      ),
+      (
+        key: 'shipped',
+        label: 'Shipped',
+        subtext: 'Done',
+        detail: null,
+      ),
     ];
 
-    return RefreshIndicator(
+    final shipToday = _bucket(filteredStaging, _StagingBoardColumn.shipToday);
+    final shipTomorrow =
+        _bucket(filteredStaging, _StagingBoardColumn.shipTomorrow);
+    final partial = _bucket(filteredStaging, _StagingBoardColumn.partial);
+    final future = _bucket(filteredStaging, _StagingBoardColumn.future);
+    final corpPick = _bucket(filteredStaging, _StagingBoardColumn.corpPick);
+    final customerPick =
+        _bucket(filteredStaging, _StagingBoardColumn.customerPick);
+    final awaiting = _bucket(filteredStaging, _StagingBoardColumn.awaiting);
+
+    final scrollBody = RefreshIndicator(
       onRefresh: () => ref.read(appDataProvider.notifier).refresh(),
       child: ListView(
         padding: slstPagePadding(context),
@@ -75,108 +309,496 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 subtitle: Text(data.error!),
                 trailing: IconButton(
                   icon: const Icon(Icons.refresh),
-                  onPressed: () => ref.read(appDataProvider.notifier).refresh(),
+                  onPressed: () =>
+                      ref.read(appDataProvider.notifier).refresh(),
                 ),
               ),
             ),
             const SizedBox(height: 14),
           ],
-          // KPI grid
+          // Unified content column: KPIs + map + staging share one width.
           LayoutBuilder(
             builder: (context, constraints) {
-              final cols = constraints.maxWidth >= 1100
-                  ? 8
-                  : constraints.maxWidth >= 720
-                      ? 4
-                      : 2;
-              const gap = 10.0;
-              final w = (constraints.maxWidth - gap * (cols - 1)) / cols;
-              return Wrap(
-                spacing: gap,
-                runSpacing: gap,
-                children: [
-                  for (final k in kpis)
-                    SizedBox(
-                      width: w,
-                      child: KpiCard(
-                        label: k.label,
-                        value: totals[k.key] ?? 0,
-                        icon: k.icon,
-                        onTap: k.detail == null
-                            ? () => context.go('/shipped')
-                            : () => showStatDetailDialog(context, k.detail!),
+              final contentWidth =
+                  constraints.maxWidth < _dashboardContentMaxWidth
+                      ? constraints.maxWidth
+                      : _dashboardContentMaxWidth;
+              return Align(
+                alignment: Alignment.centerLeft,
+                child: SizedBox(
+                  width: contentWidth,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Section A — KPI strip (evenly fills content width)
+                      IntrinsicHeight(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            for (var i = 0; i < kpis.length; i++) ...[
+                              if (i > 0) const SizedBox(width: _kpiGap),
+                              Expanded(
+                                child: IndustrialKpiCard.compact(
+                                  label: kpis[i].label,
+                                  value: '${totals[kpis[i].key] ?? 0}',
+                                  subtext: kpis[i].subtext,
+                                  onTap: kpis[i].detail == null
+                                      ? () => context.go('/shipped')
+                                      : () => showStatDetailDialog(
+                                            context,
+                                            kpis[i].detail!,
+                                          ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
                       ),
-                    ),
-                ],
-              );
-            },
-          ),
-          const SizedBox(height: 16),
-          // Quick search + quick actions row
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final narrow = constraints.maxWidth < 760;
-              final search = SearchField(
-                controller: _search,
-                hint: 'Quick search — SO, customer, carrier, location…',
-                onChanged: (v) => setState(() => _q = v.trim().toLowerCase()),
-              );
-              final actions = Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  PillButton(
-                    label: 'Quick Consolidate',
-                    icon: Icons.merge_type,
-                    color: SlstColors.purple,
-                    onPressed: user == null
-                        ? null
-                        : () => showQuickConsolidateDialog(context, ref),
+                      const SizedBox(height: _sectionGap),
+                      // Section B — Floor map (same width; scales with container)
+                      WarehouseFloorMap(staging: data.staging),
+                      const SizedBox(height: _sectionGap),
+                      SearchField(
+                        controller: _search,
+                        hint:
+                            'Quick Search — SO, customer, location, status…',
+                        onChanged: (v) =>
+                            setState(() => _q = v.trim().toLowerCase()),
+                      ),
+                      const SizedBox(height: 12),
+                      // Section C — Active Staging (same content bounds)
+                      _ActiveStagingBoard(
+                        shipToday: shipToday,
+                        shipTomorrow: shipTomorrow,
+                        partial: partial,
+                        future: future,
+                        corpPick: corpPick,
+                        customerPick: customerPick,
+                        awaiting: awaiting,
+                        selectedId: _inspect?.id,
+                        onSelect: (e) => setState(() => _inspect = e),
+                        loading: data.loading && data.staging.isEmpty,
+                        stackBreakpoint: _boardStackBreakpoint,
+                        filterActive: _q.isNotEmpty,
+                      ),
+                    ],
                   ),
-                ],
-              );
-              if (narrow) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [search, const SizedBox(height: 10), actions],
-                );
-              }
-              return Row(
-                children: [
-                  Expanded(child: search),
-                  const SizedBox(width: 12),
-                  actions,
-                ],
+                ),
               );
             },
-          ),
-          const SizedBox(height: 16),
-          if (data.loading && data.staging.isEmpty && data.shipped.isEmpty)
-            const Padding(
-              padding: EdgeInsets.all(48),
-              child: Center(child: CircularProgressIndicator()),
-            )
-          else ...[
-            StagingLogCard(
-              entries: staging,
-              onExpand: () => context.go('/staging'),
-            ),
-            const SizedBox(height: 16),
-            ShippedLogCard(
-              entries: shipped,
-              onExpand: () => context.go('/shipped'),
-              onQuickShip: () => showQuickShipSheet(context, ref),
-            ),
-          ],
-          const SizedBox(height: 16),
-          const ComingSoonCard(
-            title: 'Shipment Tracker — Coming Soon',
-            text:
-                'Live carrier tracking for outbound freight is on the roadmap. '
-                'Shipped entries will link directly to carrier tracking status.',
           ),
           const BrandFooter(),
         ],
+      ),
+    );
+
+    if (_inspect == null) {
+      return ColoredBox(
+        color: IndustrialTheme.darkBase,
+        child: scrollBody,
+      );
+    }
+
+    return ColoredBox(
+      color: IndustrialTheme.darkBase,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(child: scrollBody),
+          OrderInspector(
+            entry: _inspect!,
+            onClose: () => setState(() => _inspect = null),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActiveStagingBoard extends StatelessWidget {
+  const _ActiveStagingBoard({
+    required this.shipToday,
+    required this.shipTomorrow,
+    required this.partial,
+    required this.future,
+    required this.corpPick,
+    required this.customerPick,
+    required this.awaiting,
+    required this.selectedId,
+    required this.onSelect,
+    required this.loading,
+    this.stackBreakpoint = 720,
+    this.filterActive = false,
+  });
+
+  final List<StagingEntry> shipToday;
+  final List<StagingEntry> shipTomorrow;
+  final List<StagingEntry> partial;
+  final List<StagingEntry> future;
+  final List<StagingEntry> corpPick;
+  final List<StagingEntry> customerPick;
+  final List<StagingEntry> awaiting;
+  final String? selectedId;
+  final ValueChanged<StagingEntry> onSelect;
+  final bool loading;
+  final double stackBreakpoint;
+  final bool filterActive;
+
+  @override
+  Widget build(BuildContext context) {
+    final totalVisible = shipToday.length +
+        shipTomorrow.length +
+        partial.length +
+        future.length +
+        corpPick.length +
+        customerPick.length +
+        awaiting.length;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'ACTIVE STAGING',
+                style: Theme.of(context).textTheme.labelSmall,
+              ),
+            ),
+            if (filterActive)
+              Text(
+                '$totalVisible match${totalVisible == 1 ? '' : 'es'}',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: IndustrialTheme.textMuted,
+                    ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        if (loading)
+          const Padding(
+            padding: EdgeInsets.all(32),
+            child: Center(child: CircularProgressIndicator()),
+          )
+        else
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final narrow = constraints.maxWidth < stackBreakpoint;
+              final columns = [
+                _BoardColumn(
+                  title: 'SHIP TODAY',
+                  accent: IndustrialTheme.mintGreen,
+                  entries: shipToday,
+                  selectedId: selectedId,
+                  onSelect: onSelect,
+                ),
+                _BoardColumn(
+                  title: 'SHIP TOMORROW',
+                  accent: IndustrialTheme.skyBlue,
+                  entries: shipTomorrow,
+                  selectedId: selectedId,
+                  onSelect: onSelect,
+                ),
+                _BoardColumn(
+                  title: 'PARTIAL STAGED',
+                  accent: IndustrialTheme.amber,
+                  entries: partial,
+                  selectedId: selectedId,
+                  onSelect: onSelect,
+                ),
+                _BoardColumn(
+                  title: 'FUTURE',
+                  accent: const Color(0xFF8B5CF6),
+                  entries: future,
+                  selectedId: selectedId,
+                  onSelect: onSelect,
+                ),
+                _BoardColumn(
+                  title: 'CORP PICK',
+                  accent: IndustrialTheme.purple,
+                  entries: corpPick,
+                  selectedId: selectedId,
+                  onSelect: onSelect,
+                ),
+                _BoardColumn(
+                  title: 'CUSTOMER PICK-UP',
+                  accent: const Color(0xFFEC4899),
+                  entries: customerPick,
+                  selectedId: selectedId,
+                  onSelect: onSelect,
+                ),
+                _BoardColumn(
+                  title: 'AWAITING INSTRUCTIONS',
+                  accent: IndustrialTheme.slateMuted,
+                  entries: awaiting,
+                  selectedId: selectedId,
+                  onSelect: onSelect,
+                ),
+              ];
+
+              if (narrow) {
+                return Column(
+                  children: [
+                    for (var i = 0; i < columns.length; i++) ...[
+                      if (i > 0) const SizedBox(height: 12),
+                      columns[i],
+                    ],
+                  ],
+                );
+              }
+
+              // Horizontal scroll keeps all status lists readable without
+              // crushing Future / Corp / Customer into Awaiting.
+              return SizedBox(
+                height: 420,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: columns.length,
+                  separatorBuilder: (_, _) => const SizedBox(width: 10),
+                  itemBuilder: (context, i) => SizedBox(
+                    width: 210,
+                    child: columns[i],
+                  ),
+                ),
+              );
+            },
+          ),
+      ],
+    );
+  }
+}
+
+class _BoardColumn extends StatelessWidget {
+  const _BoardColumn({
+    required this.title,
+    required this.accent,
+    required this.entries,
+    required this.selectedId,
+    required this.onSelect,
+  });
+
+  final String title;
+  final Color accent;
+  final List<StagingEntry> entries;
+  final String? selectedId;
+  final ValueChanged<StagingEntry> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(minHeight: 160),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: IndustrialTheme.darkHeader,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: IndustrialTheme.borderStroke),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: accent,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.7,
+                    color: accent,
+                  ),
+                ),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.16),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  '${entries.length}',
+                  style: IndustrialTheme.mono(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: accent,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          if (entries.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 18),
+              child: Text(
+                'No orders',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: IndustrialTheme.textMuted,
+                ),
+              ),
+            )
+          else
+            Expanded(
+              child: ListView(
+                children: [
+                  for (final e in entries) ...[
+                    _StagingSoCard(
+                      entry: e,
+                      selected: e.id == selectedId,
+                      onTap: () => onSelect(e),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StagingSoCard extends StatelessWidget {
+  const _StagingSoCard({
+    required this.entry,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final StagingEntry entry;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final urgent = StatusRules.formatUi(entry.status) == 'Ship Today' ||
+        StatusRules.isOverdue(entry.status);
+    final weight = (entry.weight ?? '').trim();
+    final stager = (entry.stagedBy ?? '').trim();
+
+    return Material(
+      color: selected
+          ? IndustrialTheme.skyBlue.withValues(alpha: 0.12)
+          : IndustrialTheme.darkSurface,
+      borderRadius: BorderRadius.circular(6),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(6),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(
+              color: selected
+                  ? IndustrialTheme.skyBlue.withValues(alpha: 0.55)
+                  : IndustrialTheme.borderStroke,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      entry.so,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: IndustrialTheme.mono(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: IndustrialTheme.textPrimary,
+                      ),
+                    ),
+                  ),
+                  if (urgent)
+                    Container(
+                      margin: const EdgeInsets.only(left: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEF4444).withValues(alpha: 0.16),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color:
+                              const Color(0xFFEF4444).withValues(alpha: 0.5),
+                        ),
+                      ),
+                      child: const Text(
+                        'URGENT',
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.4,
+                          color: Color(0xFFEF4444),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                entry.customer.isEmpty ? '—' : entry.customer,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: IndustrialTheme.textMuted,
+                ),
+              ),
+              const SizedBox(height: 8),
+              if (entry.location.trim().isNotEmpty)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: IndustrialTheme.darkHeader,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: IndustrialTheme.borderStroke),
+                  ),
+                  child: Text(
+                    entry.location,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: IndustrialTheme.mono(
+                      fontSize: 10,
+                      color: IndustrialTheme.skyBlue,
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 8),
+              Text(
+                [
+                  if (weight.isNotEmpty) weight,
+                  '${entry.qty} ${entry.type}',
+                  if (stager.isNotEmpty) stager,
+                ].join(' · '),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: IndustrialTheme.mono(
+                  fontSize: 10,
+                  color: IndustrialTheme.textMuted,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

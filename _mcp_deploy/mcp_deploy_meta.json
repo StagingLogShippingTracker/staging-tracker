@@ -1,0 +1,6 @@
+{
+  "project_id": "gdrpdiwykmnybmkadlrv",
+  "name": "notify-pm",
+  "entrypoint_path": "index.ts",
+  "verify_jwt": true
+}

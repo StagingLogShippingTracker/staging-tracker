@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office" style="color-scheme:light dark;">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="color-scheme" content="light dark" />
+  <meta name="supported-color-schemes" content="light dark" />
+  <meta name="x-apple-disable-message-reformatting" />
+  <title>PO notification</title>
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet" type="text/css" />
+  <!--[if mso]>
+  <noscript>
+    <xml>
+      <o:OfficeDocumentSettings>
+        <o:PixelsPerInch>96</o:PixelsPerInch>
+        <o:AllowPNG/>
+      </o:OfficeDocumentSettings>
+    </xml>
+  </noscript>
+  <style>
+    table { border-collapse: collapse; }
+    td, th, div, p, a, span, strong, h1 { font-family: Arial, Helvetica, sans-serif !important; }
+    .logo-dark, .logo-dark-wrap { display: none !important; mso-hide: all !important; }
+    .logo-light, .logo-light-wrap { display: block !important; }
+    .logo-img { max-height: 60px !important; width: auto !important; height: auto !important; }
+  </style>
+  <![endif]-->
+  <style type="text/css">
+    :root { color-scheme: light dark !important; supported-color-schemes: light dark !important; }
+    body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    img { -ms-interpolation-mode: bicubic; border: 0; outline: none; text-decoration: none; }
+    body { margin: 0 !important; padding: 0 !important; width: 100% !important; background-color:#F0F2F5 !important; background-image:linear-gradient(#F0F2F5,#F0F2F5) !important; }
+    a { color:#D93223 !important; }
+    
+    :root, html { color-scheme: light dark !important; supported-color-schemes: light dark !important; }
+    .logo-dark, .logo-dark-wrap { display: none !important; max-height: 0 !important; overflow: hidden !important; font-size: 0 !important; line-height: 0 !important; mso-hide: all; }
+    .logo-light, .logo-light-wrap { display: block !important; max-height: none !important; overflow: visible !important; }
+    /* Cap logo display height — PNG intrinsic is 659×232; never render near-native size */
+    .logo-swift { max-height: 62px !important; width: auto !important; height: auto !important; }
+    .logo-img { max-height: 60px !important; width: auto !important; height: auto !important; }
+    .og-accent-orange { background-color:#E85D04 !important; background-image:linear-gradient(#E85D04,#E85D04) !important; }
+    .og-accent-blue { background-color:#3B82F6 !important; background-image:linear-gradient(#3B82F6,#3B82F6) !important; }
+    .og-label { color:#8A8A8A !important; font-weight: 400 !important; font-size: 13px !important; }
+    .og-value { color:#1A1A1A !important; font-weight: 600 !important; font-size: 15px !important; }
+    .og-section-orange { color:#E85D04 !important; }
+    .og-section-blue { color:#3B82F6 !important; }
+
+    @media (prefers-color-scheme: dark) {
+      body, .og-page { background-color:#1F1F1F !important; background-image:linear-gradient(#1F1F1F,#1F1F1F) !important; }
+      .og-shell, .og-footer { background-color:#2B2B2B !important; background-image:linear-gradient(#2B2B2B,#2B2B2B) !important; }
+      .og-white, .og-card { background-color:#0D0D0D !important; background-image:linear-gradient(#0D0D0D,#0D0D0D) !important; }
+      .og-icon { background-color:#1A1210 !important; background-image:linear-gradient(#1A1210,#1A1210) !important; }
+      .og-logo-cell { background-color:#2B2B2B !important; background-image:linear-gradient(#2B2B2B,#2B2B2B) !important; }
+      .og-text, .og-text strong, .og-text h1 { color:#F5F5F5 !important; }
+      .og-body { color:#E0E0E0 !important; }
+      .og-muted { color:#A8A8A8 !important; }
+      .og-label { color:#9A9A9A !important; }
+      .og-value { color:#F5F5F5 !important; }
+      .og-brand { color:#E85D04 !important; }
+      .og-section-orange { color:#E85D04 !important; }
+      .og-section-blue { color:#3B82F6 !important; }
+      .og-border {
+        border-left-color:#3A3A3A !important;
+        border-right-color:#3A3A3A !important;
+        border-bottom-color:#3A3A3A !important;
+        border-top-color:#3A3A3A !important;
+      }
+      .og-accent-orange { background-color:#E85D04 !important; background-image:linear-gradient(#E85D04,#E85D04) !important; }
+      .og-accent-blue { background-color:#3B82F6 !important; background-image:linear-gradient(#3B82F6,#3B82F6) !important; }
+      .og-cta, .og-cta span {
+        color:#FFFFFE !important; border-color:#D93223 !important;
+        background-color:#D93223 !important; background-image:linear-gradient(#D93223,#B8281C) !important;
+      }
+      /* Logo swap only with full dark backgrounds (Apple Mail / capable clients).
+       * Never clear max-height on .logo-img / .logo-dark — that blew logos to PNG size. */
+      .logo-light, .logo-light-wrap {
+        display: none !important; max-height: 0 !important; overflow: hidden !important;
+        width: 0 !important; height: 0 !important; font-size: 0 !important; line-height: 0 !important;
+      }
+      .logo-dark-wrap {
+        display: block !important; max-height: 60px !important; overflow: hidden !important;
+        width: auto !important; height: auto !important; font-size: 0 !important; line-height: 0 !important;
+      }
+      .logo-dark {
+        display: block !important; max-height: 60px !important; width: auto !important; height: auto !important;
+      }
+    }
+
+    /* Outlook.com / Office dark-mode hooks — ONLY when Outlook actually darkens */
+    [data-ogsb] .og-page, [data-ogab] .og-page { background-color:#1F1F1F !important; background-image:linear-gradient(#1F1F1F,#1F1F1F) !important; }
+    [data-ogsb] .og-shell, [data-ogsb] .og-footer, [data-ogab] .og-shell { background-color:#2B2B2B !important; background-image:linear-gradient(#2B2B2B,#2B2B2B) !important; }
+    [data-ogsb] .og-white, [data-ogsb] .og-card, [data-ogab] .og-white { background-color:#0D0D0D !important; background-image:linear-gradient(#0D0D0D,#0D0D0D) !important; }
+    [data-ogsb] .og-icon, [data-ogab] .og-icon { background-color:#1A1210 !important; }
+    [data-ogsb] .og-logo-cell, [data-ogab] .og-logo-cell { background-color:#2B2B2B !important; }
+    [data-ogsc] .og-text, [data-ogac] .og-text { color:#F5F5F5 !important; }
+    [data-ogsc] .og-body, [data-ogac] .og-body { color:#E0E0E0 !important; }
+    [data-ogsc] .og-muted, [data-ogac] .og-muted { color:#A8A8A8 !important; }
+    [data-ogsc] .og-label, [data-ogac] .og-label { color:#9A9A9A !important; }
+    [data-ogsc] .og-value, [data-ogac] .og-value { color:#F5F5F5 !important; }
+    [data-ogsc] .og-brand, [data-ogac] .og-brand { color:#E85D04 !important; }
+    [data-ogsc] .og-section-orange, [data-ogac] .og-section-orange { color:#E85D04 !important; }
+    [data-ogsc] .og-section-blue, [data-ogac] .og-section-blue { color:#3B82F6 !important; }
+    [data-ogsb] .og-border, [data-ogab] .og-border {
+      border-left-color:#3A3A3A !important;
+      border-right-color:#3A3A3A !important;
+      border-bottom-color:#3A3A3A !important;
+      border-top-color:#3A3A3A !important;
+    }
+    [data-ogsb] .og-accent-orange, [data-ogab] .og-accent-orange {
+      background-color:#E85D04 !important; background-image:linear-gradient(#E85D04,#E85D04) !important;
+    }
+    [data-ogsb] .og-accent-blue, [data-ogab] .og-accent-blue {
+      background-color:#3B82F6 !important; background-image:linear-gradient(#3B82F6,#3B82F6) !important;
+    }
+    [data-ogsb] .logo-light, [data-ogsb] .logo-light-wrap,
+    [data-ogab] .logo-light, [data-ogab] .logo-light-wrap {
+      display: none !important; max-height: 0 !important; overflow: hidden !important; width: 0 !important; height: 0 !important;
+      font-size: 0 !important; line-height: 0 !important;
+    }
+    [data-ogsb] .logo-dark-wrap, [data-ogab] .logo-dark-wrap {
+      display: block !important; max-height: 60px !important; overflow: hidden !important; width: auto !important; height: auto !important;
+      font-size: 0 !important; line-height: 0 !important;
+    }
+    [data-ogsb] .logo-dark, [data-ogab] .logo-dark {
+      display: block !important; max-height: 60px !important; width: auto !important; height: auto !important;
+    }
+
+    /*
+     * HYBRID FIX: Outlook.com light reading pane + OS dark mode fires
+     * prefers-color-scheme:dark while keeping white/cream backgrounds.
+     * Re-assert light logo + dark text when page is still light-themed.
+     * [data-ogsb] rules above win when Outlook truly darkens.
+     */
+    [data-ogsc]:not([data-ogsb]) .logo-light-wrap {
+      display: block !important; max-height: 60px !important; overflow: hidden !important; width: auto !important; height: auto !important;
+      font-size: 0 !important; line-height: 0 !important;
+    }
+    [data-ogsc]:not([data-ogsb]) .logo-light {
+      display: block !important; max-height: 60px !important; width: auto !important; height: auto !important;
+    }
+    [data-ogsc]:not([data-ogsb]) .logo-dark,
+    [data-ogsc]:not([data-ogsb]) .logo-dark-wrap {
+      display: none !important; max-height: 0 !important; overflow: hidden !important; width: 0 !important; height: 0 !important;
+      font-size: 0 !important; line-height: 0 !important;
+    }
+  
+    @media only screen and (max-width: 620px) {
+      .email-card { width: 100% !important; }
+      .stack-col { display: block !important; width: 100% !important; max-width: 100% !important; box-sizing: border-box !important; padding-left: 0 !important; padding-right: 0 !important; }
+      .stack-col-pad { padding: 8px 0 !important; }
+      .footer-right { text-align: left !important; padding-top: 16px !important; }
+      .logo-swift { width: 140px !important; max-width: 140px !important; max-height: 44px !important; height: auto !important; }
+      .logo-img { width: auto !important; max-width: 130px !important; max-height: 48px !important; height: auto !important; }
+      .logo-light-wrap, .logo-dark-wrap { max-height: 48px !important; }
+      .email-h1 { font-size: 26px !important; }
+    }
+  </style>
+
+  <style type="text/css">
+    body, .og-page { background-color:#1F1F1F !important; background-image:linear-gradient(#1F1F1F,#1F1F1F) !important; }
+    .og-shell, .og-footer, .og-logo-cell { background-color:#2B2B2B !important; background-image:linear-gradient(#2B2B2B,#2B2B2B) !important; }
+    .og-card, .og-white { background-color:#0D0D0D !important; background-image:linear-gradient(#0D0D0D,#0D0D0D) !important; }
+    .og-text, .og-text strong, .og-text h1, .og-value { color:#F5F5F5 !important; }
+    .og-body { color:#E0E0E0 !important; }
+    .og-muted, .og-label { color:#A8A8A8 !important; }
+    .og-section-orange, .og-brand { color:#E85D04 !important; }
+    .og-section-blue { color:#3B82F6 !important; }
+    .og-accent-orange { background-color:#E85D04 !important; background-image:linear-gradient(#E85D04,#E85D04) !important; }
+    .og-accent-blue { background-color:#3B82F6 !important; background-image:linear-gradient(#3B82F6,#3B82F6) !important; }
+    .logo-light, .logo-light-wrap { display:none !important; max-height:0 !important; overflow:hidden !important; width:0 !important; height:0 !important; }
+    .logo-dark-wrap { display:block !important; max-height:60px !important; overflow:hidden !important; width:auto !important; height:auto !important; }
+    .logo-dark { display:block !important; max-height:60px !important; width:auto !important; height:auto !important; }
+  </style></head>
+<body class="body og-page preview-dark" data-ogsb data-ogsc data-preview="dark" style="margin:0;padding:0;background-color:#F0F2F5 !important; background-image:linear-gradient(#F0F2F5,#F0F2F5) !important;">
+  <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;line-height:1px;color:#F0F2F5 !important;">
+    PO notification: 1223344
+  </div>
+  <table role="presentation" class="og-page" width="100%" cellpadding="0" cellspacing="0" border="0"
+    style="background-color:#F0F2F5 !important; background-image:linear-gradient(#F0F2F5,#F0F2F5) !important;">
+    <tr>
+      <td align="center" class="og-page" style="padding:36px 16px 28px 16px;background-color:#F0F2F5 !important; background-image:linear-gradient(#F0F2F5,#F0F2F5) !important;">
+        <!--[if mso]>
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0"><tr><td>
+        <![endif]-->
+        <table role="presentation" class="email-card og-shell og-border" width="600" cellpadding="0" cellspacing="0" border="0"
+          bgcolor="#FFFFFF"
+          style="width:100%;max-width:600px;background-color:#FFFFFF !important; background-image:linear-gradient(#FFFFFF,#FFFFFF) !important; border-radius:20px;border:1px solid #E8E4DE;box-shadow:0 18px 48px rgba(26,26,26,0.10);overflow:hidden;">
+          <tr>
+            <td align="center" class="og-shell og-logo-cell" bgcolor="#FFFFFF" style="padding:40px 28px 8px 28px;background-color:#FFFFFF !important; background-image:linear-gradient(#FFFFFF,#FFFFFF) !important;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" class="logo-row" style="margin:0 auto;width:100%;">
+    <tr>
+      <td align="center" valign="middle" class="og-logo-cell og-shell" bgcolor="#FFFFFF" style="vertical-align:middle;text-align:center;padding:0;background-color:#FFFFFF !important; background-image:linear-gradient(#FFFFFF,#FFFFFF) !important;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto;">
+          <tr>
+            <td align="center" valign="middle" height="72" class="og-logo-cell"
+              style="vertical-align:middle;text-align:center;padding:0 14px 0 0;height:72px;background-color:#FFFFFF !important; background-image:linear-gradient(#FFFFFF,#FFFFFF) !important;">
+              <img class="logo-swift" src="https://gdrpdiwykmnybmkadlrv.supabase.co/storage/v1/object/public/email-assets/swift-supply-logo-email.png?v=20260725d" width="200" height="62" alt="Swift Supply"
+                style="display:block;margin:0 auto;border:0;outline:none;width:200px;max-width:200px;height:auto;max-height:62px;vertical-align:middle;-ms-interpolation-mode:bicubic;" />
+            </td>
+            <td align="center" valign="middle" height="72" class="og-muted og-logo-cell"
+              style="vertical-align:middle;text-align:center;padding:0 10px;height:72px;font-family:'Oswald', Arial, Helvetica, sans-serif;font-size:22px;font-weight:300;color:#6B6B6B;line-height:1;background-color:#FFFFFF !important; background-image:linear-gradient(#FFFFFF,#FFFFFF) !important;">
+              +
+            </td>
+            <td align="center" valign="middle" height="72" class="og-logo-cell"
+              style="vertical-align:middle;text-align:center;padding:0 0 0 6px;height:72px;background-color:#FFFFFF !important; background-image:linear-gradient(#FFFFFF,#FFFFFF) !important;">
+              <!--[if mso]>
+              <img src="https://gdrpdiwykmnybmkadlrv.supabase.co/storage/v1/object/public/email-assets/slst-logo-email.png?v=20260725d" width="170" height="60" alt="SLST — Staging Log &amp; Shipping Tracker"
+                style="display:block;margin:0 auto;border:0;outline:none;width:170px;height:60px;max-height:60px;" />
+              <![endif]-->
+              <!--[if !mso]><!-->
+              <div class="logo-light-wrap" style="display:block;line-height:0;font-size:0;max-height:60px;overflow:hidden;">
+                <img class="logo-img logo-light" src="https://gdrpdiwykmnybmkadlrv.supabase.co/storage/v1/object/public/email-assets/slst-logo-email.png?v=20260725d" width="170" height="60" alt="SLST — Staging Log &amp; Shipping Tracker"
+                  style="display:block;margin:0 auto;border:0;outline:none;max-height:60px;width:auto;height:auto;max-width:170px;vertical-align:middle;-ms-interpolation-mode:bicubic;" />
+              </div>
+              <div class="logo-dark-wrap" style="display:none;max-height:0;overflow:hidden;line-height:0;font-size:0;mso-hide:all;">
+                <img class="logo-img logo-dark" src="https://gdrpdiwykmnybmkadlrv.supabase.co/storage/v1/object/public/email-assets/slst-logo-email-dark.png?v=20260725d" width="170" height="60" alt="SLST — Staging Log &amp; Shipping Tracker"
+                  style="display:block;margin:0 auto;border:0;outline:none;max-height:60px;width:auto;height:auto;max-width:170px;vertical-align:middle;-ms-interpolation-mode:bicubic;" />
+              </div>
+              <!--<![endif]-->
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" class="og-shell og-text" style="padding:22px 36px 4px 36px;background-color:#FFFFFF !important; background-image:linear-gradient(#FFFFFF,#FFFFFF) !important;">
+              <h1 class="og-text email-h1" style="margin:0;font-family:'Oswald', Arial, Helvetica, sans-serif;font-size:32px;line-height:1.22;font-weight:700;letter-spacing:-0.01em;color:#1A1A1A;">
+                PO notification
+              </h1>
+            </td>
+          </tr>
+          
+          <tr>
+            <td align="center" class="og-shell" style="padding:6px 36px 22px 36px;background-color:#FFFFFF !important; background-image:linear-gradient(#FFFFFF,#FFFFFF) !important;">
+              <p class="og-muted" style="margin:0;font-family:'Oswald', Arial, Helvetica, sans-serif;font-size:15px;line-height:1.4;font-weight:400;color:#6B6B6B;">
+                Order details:
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td class="og-shell" style="padding:0 22px 10px 22px;background-color:#FFFFFF !important; background-image:linear-gradient(#FFFFFF,#FFFFFF) !important;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+      <td class="stack-col stack-col-pad" width="50%" valign="top" style="width:50%;padding:8px;">
+        
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+      class="og-card og-border"
+      style="background-color:#F5F0E8 !important; background-image:linear-gradient(#F5F0E8,#F5F0E8) !important; border:1px solid #E8E4DE;border-radius:14px;overflow:hidden;box-shadow:0 2px 10px rgba(26,26,26,0.05);">
+      
+    <tr>
+      <td class="og-accent-orange" bgcolor="#E85D04" height="4"
+        style="height:4px;max-height:4px;font-size:0;line-height:0;mso-line-height-rule:exactly;background-color:#E85D04 !important; background-image:linear-gradient(#E85D04,#E85D04) !important;border:0;padding:0;">
+        &nbsp;
+      </td>
+    </tr>
+      <tr>
+        <td class="og-card" style="padding:16px 16px 8px 16px;background-color:#F5F0E8 !important; background-image:linear-gradient(#F5F0E8,#F5F0E8) !important;">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+            <tr>
+              <td width="36" valign="middle" style="padding-right:10px;background-color:#F5F0E8 !important; background-image:linear-gradient(#F5F0E8,#F5F0E8) !important;">
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="32" height="32" class="og-icon"
+                  style="width:32px;height:32px;background-color:#FDECEA !important; background-image:linear-gradient(#FDECEA,#FDECEA) !important; border-radius:8px;">
+                  <tr>
+                    <td align="center" valign="middle" class="og-icon"
+                      style="width:32px;height:32px;text-align:center;vertical-align:middle;background-color:#FDECEA !important; background-image:linear-gradient(#FDECEA,#FDECEA) !important;">
+                      <img src="https://gdrpdiwykmnybmkadlrv.supabase.co/storage/v1/object/public/email-assets/icon-clipboard.png?v=20260725d" width="20" height="20" alt=""
+                        style="display:block;margin:0 auto;border:0;outline:none;-ms-interpolation-mode:bicubic;" />
+                    </td>
+                  </tr>
+                </table>
+              </td>
+              <td valign="middle" class="og-section-orange" style="background-color:#F5F0E8 !important; background-image:linear-gradient(#F5F0E8,#F5F0E8) !important;">
+                <div class="og-section-orange" style="font-family:'Oswald', Arial, Helvetica, sans-serif;font-size:13px;font-weight:700;letter-spacing:0.10em;text-transform:uppercase;color:#E85D04;mso-line-height-rule:exactly;">
+                  PO NOTIFICATION
+                </div>
+              </td>
+            </tr>
+          </table>
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-top:14px;">
+            
+        <tr>
+          <td class="og-card" style="padding:0 0 12px 0;font-family:'Oswald', Arial, Helvetica, sans-serif;line-height:1.35;background-color:#F5F0E8 !important; background-image:linear-gradient(#F5F0E8,#F5F0E8) !important;">
+            <div class="og-label" style="font-family:'Oswald', Arial, Helvetica, sans-serif;font-size:13px;font-weight:400;line-height:1.3;color:#8A8A8A;mso-line-height-rule:exactly;">
+              PO#
+            </div>
+            <div class="og-value og-text" style="font-family:'Oswald', Arial, Helvetica, sans-serif;font-size:15px;font-weight:600;line-height:1.35;padding-top:2px;color:#1A1A1A;mso-line-height-rule:exactly;">
+              1223344
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td class="og-card" style="padding:0 0 12px 0;font-family:'Oswald', Arial, Helvetica, sans-serif;line-height:1.35;background-color:#F5F0E8 !important; background-image:linear-gradient(#F5F0E8,#F5F0E8) !important;">
+            <div class="og-label" style="font-family:'Oswald', Arial, Helvetica, sans-serif;font-size:13px;font-weight:400;line-height:1.3;color:#8A8A8A;mso-line-height-rule:exactly;">
+              Vendor
+            </div>
+            <div class="og-value og-text" style="font-family:'Oswald', Arial, Helvetica, sans-serif;font-size:15px;font-weight:600;line-height:1.35;padding-top:2px;color:#1A1A1A;mso-line-height-rule:exactly;">
+              Test
+            </div>
+          </td>
+        </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+      </td>
+      <td class="stack-col stack-col-pad" width="50%" valign="top" style="width:50%;padding:8px;">
+        
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+      class="og-card og-border"
+      style="background-color:#F5F0E8 !important; background-image:linear-gradient(#F5F0E8,#F5F0E8) !important; border:1px solid #E8E4DE;border-radius:14px;overflow:hidden;box-shadow:0 2px 10px rgba(26,26,26,0.05);">
+      
+    <tr>
+      <td class="og-accent-blue" bgcolor="#3B82F6" height="4"
+        style="height:4px;max-height:4px;font-size:0;line-height:0;mso-line-height-rule:exactly;background-color:#3B82F6 !important; background-image:linear-gradient(#3B82F6,#3B82F6) !important;border:0;padding:0;">
+        &nbsp;
+      </td>
+    </tr>
+      <tr>
+        <td class="og-card" style="padding:16px 16px 8px 16px;background-color:#F5F0E8 !important; background-image:linear-gradient(#F5F0E8,#F5F0E8) !important;">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+            <tr>
+              <td width="36" valign="middle" style="padding-right:10px;background-color:#F5F0E8 !important; background-image:linear-gradient(#F5F0E8,#F5F0E8) !important;">
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="32" height="32" class="og-icon"
+                  style="width:32px;height:32px;background-color:#FDECEA !important; background-image:linear-gradient(#FDECEA,#FDECEA) !important; border-radius:8px;">
+                  <tr>
+                    <td align="center" valign="middle" class="og-icon"
+                      style="width:32px;height:32px;text-align:center;vertical-align:middle;background-color:#FDECEA !important; background-image:linear-gradient(#FDECEA,#FDECEA) !important;">
+                      <img src="https://gdrpdiwykmnybmkadlrv.supabase.co/storage/v1/object/public/email-assets/icon-chat.png?v=20260725d" width="20" height="20" alt=""
+                        style="display:block;margin:0 auto;border:0;outline:none;-ms-interpolation-mode:bicubic;" />
+                    </td>
+                  </tr>
+                </table>
+              </td>
+              <td valign="middle" class="og-section-blue" style="background-color:#F5F0E8 !important; background-image:linear-gradient(#F5F0E8,#F5F0E8) !important;">
+                <div class="og-section-blue" style="font-family:'Oswald', Arial, Helvetica, sans-serif;font-size:13px;font-weight:700;letter-spacing:0.10em;text-transform:uppercase;color:#3B82F6;mso-line-height-rule:exactly;">
+                  DETAILS
+                </div>
+              </td>
+            </tr>
+          </table>
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-top:14px;">
+            
+        <tr>
+          <td class="og-card" style="padding:0 0 12px 0;font-family:'Oswald', Arial, Helvetica, sans-serif;line-height:1.35;background-color:#F5F0E8 !important; background-image:linear-gradient(#F5F0E8,#F5F0E8) !important;">
+            <div class="og-label" style="font-family:'Oswald', Arial, Helvetica, sans-serif;font-size:13px;font-weight:400;line-height:1.3;color:#8A8A8A;mso-line-height-rule:exactly;">
+              Notes
+            </div>
+            <div class="og-value og-text" style="font-family:'Oswald', Arial, Helvetica, sans-serif;font-size:15px;font-weight:600;line-height:1.35;padding-top:2px;color:#1A1A1A;mso-line-height-rule:exactly;">
+              Test 2
+            </div>
+          </td>
+        </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+      </td></tr>
+              </table>
+            </td>
+          </tr>
+          
+          
+          <tr>
+            <td class="og-shell" style="padding:0 36px;background-color:#FFFFFF !important; background-image:linear-gradient(#FFFFFF,#FFFFFF) !important;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td class="og-shell og-border" style="border-top:1px solid #E8E4DE;font-size:0;line-height:0;background-color:#FFFFFF !important; background-image:linear-gradient(#FFFFFF,#FFFFFF) !important;">&nbsp;</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td class="og-shell og-footer" style="padding:22px 36px 32px 36px;background-color:#FFFFFF !important; background-image:linear-gradient(#FFFFFF,#FFFFFF) !important;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td class="stack-col og-text" valign="top"
+                    style="font-family:'Oswald', Arial, Helvetica, sans-serif;font-size:13px;line-height:1.55;background-color:#FFFFFF !important; background-image:linear-gradient(#FFFFFF,#FFFFFF) !important;">
+                    <strong class="og-text" style="display:block;font-weight:700;font-size:14px;color:#1A1A1A;">Thank you for using SLST!</strong>
+                    <span class="og-body" style="display:block;padding-top:2px;color:#2E2E2E;">SLST - Staging Log &amp; Shipping Tracker</span>
+                    <span class="og-muted" style="display:block;padding-top:2px;font-size:12px;color:#6B6B6B;">Copyright © 2026 SLST. All rights reserved.</span>
+                  </td>
+                  <td class="stack-col footer-right" valign="middle" align="right"
+                    style="font-family:'Oswald', Arial, Helvetica, sans-serif;font-size:13px;line-height:1.9;white-space:nowrap;background-color:#FFFFFF !important; background-image:linear-gradient(#FFFFFF,#FFFFFF) !important;">
+                    <a class="og-brand" href="mailto:warehouse1@swiftsupply.ca" style="text-decoration:underline;color:#D93223;">
+                      <img src="https://gdrpdiwykmnybmkadlrv.supabase.co/storage/v1/object/public/email-assets/icon-mail.png?v=20260725d" width="14" height="14" alt=""
+                        style="display:inline-block;vertical-align:middle;margin-right:5px;border:0;" />
+                      Email
+                    </a>
+                    &nbsp;&nbsp;&nbsp;
+                    <a class="og-brand" href="https://www.swiftsupply.ca" style="text-decoration:underline;color:#D93223;">
+                      <img src="https://gdrpdiwykmnybmkadlrv.supabase.co/storage/v1/object/public/email-assets/icon-globe.png?v=20260725d" width="14" height="14" alt=""
+                        style="display:inline-block;vertical-align:middle;margin-right:5px;border:0;" />
+                      Website
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+        <!--[if mso]>
+        </td></tr></table>
+        <![endif]-->
+        <div class="og-muted" style="font-family:'Oswald', Arial, Helvetica, sans-serif;font-size:11px;padding-top:18px;color:#6B6B6B;">
+          Sent via SLST · Swift Supply
+        </div>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

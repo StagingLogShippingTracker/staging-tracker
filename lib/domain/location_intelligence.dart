@@ -60,6 +60,35 @@ LocationCategory classifyLocation(String raw) {
 String locationKey(String value) => value.trim().toUpperCase();
 String orderKey(String value) => value.trim().toUpperCase();
 
+/// Most recent non-empty customer for [so] across active staging and shipped.
+String? mostRecentCustomerForSo({
+  required Iterable<StagingEntry> staging,
+  required Iterable<ShippedEntry> shipped,
+  required String so,
+}) {
+  final key = orderKey(so);
+  if (key.isEmpty) return null;
+
+  final candidates = <({String customer, DateTime? at})>[
+    for (final e in staging)
+      if (orderKey(e.so) == key && e.customer.trim().isNotEmpty)
+        (customer: e.customer.trim(), at: e.entryDate),
+    for (final e in shipped)
+      if (orderKey(e.so) == key && e.customer.trim().isNotEmpty)
+        (customer: e.customer.trim(), at: e.shippedAt),
+  ];
+  if (candidates.isEmpty) return null;
+  candidates.sort((a, b) {
+    final aAt = a.at;
+    final bAt = b.at;
+    if (aAt == null && bAt == null) return 0;
+    if (aAt == null) return 1;
+    if (bAt == null) return -1;
+    return bAt.compareTo(aAt);
+  });
+  return candidates.first.customer;
+}
+
 class LocationAssessment {
   const LocationAssessment({
     required this.location,

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:slst/core/theme.dart';
 import 'package:slst/data/app_state.dart';
+import 'package:slst/data/log_view_mode.dart';
 import 'package:slst/domain/models.dart';
 import 'package:slst/domain/status.dart';
 import 'package:slst/features/reports/verification_audit.dart';
@@ -46,9 +48,14 @@ ShippedEntry _shipped({String id = '9', String carrier = 'Day & Ross'}) {
   );
 }
 
-Widget _wrap(Widget child) {
+Widget _wrap(Widget child, SharedPreferences prefs) {
   return ProviderScope(
-    overrides: [currentUserProvider.overrideWithValue(null)],
+    overrides: [
+      currentUserProvider.overrideWithValue(null),
+      logViewModeProvider.overrideWith(
+        (ref) => LogViewModeNotifier(prefs, LogViewMode.list),
+      ),
+    ],
     child: MaterialApp(
       theme: buildSlstTheme(dark: false),
       home: Scaffold(body: SingleChildScrollView(child: child)),
@@ -57,6 +64,13 @@ Widget _wrap(Widget child) {
 }
 
 void main() {
+  late SharedPreferences prefs;
+
+  setUp(() async {
+    SharedPreferences.setMockInitialValues({});
+    prefs = await SharedPreferences.getInstance();
+  });
+
   test('StatusRules maps Ship Today/Tomorrow to YMD', () {
     final today = StatusRules.todayYmd();
     final tomorrow = StatusRules.tomorrowYmd();
@@ -167,14 +181,17 @@ void main() {
 
   testWidgets('KPI card renders label, value and red accent', (tester) async {
     await tester.pumpWidget(
-      _wrap(const KpiCard(label: 'Orders', value: 12, icon: Icons.description)),
+      _wrap(
+        const KpiCard(label: 'Orders', value: 12, icon: Icons.description),
+        prefs,
+      ),
     );
     expect(find.text('ORDERS'), findsOneWidget);
     expect(find.text('12'), findsOneWidget);
   });
 
   testWidgets('Status legend lists all seven statuses', (tester) async {
-    await tester.pumpWidget(_wrap(const StagingStatusLegend()));
+    await tester.pumpWidget(_wrap(const StagingStatusLegend(), prefs));
     for (final label in [
       'Partial',
       'Ship Today',
@@ -195,7 +212,7 @@ void main() {
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
     await tester.pumpWidget(
-      _wrap(StagingLogCard(entries: [_staging()], expanded: true)),
+      _wrap(StagingLogCard(entries: [_staging()], expanded: true), prefs),
     );
     await tester.pumpAndSettle();
     expect(find.text('Staging Entries'), findsOneWidget);
@@ -220,12 +237,13 @@ void main() {
           ],
           expanded: true,
         ),
+        prefs,
       ),
     );
     await tester.pumpAndSettle();
     expect(find.text('Shipped Log'), findsOneWidget);
-    expect(find.text('Day & Ross'), findsOneWidget);
-    expect(find.text('RETURNED TO STOCK'), findsOneWidget);
+    expect(find.textContaining('Day & Ross'), findsWidgets);
+    expect(find.textContaining('RETURNED TO STOCK'), findsWidgets);
   });
 
   testWidgets('Order History is complete and fits a phone', (tester) async {

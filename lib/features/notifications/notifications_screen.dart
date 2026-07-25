@@ -3,9 +3,55 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme.dart';
 import '../../data/app_state.dart';
+import '../../domain/models.dart';
 import '../../platform/photo_picker.dart';
 import '../shared/entry_suggestion_fields.dart';
 import '../shared/widgets.dart';
+
+enum _NotifyKind { po, bulkPo, returnNotify }
+
+class _BulkPoRow {
+  _BulkPoRow()
+      : po = TextEditingController(),
+        vendor = TextEditingController(),
+        pmEmail = TextEditingController(),
+        details = TextEditingController(),
+        skids = TextEditingController(),
+        boxes = TextEditingController(),
+        crates = TextEditingController(),
+        pipe = TextEditingController(),
+        other = TextEditingController();
+
+  final TextEditingController po;
+  final TextEditingController vendor;
+  final TextEditingController pmEmail;
+  final TextEditingController details;
+  final TextEditingController skids;
+  final TextEditingController boxes;
+  final TextEditingController crates;
+  final TextEditingController pipe;
+  final TextEditingController other;
+
+  void dispose() {
+    po.dispose();
+    vendor.dispose();
+    pmEmail.dispose();
+    details.dispose();
+    skids.dispose();
+    boxes.dispose();
+    crates.dispose();
+    pipe.dispose();
+    other.dispose();
+  }
+
+  ContainerCounts get containers => countsFromControllers(
+        skids: skids,
+        boxes: boxes,
+        crates: crates,
+        pipe: pipe,
+        other: other,
+      );
+}
 
 class NotificationsScreen extends ConsumerStatefulWidget {
   const NotificationsScreen({super.key});
@@ -16,23 +62,29 @@ class NotificationsScreen extends ConsumerStatefulWidget {
 }
 
 class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
+  _NotifyKind _kind = _NotifyKind.po;
   final _po = TextEditingController();
   final _so = TextEditingController();
+  final _vendor = TextEditingController();
   final _customer = TextEditingController();
   final _pmEmail = TextEditingController();
   final _details = TextEditingController();
-  bool _returnMode = false;
   bool _busy = false;
   final _photos = <PhotoBytes>[];
   final _picker = PhotoPickerService();
+  final _bulkRows = <_BulkPoRow>[_BulkPoRow()];
 
   @override
   void dispose() {
     _po.dispose();
     _so.dispose();
+    _vendor.dispose();
     _customer.dispose();
     _pmEmail.dispose();
     _details.dispose();
+    for (final row in _bulkRows) {
+      row.dispose();
+    }
     super.dispose();
   }
 
@@ -45,23 +97,51 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     setState(() => _busy = true);
     try {
       final ops = ref.read(operationsProvider);
-      if (_returnMode) {
-        await ops.sendReturnNotification(
-          so: _so.text.trim(),
-          customer: _customer.text.trim(),
-          pmEmail: _pmEmail.text.trim(),
-          details: _details.text.trim(),
-          photos: _photos,
-        );
-      } else {
-        await ops.sendPoNotification(
-          po: _po.text.trim(),
-          customer: _customer.text.trim(),
-          pmEmail: _pmEmail.text.trim(),
-          linkedSo: _so.text.trim().isEmpty ? null : _so.text.trim(),
-          details: _details.text.trim(),
-          photos: _photos,
-        );
+      switch (_kind) {
+        case _NotifyKind.returnNotify:
+          await ops.sendReturnNotification(
+            so: _so.text.trim(),
+            customer: _customer.text.trim(),
+            pmEmail: _pmEmail.text.trim(),
+            details: _details.text.trim(),
+            photos: _photos,
+          );
+        case _NotifyKind.po:
+          await ops.sendPoNotification(
+            po: _po.text.trim(),
+            vendor: _vendor.text.trim(),
+            pmEmail: _pmEmail.text.trim(),
+            linkedSo: _so.text.trim().isEmpty ? null : _so.text.trim(),
+            details: _details.text.trim(),
+            photos: _photos,
+          );
+        case _NotifyKind.bulkPo:
+          final items = <BulkPoItem>[];
+          for (final row in _bulkRows) {
+            final po = row.po.text.trim();
+            if (po.isEmpty) continue;
+            final counts = row.containers;
+            if (counts.total <= 0) {
+              throw Exception('PO $po needs at least one container.');
+            }
+            final email = row.pmEmail.text.trim();
+            if (!email.contains('@')) {
+              throw Exception('PO $po needs a valid PM email.');
+            }
+            items.add(
+              BulkPoItem(
+                po: po,
+                vendor: row.vendor.text.trim(),
+                pmEmail: email,
+                containers: counts,
+                details: row.details.text.trim(),
+              ),
+            );
+          }
+          if (items.isEmpty) {
+            throw Exception('Add at least one PO with a PO #.');
+          }
+          await ops.sendBulkPoNotification(items: items);
       }
       if (mounted) {
         showOk(context, 'Notification sent');
@@ -105,72 +185,33 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        SegmentedButton<bool>(
+        SegmentedButton<_NotifyKind>(
           segments: const [
             ButtonSegment(
-              value: false,
+              value: _NotifyKind.po,
               icon: Icon(Icons.receipt_long),
-              label: Text('PO notify'),
+              label: Text('PO Notify'),
             ),
             ButtonSegment(
-              value: true,
+              value: _NotifyKind.bulkPo,
+              icon: Icon(Icons.playlist_add_check),
+              label: Text('Bulk PO Notify'),
+            ),
+            ButtonSegment(
+              value: _NotifyKind.returnNotify,
               icon: Icon(Icons.keyboard_return),
-              label: Text('Return notify'),
+              label: Text('Return Notify'),
             ),
           ],
-          selected: {_returnMode},
+          selected: {_kind},
           showSelectedIcon: false,
-          onSelectionChanged: (s) => setState(() => _returnMode = s.first),
+          onSelectionChanged: (s) => setState(() => _kind = s.first),
         ),
         const SizedBox(height: 16),
-        Card(
-          margin: EdgeInsets.zero,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (!_returnMode) ...[
-                  TextField(
-                    controller: _po,
-                    decoration: const InputDecoration(labelText: 'PO #'),
-                  ),
-                  const SizedBox(height: 12),
-                ],
-                TextField(
-                  controller: _so,
-                  decoration: InputDecoration(
-                    labelText: _returnMode ? 'SO #' : 'Linked SO (optional)',
-                  ),
-                ),
-                const SizedBox(height: 12),
-                CustomerSuggestionField(controller: _customer),
-                const SizedBox(height: 12),
-                ContactEmailField(controller: _pmEmail),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _details,
-                  decoration: const InputDecoration(labelText: 'Details'),
-                  maxLines: 4,
-                ),
-                const SizedBox(height: 12),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: PhotoAttachButtons(
-                    picker: _picker,
-                    photos: _photos,
-                    attachLabel: 'Attach photos',
-                    onChanged: (next) => setState(() {
-                      _photos
-                        ..clear()
-                        ..addAll(next);
-                    }),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+        if (_kind == _NotifyKind.bulkPo)
+          _buildBulkForm(scheme)
+        else
+          _buildSingleForm(),
         const SizedBox(height: 16),
         FilledButton.icon(
           style: FilledButton.styleFrom(
@@ -198,6 +239,152 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
         ),
         const BrandFooter(),
       ],
+    );
+  }
+
+  Widget _buildSingleForm() {
+    final isReturn = _kind == _NotifyKind.returnNotify;
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (!isReturn) ...[
+              TextField(
+                controller: _po,
+                decoration: const InputDecoration(labelText: 'PO #'),
+              ),
+              const SizedBox(height: 12),
+            ],
+            TextField(
+              controller: _so,
+              decoration: InputDecoration(
+                labelText: isReturn ? 'SO #' : 'Linked SO (optional)',
+              ),
+            ),
+            const SizedBox(height: 12),
+            if (isReturn)
+              CustomerSuggestionField(controller: _customer)
+            else
+              TextField(
+                controller: _vendor,
+                decoration: const InputDecoration(labelText: 'Vendor'),
+                textCapitalization: TextCapitalization.words,
+              ),
+            const SizedBox(height: 12),
+            ContactEmailField(controller: _pmEmail),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _details,
+              decoration: const InputDecoration(labelText: 'Details'),
+              maxLines: 4,
+            ),
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: PhotoAttachButtons(
+                picker: _picker,
+                photos: _photos,
+                attachLabel: 'Attach photos',
+                onChanged: (next) => setState(() {
+                  _photos
+                    ..clear()
+                    ..addAll(next);
+                }),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBulkForm(ColorScheme scheme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'Enter each morning PO with containers, vendor, PM email, and notes. '
+          'No photos or scans — one digest email is sent per PM.',
+          style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
+        ),
+        const SizedBox(height: 12),
+        for (var i = 0; i < _bulkRows.length; i++) ...[
+          _bulkCard(i),
+          const SizedBox(height: 12),
+        ],
+        OutlinedButton.icon(
+          onPressed: () => setState(() => _bulkRows.add(_BulkPoRow())),
+          icon: const Icon(Icons.add),
+          label: const Text('Add another PO'),
+        ),
+      ],
+    );
+  }
+
+  Widget _bulkCard(int index) {
+    final row = _bulkRows[index];
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Text(
+                  'PO ${index + 1}',
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+                const Spacer(),
+                if (_bulkRows.length > 1)
+                  IconButton(
+                    tooltip: 'Remove',
+                    onPressed: () => setState(() {
+                      _bulkRows.removeAt(index).dispose();
+                    }),
+                    icon: const Icon(Icons.close),
+                  ),
+              ],
+            ),
+            TextField(
+              controller: row.po,
+              decoration: const InputDecoration(labelText: 'PO #'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: row.vendor,
+              decoration: const InputDecoration(labelText: 'Vendor'),
+              textCapitalization: TextCapitalization.words,
+            ),
+            const SizedBox(height: 12),
+            ContactEmailField(controller: row.pmEmail),
+            const SizedBox(height: 12),
+            const Text(
+              'Containers received',
+              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+            ),
+            const SizedBox(height: 8),
+            ContainerInputs(
+              skids: row.skids,
+              boxes: row.boxes,
+              crates: row.crates,
+              pipe: row.pipe,
+              other: row.other,
+              onChanged: () => setState(() {}),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: row.details,
+              decoration: const InputDecoration(labelText: 'Comment (Details)'),
+              maxLines: 3,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

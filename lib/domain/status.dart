@@ -29,7 +29,17 @@ class StatusRules {
       if (dbStatus.compareTo(today) <= 0) return 'Ship Today';
       if (dbStatus == tomorrow) return 'Ship Tomorrow';
     }
+    // Normalize legacy "Awaiting Shipping Instructions" to the UI label.
+    if (isAwaitingInstructions(dbStatus)) return 'Awaiting Instructions';
     return dbStatus;
+  }
+
+  /// True for both current and legacy awaiting-instruction status labels.
+  static bool isAwaitingInstructions(String dbStatus) {
+    final lower = dbStatus.trim().toLowerCase();
+    return lower == 'awaiting instructions' ||
+        lower == 'awaiting shipping instructions' ||
+        (lower.contains('awaiting') && lower.contains('instruction'));
   }
 
   static String toDb(String uiStatus, {String? futureDateYmd}) {

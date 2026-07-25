@@ -30,9 +30,7 @@ Future<bool> confirmPartialShipAdvisory(
           Expanded(
             child: Text(
               'Other locations remain',
-              style: Theme.of(dialogContext).textTheme.titleLarge?.copyWith(
-                fontFamily: kBodyFontFamily,
-              ),
+              style: Theme.of(dialogContext).textTheme.titleLarge,
             ),
           ),
           IconButton(
@@ -99,9 +97,7 @@ Future<bool> confirmSoMultiEntryAdvisory(
           Expanded(
             child: Text(
               title,
-              style: Theme.of(dialogContext).textTheme.titleLarge?.copyWith(
-                fontFamily: kBodyFontFamily,
-              ),
+              style: Theme.of(dialogContext).textTheme.titleLarge,
             ),
           ),
           IconButton(

@@ -1,81 +1,290 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
-/// SLST brand tokens carried over from the legacy web app (style.css).
+/// Industrial Command Center dark operations palette + ThemeData.
 ///
-/// The Windows and Android redesigns evolved slightly different names for the
-/// same palette; both naming schemes are kept here as aliases so every screen
-/// (desktop-dense tables and touch-first Material 3 surfaces alike) resolves to
-/// an identical colour.
-class SlstColors {
-  // Brand reds.
-  static const brand = Color(0xFFD93223);
-  static const brandHover = Color(0xFFB92820);
-  static const brandDark = Color(0xFFB92820); // alias of brandHover (Android)
-  static const brandLight = Color(0xFFBF4F45);
-  static const brandSoft = Color(0x14D93223); // rgba(217,50,35,0.08)
+/// Windows overhaul default. Prefer [IndustrialTheme] tokens and helpers for
+/// new UI; [SlstColors] / [buildSlstTheme] remain for existing call sites.
+class IndustrialTheme {
+  // Deep dark operations palette.
+  static const Color darkBase = Color(0xFF090D16); // Scaffold background
+  static const Color darkSurface = Color(0xFF1F2937); // Card & panel
+  static const Color darkHeader = Color(0xFF111827); // Header & sidebar
+  static const Color borderStroke = Color(0xFF374151); // Panel borders
+  static const Color textPrimary = Color(0xFFF9FAFB); // Main readable text
+  static const Color textMuted = Color(0xFF9CA3AF); // Subtitles / secondary
 
-  // Light surfaces.
-  static const surface = Color(0xFFFFFFFF); // white cards
-  static const card = Color(0xFFFFFFFF); // alias of surface (Android)
-  static const surfaceMuted = Color(0xFFF8FAFC);
-  static const surfaceSubtle = Color(0xFFF3F5F8);
-  static const surfaceAlt = Color(0xFFF3F5F8); // alias of surfaceSubtle (Android)
-  static const border = Color(0xFFE2E8F0);
-  static const borderStrong = Color(0xFFCBD5E1);
+  // Status accent tokens.
+  static const Color mintGreen = Color(0xFF10B981); // Today / ready / live sync
+  static const Color skyBlue = Color(0xFF3B82F6); // Tomorrow / transit / accent
+  static const Color amber = Color(0xFFF59E0B); // Partial / awaiting
+  static const Color purple = Color(0xFF8B5CF6); // Future / special action
+  static const Color slateMuted = Color(0xFF4B5563); // Delivered / completed
 
-  // Dark surfaces.
-  static const darkSurface = Color(0xFF1E293B);
-  static const darkSurfaceMuted = Color(0xFF334155);
-  static const darkSurfaceSubtle = Color(0xFF0F172A);
-  static const darkBorder = Color(0xFF475569);
-  static const darkBorderStrong = Color(0xFF64748B);
+  static ThemeData get darkTheme {
+    final inter = GoogleFonts.interTextTheme(
+      ThemeData(brightness: Brightness.dark).textTheme,
+    ).apply(
+      bodyColor: textPrimary,
+      displayColor: textPrimary,
+    );
 
-  // Text.
-  static const ink = Color(0xFF1E293B);
-  static const muted = Color(0xFF64748B);
-  static const subtle = Color(0xFF94A3B8);
-  static const darkInk = Color(0xFFF1F5F9);
-  static const darkMuted = Color(0xFF94A3B8);
+    final textTheme = inter.copyWith(
+      headlineMedium: GoogleFonts.inter(
+        fontSize: 20,
+        fontWeight: FontWeight.bold,
+        color: textPrimary,
+      ),
+      titleMedium: GoogleFonts.inter(
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+        color: textPrimary,
+      ),
+      bodyMedium: GoogleFonts.inter(fontSize: 13, color: textPrimary),
+      bodySmall: GoogleFonts.inter(fontSize: 12, color: textMuted),
+      labelSmall: GoogleFonts.inter(
+        fontSize: 11,
+        fontWeight: FontWeight.bold,
+        letterSpacing: 0.8,
+        color: textMuted,
+      ),
+    );
 
-  // Action colours (legacy web .btn-* classes).
-  static const danger = Color(0xFFDC2626);
-  static const success = Color(0xFF059669);
-  static const green = Color(0xFF059669); // alias of success (Android)
-  static const info = Color(0xFF0284C7);
-  static const blue = Color(0xFF0284C7); // alias of info (Android)
-  static const blueBright = Color(0xFF3B82F6);
-  static const notify = Color(0xFF3B82F6); // alias of blueBright
-  static const purple = Color(0xFF7C3AED);
-  static const slate = Color(0xFF475569);
-  static const warning = Color(0xFFF59E0B);
+    final scheme = ColorScheme.fromSeed(
+      seedColor: skyBlue,
+      brightness: Brightness.dark,
+      surface: darkSurface,
+    ).copyWith(
+      primary: skyBlue,
+      onPrimary: textPrimary,
+      secondary: mintGreen,
+      onSecondary: darkBase,
+      tertiary: purple,
+      onTertiary: textPrimary,
+      surface: darkSurface,
+      onSurface: textPrimary,
+      onSurfaceVariant: textMuted,
+      surfaceContainerLowest: darkBase,
+      surfaceContainerLow: darkHeader,
+      surfaceContainer: darkSurface,
+      surfaceContainerHigh: const Color(0xFF273549),
+      surfaceContainerHighest: borderStroke,
+      outline: borderStroke,
+      outlineVariant: borderStroke,
+      error: const Color(0xFFEF4444),
+    );
 
-  // Staging status row colours (light theme).
-  static const statusPartial = Color(0xFFFFEDD5);
-  static const statusToday = Color(0xFFFEE2E2);
-  static const statusTomorrow = Color(0xFFFEF9C3);
-  static const statusFuture = Color(0xFFDBEAFE);
-  static const statusCorpPick = Color(0xFFDCFCE7);
-  static const statusCustomerPick = Color(0xFFF3E8FF);
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.dark,
+      colorScheme: scheme,
+      scaffoldBackgroundColor: darkBase,
+      primaryColor: darkHeader,
+      textTheme: textTheme,
+      fontFamily: GoogleFonts.inter().fontFamily,
+      appBarTheme: AppBarTheme(
+        backgroundColor: darkHeader,
+        foregroundColor: textPrimary,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
+        centerTitle: false,
+        titleTextStyle: textTheme.titleMedium?.copyWith(fontSize: 16),
+      ),
+      cardTheme: CardThemeData(
+        color: darkSurface,
+        elevation: 0,
+        margin: EdgeInsets.zero,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          side: const BorderSide(color: borderStroke, width: 1),
+          borderRadius: BorderRadius.circular(6),
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: darkHeader,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(6),
+          borderSide: const BorderSide(color: borderStroke),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(6),
+          borderSide: const BorderSide(color: borderStroke),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(6),
+          borderSide: const BorderSide(color: skyBlue, width: 1.5),
+        ),
+      ),
+      dividerTheme: const DividerThemeData(
+        color: borderStroke,
+        thickness: 1,
+        space: 1,
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: darkSurface,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+          side: const BorderSide(color: borderStroke),
+        ),
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: darkSurface,
+        showDragHandle: false,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(8)),
+        ),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: darkHeader,
+        contentTextStyle: GoogleFonts.inter(color: textPrimary, fontSize: 13),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+      ),
+      tooltipTheme: TooltipThemeData(
+        textStyle: GoogleFonts.inter(color: textPrimary, fontSize: 12),
+        decoration: BoxDecoration(
+          color: darkHeader,
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(color: borderStroke),
+        ),
+      ),
+      scrollbarTheme: ScrollbarThemeData(
+        thumbVisibility: const WidgetStatePropertyAll(true),
+        thumbColor: WidgetStatePropertyAll(borderStroke),
+        radius: const Radius.circular(4),
+        thickness: const WidgetStatePropertyAll(8),
+      ),
+      dataTableTheme: DataTableThemeData(
+        headingTextStyle: GoogleFonts.inter(
+          fontWeight: FontWeight.w600,
+          fontSize: 12,
+          letterSpacing: 0.8,
+          color: textMuted,
+        ),
+        dataTextStyle: GoogleFonts.inter(fontSize: 13, color: textPrimary),
+        dividerThickness: 1,
+        headingRowColor: const WidgetStatePropertyAll(darkHeader),
+      ),
+      navigationRailTheme: const NavigationRailThemeData(
+        backgroundColor: darkHeader,
+        indicatorColor: Color(0x333B82F6),
+        selectedIconTheme: IconThemeData(color: skyBlue),
+        unselectedIconTheme: IconThemeData(color: textMuted),
+        selectedLabelTextStyle: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: textPrimary,
+        ),
+        unselectedLabelTextStyle: TextStyle(fontSize: 12, color: textMuted),
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: skyBlue,
+        foregroundColor: textPrimary,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+      chipTheme: ChipThemeData(
+        backgroundColor: darkHeader,
+        side: const BorderSide(color: borderStroke),
+        labelStyle: GoogleFonts.inter(fontSize: 12, color: textPrimary),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+      ),
+      listTileTheme: const ListTileThemeData(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(6)),
+        ),
+      ),
+    );
+  }
 
-  // Staging status row colours (dark theme).
-  static const statusPartialDark = Color(0x33F97316);
-  static const statusTodayDark = Color(0x33EF4444);
-  static const statusTomorrowDark = Color(0x33EAB308);
-  static const statusFutureDark = Color(0x333B82F6);
-  static const statusCorpPickDark = Color(0x3322C55E);
-  static const statusCustomerPickDark = Color(0x33A855F7);
-
-  // Legacy status fills used by [statusStyleFor] (Android chip/card tints).
-  static const shipToday = Color(0xFFFEE2E2);
-  static const shipTomorrow = Color(0xFFFEF3C7);
-  static const partial = Color(0xFFFFEDD5);
-  static const future = Color(0xFFDBEAFE);
-  static const ready = Color(0xFFDCFCE7);
-  static const pickup = Color(0xFFF3E8FF);
-  static const hold = Color(0xFFE2E8F0);
+  /// JetBrains Mono for SO numbers, UUIDs, weights, and timestamps.
+  static TextStyle mono({
+    double fontSize = 13,
+    FontWeight fontWeight = FontWeight.normal,
+    Color color = textPrimary,
+  }) {
+    return GoogleFonts.jetBrainsMono(
+      fontSize: fontSize,
+      fontWeight: fontWeight,
+      color: color,
+    );
+  }
 }
 
-/// Resolved colours + icon for one staging status, adapted to light/dark.
+/// Legacy colour aliases mapped onto industrial tokens so existing screens
+/// keep compiling during the phased overhaul.
+class SlstColors {
+  // Brand / accents → industrial primary accents.
+  static const brand = IndustrialTheme.skyBlue;
+  static const brandHover = Color(0xFF2563EB);
+  static const brandDark = Color(0xFF2563EB);
+  static const brandLight = Color(0xFF60A5FA);
+  static const brandSoft = Color(0x143B82F6);
+
+  // Surfaces (industrial dark).
+  static const surface = IndustrialTheme.darkSurface;
+  static const card = IndustrialTheme.darkSurface;
+  static const surfaceMuted = IndustrialTheme.darkBase;
+  static const surfaceSubtle = IndustrialTheme.darkHeader;
+  static const surfaceAlt = IndustrialTheme.darkHeader;
+  static const border = IndustrialTheme.borderStroke;
+  static const borderStrong = Color(0xFF4B5563);
+
+  static const darkSurface = IndustrialTheme.darkSurface;
+  static const darkSurfaceMuted = IndustrialTheme.darkHeader;
+  static const darkSurfaceSubtle = IndustrialTheme.darkBase;
+  static const darkBorder = IndustrialTheme.borderStroke;
+  static const darkBorderStrong = Color(0xFF4B5563);
+
+  // Text.
+  static const ink = IndustrialTheme.textPrimary;
+  static const muted = IndustrialTheme.textMuted;
+  static const subtle = Color(0xFF6B7280);
+  static const darkInk = IndustrialTheme.textPrimary;
+  static const darkMuted = IndustrialTheme.textMuted;
+
+  // Action colours.
+  static const danger = Color(0xFFEF4444);
+  static const success = IndustrialTheme.mintGreen;
+  static const green = IndustrialTheme.mintGreen;
+  static const info = IndustrialTheme.skyBlue;
+  static const blue = IndustrialTheme.skyBlue;
+  static const blueBright = IndustrialTheme.skyBlue;
+  static const notify = IndustrialTheme.skyBlue;
+  static const purple = IndustrialTheme.purple;
+  static const slate = IndustrialTheme.slateMuted;
+  static const warning = IndustrialTheme.amber;
+
+  // Staging status row washes (dark industrial tints).
+  static const statusPartial = Color(0x33F59E0B);
+  static const statusToday = Color(0x3310B981);
+  static const statusTomorrow = Color(0x333B82F6);
+  static const statusFuture = Color(0x338B5CF6);
+  static const statusCorpPick = Color(0x3310B981);
+  static const statusCustomerPick = Color(0x338B5CF6);
+
+  static const statusPartialDark = Color(0x33F59E0B);
+  static const statusTodayDark = Color(0x3310B981);
+  static const statusTomorrowDark = Color(0x333B82F6);
+  static const statusFutureDark = Color(0x338B5CF6);
+  static const statusCorpPickDark = Color(0x3310B981);
+  static const statusCustomerPickDark = Color(0x338B5CF6);
+
+  // Legacy status fills used by [statusStyleFor].
+  static const shipToday = Color(0x3310B981);
+  static const shipTomorrow = Color(0x333B82F6);
+  static const partial = Color(0x33F59E0B);
+  static const future = Color(0x338B5CF6);
+  static const ready = Color(0x3310B981);
+  static const pickup = Color(0x338B5CF6);
+  static const hold = Color(0x334B5563);
+}
+
+/// Resolved colours + icon for one staging status.
 class StatusStyle {
   const StatusStyle({
     required this.label,
@@ -101,313 +310,85 @@ StatusStyle statusStyleFor({
   required bool overdue,
   required Brightness brightness,
 }) {
-  final dark = brightness == Brightness.dark;
-
-  StatusStyle build(String label, Color lightFill, Color accent, IconData icon) {
-    if (!dark) {
-      return StatusStyle(label: label, fill: lightFill, accent: accent, icon: icon);
-    }
-    final hsl = HSLColor.fromColor(accent);
-    final darkAccent =
-        hsl.withLightness((hsl.lightness + 0.28).clamp(0.0, 1.0)).toColor();
-    return StatusStyle(
-      label: label,
-      fill: darkAccent.withValues(alpha: 0.16),
-      accent: darkAccent,
-      icon: icon,
-    );
+  StatusStyle build(String label, Color fill, Color accent, IconData icon) {
+    return StatusStyle(label: label, fill: fill, accent: accent, icon: icon);
   }
 
   final lower = uiLabel.toLowerCase();
   if (overdue) {
-    return build('Overdue', SlstColors.shipToday, const Color(0xFF991B1B),
-        Icons.warning_amber_rounded);
+    return build(
+      'Overdue',
+      const Color(0x33EF4444),
+      const Color(0xFFEF4444),
+      Icons.warning_amber_rounded,
+    );
   }
   if (lower == 'ship today') {
-    return build('Ship Today', SlstColors.shipToday, const Color(0xFFB91C1C),
-        Icons.local_shipping);
+    return build(
+      'Ship Today',
+      SlstColors.shipToday,
+      IndustrialTheme.mintGreen,
+      Icons.local_shipping,
+    );
   }
   if (lower == 'ship tomorrow') {
-    return build('Ship Tomorrow', SlstColors.shipTomorrow,
-        const Color(0xFFA16207), Icons.wb_twilight);
+    return build(
+      'Ship Tomorrow',
+      SlstColors.shipTomorrow,
+      IndustrialTheme.skyBlue,
+      Icons.wb_twilight,
+    );
   }
   if (lower == 'partial') {
-    return build('Partial', SlstColors.partial, const Color(0xFFC2410C),
-        Icons.donut_large);
+    return build(
+      'Partial',
+      SlstColors.partial,
+      IndustrialTheme.amber,
+      Icons.donut_large,
+    );
   }
   if (isDateStatus) {
-    return build(uiLabel, SlstColors.future, const Color(0xFF1D4ED8),
-        Icons.event);
+    return build(
+      uiLabel,
+      SlstColors.future,
+      IndustrialTheme.purple,
+      Icons.event,
+    );
   }
   if (lower.contains('corp pick')) {
-    return build('Corp Pick', SlstColors.ready, const Color(0xFF047857),
-        Icons.store_mall_directory);
+    return build(
+      'Corp Pick',
+      SlstColors.ready,
+      IndustrialTheme.mintGreen,
+      Icons.store_mall_directory,
+    );
   }
   if (lower.contains('customer pick')) {
-    return build('Customer Pick-Up', SlstColors.pickup,
-        const Color(0xFF7E22CE), Icons.hail);
+    return build(
+      'Customer Pick-Up',
+      SlstColors.pickup,
+      IndustrialTheme.purple,
+      Icons.hail,
+    );
   }
   if (lower.contains('awaiting')) {
-    return build('Awaiting Instructions', SlstColors.hold,
-        const Color(0xFF475569), Icons.hourglass_empty);
+    return build(
+      'Awaiting Instructions',
+      SlstColors.hold,
+      IndustrialTheme.amber,
+      Icons.hourglass_empty,
+    );
   }
-  return build(uiLabel, SlstColors.surfaceAlt, SlstColors.muted,
-      Icons.inventory_2_outlined);
-}
-
-TextTheme _brandTextTheme(TextTheme base) {
-  final oswald = base.apply(
-    fontFamily: kBodyFontFamily,
-    displayColor: base.bodyLarge?.color,
-    bodyColor: base.bodyLarge?.color,
-  );
-  return oswald.copyWith(
-    displayLarge: oswald.displayLarge?.copyWith(fontWeight: FontWeight.w600),
-    displayMedium: oswald.displayMedium?.copyWith(fontWeight: FontWeight.w600),
-    displaySmall: oswald.displaySmall?.copyWith(fontWeight: FontWeight.w600),
-    headlineLarge: oswald.headlineLarge?.copyWith(fontWeight: FontWeight.w600),
-    headlineMedium: oswald.headlineMedium?.copyWith(fontWeight: FontWeight.w600),
-    headlineSmall: oswald.headlineSmall?.copyWith(fontWeight: FontWeight.w600),
-    titleLarge: oswald.titleLarge?.copyWith(fontWeight: FontWeight.w600),
-    titleMedium: oswald.titleMedium?.copyWith(fontWeight: FontWeight.w500),
+  return build(
+    uiLabel,
+    IndustrialTheme.darkHeader,
+    IndustrialTheme.textMuted,
+    Icons.inventory_2_outlined,
   );
 }
 
-const kBrandFontFamily = 'SLSTBrand';
-const kBodyFontFamily = 'Oswald';
-
+/// Builds the app [ThemeData]. Always returns the industrial dark theme;
+/// [dark] is retained for call-site compatibility.
 ThemeData buildSlstTheme({required bool dark}) {
-  final scheme = dark
-      ? ColorScheme.fromSeed(
-          seedColor: SlstColors.brand,
-          brightness: Brightness.dark,
-        ).copyWith(
-          // Pin brand + slate tokens so seed drift doesn't wash out red or
-          // float surfaces away from the Windows/Android shared shell.
-          primary: SlstColors.brand,
-          onPrimary: Colors.white,
-          primaryContainer: const Color(0xFF7F1D1D),
-          onPrimaryContainer: const Color(0xFFFFDAD5),
-          secondary: const Color(0xFF7DD3FC),
-          onSecondary: const Color(0xFF0C4A6E),
-          secondaryContainer: const Color(0xFF075985),
-          onSecondaryContainer: const Color(0xFFE0F2FE),
-          tertiary: const Color(0xFFC4B5FD),
-          onTertiary: const Color(0xFF4C1D95),
-          tertiaryContainer: const Color(0xFF5B21B6),
-          onTertiaryContainer: const Color(0xFFEDE9FE),
-          surface: SlstColors.darkSurfaceSubtle,
-          onSurface: SlstColors.darkInk,
-          onSurfaceVariant: SlstColors.darkMuted,
-          surfaceContainerLowest: const Color(0xFF0B1220),
-          surfaceContainerLow: SlstColors.darkSurface,
-          surfaceContainer: SlstColors.darkSurface,
-          surfaceContainerHigh: SlstColors.darkSurfaceMuted,
-          surfaceContainerHighest: const Color(0xFF3F4F63),
-          outline: SlstColors.darkBorderStrong,
-          outlineVariant: SlstColors.darkBorder,
-        )
-      : ColorScheme.fromSeed(
-          seedColor: SlstColors.brand,
-          brightness: Brightness.light,
-        ).copyWith(
-          primary: SlstColors.brand,
-          onPrimary: Colors.white,
-          primaryContainer: const Color(0xFFFFDAD5),
-          onPrimaryContainer: const Color(0xFF73150C),
-          secondary: SlstColors.blue,
-          onSecondary: Colors.white,
-          secondaryContainer: const Color(0xFFDBEFFB),
-          onSecondaryContainer: const Color(0xFF075985),
-          tertiary: SlstColors.purple,
-          onTertiary: Colors.white,
-          tertiaryContainer: const Color(0xFFEDE9FE),
-          onTertiaryContainer: const Color(0xFF5B21B6),
-          surface: SlstColors.surface,
-          onSurface: SlstColors.ink,
-          onSurfaceVariant: SlstColors.muted,
-          surfaceContainerLowest: Colors.white,
-          surfaceContainerLow: Colors.white,
-          surfaceContainer: SlstColors.surfaceAlt,
-          surfaceContainerHigh: const Color(0xFFECEFF3),
-          surfaceContainerHighest: const Color(0xFFE5E9EF),
-          outlineVariant: const Color(0xFFE2E8F0),
-        );
-
-  final base = ThemeData(
-    colorScheme: scheme,
-    useMaterial3: true,
-    fontFamily: kBodyFontFamily,
-  );
-  final textTheme = _brandTextTheme(base.textTheme);
-
-  // Desktop density: keep the touch-first Material 3 look on mobile while
-  // giving the Windows shell tighter tables, always-visible scrollbars and
-  // tooltips.
-  return base.copyWith(
-    textTheme: textTheme,
-    // The M3 scheme surface (F8FAFC) reads as the light "muted" backdrop; use
-    // it for the scaffold so cards (white) still stand out on both platforms.
-    scaffoldBackgroundColor: dark ? scheme.surface : SlstColors.surfaceMuted,
-    appBarTheme: AppBarTheme(
-      backgroundColor: scheme.surface,
-      foregroundColor: scheme.onSurface,
-      elevation: 0,
-      scrolledUnderElevation: 2,
-      surfaceTintColor: scheme.surfaceTint,
-      centerTitle: false,
-      titleTextStyle: textTheme.titleLarge?.copyWith(
-        fontSize: 20,
-        color: scheme.onSurface,
-      ),
-    ),
-    navigationBarTheme: NavigationBarThemeData(
-      backgroundColor: dark ? scheme.surfaceContainerLow : Colors.white,
-      indicatorColor: dark ? scheme.primaryContainer : SlstColors.brandSoft,
-      iconTheme: WidgetStateProperty.resolveWith(
-        (states) => IconThemeData(
-          color: states.contains(WidgetState.selected)
-              ? (dark ? scheme.onPrimaryContainer : SlstColors.brand)
-              : scheme.onSurfaceVariant,
-        ),
-      ),
-      labelTextStyle: WidgetStateProperty.resolveWith(
-        (states) => TextStyle(
-          fontSize: 12,
-          fontWeight: states.contains(WidgetState.selected)
-              ? FontWeight.w700
-              : FontWeight.w500,
-          color: states.contains(WidgetState.selected)
-              ? (dark ? scheme.onSurface : SlstColors.brand)
-              : scheme.onSurfaceVariant,
-        ),
-      ),
-    ),
-    navigationRailTheme: NavigationRailThemeData(
-      backgroundColor: dark ? scheme.surfaceContainerLow : Colors.white,
-      indicatorColor: dark ? scheme.primaryContainer : SlstColors.brandSoft,
-      selectedIconTheme: IconThemeData(
-        color: dark ? scheme.onPrimaryContainer : SlstColors.brand,
-      ),
-      selectedLabelTextStyle: TextStyle(
-        fontSize: 12,
-        fontWeight: FontWeight.w700,
-        color: dark ? scheme.onSurface : SlstColors.brand,
-      ),
-      unselectedLabelTextStyle: TextStyle(
-        fontSize: 12,
-        color: scheme.onSurfaceVariant,
-      ),
-    ),
-    floatingActionButtonTheme: FloatingActionButtonThemeData(
-      backgroundColor: SlstColors.brand,
-      foregroundColor: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-    ),
-    inputDecorationTheme: InputDecorationTheme(
-      filled: true,
-      fillColor: dark ? scheme.surfaceContainerHighest : Colors.white,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: scheme.outlineVariant),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: scheme.outlineVariant),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: scheme.primary, width: 2),
-      ),
-    ),
-    cardTheme: CardThemeData(
-      elevation: 0,
-      color: dark ? scheme.surfaceContainerLow : Colors.white,
-      surfaceTintColor: Colors.transparent,
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: scheme.outlineVariant),
-      ),
-    ),
-    chipTheme: base.chipTheme.copyWith(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      side: BorderSide(color: scheme.outlineVariant),
-    ),
-    segmentedButtonTheme: SegmentedButtonThemeData(
-      style: ButtonStyle(
-        visualDensity: VisualDensity.standard,
-        backgroundColor: WidgetStateProperty.resolveWith(
-          (states) => states.contains(WidgetState.selected)
-              ? (dark ? scheme.primaryContainer : SlstColors.brandSoft)
-              : Colors.transparent,
-        ),
-        foregroundColor: WidgetStateProperty.resolveWith(
-          (states) => states.contains(WidgetState.selected)
-              ? (dark ? scheme.onPrimaryContainer : SlstColors.brandDark)
-              : scheme.onSurfaceVariant,
-        ),
-      ),
-    ),
-    snackBarTheme: SnackBarThemeData(
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-    ),
-    dividerTheme: DividerThemeData(color: scheme.outlineVariant, thickness: 1),
-    listTileTheme: const ListTileThemeData(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.all(Radius.circular(12)),
-      ),
-    ),
-    bottomSheetTheme: BottomSheetThemeData(
-      backgroundColor: dark ? scheme.surfaceContainerLow : Colors.white,
-      // Sheets close via an explicit X button in their header row; the drag
-      // handle would be redundant chrome (swipe-down still works).
-      showDragHandle: false,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-    ),
-    dialogTheme: DialogThemeData(
-      backgroundColor: dark ? scheme.surfaceContainerLow : Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-    ),
-    tooltipTheme: TooltipThemeData(
-      textStyle: const TextStyle(
-        fontFamily: kBodyFontFamily,
-        color: Colors.white,
-        fontSize: 12,
-      ),
-      decoration: BoxDecoration(
-        color: dark ? SlstColors.darkSurfaceMuted : SlstColors.ink,
-        borderRadius: BorderRadius.circular(6),
-      ),
-    ),
-    scrollbarTheme: ScrollbarThemeData(
-      thumbVisibility: const WidgetStatePropertyAll(true),
-      thumbColor: WidgetStatePropertyAll(
-        dark ? SlstColors.darkBorderStrong : SlstColors.borderStrong,
-      ),
-      radius: const Radius.circular(8),
-      thickness: const WidgetStatePropertyAll(8),
-    ),
-    dataTableTheme: DataTableThemeData(
-      headingTextStyle: TextStyle(
-        fontFamily: kBodyFontFamily,
-        fontWeight: FontWeight.w600,
-        fontSize: 12,
-        letterSpacing: 0.8,
-        color: dark ? SlstColors.darkMuted : SlstColors.muted,
-      ),
-      dataTextStyle: TextStyle(
-        fontFamily: kBodyFontFamily,
-        fontSize: 13.5,
-        color: dark ? SlstColors.darkInk : SlstColors.ink,
-      ),
-      dividerThickness: 1,
-      headingRowColor: WidgetStatePropertyAll(
-        dark ? SlstColors.darkSurfaceMuted : SlstColors.surfaceMuted,
-      ),
-    ),
-  );
+  return IndustrialTheme.darkTheme;
 }

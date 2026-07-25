@@ -6,15 +6,16 @@ const consolidationUndoWindow = Duration(minutes: 2);
 
 class ConsolidationUndoSnapshot {
   const ConsolidationUndoSnapshot({
-    required this.keepId,
-    required this.keepBefore,
-    required this.removed,
+    required this.mergedId,
+    required this.sources,
     required this.at,
   });
 
-  final String keepId;
-  final StagingEntry keepBefore;
-  final List<StagingEntry> removed;
+  /// New UUID of the consolidated survivor (deleted on undo).
+  final String mergedId;
+
+  /// All pre-consolidate rows (re-inserted on undo with fresh UUIDs).
+  final List<StagingEntry> sources;
   final DateTime at;
 
   bool get isActive =>

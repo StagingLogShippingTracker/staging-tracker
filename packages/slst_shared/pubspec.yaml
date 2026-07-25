@@ -1,0 +1,26 @@
+name: slst_shared
+description: Shared SLST domain, Supabase data layer, and operations for Windows, Android, and Wear clients.
+publish_to: 'none'
+version: 1.0.0
+
+environment:
+  sdk: ^3.12.2
+  flutter: '>=3.29.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  supabase_flutter: ^2.9.1
+  intl: ^0.20.2
+  uuid: ^4.5.1
+  http: ^1.4.0
+  crypto: ^3.0.6
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  assets:
+    - assets/contacts.json
