@@ -192,7 +192,6 @@ class _StatDetailDialogState extends ConsumerState<_StatDetailDialog> {
           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
           foregroundColor: SlstColors.brand,
           textStyle: TextStyle(
-            fontFamily: kBodyFontFamily,
             fontWeight: FontWeight.w700,
             decoration: TextDecoration.underline,
           ),
@@ -214,7 +213,6 @@ class _StatDetailDialogState extends ConsumerState<_StatDetailDialog> {
       isExpanded: true,
       decoration: const InputDecoration(labelText: 'Sort', isDense: true),
       style: TextStyle(
-        fontFamily: kBodyFontFamily,
         fontSize: 13,
         fontWeight: FontWeight.w600,
         color: dark ? SlstColors.darkInk : SlstColors.ink,

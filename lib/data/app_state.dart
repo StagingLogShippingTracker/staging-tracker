@@ -17,6 +17,22 @@ final _shipEmailDateFmt = DateFormat('M/d/yyyy, h:mm:ss a');
 
 typedef PhotoBytes = ({Uint8List bytes, String name});
 
+class BulkPoItem {
+  const BulkPoItem({
+    required this.po,
+    required this.vendor,
+    required this.pmEmail,
+    required this.containers,
+    this.details = '',
+  });
+
+  final String po;
+  final String vendor;
+  final String pmEmail;
+  final ContainerCounts containers;
+  final String details;
+}
+
 final supabaseClientProvider = Provider<SupabaseClient>(
   (ref) => Supabase.instance.client,
 );
@@ -186,6 +202,11 @@ class LocalPrefs {
 
   bool get darkMode => _prefs.getBool('swift_theme_dark') ?? false;
   Future<void> setDarkMode(bool v) => _prefs.setBool('swift_theme_dark', v);
+
+  bool get floorMapCollapsed =>
+      _prefs.getBool('swift_floor_map_collapsed') ?? false;
+  Future<void> setFloorMapCollapsed(bool v) =>
+      _prefs.setBool('swift_floor_map_collapsed', v);
 
   List<String> get hiddenMemory =>
       _prefs.getStringList('swift_hidden_memory') ?? const [];
@@ -663,6 +684,7 @@ class OperationsService {
   }
 
   /// Split one staging row into two rows that share the same SO metadata.
+  /// Both parts receive **new** UUIDs; the original row is deleted.
   Future<void> splitStaging({
     required StagingEntry entry,
     required ContainerCounts first,
@@ -685,27 +707,26 @@ class OperationsService {
         'Split parts must add up to the original quantity (${entry.qty}).',
       );
     }
-    await _staging.update(entry.id, {
+    final base = entry.toInsertMap();
+    final a = await _staging.insert({
+      ...base,
       'type': first.typeLabel,
       'qty': first.total,
     });
-    await _staging.insert({
-      'so': entry.so,
-      'customer': entry.customer,
-      'location': entry.location,
-      'status': entry.status,
+    final b = await _staging.insert({
+      ...base,
       'type': second.typeLabel,
       'qty': second.total,
-      'weight': entry.weight,
-      'comments': entry.comments,
-      'staged_by': entry.stagedBy,
-      'photo_urls': entry.photoUrls,
     });
-    await _log.log('staging', 'Split SO ${entry.so} into two staging rows');
+    await _staging.delete(entry.id);
+    await _log.log(
+      'staging',
+      'Split SO ${entry.so}: ${entry.id} → ${a.id}, ${b.id}',
+    );
     await _ref.read(appDataProvider.notifier).refresh();
   }
 
-  /// Consolidate multiple same-SO staging rows into the first selected row.
+  /// Consolidate multiple same-SO staging rows into one **new**-UUID survivor.
   Future<void> consolidateStaging(List<StagingEntry> entries) async {
     if (entries.length < 2) {
       throw Exception('Select at least two staging rows to consolidate.');
@@ -715,9 +736,8 @@ class OperationsService {
       throw Exception('Consolidate requires the same SO on every row.');
     }
     final keep = entries.first;
-    final removed = entries.skip(1).toList();
     var skids = 0, boxes = 0, crates = 0, pipe = 0, other = 0;
-    final photos = <String>{...keep.photoUrls};
+    final photos = <String>{};
     for (final e in entries) {
       final parsed = ContainerCounts.parse(e.type);
       skids += parsed.skids;
@@ -727,7 +747,6 @@ class OperationsService {
       other += parsed.other;
       photos.addAll(e.photoUrls);
     }
-    // Fallback when type labels are mixed: keep summed qty under a combined label.
     final counts = ContainerCounts(
       skids: skids,
       boxes: boxes,
@@ -741,24 +760,26 @@ class OperationsService {
     final qty = counts.total > 0
         ? counts.total
         : entries.fold<int>(0, (sum, e) => sum + e.qty);
-    await _staging.update(keep.id, {
+    final merged = await _staging.insert({
+      ...keep.toInsertMap(),
       'type': type,
       'qty': qty,
       'photo_urls': photos.toList(),
     });
-    for (final e in removed) {
+    final oldIds = entries.map((e) => e.id).join(', ');
+    for (final e in entries) {
       await _staging.delete(e.id);
     }
     _ref.read(consolidationUndoProvider.notifier).state =
         ConsolidationUndoSnapshot(
-      keepId: keep.id,
-      keepBefore: keep,
-      removed: removed,
+      mergedId: merged.id,
+      sources: List<StagingEntry>.from(entries),
       at: DateTime.now(),
     );
     await _log.log(
       'staging',
-      'Consolidated ${entries.length} rows for SO ${keep.so}',
+      'Consolidated ${entries.length} rows for SO ${keep.so}: '
+      '$oldIds → ${merged.id}',
     );
     await _ref.read(appDataProvider.notifier).refresh();
   }
@@ -771,25 +792,24 @@ class OperationsService {
         'Consolidation can only be reversed within two minutes.',
       );
     }
-    await _staging.update(snap.keepId, {
-      'type': snap.keepBefore.type,
-      'qty': snap.keepBefore.qty,
-      'photo_urls': snap.keepBefore.photoUrls,
-    });
-    for (final e in snap.removed) {
-      await _staging.insert(e.toInsertMap());
+    await _staging.delete(snap.mergedId);
+    final restored = <String>[];
+    for (final e in snap.sources) {
+      final row = await _staging.insert(e.toInsertMap());
+      restored.add(row.id);
     }
     _ref.read(consolidationUndoProvider.notifier).state = null;
     await _log.log(
       'staging',
-      'Reversed consolidation for SO ${snap.keepBefore.so}',
+      'Reversed consolidation for SO ${snap.sources.first.so}: '
+      '${snap.mergedId} → ${restored.join(', ')}',
     );
     await _ref.read(appDataProvider.notifier).refresh();
   }
 
   Future<void> sendPoNotification({
     required String po,
-    required String customer,
+    required String vendor,
     required String pmEmail,
     String? linkedSo,
     String? details,
@@ -805,19 +825,65 @@ class OperationsService {
       'subject':
           'PO Notification: $po${linkedSo == null ? '' : ' (SO $linkedSo)'}',
       'body':
-          'PO Notification<br><br><b>PO#</b> | $po<br><b>Customer</b> | $customer${linkedSo == null ? '' : '<br><b>SO#</b> | $linkedSo'}${details == null || details.isEmpty ? '' : '<br><br>$details'}',
+          'PO Notification<br><br><b>PO#</b> | $po<br><b>Vendor</b> | $vendor${linkedSo == null ? '' : '<br><b>SO#</b> | $linkedSo'}${details == null || details.isEmpty ? '' : '<br><br>$details'}',
       'po': po.trim(),
-      'customer': customer.trim(),
+      'vendor': vendor.trim(),
+      'customer': vendor.trim(), // legacy key for older Make mappings
       if (linkedSo != null && linkedSo.trim().isNotEmpty) 'so': linkedSo.trim(),
       'details': details?.trim() ?? '',
       'attachments': paths,
       'notification_type': 'po_notification',
     });
-    await _rememberEntryValues(customer: customer);
     await _log.log(
       'staging',
       'Sent Automated PO Notification for PO: $po${linkedSo == null ? '' : ' (SO $linkedSo)'} (PM: $pmEmail)',
     );
+  }
+
+  Future<void> sendBulkPoNotification({
+    required List<BulkPoItem> items,
+  }) async {
+    if (items.isEmpty) {
+      throw Exception('Add at least one PO.');
+    }
+    // Group by PM so each recipient gets one digest.
+    final byPm = <String, List<BulkPoItem>>{};
+    for (final item in items) {
+      byPm.putIfAbsent(item.pmEmail.trim().toLowerCase(), () => []).add(item);
+    }
+    for (final entry in byPm.entries) {
+      final list = entry.value;
+      final to = list.first.pmEmail.trim();
+      final poList = list.map((e) => e.po).join(', ');
+      final lines = list.map((e) {
+        return '<b>PO#</b> | ${e.po}<br>'
+            '<b>Vendor</b> | ${e.vendor}<br>'
+            '<b>Containers</b> | ${e.containers.typeLabel}<br>'
+            '${e.details.trim().isEmpty ? '' : '<b>Notes</b> | ${e.details.trim()}<br>'}';
+      }).join('<br>');
+      await _notify.sendPmNotification({
+        'to': to,
+        'cc': 'warehouse1@swiftsupply.ca',
+        'subject': 'Bulk PO Notification: $poList',
+        'body': 'Bulk PO Notification<br><br>$lines',
+        'pos': list
+            .map(
+              (e) => {
+                'po': e.po,
+                'vendor': e.vendor,
+                'containers': e.containers.typeLabel,
+                'qty': e.containers.total,
+                'details': e.details,
+              },
+            )
+            .toList(),
+        'notification_type': 'bulk_po_notification',
+      });
+      await _log.log(
+        'staging',
+        'Sent Bulk PO Notification (${list.length} POs) to $to',
+      );
+    }
   }
 
   Future<void> sendReturnNotification({

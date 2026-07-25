@@ -6,6 +6,7 @@ import '../features/contacts/contacts_screen.dart';
 import '../features/dashboard/dashboard_screen.dart';
 import '../features/notifications/notifications_screen.dart';
 import '../features/reports/reports_screen.dart';
+import '../features/settings/settings_screen.dart';
 import '../features/shell/app_shell.dart';
 import '../features/shipping/shipped_screen.dart';
 import '../features/staging/staging_screen.dart';
@@ -52,6 +53,12 @@ final routerProvider = Provider<GoRouter>((ref) {
             name: 'contacts',
             pageBuilder: (context, state) =>
                 const NoTransitionPage(child: ContactsScreen()),
+          ),
+          GoRoute(
+            path: '/settings',
+            name: 'settings',
+            pageBuilder: (context, state) =>
+                const NoTransitionPage(child: SettingsScreen()),
           ),
         ],
       ),

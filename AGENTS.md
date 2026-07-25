@@ -2,9 +2,9 @@
 
 ## What this is
 
-SLST — Staging Log & Shipping Tracker: a **Flutter** app (Windows + Android) backed by a **hosted Supabase** project. Make.com PM email/SMS is invoked only through the authenticated Edge Function `notify-pm`.
+SLST — Staging Log & Shipping Tracker: a **Flutter Windows** client backed by a **hosted Supabase** project. Make.com PM email/SMS is invoked only through the authenticated Edge Function `notify-pm`.
 
-There is **no** web/PWA client and **no** Prophet21 / Epicor integration.
+There is **no** web/PWA client, **no** phone/Wear client, and **no** Prophet21 / Epicor integration.
 
 ## Dev commands
 
@@ -16,6 +16,10 @@ There is **no** web/PWA client and **no** Prophet21 / Epicor integration.
 ```
 
 `.tools/` is gitignored. Document PATH/SDK setup in README if developers use a system Flutter install instead.
+
+## After app changes — always rebuild
+
+When agents change the Flutter Windows client, they must rebuild automatically before finishing — do not ask the user to rebuild. Prefer `scripts/packaging/build-windows-installer.ps1` (and related Windows packaging under `scripts/packaging/`) for distributables.
 
 ## Live production backend — be careful
 
@@ -37,9 +41,11 @@ There is **no** web/PWA client and **no** Prophet21 / Epicor integration.
 - `lib/data/` — repositories, Riverpod app state, operations service
 - `lib/platform/` — camera/file picker adapters
 - `lib/core/` — config, theme, router
+- `packages/slst_shared/` — shared domain/data used by the Windows client
 - `supabase/functions/notify-pm` — authenticated Make webhook proxy + PM SMS roster
+- `supabase/functions/watch-pair` — legacy watch pairing (backend only; no client UI)
 - `supabase/migrations/` — RLS + private secrets support
-- `scripts/packaging/` — portable ZIP / Inno Setup / APK helpers
+- `scripts/packaging/` — portable ZIP / Inno Setup helpers
 
 ## Notifications
 
@@ -48,5 +54,4 @@ Rotate the Make webhook via Edge secret or `private.app_secrets`.
 
 ## Packaging
 
-See README for portable Windows ZIP, per-user Inno installer, and APK scripts.
-Signing secrets (`android/key.properties`, `*.jks`, `*.keystore`) must stay out of git.
+See README for portable Windows ZIP and per-user Inno installer.

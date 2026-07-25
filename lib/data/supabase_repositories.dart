@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
 import '../core/app_config.dart';
+import '../core/email_subjects.dart';
 import '../domain/models.dart';
 
 class StagingRepository {
@@ -185,7 +186,12 @@ class NotifyRepository {
   final SupabaseClient _client;
 
   Future<void> sendPmNotification(Map<String, dynamic> payload) async {
-    final res = await _client.functions.invoke('notify-pm', body: payload);
+    final body = Map<String, dynamic>.from(payload);
+    final subject = body['subject'];
+    if (subject is String && subject.trim().isNotEmpty) {
+      body['subject'] = capitalizeEmailSubject(subject);
+    }
+    final res = await _client.functions.invoke('notify-pm', body: body);
     if (res.status >= 400) {
       throw Exception('Notification failed (${res.status}): ${res.data}');
     }

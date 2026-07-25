@@ -16,12 +16,12 @@ Future<void> main() async {
     publishableKey: AppConfig.supabaseAnonKey,
   );
   final prefs = await SharedPreferences.getInstance();
-  final dark = prefs.getBool('swift_theme_dark') ?? false;
   final logView = await loadLogViewMode(prefs);
   runApp(
     ProviderScope(
       overrides: [
-        darkModeProvider.overrideWith((ref) => dark),
+        // Industrial Command Center is dark-operations only.
+        darkModeProvider.overrideWith((ref) => true),
         logViewModeProvider.overrideWith(
           (ref) => LogViewModeNotifier(prefs, logView),
         ),
@@ -36,13 +36,12 @@ class SlstApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final dark = ref.watch(darkModeProvider);
     final router = ref.watch(routerProvider);
     return MaterialApp.router(
-      title: 'SLST',
-      theme: buildSlstTheme(dark: false),
-      darkTheme: buildSlstTheme(dark: true),
-      themeMode: dark ? ThemeMode.dark : ThemeMode.light,
+      title: 'Swift Staging Tracker',
+      theme: IndustrialTheme.darkTheme,
+      darkTheme: IndustrialTheme.darkTheme,
+      themeMode: ThemeMode.dark,
       routerConfig: router,
       debugShowCheckedModeBanner: false,
     );

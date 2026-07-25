@@ -1,5 +1,3 @@
-import 'dart:io' show Platform;
-
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -8,12 +6,9 @@ enum LogViewMode { list, card }
 
 const _prefsKey = 'slst_log_view_mode';
 
-/// Android defaults to cards; Windows (and other desktops) default to list.
+/// Windows defaults to list view.
 LogViewMode defaultLogViewMode() {
   if (kIsWeb) return LogViewMode.list;
-  try {
-    if (Platform.isAndroid) return LogViewMode.card;
-  } catch (_) {}
   return LogViewMode.list;
 }
 

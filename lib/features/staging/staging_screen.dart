@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/theme.dart';
 import '../../data/app_state.dart';
 import '../shared/log_tables.dart';
 import '../shared/widgets.dart';
@@ -28,31 +29,35 @@ class _StagingScreenState extends ConsumerState<StagingScreen> {
     final entries = data.staging.where((e) {
       if (_q.isEmpty) return true;
       final hay =
-          '${e.so} ${e.customer} ${e.location} ${e.status} ${e.comments ?? ''} ${e.stagedBy ?? ''}'
+          '${e.so} ${e.customer} ${e.location} ${e.status} ${e.comments ?? ''} ${e.stagedBy ?? ''} ${e.id}'
               .toLowerCase();
       return hay.contains(_q);
     }).toList();
 
-    return RefreshIndicator(
-      onRefresh: () => ref.read(appDataProvider.notifier).refresh(),
-      child: ListView(
-        padding: slstPagePadding(context),
-        children: [
-          SearchField(
-            controller: _search,
-            hint: 'Search staging — SO, customer, location, status…',
-            onChanged: (v) => setState(() => _q = v.trim().toLowerCase()),
-          ),
-          const SizedBox(height: 14),
-          if (data.loading && data.staging.isEmpty)
-            const Padding(
-              padding: EdgeInsets.all(48),
-              child: Center(child: CircularProgressIndicator()),
-            )
-          else
-            StagingLogCard(entries: entries, expanded: true),
-          const BrandFooter(),
-        ],
+    return ColoredBox(
+      color: IndustrialTheme.darkBase,
+      child: RefreshIndicator(
+        onRefresh: () => ref.read(appDataProvider.notifier).refresh(),
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: slstPagePadding(context),
+          children: [
+            SearchField(
+              controller: _search,
+              hint: 'Search staging — SO, customer, location, status, UUID…',
+              onChanged: (v) => setState(() => _q = v.trim().toLowerCase()),
+            ),
+            const SizedBox(height: 14),
+            if (data.loading && data.staging.isEmpty)
+              const Padding(
+                padding: EdgeInsets.all(48),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else
+              StagingLogCard(entries: entries, expanded: true),
+            const BrandFooter(),
+          ],
+        ),
       ),
     );
   }

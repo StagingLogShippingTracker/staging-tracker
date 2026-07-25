@@ -1,0 +1,14 @@
+---
+description: Always rebuild Windows after Flutter app changes
+alwaysApply: true
+---
+
+# Auto-rebuild Flutter clients
+
+When a request changes the Flutter app (anything under `lib/`, `windows/`, `pubspec.yaml`, assets used by the client, etc.):
+
+1. Do **not** tell the user to rebuild themselves.
+2. Automatically rebuild the Windows client before finishing:
+   - Windows: `.\.tools\flutter\bin\flutter.bat build windows --release` (or the packaging scripts under `scripts/packaging/` when a distributable is expected)
+3. Edge-function / Supabase-only changes do **not** require a Flutter rebuild unless the client also changed.
+4. Prefer packaging scripts when the user typically installs from ZIP/Inno artifacts rather than raw `build/` outputs.

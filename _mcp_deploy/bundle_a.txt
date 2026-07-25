@@ -1,0 +1,229 @@
+/**
+ * SLST ship-confirmation HTML email — concept-matched layout.
+ * Images MUST be HTTPS PNGs (Outlook blocks SVG / data: URIs).
+ * Forced light appearance: bgcolor + color-scheme + Outlook dark overrides.
+ */
+
+export type ShipConfirmationData = {
+  so: string;
+  customer: string;
+  carrier: string;
+  shippedAt: string;
+  shippedBy: string;
+  containers: string;
+  weight: string;
+  comments: string;
+  logoUrl?: string;
+  ctaUrl?: string;
+  emailContact?: string;
+  websiteUrl?: string;
+  year?: number;
+  assetBaseUrl?: string;
+};
+
+/** Brand tokens aligned to concept mockup + app theme. */
+const BRAND = "#D93223";
+const BRAND_DARK = "#B92820";
+const INK = "#2A2A2A";
+const BODY = "#3A3A3A";
+const MUTED = "#6B6B6B";
+const BORDER = "#E6E2DC";
+const PAGE_BG = "#F3F1EC";
+const CARD_SHELL = "#F7F5F1";
+const WHITE = "#FFFFFF";
+const ICON_WASH = "#FDECEA";
+
+/**
+ * Public HTTPS asset host (Supabase Storage bucket `email-assets`).
+ * Outlook blocks SVG and data: image URIs — HTTPS PNGs are required.
+ */
+export const DEFAULT_EMAIL_ASSET_BASE =
+  "https://gdrpdiwykmnybmkadlrv.supabase.co/storage/v1/object/public/email-assets";
+
+/** Cache-bust so Outlook/CDN pick up the HD logo after redeploys. */
+const ASSET_VERSION = "20260722b";
+
+export function emailAssetUrl(fileKey: string, baseUrl?: string): string {
+  const base = (baseUrl ?? DEFAULT_EMAIL_ASSET_BASE).replace(/\/$/, "");
+  const key = fileKey.replace(/\.png$/i, "");
+  // Edge function uses ?f= ; Storage uses /file.png
+  if (base.includes("/functions/v1/email-assets")) {
+    return `${base}?f=${encodeURIComponent(key)}&v=${ASSET_VERSION}`;
+  }
+  return `${base}/${encodeURIComponent(key)}.png?v=${ASSET_VERSION}`;
+}
+
+function esc(value: string | undefined | null): string {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function displayOrNone(value: string | undefined | null): string {
+  const v = String(value ?? "").trim();
+  return v.length ? esc(v) : "None";
+}
+
+function detailCard(opts: {
+  iconUrl: string;
+  title: string;
+  rows: Array<{ label: string; value: string }>;
+}): string {
+  const rowsHtml = opts.rows
+    .map(
+      (r) => `
+        <tr>
+          <td style="padding:0 0 10px 0;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.35;color:${INK};">
+            <div style="font-weight:700;color:${INK};mso-line-height-rule:exactly;">${esc(r.label)}</div>
+            <div style="font-weight:400;color:${BODY};padding-top:2px;mso-line-height-rule:exactly;">${r.value}</div>
+          </td>
+        </tr>`,
+    )
+    .join("");
+
+  return `
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${WHITE}" class="og-white"
+      style="background-color:${WHITE} !important;border:1px solid ${BORDER};border-radius:14px;box-shadow:0 4px 14px rgba(42,42,42,0.06);">
+      <tr>
+        <td bgcolor="${WHITE}" class="og-white" style="padding:20px 18px 12px 18px;background-color:${WHITE} !important;">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+            <tr>
+              <td width="44" valign="top" style="padding-right:12px;">
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="40" height="40" bgcolor="${ICON_WASH}" class="og-icon"
+                  style="width:40px;height:40px;background-color:${ICON_WASH} !important;border-radius:10px;">
+                  <tr>
+                    <td align="center" valign="middle" bgcolor="${ICON_WASH}" class="og-icon"
+                      style="width:40px;height:40px;text-align:center;vertical-align:middle;background-color:${ICON_WASH} !important;">
+                      <img src="${esc(opts.iconUrl)}" width="24" height="24" alt=""
+                        style="display:block;margin:0 auto;border:0;outline:none;-ms-interpolation-mode:bicubic;" />
+                    </td>
+                  </tr>
+                </table>
+              </td>
+              <td valign="middle">
+                <div style="font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:700;letter-spacing:0.12em;color:${BRAND};text-transform:uppercase;mso-line-height-rule:exactly;">
+                  ${esc(opts.title)}
+                </div>
+              </td>
+            </tr>
+          </table>
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-top:14px;">
+            ${rowsHtml}
+          </table>
+        </td>
+      </tr>
+    </table>`;
+}
+
+/**
+ * HD logo: serve ~900px PNG, display at 300px (3x) for crisp Outlook / HiDPI.
+ * Tagline is baked into the logo artwork — do not duplicate as HTML text.
+ */
+function logoBlock(logoUrl: string): string {
+  return `<img src="${esc(logoUrl)}" width="300" alt="SLST — Staging Log &amp; Shipping Tracker"
+    style="display:block;margin:0 auto;border:0;outline:none;width:300px;max-width:86%;height:auto;-ms-interpolation-mode:bicubic;" />`;
+}
+
+export function renderShipConfirmationEmail(data: ShipConfirmationData): string {
+  const assetBase = data.assetBaseUrl ?? DEFAULT_EMAIL_ASSET_BASE;
+  const logoUrl = (data.logoUrl && data.logoUrl.trim()) ||
+    emailAssetUrl("slst-logo-email", assetBase);
+
+  const so = esc(data.so);
+  const customer = displayOrNone(data.customer);
+  const carrier = displayOrNone(data.carrier);
+  const shippedAt = displayOrNone(data.shippedAt);
+  const shippedBy = displayOrNone(data.shippedBy);
+  const containers = displayOrNone(data.containers);
+  const weight = displayOrNone(data.weight);
+  const comments = displayOrNone(data.comments);
+  const year = data.year ?? new Date().getFullYear();
+  const emailContact = (data.emailContact ?? "warehouse1@swiftsupply.ca").trim();
+  const websiteUrl = (data.websiteUrl ?? "https://www.swiftsupply.ca").trim();
+  const ctaUrl = (data.ctaUrl ?? websiteUrl).trim();
+  const mailto = `mailto:${emailContact}`;
+
+  const clipboard = emailAssetUrl("icon-clipboard", assetBase);
+  const truck = emailAssetUrl("icon-truck", assetBase);
+  const cargo = emailAssetUrl("icon-cargo", assetBase);
+  const chat = emailAssetUrl("icon-chat", assetBase);
+  const search = emailAssetUrl("icon-search", assetBase);
+  const mail = emailAssetUrl("icon-mail", assetBase);
+  const globe = emailAssetUrl("icon-globe", assetBase);
+  const watermark = emailAssetUrl("watermark-gears", assetBase);
+
+  const orderCard = detailCard({
+    iconUrl: clipboard,
+    title: "ORDER SUMMARY",
+    rows: [
+      { label: "SO#", value: so || "None" },
+      { label: "Customer", value: customer },
+    ],
+  });
+  const shippingCard = detailCard({
+    iconUrl: truck,
+    title: "SHIPPING INFORMATION",
+    rows: [
+      { label: "Carrier", value: carrier },
+      { label: "Shipped At", value: shippedAt },
+      { label: "Shipped By", value: shippedBy },
+    ],
+  });
+  const cargoCard = detailCard({
+    iconUrl: cargo,
+    title: "CARGO DETAILS",
+    rows: [
+      { label: "Container(s)", value: containers },
+      { label: "Total Weight (In lbs)", value: weight },
+    ],
+  });
+  const notesCard = detailCard({
+    iconUrl: chat,
+    title: "ADDITIONAL NOTES",
+    rows: [{ label: "Comments", value: comments }],
+  });
+
+  return `<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="color-scheme" content="light only" />
+  <meta name="supported-color-schemes" content="light" />
+  <title>Your order has now been shipped!</title>
+  <!--[if mso]>
+  <noscript>
+    <xml>
+      <o:OfficeDocumentSettings>
+        <o:PixelsPerInch>96</o:PixelsPerInch>
+        <o:AllowPNG/>
+      </o:OfficeDocumentSettings>
+    </xml>
+  </noscript>
+  <style>
+    table { border-collapse: collapse; }
+    td, th, div, p, a, span, strong, h1 { font-family: Arial, Helvetica, sans-serif !important; }
+  </style>
+  <![endif]-->
+  <style type="text/css">
+    :root { color-scheme: light only; supported-color-schemes: light; }
+    body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    img { -ms-interpolation-mode: bicubic; border: 0; outline: none; text-decoration: none; }
+    body { margin: 0 !important; padding: 0 !important; width: 100% !important; background-color: ${PAGE_BG} !important; }
+    a { color: ${BRAND}; }
+
+    /* Keep light palette even when the client tries to invert for dark mode */
+    @media (prefers-color-scheme: dark) {
+      .og-page, .og-shell, .og-white, .og-icon, .og-footer {
+        background-color: ${PAGE_BG} !important;
+        color: ${INK} !important;
+      }
+      .og-shell { background-color: ${CARD_SHELL} !important; }
+      .og-white { background-color: ${WHITE} !important; }
+      .og-icon { background-color: ${ICON_WASH} !important; }
+      .og-text, .og-text div, .og-text p, .og-text span, .og-text strong, .og-text h1 {
+        colo

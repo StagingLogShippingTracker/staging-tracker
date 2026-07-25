@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:slst_shared/slst_shared.dart' as shared;
 
 import '../../core/theme.dart';
 import '../../data/app_state.dart';
@@ -86,13 +87,37 @@ Future<void> startVerificationAudit(
   final prefs = await ref.read(prefsProvider.future);
   if (!context.mounted) return;
 
-  // Offer to resume an unfinished audit.
-  final savedRaw = prefs.reportState;
-  if (savedRaw != null) {
+  Map<String, dynamic>? saved;
+  final cloudRepo = shared.AuditStateRepository(ref.read(supabaseClientProvider));
+  try {
+    final cloud = await cloudRepo.fetchMine();
+    if (cloud != null && cloud.isActive) {
+      saved = {
+        'queue': cloud.queue,
+        'index': cloud.index,
+        'results': cloud.results,
+        'filter': shared.auditModeName(cloud.mode),
+        'discrepancy_ids': cloud.discrepancyIds,
+      };
+    }
+  } catch (_) {
+    // Fall back to local prefs if cloud is unavailable.
+  }
+  saved ??= () {
+    final raw = prefs.reportState;
+    if (raw == null) return null;
     try {
-      final saved = jsonDecode(savedRaw) as Map<String, dynamic>;
-      final queue = (saved['queue'] as List).cast<String>();
-      final index = saved['index'] as int;
+      return jsonDecode(raw) as Map<String, dynamic>;
+    } catch (_) {
+      return null;
+    }
+  }();
+
+  // Offer to resume an unfinished audit.
+  if (saved != null) {
+    try {
+      final queue = (saved['queue'] as List).map((e) => '$e').toList();
+      final index = (saved['index'] as num?)?.toInt() ?? 0;
       if (queue.isNotEmpty && index < queue.length) {
         final resume = await showDialog<bool>(
           context: context,
@@ -119,17 +144,24 @@ Future<void> startVerificationAudit(
         );
         if (resume == null || !context.mounted) return;
         if (resume) {
+          final disc = (saved['discrepancy_ids'] as List?)
+                  ?.map((e) => '$e')
+                  .toList() ??
+              prefs.discrepancyIds;
+          if (disc.isNotEmpty) await prefs.setDiscrepancyIds(disc);
           await showDialog<void>(
             context: context,
             barrierDismissible: false,
             builder: (_) => _AuditDialog(
               prefs: prefs,
-              mode: _auditModeFromName('${saved['filter']}'),
+              mode: _auditModeFromName('${saved!['filter']}'),
               queue: queue,
               index: index,
               results: [
                 for (final r in (saved['results'] as List? ?? const []))
-                  Map<String, String>.from(r as Map),
+                  Map<String, String>.from(
+                    (r as Map).map((k, v) => MapEntry('$k', '$v')),
+                  ),
               ],
             ),
           );
@@ -140,6 +172,9 @@ Future<void> startVerificationAudit(
       // Corrupt saved state — fall through to a fresh run.
     }
     await prefs.clearReportState();
+    try {
+      await cloudRepo.clearMine();
+    } catch (_) {}
   }
   if (!context.mounted) return;
 
@@ -218,10 +253,24 @@ class _AuditDialogState extends ConsumerState<_AuditDialog> {
       'results': _results,
       'filter': _auditModeName(widget.mode),
     }));
+    // Best-effort cloud sync so other sessions can resume.
+    final client = ref.read(supabaseClientProvider);
+    if (client.auth.currentUser != null) {
+      shared.AuditStateRepository(client).upsertMine(
+        shared.VerificationAuditState(
+          mode: shared.auditModeFromName(_auditModeName(widget.mode)),
+          queue: _queue,
+          index: _index,
+          results: _results,
+          discrepancyIds: widget.prefs.discrepancyIds,
+        ),
+      );
+    }
   }
 
   void _record(StagingEntry item, String result) {
     _results.add({
+      'id': item.id,
       'so': item.so,
       'customer': item.customer,
       'location': item.location,
@@ -280,6 +329,10 @@ class _AuditDialogState extends ConsumerState<_AuditDialog> {
     if (_completed) return;
     _completed = true;
     await widget.prefs.clearReportState();
+    try {
+      await shared.AuditStateRepository(ref.read(supabaseClientProvider))
+          .clearMine();
+    } catch (_) {}
   }
 
   Future<void> _exportCsv({required bool discrepanciesOnly}) async {

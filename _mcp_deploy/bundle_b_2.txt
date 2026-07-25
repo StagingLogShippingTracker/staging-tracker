@@ -1,0 +1,111 @@
+        <img src="${esc(search)}" width="16" height="16" alt=""
+                  style="display:inline-block;vertical-align:middle;margin-right:10px;border:0;" />
+                <span style="vertical-align:middle;color:${WHITE} !important;">VIEW FULL TRACKING DETAILS</span>
+              </a>
+              <!--<![endif]-->
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td bgcolor="${CARD_SHELL}" class="og-shell" style="padding:0 36px;background-color:${CARD_SHELL};">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td bgcolor="${CARD_SHELL}" class="og-shell" style="border-top:1px solid ${BORDER};font-size:0;line-height:0;background-color:${CARD_SHELL};">&nbsp;</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td bgcolor="${CARD_SHELL}" class="og-shell og-footer" style="padding:22px 36px 32px 36px;background-color:${CARD_SHELL};">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td class="stack-col og-text" valign="top"
+                    style="font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.55;color:${INK};">
+                    <strong style="font-weight:700;color:${INK};">Thank you for using SLST!</strong><br />
+                    <span style="color:${BODY};">SLST - Staging Log &amp; Shipping Tracker</span><br />
+                    <span class="og-muted" style="font-size:12px;color:${MUTED};">Copyright © ${year} SLST. All rights reserved.</span>
+                  </td>
+                  <td class="stack-col footer-right" valign="top" align="right"
+                    style="font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.9;white-space:nowrap;">
+                    <a class="og-brand" href="${esc(mailto)}" style="color:${BRAND};text-decoration:underline;">
+                      <img src="${esc(mail)}" width="14" height="14" alt=""
+                        style="display:inline-block;vertical-align:middle;margin-right:5px;border:0;" />
+                      <span style="vertical-align:middle;color:${BRAND};">Email</span>
+                    </a>
+                    &nbsp;&nbsp;&nbsp;
+                    <a class="og-brand" href="${esc(websiteUrl)}" style="color:${BRAND};text-decoration:underline;">
+                      <img src="${esc(globe)}" width="14" height="14" alt=""
+                        style="display:inline-block;vertical-align:middle;margin-right:5px;border:0;" />
+                      <span style="vertical-align:middle;color:${BRAND};">Website</span>
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+
+        <!--[if mso]>
+        </td></tr></table>
+        <![endif]-->
+
+        <div class="og-muted" style="font-family:Arial,Helvetica,sans-serif;font-size:11px;color:${MUTED};padding-top:18px;">
+          Sent via SLST · Swift Supply
+        </div>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+export function renderShipConfirmationPlain(data: ShipConfirmationData): string {
+  return [
+    "Your order has now been shipped!",
+    "",
+    "Order details:",
+    `SO#: ${data.so || "None"}`,
+    `Customer: ${data.customer || "None"}`,
+    `Carrier: ${data.carrier || "None"}`,
+    `Shipped At: ${data.shippedAt || "None"}`,
+    `Shipped By: ${data.shippedBy || "None"}`,
+    `Container(s): ${data.containers || "None"}`,
+    `Total Weight (lbs): ${data.weight || "None"}`,
+    `Comments: ${data.comments || "None"}`,
+  ].join("\n");
+}
+
+export function isShipConfirmationType(notificationType: string | undefined | null): boolean {
+  const t = String(notificationType ?? "").trim().toLowerCase();
+  return t === "ship_confirm" || t === "quick_ship";
+}
+
+export function shipDataFromPayload(body: Record<string, unknown>): ShipConfirmationData {
+  const pick = (...keys: string[]): string => {
+    for (const k of keys) {
+      const v = body[k];
+      if (v != null && String(v).trim()) return String(v).trim();
+    }
+    return "";
+  };
+
+  const assetBase = pick("asset_base_url", "assetBaseUrl") || DEFAULT_EMAIL_ASSET_BASE;
+  const logoFromPayload = pick("logo_url", "logoUrl");
+
+  return {
+    so: pick("so", "so_number"),
+    customer: pick("customer"),
+    carrier: pick("carrier"),
+    shippedAt: pick("shipped_at", "shippedAt"),
+    shippedBy: pick("shipped_by", "shippedBy"),
+    containers: pick("containers", "type", "container"),
+    weight: pick("weight"),
+    comments: pick("comments"),
+    logoUrl: logoFromPayload || emailAssetUrl("slst-logo-email", assetBase),
+    ctaUrl: pick("cta_url", "ctaUrl", "tracking_url", "trackingUrl") || undefined,
+    emailContact: pick("email_contact", "emailContact") || undefined,
+    websiteUrl: pick("website_url", "websiteUrl") || undefined,
+    assetBaseUrl: assetBase,
+  };
+}
