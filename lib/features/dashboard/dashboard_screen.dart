@@ -16,6 +16,9 @@ enum _StagingBoardColumn {
   shipToday,
   shipTomorrow,
   partial,
+  future,
+  corpPick,
+  customerPick,
   awaiting,
 }
 
@@ -28,6 +31,10 @@ class DashboardScreen extends ConsumerStatefulWidget {
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   StagingEntry? _inspect;
+  final _search = TextEditingController();
+  String _q = '';
+  bool _overduePromptRunning = false;
+  final _overduePromptedIds = <String>{};
 
   /// Preferred compact KPI card width at the content-column ceiling.
   static const double _kpiPreferredCardWidth = 112;
@@ -45,6 +52,136 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   /// Below this content width, staging columns stack instead of 4-across.
   static const double _boardStackBreakpoint = 720;
 
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _maybeShowOverduePrompts();
+    });
+  }
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  bool _matchesQuickSearch(StagingEntry e) {
+    if (_q.isEmpty) return true;
+    final ui = StatusRules.formatUi(e.status);
+    final hay =
+        '${e.so} ${e.customer} ${e.location} ${e.status} $ui'.toLowerCase();
+    return hay.contains(_q);
+  }
+
+  Future<void> _maybeShowOverduePrompts() async {
+    if (!mounted || _overduePromptRunning) return;
+    final data = ref.read(appDataProvider);
+    if (data.loading) return;
+
+    final prefs = await ref.read(prefsProvider.future);
+    if (!mounted) return;
+    final handled = prefs.overdueHandled;
+    final overdue = data.staging
+        .where(
+          (e) =>
+              StatusRules.isOverdue(e.status) &&
+              !handled.contains(e.id) &&
+              !_overduePromptedIds.contains(e.id),
+        )
+        .toList()
+      ..sort((a, b) => a.status.compareTo(b.status));
+    if (overdue.isEmpty) return;
+
+    _overduePromptRunning = true;
+    try {
+      for (final entry in overdue) {
+        if (!mounted) break;
+        _overduePromptedIds.add(entry.id);
+        final open = await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (dialogContext) => AlertDialog(
+            backgroundColor: IndustrialTheme.darkSurface,
+            title: Text(
+              'Overdue staging entry',
+              style: IndustrialTheme.mono(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: IndustrialTheme.textPrimary,
+              ),
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'SO ${entry.so}',
+                  style: IndustrialTheme.mono(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: IndustrialTheme.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  entry.customer,
+                  style: const TextStyle(color: IndustrialTheme.textPrimary),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Location: ${entry.location.isEmpty ? '—' : entry.location}',
+                  style: const TextStyle(color: IndustrialTheme.textMuted),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Ship date: ${entry.status}',
+                  style: IndustrialTheme.mono(
+                    fontSize: 12,
+                    color: IndustrialTheme.amber,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  'This entry is past its ship window.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: IndustrialTheme.textMuted,
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                style: TextButton.styleFrom(
+                  foregroundColor: IndustrialTheme.textMuted,
+                ),
+                child: const Text('Dismiss'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(dialogContext, true),
+                style: FilledButton.styleFrom(
+                  backgroundColor: IndustrialTheme.skyBlue,
+                  foregroundColor: IndustrialTheme.textPrimary,
+                ),
+                child: const Text('Open'),
+              ),
+            ],
+          ),
+        );
+        await prefs.markOverdueHandled(entry.id);
+        if (!mounted) break;
+        if (open == true) {
+          setState(() => _inspect = entry);
+          break;
+        }
+      }
+    } finally {
+      _overduePromptRunning = false;
+    }
+  }
+
   _StagingBoardColumn _columnFor(StagingEntry e) {
     final ui = StatusRules.formatUi(e.status);
     if (ui == 'Ship Today' || StatusRules.isOverdue(e.status)) {
@@ -52,6 +189,22 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     }
     if (ui == 'Ship Tomorrow') return _StagingBoardColumn.shipTomorrow;
     if (ui == 'Partial') return _StagingBoardColumn.partial;
+    if (ui == 'Corp Pick' || ui.toLowerCase().contains('corp pick')) {
+      return _StagingBoardColumn.corpPick;
+    }
+    if (ui == 'Customer Pick-Up' || ui.toLowerCase().contains('customer pick')) {
+      return _StagingBoardColumn.customerPick;
+    }
+    if (ui == 'Awaiting Instructions' ||
+        StatusRules.isAwaitingInstructions(e.status)) {
+      return _StagingBoardColumn.awaiting;
+    }
+    // Future YMD dates, TBD, Ship On Future Date → Future column.
+    if (ui == 'Ship On Future Date' ||
+        ui == 'TBD' ||
+        StatusRules.isYmd(e.status)) {
+      return _StagingBoardColumn.future;
+    }
     return _StagingBoardColumn.awaiting;
   }
 
@@ -71,7 +224,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final data = ref.watch(appDataProvider);
+    ref.listen<AppData>(appDataProvider, (prev, next) {
+      if (prev?.loading == true && !next.loading) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _maybeShowOverduePrompts();
+        });
+      }
+    });
     final totals = data.containerTotals;
+    final filteredStaging = data.staging.where(_matchesQuickSearch).toList();
 
     final kpis = [
       (
@@ -124,11 +285,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       ),
     ];
 
-    final shipToday = _bucket(data.staging, _StagingBoardColumn.shipToday);
+    final shipToday = _bucket(filteredStaging, _StagingBoardColumn.shipToday);
     final shipTomorrow =
-        _bucket(data.staging, _StagingBoardColumn.shipTomorrow);
-    final partial = _bucket(data.staging, _StagingBoardColumn.partial);
-    final awaiting = _bucket(data.staging, _StagingBoardColumn.awaiting);
+        _bucket(filteredStaging, _StagingBoardColumn.shipTomorrow);
+    final partial = _bucket(filteredStaging, _StagingBoardColumn.partial);
+    final future = _bucket(filteredStaging, _StagingBoardColumn.future);
+    final corpPick = _bucket(filteredStaging, _StagingBoardColumn.corpPick);
+    final customerPick =
+        _bucket(filteredStaging, _StagingBoardColumn.customerPick);
+    final awaiting = _bucket(filteredStaging, _StagingBoardColumn.awaiting);
 
     final scrollBody = RefreshIndicator(
       onRefresh: () => ref.read(appDataProvider.notifier).refresh(),
@@ -193,16 +358,28 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       // Section B — Floor map (same width; scales with container)
                       WarehouseFloorMap(staging: data.staging),
                       const SizedBox(height: _sectionGap),
+                      SearchField(
+                        controller: _search,
+                        hint:
+                            'Quick Search — SO, customer, location, status…',
+                        onChanged: (v) =>
+                            setState(() => _q = v.trim().toLowerCase()),
+                      ),
+                      const SizedBox(height: 12),
                       // Section C — Active Staging (same content bounds)
                       _ActiveStagingBoard(
                         shipToday: shipToday,
                         shipTomorrow: shipTomorrow,
                         partial: partial,
+                        future: future,
+                        corpPick: corpPick,
+                        customerPick: customerPick,
                         awaiting: awaiting,
                         selectedId: _inspect?.id,
                         onSelect: (e) => setState(() => _inspect = e),
                         loading: data.loading && data.staging.isEmpty,
                         stackBreakpoint: _boardStackBreakpoint,
+                        filterActive: _q.isNotEmpty,
                       ),
                     ],
                   ),
@@ -243,30 +420,59 @@ class _ActiveStagingBoard extends StatelessWidget {
     required this.shipToday,
     required this.shipTomorrow,
     required this.partial,
+    required this.future,
+    required this.corpPick,
+    required this.customerPick,
     required this.awaiting,
     required this.selectedId,
     required this.onSelect,
     required this.loading,
     this.stackBreakpoint = 720,
+    this.filterActive = false,
   });
 
   final List<StagingEntry> shipToday;
   final List<StagingEntry> shipTomorrow;
   final List<StagingEntry> partial;
+  final List<StagingEntry> future;
+  final List<StagingEntry> corpPick;
+  final List<StagingEntry> customerPick;
   final List<StagingEntry> awaiting;
   final String? selectedId;
   final ValueChanged<StagingEntry> onSelect;
   final bool loading;
   final double stackBreakpoint;
+  final bool filterActive;
 
   @override
   Widget build(BuildContext context) {
+    final totalVisible = shipToday.length +
+        shipTomorrow.length +
+        partial.length +
+        future.length +
+        corpPick.length +
+        customerPick.length +
+        awaiting.length;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          'ACTIVE STAGING',
-          style: Theme.of(context).textTheme.labelSmall,
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'ACTIVE STAGING',
+                style: Theme.of(context).textTheme.labelSmall,
+              ),
+            ),
+            if (filterActive)
+              Text(
+                '$totalVisible match${totalVisible == 1 ? '' : 'es'}',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: IndustrialTheme.textMuted,
+                    ),
+              ),
+          ],
         ),
         const SizedBox(height: 10),
         if (loading)
@@ -301,8 +507,29 @@ class _ActiveStagingBoard extends StatelessWidget {
                   onSelect: onSelect,
                 ),
                 _BoardColumn(
-                  title: 'AWAITING SHIPPING INSTRUCTIONS',
+                  title: 'FUTURE',
+                  accent: const Color(0xFF8B5CF6),
+                  entries: future,
+                  selectedId: selectedId,
+                  onSelect: onSelect,
+                ),
+                _BoardColumn(
+                  title: 'CORP PICK',
                   accent: IndustrialTheme.purple,
+                  entries: corpPick,
+                  selectedId: selectedId,
+                  onSelect: onSelect,
+                ),
+                _BoardColumn(
+                  title: 'CUSTOMER PICK-UP',
+                  accent: const Color(0xFFEC4899),
+                  entries: customerPick,
+                  selectedId: selectedId,
+                  onSelect: onSelect,
+                ),
+                _BoardColumn(
+                  title: 'AWAITING INSTRUCTIONS',
+                  accent: IndustrialTheme.slateMuted,
                   entries: awaiting,
                   selectedId: selectedId,
                   onSelect: onSelect,
@@ -320,15 +547,18 @@ class _ActiveStagingBoard extends StatelessWidget {
                 );
               }
 
-              return IntrinsicHeight(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    for (var i = 0; i < columns.length; i++) ...[
-                      if (i > 0) const SizedBox(width: 10),
-                      Expanded(child: columns[i]),
-                    ],
-                  ],
+              // Horizontal scroll keeps all status lists readable without
+              // crushing Future / Corp / Customer into Awaiting.
+              return SizedBox(
+                height: 420,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: columns.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 10),
+                  itemBuilder: (context, i) => SizedBox(
+                    width: 210,
+                    child: columns[i],
+                  ),
                 ),
               );
             },
@@ -422,14 +652,20 @@ class _BoardColumn extends StatelessWidget {
               ),
             )
           else
-            for (final e in entries) ...[
-              _StagingSoCard(
-                entry: e,
-                selected: e.id == selectedId,
-                onTap: () => onSelect(e),
+            Expanded(
+              child: ListView(
+                children: [
+                  for (final e in entries) ...[
+                    _StagingSoCard(
+                      entry: e,
+                      selected: e.id == selectedId,
+                      onTap: () => onSelect(e),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                ],
               ),
-              const SizedBox(height: 8),
-            ],
+            ),
         ],
       ),
     );
