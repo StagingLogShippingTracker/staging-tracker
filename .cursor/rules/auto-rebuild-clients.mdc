@@ -1,19 +1,19 @@
 ---
-description: Rebuild Flutter clients in Cursor Cloud Agents
+description: Rebuild Flutter clients locally after app changes
 alwaysApply: true
 ---
 
-# Cloud-first Flutter builds
+# Local Flutter builds
 
-Future development and packaging builds run in **Cursor Cloud Agents**, not on a local Windows checkout.
+Development and packaging builds run on the **local Windows checkout** (this machine), not Cursor Cloud Agents.
 
 When a request changes a Flutter client (`lib/`, `windows/`, `android/`, `apps/slst_wear/`, `pubspec.yaml`, assets, etc.):
 
-1. Do **not** tell the user to rebuild themselves locally.
-2. Prefer a **cloud** agent / cloud worktree for builds and packaging.
-3. Rebuild the affected platform(s) in that cloud environment before finishing:
+1. Do **not** tell the user to rebuild themselves.
+2. Prefer the local checkout and local Flutter (`.tools/flutter` bootstrap or system Flutter on PATH).
+3. Rebuild the affected platform(s) before finishing:
  - Windows: `scripts/packaging/build-windows-installer.ps1` / portable helpers when a distributable is expected
  - Android: `scripts/packaging/build-android-apk.ps1`
  - Wear: `scripts/packaging/build-wear-apk.ps1`
 4. Edge-function / Supabase-only changes do **not** require a Flutter rebuild unless the client also changed.
-5. Do not assume a local `.tools/flutter` SDK or local `dist/`/`build/` artifacts exist.
+5. Keep `.tools/flutter`, `build/`, and `dist/` available for local run/install workflows (including ADB install to phone/Wear).

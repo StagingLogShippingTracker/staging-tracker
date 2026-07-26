@@ -6,28 +6,28 @@ SLST — Staging Log & Shipping Tracker: **Flutter clients** for **Windows**, **
 
 There is **no** web/PWA client and **no** Prophet21 / Epicor integration.
 
-## Cloud-first development
+## Local-first development
 
-Future development and Flutter packaging builds run in **Cursor Cloud Agents**. Do not assume a local Windows checkout, local `.tools/` Flutter SDK, or local `dist/` / `build/` artifacts.
+Development and Flutter packaging builds run on the **local Windows checkout**. Prefer this machine’s `.tools/flutter` bootstrap (or Flutter on PATH), plus local `build/` / `dist/` artifacts. Do not default to Cursor Cloud Agents for app work unless the user asks.
 
-## Dev commands (cloud agent)
-
-Prefer a system Flutter on PATH in the cloud environment (or whatever the cloud image provides):
+## Dev commands (local)
 
 ```bash
+# Prefer repo-local SDK when present:
+#   .tools\flutter\bin\flutter.bat   (Windows)
 flutter pub get
-flutter run -d windows   # when a Windows target is available
+flutter run -d windows
 flutter run -d android
 flutter -C apps/slst_wear run -d <wear-device>
 flutter test
 flutter analyze
 ```
 
-Legacy local note: `.tools/` was a gitignored Windows SDK bootstrap and is not required for cloud work.
+Push to devices with ADB when paired (`adb install -r …` for phone and Wear).
 
-## After app changes — always rebuild (in cloud)
+## After app changes — always rebuild (local)
 
-When agents change a Flutter client, they must rebuild the affected platform(s) in the **cloud** environment before finishing — do not ask the user to rebuild locally.
+When agents change a Flutter client, they must rebuild the affected platform(s) **locally** before finishing — do not ask the user to rebuild.
 
 - Windows: prefer `scripts/packaging/build-windows-installer.ps1` (and related Windows packaging under `scripts/packaging/`) for distributables.
 - Android: `scripts/packaging/build-android-apk.ps1`
