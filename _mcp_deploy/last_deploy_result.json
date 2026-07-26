@@ -1,0 +1,40 @@
+{
+  "deploy": {
+    "id": "f62c1a94-a178-4ffb-bddd-6e168e2feab7",
+    "slug": "notify-pm",
+    "version": 48,
+    "name": "notify-pm",
+    "status": "ACTIVE",
+    "entrypoint_path": "file:///tmp/user_fn_gdrpdiwykmnybmkadlrv_f62c1a94-a178-4ffb-bddd-6e168e2feab7_48/source/index.ts",
+    "import_map_path": null,
+    "import_map": false,
+    "verify_jwt": true,
+    "created_at": 1784412054914,
+    "updated_at": 1785017498616,
+    "ezbr_sha256": "a891000d2a7b46c4a009deef0e3c5a5eef6f63959166333a7de1d46330b7c264"
+  },
+  "get": {
+    "version": 48,
+    "files": [
+      "index.ts",
+      "email-templates/ship-confirmation.ts",
+      "email-templates/email-shared.ts",
+      "email-templates/notification-email.ts"
+    ],
+    "verify": {
+      "version": 48,
+      "version_gt_46": true,
+      "file_count": 4,
+      "file_names": [
+        "index.ts",
+        "email-templates/ship-confirmation.ts",
+        "email-templates/email-shared.ts",
+        "email-templates/notification-email.ts"
+      ],
+      "has_swift": true,
+      "has_cta": true,
+      "has_render": true,
+      "no_placeholder": true
+    }
+  }
+}

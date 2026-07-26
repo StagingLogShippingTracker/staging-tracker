@@ -1,5 +1,5 @@
-; Non-admin per-user installer for SLST
-#define MyAppName "SLST"
+; Non-admin per-user installer for Swift Staging Tracker
+#define MyAppName "Swift Staging Tracker"
 #define MyAppVersion "1.0.0"
 #define MyAppPublisher "Swift Supply"
 #define MyAppExeName "slst.exe"
@@ -36,4 +36,4 @@ Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{userdesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\{#MyAppExeName}"; Description: "Launch SLST"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\{#MyAppExeName}"; Description: "Launch Swift Staging Tracker"; Flags: nowait postinstall skipifsilent

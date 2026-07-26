@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "Swift Supply" "\0"
-            VALUE "FileDescription", "SLST - Staging Log & Shipping Tracker" "\0"
+            VALUE "FileDescription", "Swift Staging Tracker" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "slst" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 ca.swiftsupply. All rights reserved." "\0"
             VALUE "OriginalFilename", "slst.exe" "\0"
-            VALUE "ProductName", "SLST" "\0"
+            VALUE "ProductName", "Swift Staging Tracker" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END
