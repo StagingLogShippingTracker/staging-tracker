@@ -1,16 +1,19 @@
 ---
-description: Always rebuild Windows after Flutter app changes
+description: Rebuild Flutter clients in Cursor Cloud Agents
 alwaysApply: true
 ---
 
-# Auto-rebuild Flutter clients
+# Cloud-first Flutter builds
+
+Future development and packaging builds run in **Cursor Cloud Agents**, not on a local Windows checkout.
 
 When a request changes a Flutter client (`lib/`, `windows/`, `android/`, `apps/slst_wear/`, `pubspec.yaml`, assets, etc.):
 
-1. Do **not** tell the user to rebuild themselves.
-2. Automatically rebuild the affected platform(s) before finishing:
- - Windows: `.\.tools\flutter\bin\flutter.bat build windows --release` (prefer `scripts/packaging/build-windows-installer.ps1` / portable when a distributable is expected)
+1. Do **not** tell the user to rebuild themselves locally.
+2. Prefer a **cloud** agent / cloud worktree for builds and packaging.
+3. Rebuild the affected platform(s) in that cloud environment before finishing:
+ - Windows: `scripts/packaging/build-windows-installer.ps1` / portable helpers when a distributable is expected
  - Android: `scripts/packaging/build-android-apk.ps1`
  - Wear: `scripts/packaging/build-wear-apk.ps1`
-3. Edge-function / Supabase-only changes do **not** require a Flutter rebuild unless the client also changed.
-4. Prefer packaging scripts when the user typically installs from ZIP/Inno/APK artifacts rather than raw `build/` outputs.
+4. Edge-function / Supabase-only changes do **not** require a Flutter rebuild unless the client also changed.
+5. Do not assume a local `.tools/flutter` SDK or local `dist/`/`build/` artifacts exist.
