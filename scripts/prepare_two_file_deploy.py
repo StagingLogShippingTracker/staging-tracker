@@ -49,16 +49,19 @@ for good in [
     "renderShipConfirmationEmail",
     "renderNotificationEmail",
     "renderBrandedEmail",
-    "20260722g",
+    "20260728sst",
     "darkModeCss",
     "linear-gradient",
-    "watermark-gears",
     "surfaceBg",
     "swift-supply-logo-email",
     "headerLogosBlock",
     "publicPhotoUrl",
     "public_photo_url",
+    "SST",
 ]:
     assert good in combined, good
+
+for retired in ["slst-logo-email", "alt=\"SLST", "Thank you for using SLST"]:
+    assert retired not in combined, retired
 
 print("ok", out, out.stat().st_size)
