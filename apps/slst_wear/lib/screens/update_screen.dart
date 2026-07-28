@@ -6,7 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../theme.dart';
 
-/// Compact Wear Settings → Update: download SST-Wear.apk from GitHub Releases.
+/// Compact Wear Settings → Update: check, confirm, download+install SST-Wear.apk.
 class WearUpdateScreen extends StatefulWidget {
   const WearUpdateScreen({super.key});
 
@@ -20,8 +20,10 @@ class _WearUpdateScreenState extends State<WearUpdateScreen> {
   PackageInfo? _info;
   AppReleaseInfo? _latest;
   bool _checking = false;
-  bool _opening = false;
+  bool _installing = false;
+  double? _progress;
   String? _error;
+  String? _status;
 
   @override
   void initState() {
@@ -41,11 +43,49 @@ class _WearUpdateScreenState extends State<WearUpdateScreen> {
     setState(() {
       _checking = true;
       _error = null;
+      _status = null;
     });
     try {
-      final latest = await _svc.fetchLatestRelease();
+      final info = _info ?? await PackageInfo.fromPlatform();
+      final result = await _svc.checkForUpdate(
+        installedVersion: info.version,
+        installedBuild: info.buildNumber,
+      );
       if (!mounted) return;
-      setState(() => _latest = latest);
+      setState(() {
+        _info = info;
+        _latest = result.latest;
+      });
+
+      if (!result.updateAvailable) {
+        setState(() {
+          _status = 'Up to date (${info.version}).';
+        });
+        return;
+      }
+
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Update?', style: TextStyle(fontSize: 16)),
+          content: Text(
+            '${result.latest.tagName}\nInstall now?',
+            style: const TextStyle(fontSize: 13),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('Yes'),
+            ),
+          ],
+        ),
+      );
+      if (confirm != true || !mounted) return;
+      await _downloadAndInstall(result.latest);
     } catch (e) {
       if (!mounted) return;
       setState(() => _error = '$e');
@@ -54,10 +94,7 @@ class _WearUpdateScreenState extends State<WearUpdateScreen> {
     }
   }
 
-  Future<void> _download() async {
-    if (_latest == null) await _check();
-    final release = _latest;
-    if (release == null) return;
+  Future<void> _downloadAndInstall(AppReleaseInfo release) async {
     final url = release.assetUrlFor(AppUpdatePlatform.wear);
     if (url == null || url.isEmpty) {
       setState(() {
@@ -67,23 +104,47 @@ class _WearUpdateScreenState extends State<WearUpdateScreen> {
       return;
     }
     setState(() {
-      _opening = true;
+      _installing = true;
+      _progress = 0;
       _error = null;
+      _status = 'Downloading…';
     });
     try {
-      final ok = await launchUrl(
-        Uri.parse(url),
-        mode: LaunchMode.externalApplication,
+      await _svc.downloadAndInstall(
+        platform: AppUpdatePlatform.wear,
+        release: release,
+        onProgress: (p) {
+          if (!mounted) return;
+          setState(() {
+            _progress = p;
+            _status = p >= 1.0
+                ? 'Opening installer…'
+                : 'Downloading… ${(p * 100).round()}%';
+          });
+        },
       );
-      if (!ok && mounted) {
-        setState(() => _error = 'Could not open download link.');
-      }
+      if (!mounted) return;
+      setState(() => _status = 'Installer opened.');
     } catch (e) {
       if (!mounted) return;
       setState(() => _error = '$e');
     } finally {
-      if (mounted) setState(() => _opening = false);
+      if (mounted) {
+        setState(() {
+          _installing = false;
+          _progress = null;
+        });
+      }
     }
+  }
+
+  Future<void> _openReleases() async {
+    final uri = Uri.parse(
+      (_latest?.htmlUrl.isNotEmpty ?? false)
+          ? _latest!.htmlUrl
+          : AppConfig.githubReleasesPage,
+    );
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
   @override
@@ -95,6 +156,7 @@ class _WearUpdateScreenState extends State<WearUpdateScreen> {
         ? null
         : DateFormat.MMMd().add_jm().format(_latest!.publishedAt!);
     final asset = _latest?.assetLabelFor(AppUpdatePlatform.wear);
+    final busy = _checking || _installing;
 
     return Scaffold(
       body: SafeArea(
@@ -123,7 +185,7 @@ class _WearUpdateScreenState extends State<WearUpdateScreen> {
             ),
             const SizedBox(height: 6),
             Text(
-              'Wear builds update less often. Download SST-Wear.apk from GitHub Releases when available.',
+              'Checks GitHub for a newer Wear build, then downloads and installs.',
               style: Theme.of(context).textTheme.labelSmall,
             ),
             if (_latest != null) ...[
@@ -149,6 +211,21 @@ class _WearUpdateScreenState extends State<WearUpdateScreen> {
                 ),
               ),
             ],
+            if (_status != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                _status!,
+                style: const TextStyle(
+                  color: WearTheme.ok,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+            if (_progress != null) ...[
+              const SizedBox(height: 6),
+              LinearProgressIndicator(value: _progress),
+            ],
             if (_error != null) ...[
               const SizedBox(height: 8),
               Text(
@@ -160,20 +237,24 @@ class _WearUpdateScreenState extends State<WearUpdateScreen> {
             SizedBox(
               height: 48,
               width: double.infinity,
-              child: OutlinedButton(
-                onPressed: _checking ? null : _check,
-                child: Text(_checking ? 'Checking…' : 'Check for updates'),
+              child: FilledButton(
+                onPressed: busy ? null : _check,
+                child: Text(
+                  _installing
+                      ? 'Installing…'
+                      : _checking
+                          ? 'Checking…'
+                          : 'Check for updates',
+                ),
               ),
             ),
             const SizedBox(height: 8),
             SizedBox(
-              height: 48,
+              height: 40,
               width: double.infinity,
-              child: FilledButton(
-                onPressed: (_checking || _opening) ? null : _download,
-                child: Text(
-                  _opening ? 'Opening…' : 'Download Wear APK',
-                ),
+              child: TextButton(
+                onPressed: _openReleases,
+                child: const Text('View releases'),
               ),
             ),
           ],

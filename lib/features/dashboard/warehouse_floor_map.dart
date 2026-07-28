@@ -166,7 +166,7 @@ class WarehouseFloorMap extends ConsumerWidget {
                 const aislePadLeft = 4.0;
                 const headerH = 30.0;
                 const corpH = 22.0;
-                const southH = 24.0;
+                const southH = 48.0;
                 const shortAisleFlex = 11;
                 const biteFlex = 18;
                 const shortFlexTotal = shortAisleFlex + biteFlex; // 29

@@ -348,12 +348,17 @@ class _CompactShell extends ConsumerWidget {
           ),
         ),
       ),
-      body: Column(
-        children: [
-          if (compactActions.isNotEmpty)
-            _CompactActionStrip(actions: compactActions),
-          Expanded(child: child),
-        ],
+      body: SafeArea(
+        // Keep bottom free for NavigationBar's own SafeArea; pad sides/top so
+        // landscape content does not bleed under system gesture/nav bars.
+        bottom: false,
+        child: Column(
+          children: [
+            if (compactActions.isNotEmpty)
+              _CompactActionStrip(actions: compactActions),
+            Expanded(child: child),
+          ],
+        ),
       ),
       bottomNavigationBar: SafeArea(
         top: false,

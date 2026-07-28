@@ -225,29 +225,33 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   void _openInspector(StagingEntry entry) {
-    final compact =
-        MediaQuery.sizeOf(context).width <
-        IndustrialTheme.tokens.inspectorBreakpoint;
     setState(() => _inspect = entry);
-    if (!compact) return;
-    showModalBottomSheet<void>(
+    if (!useInspectorPopup(context)) return;
+
+    final size = MediaQuery.sizeOf(context);
+    showDialog<void>(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (sheetContext) => DraggableScrollableSheet(
-        initialChildSize: 0.82,
-        minChildSize: 0.5,
-        maxChildSize: 0.96,
-        expand: false,
-        builder: (context, scrollController) => SafeArea(
-          top: false,
-          child: OrderInspector(
-            entry: entry,
-            width: double.infinity,
-            onClose: () => Navigator.of(sheetContext).pop(),
+      barrierDismissible: true,
+      builder: (dialogContext) {
+        return Dialog(
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 14,
+            vertical: 20,
           ),
-        ),
-      ),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          child: SizedBox(
+            width: double.infinity,
+            height: size.height * 0.88,
+            child: OrderInspector(
+              entry: entry,
+              asPopup: true,
+              width: size.width,
+              onClose: () => Navigator.of(dialogContext).pop(),
+            ),
+          ),
+        );
+      },
     ).whenComplete(() {
       if (mounted && _inspect?.id == entry.id) {
         setState(() => _inspect = null);
@@ -498,17 +502,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       ),
     );
 
-    final compact =
-        MediaQuery.sizeOf(context).width <
-        IndustrialTheme.tokens.inspectorBreakpoint;
-
-    if (_inspect == null) {
-      return ColoredBox(color: IndustrialTheme.darkBase, child: scrollBody);
-    }
-
-    // Compact layouts present the inspector as a modal sheet from [_openInspector].
-    // Desktop keeps a persistent 400px side panel beside the board.
-    if (compact) {
+    // Mobile portrait opens OrderInspector as a dialog from [_openInspector].
+    // Desktop / landscape keep a persistent 400px side panel beside the board.
+    final popup = useInspectorPopup(context);
+    if (_inspect == null || popup) {
       return ColoredBox(color: IndustrialTheme.darkBase, child: scrollBody);
     }
 

@@ -21,11 +21,13 @@ class OrderInspector extends ConsumerWidget {
     required this.entry,
     required this.onClose,
     this.width = 400,
+    this.asPopup = false,
   });
 
   final StagingEntry entry;
   final VoidCallback onClose;
   final double width;
+  final bool asPopup;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -38,6 +40,7 @@ class OrderInspector extends ConsumerWidget {
       title: 'ORDER INSPECTOR: ${entry.so}',
       onClose: onClose,
       width: width,
+      asPopup: asPopup,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

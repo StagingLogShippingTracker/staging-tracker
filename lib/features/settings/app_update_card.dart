@@ -10,7 +10,7 @@ import '../../core/app_config.dart';
 import '../../core/theme.dart';
 import '../../data/app_update.dart';
 
-/// Settings card: check GitHub Releases and download the host-platform build.
+/// Settings card: check GitHub Releases and download+install the host build.
 class AppUpdateCard extends StatefulWidget {
   const AppUpdateCard({super.key});
 
@@ -24,13 +24,19 @@ class _AppUpdateCardState extends State<AppUpdateCard> {
   PackageInfo? _info;
   AppReleaseInfo? _latest;
   bool _checking = false;
-  bool _opening = false;
+  bool _installing = false;
+  double? _progress;
   String? _error;
+  String? _status;
 
   bool get _supported {
     if (kIsWeb) return false;
     return Platform.isWindows || Platform.isAndroid;
   }
+
+  AppUpdatePlatform get _hostPlatform => Platform.isWindows
+      ? AppUpdatePlatform.windows
+      : AppUpdatePlatform.android;
 
   String get _platformLabel {
     if (Platform.isWindows) return 'Windows';
@@ -60,11 +66,61 @@ class _AppUpdateCardState extends State<AppUpdateCard> {
     setState(() {
       _checking = true;
       _error = null;
+      _status = null;
     });
     try {
-      final latest = await _svc.fetchLatestRelease();
+      final info = _info ?? await PackageInfo.fromPlatform();
+      final result = await _svc.checkForUpdate(
+        installedVersion: info.version,
+        installedBuild: info.buildNumber,
+      );
       if (!mounted) return;
-      setState(() => _latest = latest);
+      setState(() {
+        _info = info;
+        _latest = result.latest;
+      });
+
+      if (!result.updateAvailable) {
+        setState(() {
+          _status =
+              'You are up to date (${info.version}). Latest is ${result.latest.tagName}.';
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Up to date — installed ${info.version}, latest ${result.latest.tagName}.',
+              ),
+            ),
+          );
+        }
+        return;
+      }
+
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Update available'),
+          content: Text(
+            'A newer build is available:\n'
+            '${result.latest.name.isEmpty ? result.latest.tagName : result.latest.name}\n\n'
+            'Installed: ${info.version} (${info.buildNumber})\n'
+            'Download and install now?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('Yes, update'),
+            ),
+          ],
+        ),
+      );
+      if (confirm != true || !mounted) return;
+      await _downloadAndInstall(result.latest);
     } catch (e) {
       if (!mounted) return;
       setState(() => _error = e.toString());
@@ -73,18 +129,8 @@ class _AppUpdateCardState extends State<AppUpdateCard> {
     }
   }
 
-  Future<void> _download() async {
-    final latest = _latest;
-    if (latest == null) {
-      await _check();
-    }
-    final release = _latest;
-    if (release == null) return;
-
-    final platform = Platform.isWindows
-        ? AppUpdatePlatform.windows
-        : AppUpdatePlatform.android;
-    final url = release.assetUrlFor(platform);
+  Future<void> _downloadAndInstall(AppReleaseInfo release) async {
+    final url = release.assetUrlFor(_hostPlatform);
     if (url == null || url.isEmpty) {
       setState(() {
         _error =
@@ -94,20 +140,41 @@ class _AppUpdateCardState extends State<AppUpdateCard> {
     }
 
     setState(() {
-      _opening = true;
+      _installing = true;
+      _progress = 0;
       _error = null;
+      _status = 'Downloading…';
     });
     try {
-      final uri = Uri.parse(url);
-      final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
-      if (!ok && mounted) {
-        setState(() => _error = 'Could not open the download link.');
-      }
+      await _svc.downloadAndInstall(
+        platform: _hostPlatform,
+        release: release,
+        onProgress: (p) {
+          if (!mounted) return;
+          setState(() {
+            _progress = p;
+            _status = p >= 1.0
+                ? 'Starting installer…'
+                : 'Downloading… ${(p * 100).round()}%';
+          });
+        },
+      );
+      if (!mounted) return;
+      setState(() {
+        _status = Platform.isWindows
+            ? 'Installer launched. Follow the setup prompts.'
+            : 'Opening package installer…';
+      });
     } catch (e) {
       if (!mounted) return;
       setState(() => _error = e.toString());
     } finally {
-      if (mounted) setState(() => _opening = false);
+      if (mounted) {
+        setState(() {
+          _installing = false;
+          _progress = null;
+        });
+      }
     }
   }
 
@@ -124,17 +191,15 @@ class _AppUpdateCardState extends State<AppUpdateCard> {
   Widget build(BuildContext context) {
     if (!_supported) return const SizedBox.shrink();
 
-    final hostPlatform = Platform.isWindows
-        ? AppUpdatePlatform.windows
-        : AppUpdatePlatform.android;
     final installed = _info == null
         ? '…'
         : '${_info!.version} (${_info!.buildNumber})';
-    final assetLabel = _latest?.assetLabelFor(hostPlatform);
+    final assetLabel = _latest?.assetLabelFor(_hostPlatform);
     final publishedAt = _latest?.publishedAt;
     final published = publishedAt == null
         ? null
         : DateFormat('MMM d, y · h:mm a').format(publishedAt);
+    final busy = _checking || _installing;
 
     return Card(
       child: Padding(
@@ -166,8 +231,8 @@ class _AppUpdateCardState extends State<AppUpdateCard> {
             ),
             const SizedBox(height: 6),
             Text(
-              'Download the latest $_platformLabel build from GitHub Releases '
-              '(installer on Windows, APK on Android).',
+              'Check GitHub Releases for a newer $_platformLabel build. '
+              'If an update is available you can download and install it here.',
               style: Theme.of(context).textTheme.bodySmall,
             ),
             if (_latest != null) ...[
@@ -208,6 +273,20 @@ class _AppUpdateCardState extends State<AppUpdateCard> {
                   ),
                 ),
             ],
+            if (_status != null) ...[
+              const SizedBox(height: 10),
+              Text(
+                _status!,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: IndustrialTheme.mintGreen,
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+            ],
+            if (_progress != null) ...[
+              const SizedBox(height: 8),
+              LinearProgressIndicator(value: _progress),
+            ],
             if (_error != null) ...[
               const SizedBox(height: 10),
               Text(
@@ -222,34 +301,24 @@ class _AppUpdateCardState extends State<AppUpdateCard> {
               spacing: 10,
               runSpacing: 10,
               children: [
-                OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size(48, 48),
-                  ),
-                  onPressed: _checking ? null : _check,
-                  icon: _checking
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.refresh, size: 18),
-                  label: Text(_checking ? 'Checking…' : 'Check for updates'),
-                ),
                 FilledButton.icon(
                   style: FilledButton.styleFrom(
                     minimumSize: const Size(48, 48),
                   ),
-                  onPressed: (_checking || _opening) ? null : _download,
-                  icon: _opening
+                  onPressed: busy ? null : _check,
+                  icon: busy
                       ? const SizedBox(
                           width: 16,
                           height: 16,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Icon(Icons.download, size: 18),
+                      : const Icon(Icons.system_update_alt, size: 18),
                   label: Text(
-                    _opening ? 'Opening…' : 'Download latest $_platformLabel',
+                    _installing
+                        ? 'Installing…'
+                        : _checking
+                            ? 'Checking…'
+                            : 'Check for updates',
                   ),
                 ),
                 TextButton.icon(
