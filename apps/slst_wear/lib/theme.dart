@@ -51,6 +51,11 @@ class WearTheme {
           fontWeight: FontWeight.w700,
           color: text,
         ),
+        titleSmall: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w700,
+          color: text,
+        ),
         bodyMedium: TextStyle(fontSize: 12, color: text),
         bodySmall: TextStyle(fontSize: 11, color: muted),
         labelSmall: TextStyle(

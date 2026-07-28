@@ -5,6 +5,7 @@ import 'package:slst_shared/slst_shared.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../theme.dart';
+import '../wear_layout.dart';
 import 'ship_confirm_screen.dart';
 import 'update_screen.dart';
 import 'verify_screen.dart';
@@ -119,83 +120,86 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    final insets = WearLayout.contentInsets(context);
     final email = Supabase.instance.client.auth.currentUser?.email ?? '';
 
     return Scaffold(
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(10, 8, 4, 4),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'STAGING',
-                          style: Theme.of(context).textTheme.labelSmall,
-                        ),
-                        Text(
-                          email.isEmpty ? 'Signed in' : email,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ],
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: EdgeInsets.fromLTRB(insets.left, insets.top, insets.right, 4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    WearIconAction(
+                      tooltip: 'Verify',
+                      onPressed: () async {
+                        await Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => const VerifyScreen(),
+                          ),
+                        );
+                        _refresh();
+                      },
+                      icon: Icons.checklist,
+                      color: WearTheme.accent,
                     ),
-                  ),
-                  IconButton(
-                    tooltip: 'Verify',
-                    onPressed: () async {
-                      await Navigator.of(context).push(
-                        MaterialPageRoute<void>(
-                          builder: (_) => const VerifyScreen(),
+                    WearIconAction(
+                      tooltip: 'Update',
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => const WearUpdateScreen(),
+                          ),
+                        );
+                      },
+                      icon: Icons.system_update_alt,
+                      color: WearTheme.muted,
+                    ),
+                    WearIconAction(
+                      tooltip: 'Refresh',
+                      onPressed: _loading ? null : () => _refresh(),
+                      icon: Icons.refresh,
+                      color: WearTheme.muted,
+                    ),
+                    WearIconAction(
+                      tooltip: 'Sign out',
+                      onPressed: _signOut,
+                      icon: Icons.logout,
+                      color: WearTheme.muted,
+                    ),
+                  ],
+                ),
+                Text(
+                  'STAGING',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.labelSmall,
+                ),
+                if (email.isNotEmpty)
+                  Text(
+                    email,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          fontSize: 9,
                         ),
-                      );
-                      _refresh();
-                    },
-                    icon: const Icon(Icons.checklist, size: 18),
-                    color: WearTheme.accent,
                   ),
-                  IconButton(
-                    tooltip: 'Update',
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute<void>(
-                          builder: (_) => const WearUpdateScreen(),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.system_update_alt, size: 18),
-                    color: WearTheme.muted,
-                  ),
-                  IconButton(
-                    tooltip: 'Refresh',
-                    onPressed: _loading ? null : () => _refresh(),
-                    icon: const Icon(Icons.refresh, size: 18),
-                    color: WearTheme.muted,
-                  ),
-                  IconButton(
-                    tooltip: 'Sign out',
-                    onPressed: _signOut,
-                    icon: const Icon(Icons.logout, size: 18),
-                    color: WearTheme.muted,
-                  ),
-                ],
-              ),
+              ],
             ),
-            const Divider(height: 1, color: WearTheme.border),
-            Expanded(child: _body()),
-          ],
-        ),
+          ),
+          const Divider(height: 1, color: WearTheme.border),
+          Expanded(child: _body(insets)),
+        ],
       ),
     );
   }
 
-  Widget _body() {
+  Widget _body(EdgeInsets insets) {
     if (_loading && _entries == null) {
       return const Center(
         child: SizedBox(
@@ -208,7 +212,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (_error != null && (_entries == null || _entries!.isEmpty)) {
       return Center(
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: EdgeInsets.fromLTRB(insets.left, 8, insets.right, insets.bottom),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -234,21 +238,30 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final entries = _entries ?? const <StagingEntry>[];
     if (entries.isEmpty) {
       return Center(
-        child: Text(
-          'No active staging',
-          style: Theme.of(context).textTheme.bodySmall,
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: insets.left),
+          child: Text(
+            'No active staging',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
         ),
       );
     }
     return ListView.separated(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: EdgeInsets.fromLTRB(
+        insets.left,
+        6,
+        insets.right,
+        insets.bottom + 8,
+      ),
       itemCount: entries.length,
       separatorBuilder: (_, _) =>
           const Divider(height: 1, color: WearTheme.border),
       itemBuilder: (context, i) {
         final e = entries[i];
-        return SizedBox(
-          height: 64,
+        return ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 56),
           child: InkWell(
             onTap: () async {
               final shipped = await Navigator.of(context).push<bool>(
@@ -259,12 +272,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               if (shipped == true) _refresh();
             },
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              padding: const EdgeInsets.symmetric(vertical: 8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(e.so, style: Theme.of(context).textTheme.titleSmall),
+                  Text(
+                    e.so,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
                   Text(
                     e.customer,
                     maxLines: 1,

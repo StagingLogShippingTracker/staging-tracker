@@ -5,6 +5,7 @@ import 'package:slst_shared/slst_shared.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../theme.dart';
+import '../wear_layout.dart';
 
 /// Compact Wear Settings → Update: check, confirm, download+install SST-Wear.apk.
 class WearUpdateScreen extends StatefulWidget {
@@ -149,6 +150,7 @@ class _WearUpdateScreenState extends State<WearUpdateScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final insets = WearLayout.contentInsets(context);
     final installed = _info == null
         ? '…'
         : '${_info!.version} (${_info!.buildNumber})';
@@ -159,106 +161,100 @@ class _WearUpdateScreenState extends State<WearUpdateScreen> {
     final busy = _checking || _installing;
 
     return Scaffold(
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
-          children: [
-            Row(
-              children: [
-                IconButton(
-                  tooltip: 'Back',
-                  onPressed: () => Navigator.of(context).pop(),
-                  icon: const Icon(Icons.arrow_back, size: 18),
-                  color: WearTheme.muted,
-                ),
-                Expanded(
-                  child: Text(
-                    'UPDATE',
-                    style: Theme.of(context).textTheme.titleSmall,
-                  ),
-                ),
-              ],
-            ),
+      body: ListView(
+        padding: EdgeInsets.fromLTRB(
+          insets.left,
+          insets.top,
+          insets.right,
+          insets.bottom + 12,
+        ),
+        physics: const BouncingScrollPhysics(
+          parent: AlwaysScrollableScrollPhysics(),
+        ),
+        children: [
+          WearPageHeader(
+            title: 'UPDATE',
+            onBack: () => Navigator.of(context).pop(),
+          ),
+          Text(
+            'Installed $installed',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Checks GitHub for a newer Wear build, then downloads and installs.',
+            style: Theme.of(context).textTheme.labelSmall,
+          ),
+          if (_latest != null) ...[
+            const SizedBox(height: 10),
             Text(
-              'Installed $installed',
-              style: Theme.of(context).textTheme.bodySmall,
+              _latest!.name.isEmpty ? _latest!.tagName : _latest!.name,
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 12,
+              ),
             ),
-            const SizedBox(height: 6),
+            if (published != null)
+              Text(
+                published,
+                style: Theme.of(context).textTheme.labelSmall,
+              ),
             Text(
-              'Checks GitHub for a newer Wear build, then downloads and installs.',
-              style: Theme.of(context).textTheme.labelSmall,
-            ),
-            if (_latest != null) ...[
-              const SizedBox(height: 10),
-              Text(
-                _latest!.name.isEmpty ? _latest!.tagName : _latest!.name,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 12,
-                ),
-              ),
-              if (published != null)
-                Text(
-                  published,
-                  style: Theme.of(context).textTheme.labelSmall,
-                ),
-              Text(
-                asset ?? 'No Wear APK on this release',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: asset == null ? WearTheme.warn : WearTheme.ok,
-                ),
-              ),
-            ],
-            if (_status != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                _status!,
-                style: const TextStyle(
-                  color: WearTheme.ok,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-            if (_progress != null) ...[
-              const SizedBox(height: 6),
-              LinearProgressIndicator(value: _progress),
-            ],
-            if (_error != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                _error!,
-                style: const TextStyle(color: WearTheme.danger, fontSize: 11),
-              ),
-            ],
-            const SizedBox(height: 12),
-            SizedBox(
-              height: 48,
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: busy ? null : _check,
-                child: Text(
-                  _installing
-                      ? 'Installing…'
-                      : _checking
-                          ? 'Checking…'
-                          : 'Check for updates',
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            SizedBox(
-              height: 40,
-              width: double.infinity,
-              child: TextButton(
-                onPressed: _openReleases,
-                child: const Text('View releases'),
+              asset ?? 'No Wear APK on this release',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: asset == null ? WearTheme.warn : WearTheme.ok,
               ),
             ),
           ],
-        ),
+          if (_status != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              _status!,
+              style: const TextStyle(
+                color: WearTheme.ok,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+          if (_progress != null) ...[
+            const SizedBox(height: 6),
+            LinearProgressIndicator(value: _progress),
+          ],
+          if (_error != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              _error!,
+              style: const TextStyle(color: WearTheme.danger, fontSize: 11),
+            ),
+          ],
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 48,
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: busy ? null : _check,
+              child: Text(
+                _installing
+                    ? 'Installing…'
+                    : _checking
+                        ? 'Checking…'
+                        : 'Check for updates',
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 40,
+            width: double.infinity,
+            child: TextButton(
+              onPressed: _openReleases,
+              child: const Text('View releases'),
+            ),
+          ),
+        ],
       ),
     );
   }

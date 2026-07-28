@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:slst_shared/slst_shared.dart';
 
 import '../theme.dart';
+import '../wear_layout.dart';
 
 /// Lean ship-confirm for a single staging row.
 class ShipConfirmScreen extends StatefulWidget {
@@ -92,33 +93,39 @@ class _ShipConfirmScreenState extends State<ShipConfirmScreen> {
     required List<String> values,
     required TextEditingController controller,
   }) async {
+    final insets = WearLayout.contentInsets(context);
     final selected = await showModalBottomSheet<String>(
       context: context,
       backgroundColor: WearTheme.base,
       isScrollControlled: true,
-      builder: (context) => SafeArea(
+      builder: (context) => Padding(
+        padding: EdgeInsets.fromLTRB(
+          insets.left,
+          insets.top,
+          insets.right,
+          insets.bottom,
+        ),
         child: SizedBox(
-          height: MediaQuery.sizeOf(context).height,
+          height: MediaQuery.sizeOf(context).height * 0.85,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 12, 4, 8),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'Select $title',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Select $title',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleMedium,
                     ),
-                    IconButton(
-                      tooltip: 'Close',
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(Icons.close),
-                    ),
-                  ],
-                ),
+                  ),
+                  WearIconAction(
+                    tooltip: 'Close',
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: Icons.close,
+                  ),
+                ],
               ),
               const Divider(height: 1, color: WearTheme.border),
               Expanded(
@@ -132,7 +139,12 @@ class _ShipConfirmScreenState extends State<ShipConfirmScreen> {
                     return SizedBox(
                       height: 48,
                       child: ListTile(
-                        title: Text(value),
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(
+                          value,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                         trailing: value == controller.text
                             ? const Icon(Icons.check, color: WearTheme.ok)
                             : null,
@@ -195,58 +207,80 @@ class _ShipConfirmScreenState extends State<ShipConfirmScreen> {
   @override
   Widget build(BuildContext context) {
     final e = widget.entry;
+    final insets = WearLayout.contentInsets(context);
+
     return Scaffold(
-      appBar: AppBar(
-        title: Text('SO ${e.so}'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, size: 18),
-          onPressed: () => Navigator.of(context).pop(false),
-        ),
-      ),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
+      body: Padding(
+        padding: EdgeInsets.fromLTRB(insets.left, insets.top, insets.right, 0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(e.customer, style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 4),
-            Text(
-              '${e.location}\n${e.type} ×${e.qty}',
-              style: Theme.of(context).textTheme.bodySmall,
+            WearPageHeader(
+              title: 'SO ${e.so}',
+              onBack: () => Navigator.of(context).pop(false),
             ),
-            const SizedBox(height: 12),
-            Text('CARRIER', style: Theme.of(context).textTheme.labelSmall),
-            const SizedBox(height: 4),
-            _rosterField(
-              label: 'Carrier',
-              emptyHint: 'Enter carrier',
-              values: _carriers,
-              controller: _carrierCtrl,
-            ),
-            const SizedBox(height: 10),
-            Text('SHIPPED BY', style: Theme.of(context).textTheme.labelSmall),
-            const SizedBox(height: 4),
-            _rosterField(
-              label: 'Staff member',
-              emptyHint: 'Enter staff name',
-              values: _people,
-              controller: _byCtrl,
-            ),
-            if (_error != null) ...[
-              const SizedBox(height: 10),
-              Text(
-                _error!,
-                style: const TextStyle(color: WearTheme.danger, fontSize: 11),
+            Expanded(
+              child: ListView(
+                padding: EdgeInsets.only(bottom: insets.bottom + 12),
+                physics: const BouncingScrollPhysics(
+                  parent: AlwaysScrollableScrollPhysics(),
+                ),
+                children: [
+                  Text(
+                    e.customer,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${e.location}\n${e.type} ×${e.qty}',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: 12),
+                  Text('CARRIER', style: Theme.of(context).textTheme.labelSmall),
+                  const SizedBox(height: 4),
+                  _rosterField(
+                    label: 'Carrier',
+                    emptyHint: 'Enter carrier',
+                    values: _carriers,
+                    controller: _carrierCtrl,
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'SHIPPED BY',
+                    style: Theme.of(context).textTheme.labelSmall,
+                  ),
+                  const SizedBox(height: 4),
+                  _rosterField(
+                    label: 'Staff member',
+                    emptyHint: 'Enter staff name',
+                    values: _people,
+                    controller: _byCtrl,
+                  ),
+                  if (_error != null) ...[
+                    const SizedBox(height: 10),
+                    Text(
+                      _error!,
+                      style: const TextStyle(
+                        color: WearTheme.danger,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 14),
+                  FilledButton(
+                    onPressed: _busy ? null : _ship,
+                    child: Text(_busy ? 'Shipping…' : 'Confirm ship'),
+                  ),
+                  const SizedBox(height: 6),
+                  OutlinedButton(
+                    onPressed:
+                        _busy ? null : () => Navigator.of(context).pop(false),
+                    child: const Text('Cancel'),
+                  ),
+                ],
               ),
-            ],
-            const SizedBox(height: 14),
-            FilledButton(
-              onPressed: _busy ? null : _ship,
-              child: Text(_busy ? 'Shipping…' : 'Confirm ship'),
-            ),
-            const SizedBox(height: 6),
-            OutlinedButton(
-              onPressed: _busy ? null : () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
             ),
           ],
         ),

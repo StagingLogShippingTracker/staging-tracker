@@ -4,6 +4,7 @@ import 'package:slst_shared/slst_shared.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../theme.dart';
+import '../wear_layout.dart';
 
 /// Redeem a 6-digit pairing code from Windows/Android Settings → Pair Watch.
 class PairScreen extends StatefulWidget {
@@ -47,67 +48,72 @@ class _PairScreenState extends State<PairScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final insets = WearLayout.contentInsets(context);
+
     return Scaffold(
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'PAIR',
-                style: Theme.of(context).textTheme.labelSmall,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Enter code from phone/PC',
-                style: Theme.of(context).textTheme.bodySmall,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                height: 56,
-                child: TextField(
-                  controller: _controller,
-                  keyboardType: TextInputType.number,
-                  textAlign: TextAlign.center,
-                  maxLength: 6,
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 4,
-                    color: WearTheme.ok,
-                  ),
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  decoration: const InputDecoration(
-                    counterText: '',
-                    hintText: '••••••',
-                  ),
-                  onSubmitted: (_) => _redeem(),
-                ),
-              ),
-              if (_error != null) ...[
-                const SizedBox(height: 6),
-                Text(
-                  _error!,
-                  style: const TextStyle(color: WearTheme.danger, fontSize: 11),
-                  textAlign: TextAlign.center,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-              const Spacer(),
-              SizedBox(
-                height: 48,
-                child: FilledButton(
-                  onPressed: _busy ? null : _redeem,
-                  child: Text(_busy ? 'Pairing…' : 'Pair'),
-                ),
-              ),
-            ],
-          ),
+      body: ListView(
+        padding: EdgeInsets.fromLTRB(
+          insets.left,
+          insets.top,
+          insets.right,
+          insets.bottom + 12,
         ),
+        physics: const BouncingScrollPhysics(
+          parent: AlwaysScrollableScrollPhysics(),
+        ),
+        children: [
+          Text(
+            'PAIR',
+            style: Theme.of(context).textTheme.labelSmall,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Enter code from phone/PC',
+            style: Theme.of(context).textTheme.bodySmall,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 56,
+            child: TextField(
+              controller: _controller,
+              keyboardType: TextInputType.number,
+              textAlign: TextAlign.center,
+              maxLength: 6,
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 4,
+                color: WearTheme.ok,
+              ),
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              decoration: const InputDecoration(
+                counterText: '',
+                hintText: '••••••',
+              ),
+              onSubmitted: (_) => _redeem(),
+            ),
+          ),
+          if (_error != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              _error!,
+              style: const TextStyle(color: WearTheme.danger, fontSize: 11),
+              textAlign: TextAlign.center,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 48,
+            child: FilledButton(
+              onPressed: _busy ? null : _redeem,
+              child: Text(_busy ? 'Pairing…' : 'Pair'),
+            ),
+          ),
+        ],
       ),
     );
   }
