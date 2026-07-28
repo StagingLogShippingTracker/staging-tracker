@@ -13,7 +13,7 @@ from pathlib import Path
 import httpx
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
-PAYLOAD_PATH = Path(r"C:\Users\Brice\Downloads\staging-tracker\_mcp_deploy\deploy_two.json")
+PAYLOAD_PATH = Path(r"C:\Users\Brice\Downloads\swift-staging-tracker\_mcp_deploy\deploy_two.json")
 TOKEN_KEY = (
     "mcpOAuth.secret.W3BsdWdpbi1zdXBhYmFzZS1zdXBhYmFzZTo6bWNwU2NvcGU6"
     "cHJvZmlsZTpaR1ZtWVhWc2RBXSBtY3BfdG9rZW5z"
@@ -146,7 +146,7 @@ def main() -> None:
         "deno": "Deno.serve" in combined,
         "render_ship": "renderShipConfirmationEmail" in combined,
         "render_notify": "renderNotificationEmail" in combined,
-        "version_tag": "20260722f" in combined,
+        "version_tag": "20260728sst-darkforce" in combined,
         "dark_mode_css": "darkModeCss" in combined,
         "public_photo": "public_photo_url" in combined,
         "no_clip_text": "gmail-clip-text" not in combined,
