@@ -27,6 +27,49 @@ class _StagingScreenState extends ConsumerState<StagingScreen> {
     super.dispose();
   }
 
+  void _openInspector(StagingEntry entry) {
+    setState(() => _inspect = entry);
+    if (!useInspectorPopup(context)) return;
+
+    final size = MediaQuery.sizeOf(context);
+    showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogContext) {
+        return Dialog(
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 14,
+            vertical: 20,
+          ),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          child: SizedBox(
+            width: double.infinity,
+            height: size.height * 0.88,
+            child: SlideOverInspector(
+              title: 'SO ${entry.so}',
+              asPopup: true,
+              width: size.width,
+              onClose: () => Navigator.of(dialogContext).pop(),
+              body: StagingInspectorBody(
+                entry: entry,
+                onClose: () {
+                  if (Navigator.of(dialogContext).canPop()) {
+                    Navigator.of(dialogContext).pop();
+                  }
+                },
+              ),
+            ),
+          ),
+        );
+      },
+    ).whenComplete(() {
+      if (mounted && _inspect?.id == entry.id) {
+        setState(() => _inspect = null);
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final data = ref.watch(appDataProvider);
@@ -153,7 +196,7 @@ class _StagingScreenState extends ConsumerState<StagingScreen> {
             entries: entries,
             expanded: true,
             selectedId: _inspect?.id,
-            onInspect: (e) => setState(() => _inspect = e),
+            onInspect: _openInspector,
           ),
           const BrandFooter(),
         ],
@@ -167,22 +210,29 @@ class _StagingScreenState extends ConsumerState<StagingScreen> {
       error: data.error,
       onRetry: () => ref.read(appDataProvider.notifier).refresh(),
       emptyTitle: 'No active staging entries',
-      emptyMessage: 'New staging work will appear here when it is created.',
+      emptyMessage: ref.watch(currentUserProvider) == null
+          ? 'Sign in to view live staging inventory.'
+          : 'New staging work will appear here when it is created.',
       child: scrollBody,
     );
 
+    final popup = useInspectorPopup(context);
     final compact =
         MediaQuery.sizeOf(context).width <
         IndustrialTheme.tokens.inspectorBreakpoint;
 
-    if (_inspect == null) {
+    // Portrait mobile uses a dialog popup; keep side panel / overlay otherwise.
+    if (_inspect == null || popup) {
       return ColoredBox(color: IndustrialTheme.darkBase, child: content);
     }
 
     final inspector = SlideOverInspector(
       title: 'SO ${_inspect!.so}',
       onClose: () => setState(() => _inspect = null),
-      body: StagingInspectorBody(entry: _inspect!),
+      body: StagingInspectorBody(
+        entry: _inspect!,
+        onClose: () => setState(() => _inspect = null),
+      ),
     );
 
     // Host at screen level (bounded height) — never inside the ListView card.

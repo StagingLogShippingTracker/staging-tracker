@@ -2442,17 +2442,331 @@ class _SortDropdown<T> extends StatelessWidget {
   }
 }
 
-class StagingInspectorBody extends StatelessWidget {
-  const StagingInspectorBody({super.key, required this.entry});
+Future<void> deleteStagingEntry(
+  BuildContext context,
+  WidgetRef ref,
+  StagingEntry e,
+) async {
+  final ok = await confirmDialog(
+    context,
+    title: 'Delete entry?',
+    message: 'Delete staging entry for SO ${e.so}?',
+    confirmLabel: 'Delete',
+  );
+  if (!ok || !context.mounted) return;
+  try {
+    await ref
+        .read(operationsProvider)
+        .deleteRecord(table: 'staging', id: e.id, so: e.so);
+    if (context.mounted) showOk(context, 'Deleted SO ${e.so}');
+  } catch (err) {
+    if (context.mounted) showError(context, err);
+  }
+}
+
+Future<void> deleteShippedEntry(
+  BuildContext context,
+  WidgetRef ref,
+  ShippedEntry e,
+) async {
+  final ok = await confirmDialog(
+    context,
+    title: 'Delete shipped entry?',
+    message: 'Delete shipped record for SO ${e.so}?',
+    confirmLabel: 'Delete',
+  );
+  if (!ok || !context.mounted) return;
+  try {
+    await ref
+        .read(operationsProvider)
+        .deleteRecord(table: 'shipped', id: e.id, so: e.so);
+    if (context.mounted) showOk(context, 'Deleted SO ${e.so}');
+  } catch (err) {
+    if (context.mounted) showError(context, err);
+  }
+}
+
+Future<void> undoShippedEntry(
+  BuildContext context,
+  WidgetRef ref,
+  ShippedEntry e,
+) async {
+  final ok = await confirmDialog(
+    context,
+    title: 'Undo shipment?',
+    message: 'Restore SO ${e.so} back to the Staging Log?',
+    confirmLabel: 'Undo Shipment',
+    confirmColor: SlstColors.info,
+  );
+  if (!ok || !context.mounted) return;
+  try {
+    final ops = ref.read(operationsProvider);
+    await ref.read(appDataProvider.notifier).refresh();
+    if (!context.mounted) return;
+    final siblings = siblingStagingEntries(
+      so: e.so,
+      active: ref.read(appDataProvider).staging,
+    );
+    var allowExistingSo = false;
+    if (siblings.isNotEmpty) {
+      final locations = leftoverLocations(siblings);
+      final locationLine = locations.isEmpty
+          ? '${siblings.length} other staging ${siblings.length == 1 ? 'entry' : 'entries'}'
+          : locations.join(', ');
+      final proceed = await confirmSoMultiEntryAdvisory(
+        context,
+        so: e.so,
+        siblings: siblings,
+        title: 'SO already in Staging',
+        proceedLabel: 'Proceed anyway',
+        messageOverride:
+            'SO ${e.so} already has active staging at:\n\n'
+            '$locationLine\n\n'
+            'Undoing this shipment will add another staging row for the same SO. '
+            'Continue only if that is intentional.',
+      );
+      if (!proceed || !context.mounted) return;
+      allowExistingSo = true;
+    }
+    await ops.undoShipment(e, allowExistingSo: allowExistingSo);
+    if (context.mounted) showOk(context, 'Restored SO ${e.so} to staging');
+  } catch (err) {
+    if (context.mounted) showError(context, err);
+  }
+}
+
+Future<void> consolidateStagingForSo(
+  BuildContext context,
+  WidgetRef ref,
+  StagingEntry entry,
+) async {
+  final key = entry.so.trim().toLowerCase();
+  final peers = ref
+      .read(appDataProvider)
+      .staging
+      .where((e) => e.so.trim().toLowerCase() == key)
+      .toList();
+  if (peers.length < 2) {
+    await showQuickConsolidateDialog(context, ref);
+    return;
+  }
+  final ok = await confirmDialog(
+    context,
+    title: 'Consolidate SO ${entry.so}?',
+    message:
+        'Merge ${peers.length} staging rows for SO ${entry.so} into a single entry?',
+    confirmLabel: 'Consolidate',
+    confirmColor: SlstColors.purple,
+  );
+  if (!ok || !context.mounted) return;
+  try {
+    await ref.read(operationsProvider).consolidateStaging(peers);
+    if (context.mounted) {
+      showOk(context, 'Consolidated SO ${entry.so}');
+    }
+  } catch (err) {
+    if (context.mounted) showError(context, err);
+  }
+}
+
+Future<void> showShippedEditDialog(
+  BuildContext context,
+  WidgetRef ref, {
+  required ShippedEntry entry,
+}) {
+  final customer = TextEditingController(text: entry.customer);
+  final carrier = TextEditingController(text: entry.carrier);
+  final location = TextEditingController(text: entry.location);
+  final weight = TextEditingController(text: entry.weight ?? '');
+  final shippedBy = TextEditingController(text: entry.shippedBy ?? '');
+  final comments = TextEditingController(text: entry.comments ?? '');
+
+  return showAdaptivePopup<void>(
+    context,
+    maxWidth: 520,
+    builder: (ctx) {
+      final maxH = MediaQuery.sizeOf(ctx).height * 0.85;
+      return ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: maxH),
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Edit shipped — SO ${entry.so}',
+                      style: Theme.of(ctx).textTheme.titleMedium,
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    icon: const Icon(Icons.close, size: 18),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      TextField(
+                        controller: customer,
+                        decoration:
+                            const InputDecoration(labelText: 'Customer'),
+                      ),
+                      const SizedBox(height: 10),
+                      TextField(
+                        controller: carrier,
+                        decoration:
+                            const InputDecoration(labelText: 'Carrier'),
+                      ),
+                      const SizedBox(height: 10),
+                      TextField(
+                        controller: location,
+                        decoration:
+                            const InputDecoration(labelText: 'Location'),
+                      ),
+                      const SizedBox(height: 10),
+                      TextField(
+                        controller: weight,
+                        decoration:
+                            const InputDecoration(labelText: 'Weight'),
+                      ),
+                      const SizedBox(height: 10),
+                      TextField(
+                        controller: shippedBy,
+                        decoration:
+                            const InputDecoration(labelText: 'Shipped by'),
+                      ),
+                      const SizedBox(height: 10),
+                      TextField(
+                        controller: comments,
+                        maxLines: 3,
+                        decoration:
+                            const InputDecoration(labelText: 'Comments'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Align(
+                alignment: Alignment.centerRight,
+                child: FilledButton(
+                  onPressed: () async {
+                    try {
+                      await ref
+                          .read(operationsProvider)
+                          .updateShipped(entry.id, {
+                        'so': entry.so,
+                        'customer': customer.text.trim(),
+                        'carrier': carrier.text.trim(),
+                        'location': location.text.trim(),
+                        'weight': weight.text.trim().isEmpty
+                            ? null
+                            : weight.text.trim(),
+                        'shipped_by': shippedBy.text.trim().isEmpty
+                            ? null
+                            : shippedBy.text.trim(),
+                        'comments': comments.text.trim().isEmpty
+                            ? null
+                            : comments.text.trim(),
+                      });
+                      if (ctx.mounted) Navigator.pop(ctx);
+                      if (context.mounted) {
+                        showOk(context, 'Updated SO ${entry.so}');
+                      }
+                    } catch (err) {
+                      if (context.mounted) showError(context, err);
+                    }
+                  },
+                  child: const Text('Save'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  ).whenComplete(() {
+    customer.dispose();
+    carrier.dispose();
+    location.dispose();
+    weight.dispose();
+    shippedBy.dispose();
+    comments.dispose();
+  });
+}
+
+class StagingInspectorBody extends ConsumerWidget {
+  const StagingInspectorBody({
+    super.key,
+    required this.entry,
+    this.onClose,
+  });
   final StagingEntry entry;
+  final VoidCallback? onClose;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final status = _stagingStatusLabel(entry.status);
+    final canWrite = ref.watch(currentUserProvider) != null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         IndustrialStatusBadge(status: status),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            if (canWrite) ...[
+              OutlinedButton.icon(
+                onPressed: () =>
+                    showStagingFormSheet(context, ref, existing: entry),
+                icon: const Icon(Icons.edit_outlined, size: 16),
+                label: const Text('Edit'),
+              ),
+              OutlinedButton.icon(
+                onPressed: () async {
+                  await deleteStagingEntry(context, ref, entry);
+                  onClose?.call();
+                },
+                icon: const Icon(Icons.delete_outline, size: 16),
+                label: const Text('Delete'),
+              ),
+              OutlinedButton.icon(
+                onPressed: () => showSplitDialog(context, ref, entry: entry),
+                icon: const Icon(Icons.call_split, size: 16),
+                label: const Text('Split'),
+              ),
+              OutlinedButton.icon(
+                onPressed: () async {
+                  await consolidateStagingForSo(context, ref, entry);
+                  onClose?.call();
+                },
+                icon: const Icon(Icons.merge_type, size: 16),
+                label: const Text('Consolidate'),
+              ),
+              OutlinedButton.icon(
+                onPressed: () =>
+                    showReturnDialog(context, ref, entry: entry),
+                icon: const Icon(Icons.undo, size: 16),
+                label: const Text('Return to Stock'),
+              ),
+            ],
+            OutlinedButton.icon(
+              onPressed: () =>
+                  showOrderHistoryDialog(context, ref, so: entry.so),
+              icon: const Icon(Icons.history, size: 16),
+              label: const Text('Order History'),
+            ),
+          ],
+        ),
         const SizedBox(height: 14),
         Text('UUID', style: Theme.of(context).textTheme.labelSmall),
         const SizedBox(height: 4),
@@ -2470,17 +2784,61 @@ class StagingInspectorBody extends StatelessWidget {
   }
 }
 
-class ShippedInspectorBody extends StatelessWidget {
-  const ShippedInspectorBody({super.key, required this.entry});
+class ShippedInspectorBody extends ConsumerWidget {
+  const ShippedInspectorBody({
+    super.key,
+    required this.entry,
+    this.onClose,
+  });
   final ShippedEntry entry;
+  final VoidCallback? onClose;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final returned = entry.carrier.toUpperCase() == 'RETURNED TO STOCK';
+    final canWrite = ref.watch(currentUserProvider) != null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         IndustrialStatusBadge(status: returned ? 'Returned' : 'Shipped'),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            if (canWrite) ...[
+              OutlinedButton.icon(
+                onPressed: () =>
+                    showShippedEditDialog(context, ref, entry: entry),
+                icon: const Icon(Icons.edit_outlined, size: 16),
+                label: const Text('Edit'),
+              ),
+              OutlinedButton.icon(
+                onPressed: () async {
+                  await deleteShippedEntry(context, ref, entry);
+                  onClose?.call();
+                },
+                icon: const Icon(Icons.delete_outline, size: 16),
+                label: const Text('Delete'),
+              ),
+              if (!returned)
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    await undoShippedEntry(context, ref, entry);
+                    onClose?.call();
+                  },
+                  icon: const Icon(Icons.replay, size: 16),
+                  label: const Text('Undo'),
+                ),
+            ],
+            OutlinedButton.icon(
+              onPressed: () =>
+                  showOrderHistoryDialog(context, ref, so: entry.so),
+              icon: const Icon(Icons.history, size: 16),
+              label: const Text('Order History'),
+            ),
+          ],
+        ),
         const SizedBox(height: 14),
         Text('UUID', style: Theme.of(context).textTheme.labelSmall),
         const SizedBox(height: 4),

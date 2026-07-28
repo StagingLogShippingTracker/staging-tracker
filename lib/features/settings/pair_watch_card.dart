@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:slst_shared/slst_shared.dart';
 
@@ -83,14 +84,23 @@ class _PairWatchCardState extends ConsumerState<PairWatchCard> {
                 style: Theme.of(context).textTheme.bodySmall,
               ),
               const SizedBox(height: 16),
-              if (user == null)
+              if (user == null) ...[
                 Text(
                   'Sign in to create a pairing code.',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: IndustrialTheme.amber,
                       ),
-                )
-              else ...[
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(48, 48),
+                  ),
+                  onPressed: () => context.push('/login'),
+                  icon: const Icon(Icons.login, size: 18),
+                  label: const Text('Sign in'),
+                ),
+              ] else ...[
                 Semantics(
                   button: true,
                   label: 'Pair Watch',

@@ -756,20 +756,25 @@ class CommandDock extends StatelessWidget {
         ),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Flexible(
+          Expanded(
+            flex: 3,
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(children: hotkeyButtons),
             ),
           ),
           const SizedBox(width: 12),
-          Text(
-            floorTotalsText,
-            style: IndustrialTheme.mono(
-              fontSize: 12,
-              color: IndustrialTheme.textMuted,
+          Flexible(
+            child: Text(
+              floorTotalsText,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.right,
+              style: IndustrialTheme.mono(
+                fontSize: 12,
+                color: IndustrialTheme.textMuted,
+              ),
             ),
           ),
         ],
@@ -778,7 +783,15 @@ class CommandDock extends StatelessWidget {
   }
 }
 
-/// Right slide-over inspector drawer (400px).
+/// Whether the log inspector should open as a centered/popup sheet
+/// (mobile portrait) instead of the right-side slide-over.
+bool useInspectorPopup(BuildContext context) {
+  final size = MediaQuery.sizeOf(context);
+  final portrait = size.height >= size.width;
+  return portrait && size.width < IndustrialTheme.tokens.compactBreakpoint;
+}
+
+/// Right slide-over inspector drawer (400px), or bordered popup panel.
 class SlideOverInspector extends StatelessWidget {
   const SlideOverInspector({
     super.key,
@@ -786,25 +799,33 @@ class SlideOverInspector extends StatelessWidget {
     required this.body,
     required this.onClose,
     this.width = 400,
+    this.asPopup = false,
   });
 
   final String title;
   final Widget body;
   final VoidCallback onClose;
   final double width;
+  final bool asPopup;
 
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
-    final panelWidth = math.min(width, size.width * 0.92);
+    final panelWidth = asPopup
+        ? double.infinity
+        : math.min(width, size.width * 0.92);
     final panel = Container(
       width: panelWidth,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: IndustrialTheme.darkSurface,
-        border: Border(
-          left: BorderSide(color: IndustrialTheme.borderStroke, width: 1),
-        ),
+        borderRadius: asPopup ? BorderRadius.circular(8) : null,
+        border: asPopup
+            ? Border.all(color: IndustrialTheme.borderStroke)
+            : const Border(
+                left: BorderSide(color: IndustrialTheme.borderStroke, width: 1),
+              ),
       ),
+      clipBehavior: asPopup ? Clip.antiAlias : Clip.none,
       child: Column(
         children: [
           Container(

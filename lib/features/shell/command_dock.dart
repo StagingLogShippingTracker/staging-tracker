@@ -52,7 +52,7 @@ class ShellCommandDock extends ConsumerWidget {
           ),
           (
             key: 'F4',
-            label: 'Quick Consolidate',
+            label: 'Consolidate',
             onPressed: signedIn
                 ? () => showQuickConsolidateDialog(context, ref)
                 : null,
@@ -201,7 +201,7 @@ class ShellCommandDock extends ConsumerWidget {
           ),
           (
             key: 'F3',
-            label: 'Quick Consolidate',
+            label: 'Consolidate',
             onPressed: signedIn
                 ? () => showQuickConsolidateDialog(context, ref)
                 : null,

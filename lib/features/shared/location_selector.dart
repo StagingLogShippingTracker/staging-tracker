@@ -47,7 +47,9 @@ class LocationSelectorField extends ConsumerWidget {
       },
       decoration: InputDecoration(
         labelText: label,
-        helperText: 'Choose a category, remembered location, or type a new one',
+        helperText:
+            'Pick a category or remembered location, or type a new one',
+        helperMaxLines: 2,
         suffixIcon: const Icon(Icons.chevron_right),
       ),
     );

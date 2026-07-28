@@ -38,7 +38,8 @@ When agents change a Flutter client, they must rebuild the affected platform(s) 
 - `lib/core/app_config.dart` (and `packages/slst_shared`) points at the **live** Supabase project.
 - Authenticated create/edit/ship/delete/notify writes affect real data and can trigger real PM email/SMS via Make.
 - Prefer read-only exploration unless you have explicit approval and a confirmed test account.
-- Anonymous clients can still **read** staging/shipped data; RLS blocks anonymous writes.
+- Authenticated clients read/write staging/shipped data; RLS blocks anonymous
+  SELECT and all writes. Sign in is required to see operational inventory.
 
 ## Auth
 

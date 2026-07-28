@@ -162,94 +162,125 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
     final scheme = Theme.of(context).colorScheme;
+    final narrow = MediaQuery.sizeOf(context).width < 720;
 
     return ColoredBox(
       color: IndustrialTheme.darkBase,
       child: ListView(
-      padding: slstPagePadding(context),
-      children: [
+        padding: slstPagePadding(context, includeCompactChrome: true),
+        children: [
           const IndustrialPageTitle(
             'Notifications',
             subtitle: 'PM email / SMS via authenticated notify-pm',
           ),
-        Card(
-          margin: EdgeInsets.zero,
-          color: IndustrialTheme.skyBlue.withValues(alpha: 0.10),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(6),
-            side: BorderSide(
-              color: IndustrialTheme.skyBlue.withValues(alpha: 0.35),
+          Card(
+            margin: EdgeInsets.zero,
+            color: IndustrialTheme.skyBlue.withValues(alpha: 0.10),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(6),
+              side: BorderSide(
+                color: IndustrialTheme.skyBlue.withValues(alpha: 0.35),
+              ),
+            ),
+            child: const ListTile(
+              leading: Icon(
+                Icons.shield_outlined,
+                color: IndustrialTheme.skyBlue,
+              ),
+              title: Text(
+                'Secure delivery',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+              subtitle: Text(
+                'Notifications are sent through an authenticated server function. '
+                'Webhook credentials never ship inside the app binary.',
+              ),
             ),
           ),
-          child: const ListTile(
-            leading:
-                Icon(Icons.shield_outlined, color: IndustrialTheme.skyBlue),
-            title: Text(
-              'Secure delivery',
-              style: TextStyle(fontWeight: FontWeight.w700),
+          const SizedBox(height: 16),
+          if (narrow)
+            DropdownButtonFormField<_NotifyKind>(
+              initialValue: _kind,
+              isExpanded: true,
+              decoration: const InputDecoration(
+                labelText: 'Notification type',
+                isDense: true,
+              ),
+              items: const [
+                DropdownMenuItem(
+                  value: _NotifyKind.po,
+                  child: Text('PO Notify'),
+                ),
+                DropdownMenuItem(
+                  value: _NotifyKind.bulkPo,
+                  child: Text('Bulk PO Notify'),
+                ),
+                DropdownMenuItem(
+                  value: _NotifyKind.returnNotify,
+                  child: Text('Return Notify'),
+                ),
+              ],
+              onChanged: (v) {
+                if (v != null) setState(() => _kind = v);
+              },
+            )
+          else
+            SegmentedButton<_NotifyKind>(
+              segments: const [
+                ButtonSegment(
+                  value: _NotifyKind.po,
+                  icon: Icon(Icons.receipt_long),
+                  label: Text('PO Notify'),
+                ),
+                ButtonSegment(
+                  value: _NotifyKind.bulkPo,
+                  icon: Icon(Icons.playlist_add_check),
+                  label: Text('Bulk PO Notify'),
+                ),
+                ButtonSegment(
+                  value: _NotifyKind.returnNotify,
+                  icon: Icon(Icons.keyboard_return),
+                  label: Text('Return Notify'),
+                ),
+              ],
+              selected: {_kind},
+              showSelectedIcon: false,
+              onSelectionChanged: (s) => setState(() => _kind = s.first),
             ),
-            subtitle: Text(
-              'Notifications are sent through an authenticated server function. '
-              'Webhook credentials never ship inside the app binary.',
+          const SizedBox(height: 16),
+          if (_kind == _NotifyKind.bulkPo)
+            _buildBulkForm(scheme)
+          else
+            _buildSingleForm(),
+          const SizedBox(height: 16),
+          FilledButton.icon(
+            style: FilledButton.styleFrom(
+              backgroundColor: SlstColors.blue,
+              foregroundColor: Colors.white,
+              disabledBackgroundColor: scheme.surfaceContainerHighest,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              minimumSize: const Size.fromHeight(48),
+            ),
+            onPressed: (_busy || user == null) ? null : _send,
+            icon: _busy
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Icon(Icons.send),
+            label: Text(
+              user == null
+                  ? 'Sign in to send'
+                  : (_busy ? 'Sending…' : 'Send notification'),
             ),
           ),
-        ),
-        const SizedBox(height: 16),
-        SegmentedButton<_NotifyKind>(
-          segments: const [
-            ButtonSegment(
-              value: _NotifyKind.po,
-              icon: Icon(Icons.receipt_long),
-              label: Text('PO Notify'),
-            ),
-            ButtonSegment(
-              value: _NotifyKind.bulkPo,
-              icon: Icon(Icons.playlist_add_check),
-              label: Text('Bulk PO Notify'),
-            ),
-            ButtonSegment(
-              value: _NotifyKind.returnNotify,
-              icon: Icon(Icons.keyboard_return),
-              label: Text('Return Notify'),
-            ),
-          ],
-          selected: {_kind},
-          showSelectedIcon: false,
-          onSelectionChanged: (s) => setState(() => _kind = s.first),
-        ),
-        const SizedBox(height: 16),
-        if (_kind == _NotifyKind.bulkPo)
-          _buildBulkForm(scheme)
-        else
-          _buildSingleForm(),
-        const SizedBox(height: 16),
-        FilledButton.icon(
-          style: FilledButton.styleFrom(
-            backgroundColor: SlstColors.blue,
-            foregroundColor: Colors.white,
-            disabledBackgroundColor: scheme.surfaceContainerHighest,
-            padding: const EdgeInsets.symmetric(vertical: 14),
-          ),
-          onPressed: (_busy || user == null) ? null : _send,
-          icon: _busy
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                )
-              : const Icon(Icons.send),
-          label: Text(
-            user == null
-                ? 'Sign in to send'
-                : (_busy ? 'Sending…' : 'Send notification'),
-          ),
-        ),
-        const BrandFooter(),
-      ],
-    ),
+          const BrandFooter(),
+        ],
+      ),
     );
   }
 

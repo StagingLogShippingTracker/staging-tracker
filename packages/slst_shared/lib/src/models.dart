@@ -255,11 +255,12 @@ class ContainerCounts {
   }
 
   static String _fmt(int n, String singular) {
-    final plural = singular == 'Pipe/Rod'
-        ? 'Pipe/Rod'
-        : singular == 'Other'
-            ? 'Other'
-            : '${singular}s';
+    final plural = switch (singular) {
+      'Box' => 'Boxes',
+      'Pipe/Rod' => 'Pipe/Rod',
+      'Other' => 'Other',
+      _ => '${singular}s',
+    };
     return n == 1 ? '1 $singular' : '$n $plural';
   }
 }

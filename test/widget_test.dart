@@ -85,6 +85,7 @@ void main() {
     expect(c.total, 3);
     expect(c.typeLabel, contains('2 Skids'));
     expect(c.typeLabel, contains('1 Box'));
+    expect(const ContainerCounts(boxes: 4).typeLabel, '4 Boxes');
   });
 
   test('ContainerCounts.parse round-trips type labels', () {

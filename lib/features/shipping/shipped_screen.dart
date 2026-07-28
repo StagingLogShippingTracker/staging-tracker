@@ -27,6 +27,49 @@ class _ShippedScreenState extends ConsumerState<ShippedScreen> {
     super.dispose();
   }
 
+  void _openInspector(ShippedEntry entry) {
+    setState(() => _inspect = entry);
+    if (!useInspectorPopup(context)) return;
+
+    final size = MediaQuery.sizeOf(context);
+    showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogContext) {
+        return Dialog(
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 14,
+            vertical: 20,
+          ),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          child: SizedBox(
+            width: double.infinity,
+            height: size.height * 0.88,
+            child: SlideOverInspector(
+              title: 'SO ${entry.so}',
+              asPopup: true,
+              width: size.width,
+              onClose: () => Navigator.of(dialogContext).pop(),
+              body: ShippedInspectorBody(
+                entry: entry,
+                onClose: () {
+                  if (Navigator.of(dialogContext).canPop()) {
+                    Navigator.of(dialogContext).pop();
+                  }
+                },
+              ),
+            ),
+          ),
+        );
+      },
+    ).whenComplete(() {
+      if (mounted && _inspect?.id == entry.id) {
+        setState(() => _inspect = null);
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final data = ref.watch(appDataProvider);
@@ -137,7 +180,7 @@ class _ShippedScreenState extends ConsumerState<ShippedScreen> {
             entries: entries,
             expanded: true,
             selectedId: _inspect?.id,
-            onInspect: (e) => setState(() => _inspect = e),
+            onInspect: _openInspector,
             onQuickShip: () => showQuickShipSheet(context, ref),
           ),
           const BrandFooter(),
@@ -152,22 +195,28 @@ class _ShippedScreenState extends ConsumerState<ShippedScreen> {
       error: data.error,
       onRetry: () => ref.read(appDataProvider.notifier).refresh(),
       emptyTitle: 'No shipped entries',
-      emptyMessage: 'Completed shipments will appear here.',
+      emptyMessage: ref.watch(currentUserProvider) == null
+          ? 'Sign in to view shipped staging history.'
+          : 'Completed shipments will appear here.',
       child: scrollBody,
     );
 
+    final popup = useInspectorPopup(context);
     final compact =
         MediaQuery.sizeOf(context).width <
         IndustrialTheme.tokens.inspectorBreakpoint;
 
-    if (_inspect == null) {
+    if (_inspect == null || popup) {
       return ColoredBox(color: IndustrialTheme.darkBase, child: content);
     }
 
     final inspector = SlideOverInspector(
       title: 'SO ${_inspect!.so}',
       onClose: () => setState(() => _inspect = null),
-      body: ShippedInspectorBody(entry: _inspect!),
+      body: ShippedInspectorBody(
+        entry: _inspect!,
+        onClose: () => setState(() => _inspect = null),
+      ),
     );
 
     if (compact) {

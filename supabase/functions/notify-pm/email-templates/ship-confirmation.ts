@@ -1,5 +1,5 @@
 /**
- * SST ship-confirmation HTML email — industrial dark layout.
+ * SST ship-confirmation HTML email — Industrial Command Center shell.
  */
 import {
   DEFAULT_EMAIL_ASSET_BASE,
@@ -44,18 +44,31 @@ export function renderShipConfirmationEmail(
   return renderBrandedEmail({
     assetBaseUrl: assetBase,
     logoUrl: data.logoUrl,
-    title: "Your order has now been shipped!",
+    sectionTitle: "Shipped Staging Entries Log",
+    statusLabel: "Shipped",
+    statusTone: "mint",
+    title: "Your order has now been shipped",
     preview: `SO# ${so} for ${customer} has shipped via ${carrier}.`,
-    subtitle: "Shipment details:",
+    subtitle: "Shipment recorded in SST — industrial staging & shipping ops",
+    hero: {
+      eyebrow: "Shipment",
+      value: so || "—",
+      unit: "SO#",
+      stats: [
+        { label: "Customer", value: data.customer?.trim() || "None", accent: "sky" },
+        { label: "Carrier", value: data.carrier?.trim() || "None", accent: "mint" },
+        { label: "Weight", value: `${data.weight?.trim() || "—"} lbs`, accent: "amber" },
+      ],
+    },
     attachmentUrls,
     ctaUrl: data.ctaUrl,
+    ctaLabel: "Open Swift Supply",
     emailContact: data.emailContact,
     websiteUrl: data.websiteUrl,
     year: data.year,
     cards: [
       {
-        iconKey: "icon-clipboard",
-        title: "ORDER SUMMARY",
+        title: "Order summary",
         accent: "amber",
         rows: [
           { label: "SO#", value: so || "None" },
@@ -63,8 +76,7 @@ export function renderShipConfirmationEmail(
         ],
       },
       {
-        iconKey: "icon-truck",
-        title: "SHIPPING INFORMATION",
+        title: "Shipping information",
         accent: "sky",
         rows: [
           { label: "Carrier", value: carrier },
@@ -73,8 +85,7 @@ export function renderShipConfirmationEmail(
         ],
       },
       {
-        iconKey: "icon-cargo",
-        title: "CARGO DETAILS",
+        title: "Cargo details",
         accent: "mint",
         rows: [
           { label: "Container(s)", value: containers },
@@ -82,8 +93,7 @@ export function renderShipConfirmationEmail(
         ],
       },
       {
-        iconKey: "icon-chat",
-        title: "ADDITIONAL NOTES",
+        title: "Additional notes",
         accent: "purple",
         rows: [{ label: "Comments", value: comments }],
       },
@@ -93,7 +103,8 @@ export function renderShipConfirmationEmail(
 
 export function renderShipConfirmationPlain(data: ShipConfirmationData): string {
   return [
-    "Your order has now been shipped!",
+    "SST — Swift Staging Tracker",
+    "Your order has now been shipped",
     "",
     "Shipment details:",
     `SO#: ${data.so || "None"}`,
@@ -136,7 +147,6 @@ export function shipDataFromPayload(
     containers: pick("containers", "type", "container"),
     weight: pick("weight"),
     comments: pick("comments"),
-    // Optional payload logo override; layout uses Swift + SST badge.
     logoUrl: logoFromPayload || undefined,
     ctaUrl: pick("cta_url", "ctaUrl", "tracking_url", "trackingUrl") ||
       undefined,

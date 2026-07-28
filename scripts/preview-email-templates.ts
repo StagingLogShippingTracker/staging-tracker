@@ -1,5 +1,6 @@
 /**
- * Local preview renderer for SST notify-pm email templates (dark-first industrial).
+ * Local preview renderer for SST notify-pm email templates.
+ * Product theme is always industrial dark (light and dark device modes).
  * Run: deno run --allow-write --allow-read scripts/preview-email-templates.ts
  */
 import {
@@ -12,25 +13,6 @@ import { renderShipConfirmationEmail } from "../supabase/functions/notify-pm/ema
 import { ASSET_VERSION } from "../supabase/functions/notify-pm/email-templates/email-shared.ts";
 
 const outDir = new URL("../.tmp-email-preview/", import.meta.url);
-
-/** Dark-first templates need no theme force; light mode is a soft invert for QA only. */
-function forceTheme(html: string, theme: "light" | "dark"): string {
-  if (theme === "dark") return html;
-  const lightForce = `
-  <style type="text/css">
-    body, .og-page { background-color:#F3F4F6 !important; }
-    .email-container, .og-shell { background-color:#FFFFFF !important; border-color:#D1D5DB !important; }
-    .og-card { background-color:#F9FAFB !important; border-color:#D1D5DB !important; }
-    .og-headline, .og-value, .og-thanks { color:#111827 !important; }
-    .og-subtitle, .og-label, .og-disclaimer, .og-footer { color:#6B7280 !important; }
-  </style>`;
-  return html
-    .replace("</head>", `${lightForce}</head>`)
-    .replace(
-      'data-preview="dark"',
-      'data-preview="light"',
-    );
-}
 
 const poBody = {
   po: "1223344",
@@ -75,16 +57,17 @@ const bulkHtml = renderBulkPoNotificationEmail({
 await Deno.mkdir(outDir, { recursive: true });
 
 const files: Array<[string, string]> = [
-  ["ship-dark.html", forceTheme(shipHtml, "dark")],
-  ["ship-light.html", forceTheme(shipHtml, "light")],
-  ["po-dark.html", forceTheme(poHtml, "dark")],
-  ["po-light.html", forceTheme(poHtml, "light")],
-  ["return-dark.html", forceTheme(returnHtml, "dark")],
-  ["return-light.html", forceTheme(returnHtml, "light")],
-  ["return-stock-dark.html", forceTheme(returnStockHtml, "dark")],
-  ["return-stock-light.html", forceTheme(returnStockHtml, "light")],
-  ["bulk-po-dark.html", forceTheme(bulkHtml, "dark")],
-  ["bulk-po-light.html", forceTheme(bulkHtml, "light")],
+  ["ship-dark.html", shipHtml],
+  ["po-dark.html", poHtml],
+  ["return-dark.html", returnHtml],
+  ["return-stock-dark.html", returnStockHtml],
+  ["bulk-po-dark.html", bulkHtml],
+  // Aliases — product emails stay dark in light device mode too.
+  ["ship-light.html", shipHtml],
+  ["po-light.html", poHtml],
+  ["return-light.html", returnHtml],
+  ["return-stock-light.html", returnStockHtml],
+  ["bulk-po-light.html", bulkHtml],
   [
     "index.html",
     `<!DOCTYPE html>
@@ -92,6 +75,7 @@ const files: Array<[string, string]> = [
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="dark only" />
   <title>SST email previews · ${ASSET_VERSION}</title>
   <style>
     body {
@@ -130,19 +114,14 @@ const files: Array<[string, string]> = [
 <body>
   <header>
     <h1>SST PM email previews</h1>
-    <p>Industrial dark-first templates · asset ${ASSET_VERSION} · no SLST logos</p>
+    <p>Always industrial dark · Inter + JetBrains Mono · asset ${ASSET_VERSION}</p>
   </header>
   <div class="grid">
-    <a class="card" href="ship-dark.html"><div class="type">ship_confirm / quick_ship</div><div class="title">Ship confirmation — dark</div><div class="meta">Default industrial theme</div></a>
-    <a class="card" href="ship-light.html"><div class="type">ship_confirm / quick_ship</div><div class="title">Ship confirmation — light QA</div><div class="meta">Forced light invert</div></a>
-    <a class="card" href="po-dark.html"><div class="type">po_notification</div><div class="title">PO notification — dark</div><div class="meta">Single PO arrival</div></a>
-    <a class="card" href="po-light.html"><div class="type">po_notification</div><div class="title">PO notification — light QA</div><div class="meta">Forced light invert</div></a>
-    <a class="card" href="bulk-po-dark.html"><div class="type">bulk_po_notification</div><div class="title">Bulk PO — dark</div><div class="meta">Multiple POs</div></a>
-    <a class="card" href="bulk-po-light.html"><div class="type">bulk_po_notification</div><div class="title">Bulk PO — light QA</div><div class="meta">Forced light invert</div></a>
-    <a class="card" href="return-dark.html"><div class="type">return_notification</div><div class="title">Return notification — dark</div><div class="meta">Customer/return notes</div></a>
-    <a class="card" href="return-light.html"><div class="type">return_notification</div><div class="title">Return notification — light QA</div><div class="meta">Forced light invert</div></a>
-    <a class="card" href="return-stock-dark.html"><div class="type">return_to_stock</div><div class="title">Returned to stock — dark</div><div class="meta">Inventory put-back</div></a>
-    <a class="card" href="return-stock-light.html"><div class="type">return_to_stock</div><div class="title">Returned to stock — light QA</div><div class="meta">Forced light invert</div></a>
+    <a class="card" href="ship-dark.html"><div class="type">ship_confirm / quick_ship</div><div class="title">Ship confirmation</div><div class="meta">Industrial dark (all device modes)</div></a>
+    <a class="card" href="po-dark.html"><div class="type">po_notification</div><div class="title">PO notification</div><div class="meta">Industrial dark</div></a>
+    <a class="card" href="bulk-po-dark.html"><div class="type">bulk_po_notification</div><div class="title">Bulk PO</div><div class="meta">Industrial dark</div></a>
+    <a class="card" href="return-dark.html"><div class="type">return_notification</div><div class="title">Return notification</div><div class="meta">Industrial dark</div></a>
+    <a class="card" href="return-stock-dark.html"><div class="type">return_to_stock</div><div class="title">Returned to stock</div><div class="meta">Industrial dark</div></a>
   </div>
 </body>
 </html>`,
@@ -153,7 +132,8 @@ for (const [name, content] of files) {
   await Deno.writeTextFile(new URL(name, outDir), content);
   if (name !== "index.html") {
     if (/slst-logo/i.test(content) || /\bSLST\b/.test(content)) {
-      console.error(`FORBIDDEN SLST branding remains in ${name}`);
+      console.error(`FORBIDDEN legacy SLST branding remains in ${name}`);
+      Deno.exit(1);
     }
   }
 }

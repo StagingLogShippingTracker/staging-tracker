@@ -59,14 +59,25 @@ StatusStyle statusStyleOf(BuildContext context, String dbStatus) {
 }
 
 /// Shared page insets: 16 on narrow widths, 24 on wide.
+///
+/// [includeCompactChrome] adds scroll clearance for the phone NavigationBar
+/// (and optional action strip) so trailing controls are not clipped.
 EdgeInsets slstPagePadding(
   BuildContext context, {
   double top = 20,
   double bottom = 8,
+  bool includeCompactChrome = false,
 }) {
-  final narrow = MediaQuery.sizeOf(context).width < 600;
+  final size = MediaQuery.sizeOf(context);
+  final narrow = size.width < 600;
   final h = narrow ? 16.0 : 24.0;
-  return EdgeInsets.fromLTRB(h, top, h, bottom);
+  var b = bottom;
+  if (includeCompactChrome &&
+      size.width < IndustrialTheme.tokens.compactBreakpoint) {
+    // NavigationBar height 68 + action strip ~60 + breathing room.
+    b = bottom + 68 + 72;
+  }
+  return EdgeInsets.fromLTRB(h, top, h, b);
 }
 
 /// SST wordmark ("SST — Swift Staging Tracker") for compact brand placements.
@@ -656,16 +667,22 @@ class PhotoAttachButtons extends StatelessWidget {
   Widget build(BuildContext context) {
     final count = photos.length;
     final label = attachLabel ?? 'Photos ($count)';
+    final btnStyle = OutlinedButton.styleFrom(
+      minimumSize: const Size(48, 48),
+      tapTargetSize: MaterialTapTargetSize.padded,
+    );
     return Wrap(
       spacing: 8,
       runSpacing: 8,
       children: [
         OutlinedButton.icon(
+          style: btnStyle,
           onPressed: _attachPhotos,
           icon: const Icon(Icons.photo_library_outlined),
           label: Text(label.contains('(') ? label : '$label ($count)'),
         ),
         OutlinedButton.icon(
+          style: btnStyle,
           onPressed: _captureCamera,
           icon: const Icon(Icons.photo_camera_outlined),
           label: const Text('Camera'),

@@ -142,7 +142,7 @@ GitHub Pages is **not** used.
 
 - Tables: `staging`, `shipped`, `changelog`, `dropdown_roster`
 - Storage bucket: `freight-photos` (public read, authenticated write)
-- RLS: anonymous **select** only; writes require authenticated session
+- RLS: staging/shipped/changelog require authenticated **select**; all writes require auth
 - No Prophet21 / Epicor / Search Order integration
 
 ## Remembered entry fields and locations

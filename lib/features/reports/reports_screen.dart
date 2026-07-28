@@ -22,7 +22,10 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   @override
   Widget build(BuildContext context) {
     final data = ref.watch(appDataProvider);
-    final narrow = MediaQuery.sizeOf(context).width < 600;
+    final size = MediaQuery.sizeOf(context);
+    final portrait = size.height >= size.width;
+    // SegmentedButton with 5 segments overflows on phone + tablet portrait.
+    final useDropdownFilter = size.width < 900 || portrait;
 
     final overdue = data.staging
         .where((e) => StatusRules.isOverdue(e.status))
@@ -69,9 +72,10 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
         ),
         LayoutBuilder(
           builder: (context, constraints) {
-            final cols = constraints.maxWidth >= 900
-                ? 3
-                : constraints.maxWidth >= 600
+            // Portrait phones: 2 columns; avoid cramped 3-up KPI rows.
+            final cols = constraints.maxWidth < 600 || portrait
+                ? 2
+                : constraints.maxWidth >= 900
                 ? 3
                 : 2;
             final rows = <Widget>[];
@@ -207,7 +211,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
               onPressed: () => showChangelogDialog(context, ref),
             ),
           ],
-          subHeader: narrow
+          subHeader: useDropdownFilter
               ? DropdownButtonFormField<String>(
                   initialValue: _filter,
                   isExpanded: true,
@@ -269,22 +273,33 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                     Padding(
                       padding: const EdgeInsets.only(bottom: 8),
                       child: Card(
-                        child: ListTile(
-                          dense: true,
-                          title: Text(
-                            'SO ${e.so}',
-                            style: const TextStyle(fontWeight: FontWeight.w700),
-                          ),
-                          subtitle: Column(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                          child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      'SO ${e.so}',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  IndustrialStatusBadge(
+                                    status: StatusRules.formatUi(e.status),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
                               Text(e.customer),
                               const SizedBox(height: 4),
                               IndustrialIdText(e.id, fontSize: 11),
                             ],
-                          ),
-                          trailing: IndustrialStatusBadge(
-                            status: StatusRules.formatUi(e.status),
                           ),
                         ),
                       ),

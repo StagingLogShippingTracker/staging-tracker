@@ -30,21 +30,60 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _signIn() async {
+    final email = _email.text.trim();
+    final password = _password.text;
+    if (email.isEmpty || password.isEmpty) {
+      setState(() {
+        _error = email.isEmpty && password.isEmpty
+            ? 'Enter your email and password.'
+            : email.isEmpty
+                ? 'Enter your email address.'
+                : 'Enter your password.';
+      });
+      return;
+    }
     setState(() {
       _busy = true;
       _error = null;
     });
     try {
       await ref.read(supabaseClientProvider).auth.signInWithPassword(
-            email: _email.text.trim(),
-            password: _password.text,
+            email: email,
+            password: password,
           );
       if (mounted) context.go('/');
     } catch (e) {
-      setState(() => _error = e.toString());
+      setState(() => _error = _friendlyAuthError(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  String _friendlyAuthError(Object e) {
+    final raw = e.toString();
+    final lower = raw.toLowerCase();
+    if (lower.contains('email not confirmed') ||
+        lower.contains('email_not_confirmed')) {
+      return 'Confirm your email before signing in. Check your inbox for the link.';
+    }
+    if (lower.contains('invalid login') ||
+        lower.contains('invalid_credentials') ||
+        lower.contains('invalid email or password')) {
+      return 'Incorrect email or password.';
+    }
+    if (lower.contains('missing email') ||
+        lower.contains('validation_failed')) {
+      return 'Enter a valid email and password.';
+    }
+    if (lower.contains('network') || lower.contains('socket')) {
+      return 'Could not reach the sign-in service. Check your connection and try again.';
+    }
+    // Strip AuthApiException(...) wrappers when present.
+    final msg = RegExp(r'message:\s*([^,\)]+)').firstMatch(raw)?.group(1);
+    if (msg != null && msg.trim().isNotEmpty) {
+      return msg.trim();
+    }
+    return 'Sign in failed. Please try again.';
   }
 
   @override
@@ -78,42 +117,60 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           children: [
                             Text(
                               'Sign in to SST to create and edit staging or '
-                              'shipping records. Anonymous users remain '
-                              'read-only.',
+                              'shipping records. Signed-out users cannot view '
+                              'or change operational data.',
                               style: const TextStyle(
                                 fontSize: 13,
                                 color: IndustrialTheme.textMuted,
                               ),
                             ),
                             const SizedBox(height: 16),
-                            TextField(
-                              controller: _email,
-                              decoration: const InputDecoration(
-                                labelText: 'Email',
-                                prefixIcon: Icon(Icons.alternate_email),
+                            Semantics(
+                              label: 'Email',
+                              textField: true,
+                              child: TextField(
+                                controller: _email,
+                                decoration: const InputDecoration(
+                                  labelText: 'Email',
+                                  hintText: 'you@example.com',
+                                  prefixIcon: Icon(Icons.alternate_email),
+                                ),
+                                keyboardType: TextInputType.emailAddress,
+                                autofillHints: const [AutofillHints.username],
+                                textInputAction: TextInputAction.next,
+                                onTapOutside: (_) => FocusManager
+                                    .instance.primaryFocus
+                                    ?.unfocus(),
                               ),
-                              keyboardType: TextInputType.emailAddress,
-                              autofillHints: const [AutofillHints.username],
                             ),
                             const SizedBox(height: 12),
-                            TextField(
-                              controller: _password,
-                              decoration: InputDecoration(
-                                labelText: 'Password',
-                                prefixIcon: const Icon(Icons.lock_outline),
-                                suffixIcon: IconButton(
-                                  onPressed: () =>
-                                      setState(() => _obscure = !_obscure),
-                                  icon: Icon(
-                                    _obscure
-                                        ? Icons.visibility_outlined
-                                        : Icons.visibility_off_outlined,
+                            Semantics(
+                              label: 'Password',
+                              textField: true,
+                              obscured: true,
+                              child: TextField(
+                                controller: _password,
+                                decoration: InputDecoration(
+                                  labelText: 'Password',
+                                  hintText: 'Password',
+                                  prefixIcon: const Icon(Icons.lock_outline),
+                                  suffixIcon: IconButton(
+                                    tooltip: _obscure
+                                        ? 'Show password'
+                                        : 'Hide password',
+                                    onPressed: () =>
+                                        setState(() => _obscure = !_obscure),
+                                    icon: Icon(
+                                      _obscure
+                                          ? Icons.visibility_outlined
+                                          : Icons.visibility_off_outlined,
+                                    ),
                                   ),
                                 ),
+                                obscureText: _obscure,
+                                autofillHints: const [AutofillHints.password],
+                                onSubmitted: (_) => _signIn(),
                               ),
-                              obscureText: _obscure,
-                              autofillHints: const [AutofillHints.password],
-                              onSubmitted: (_) => _signIn(),
                             ),
                             if (_error != null) ...[
                               const SizedBox(height: 12),
