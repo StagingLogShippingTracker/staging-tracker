@@ -179,7 +179,7 @@ void main() {
     ]);
   });
 
-  testWidgets('KPI card renders label, value and red accent', (tester) async {
+  testWidgets('KPI card renders label and value', (tester) async {
     await tester.pumpWidget(
       _wrap(
         const KpiCard(label: 'Orders', value: 12, icon: Icons.description),
@@ -215,7 +215,7 @@ void main() {
       _wrap(StagingLogCard(entries: [_staging()], expanded: true), prefs),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Staging Entries'), findsOneWidget);
+    expect(find.text('ACTIVE STAGING ENTRIES'), findsOneWidget);
     expect(find.text('SO-1001'), findsOneWidget);
     expect(find.text('Acme Industrial'), findsOneWidget);
     // Signed out: no write affordances.
@@ -241,7 +241,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Shipped Log'), findsOneWidget);
+    expect(find.text('SHIPPED STAGING ENTRIES'), findsOneWidget);
     expect(find.textContaining('Day & Ross'), findsWidgets);
     expect(find.textContaining('RETURNED TO STOCK'), findsWidgets);
   });

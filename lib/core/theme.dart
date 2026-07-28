@@ -35,17 +35,41 @@ class IndustrialTheme {
         fontWeight: FontWeight.bold,
         color: textPrimary,
       ),
+      titleLarge: GoogleFonts.inter(
+        fontSize: 16,
+        fontWeight: FontWeight.w700,
+        color: textPrimary,
+      ),
       titleMedium: GoogleFonts.inter(
         fontSize: 14,
         fontWeight: FontWeight.w600,
         color: textPrimary,
       ),
+      titleSmall: GoogleFonts.inter(
+        fontSize: 13,
+        fontWeight: FontWeight.w600,
+        color: textPrimary,
+      ),
       bodyMedium: GoogleFonts.inter(fontSize: 13, color: textPrimary),
-      bodySmall: GoogleFonts.inter(fontSize: 12, color: textMuted),
+      bodySmall: GoogleFonts.inter(
+        fontSize: 11.5,
+        height: 1.25,
+        color: textMuted,
+      ),
+      labelLarge: GoogleFonts.inter(
+        fontSize: 12.5,
+        fontWeight: FontWeight.w600,
+        color: textPrimary,
+      ),
+      labelMedium: GoogleFonts.inter(
+        fontSize: 11.5,
+        fontWeight: FontWeight.w600,
+        color: textPrimary,
+      ),
       labelSmall: GoogleFonts.inter(
-        fontSize: 11,
-        fontWeight: FontWeight.bold,
-        letterSpacing: 0.8,
+        fontSize: 10,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0.85,
         color: textMuted,
       ),
     );
@@ -374,8 +398,8 @@ StatusStyle statusStyleFor({
   if (lower.contains('awaiting')) {
     return build(
       'Awaiting Instructions',
-      SlstColors.hold,
-      IndustrialTheme.amber,
+      const Color(0x338B5CF6),
+      IndustrialTheme.purple,
       Icons.hourglass_empty,
     );
   }

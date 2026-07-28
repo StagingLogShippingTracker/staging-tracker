@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/app_config.dart';
+import '../../core/theme.dart';
 import '../../data/app_state.dart';
 import '../shared/widgets.dart';
 
@@ -50,7 +51,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(title: const Text('Sign In')),
+      backgroundColor: IndustrialTheme.darkBase,
+      appBar: AppBar(
+        backgroundColor: IndustrialTheme.darkHeader,
+        title: const Text('Sign In'),
+      ),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -62,7 +67,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Center(child: BrandLogo(height: 110)),
+                    const Center(child: BrandLogo(height: 120)),
                     const SizedBox(height: 24),
                     Card(
                       margin: EdgeInsets.zero,
@@ -72,11 +77,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             Text(
-                              'Sign in to create and edit staging or shipping '
-                              'records. Anonymous users remain read-only.',
-                              style: TextStyle(
+                              'Sign in to SST to create and edit staging or '
+                              'shipping records. Anonymous users remain '
+                              'read-only.',
+                              style: const TextStyle(
                                 fontSize: 13,
-                                color: scheme.onSurfaceVariant,
+                                color: IndustrialTheme.textMuted,
                               ),
                             ),
                             const SizedBox(height: 16),
@@ -143,9 +149,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   path: AppConfig.accessRequestEmail,
                                   queryParameters: {
                                     'subject':
-                                        'Access Request: Staging Log & Shipping Tracker',
+                                        'Access Request: SST (Swift Staging Tracker)',
                                     'body':
-                                        'Hello,\n\nI am requesting user access to create and edit entries on the Staging Log & Shipping Tracker.\n',
+                                        'Hello,\n\nI am requesting user access to create and edit entries on SST (Swift Staging Tracker).\n',
                                   },
                                 );
                                 await launchUrl(uri);

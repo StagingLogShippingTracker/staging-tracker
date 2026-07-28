@@ -3,52 +3,418 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/theme.dart';
 
-/// High-contrast status pill for industrial grids and inspectors.
-///
-/// Colour map: today/dispatch/ready → mint; tomorrow/transit → sky;
-/// partial/awaiting → amber; delivered/completed → slate; future/corp → purple.
+/// Page section title — Inter caps with optional trailing actions.
+class IndustrialPageTitle extends StatelessWidget {
+  const IndustrialPageTitle(
+    this.title, {
+    super.key,
+    this.subtitle,
+    this.trailing = const [],
+  });
+
+  final String title;
+  final String? subtitle;
+  final List<Widget> trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title.toUpperCase(),
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.0,
+                    color: IndustrialTheme.textPrimary,
+                  ),
+                ),
+                if (subtitle != null && subtitle!.trim().isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle!,
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: IndustrialTheme.textMuted,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          if (trailing.isNotEmpty)
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: trailing,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Consistent filter / toolbar row used above logs and secondary lists.
+class IndustrialFilterRow extends StatelessWidget {
+  const IndustrialFilterRow({
+    super.key,
+    required this.children,
+    this.spacing = 8,
+  });
+
+  final List<Widget> children;
+  final double spacing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: spacing,
+      runSpacing: spacing,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: children,
+    );
+  }
+}
+
+/// Compact horizontal summary strip (counts / tallies).
+class IndustrialSummaryStrip extends StatelessWidget {
+  const IndustrialSummaryStrip({
+    super.key,
+    required this.items,
+  });
+
+  final List<({String label, String value, Color? accent})> items;
+
+  @override
+  Widget build(BuildContext context) {
+    if (items.isEmpty) return const SizedBox.shrink();
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: IndustrialTheme.darkSurface,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: IndustrialTheme.borderStroke),
+      ),
+      child: Wrap(
+        spacing: 20,
+        runSpacing: 10,
+        children: [
+          for (final item in items)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  item.value,
+                  style: IndustrialTheme.mono(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: item.accent ?? IndustrialTheme.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  item.label.toUpperCase(),
+                  style: GoogleFonts.inter(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.5,
+                    color: IndustrialTheme.textMuted,
+                  ),
+                ),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Muted pastel status pill — soft tint fill + accent text (color on pill only).
 class IndustrialStatusBadge extends StatelessWidget {
   const IndustrialStatusBadge({super.key, required this.status});
 
   final String status;
 
-  @override
-  Widget build(BuildContext context) {
-    Color bg = IndustrialTheme.slateMuted;
-    const fg = Colors.white;
-
+  static ({Color fill, Color accent}) colorsFor(String status) {
     final s = status.toLowerCase();
+    if (s.contains('overdue') || s.contains('urgent')) {
+      return (fill: const Color(0x33EF4444), accent: const Color(0xFFEF4444));
+    }
     if (s.contains('today') ||
         s.contains('dispatch') ||
-        s.contains('ready')) {
-      bg = IndustrialTheme.mintGreen;
-    } else if (s.contains('tomorrow') ||
+        s.contains('ready') ||
+        s == 'shipped') {
+      return (
+        fill: IndustrialTheme.mintGreen.withValues(alpha: 0.18),
+        accent: IndustrialTheme.mintGreen,
+      );
+    }
+    if (s.contains('tomorrow') ||
         s.contains('transit') ||
         s.contains('progress')) {
-      bg = IndustrialTheme.skyBlue;
-    } else if (s.contains('partial') ||
-        s.contains('awaiting') ||
-        s.contains('pending')) {
-      bg = IndustrialTheme.amber;
-    } else if (s.contains('delivered') || s.contains('completed')) {
-      bg = IndustrialTheme.slateMuted;
-    } else if (s.contains('future') || s.contains('corp')) {
-      bg = IndustrialTheme.purple;
+      return (
+        fill: IndustrialTheme.skyBlue.withValues(alpha: 0.18),
+        accent: IndustrialTheme.skyBlue,
+      );
     }
+    if (s.contains('partial') || s.contains('returned')) {
+      return (
+        fill: IndustrialTheme.amber.withValues(alpha: 0.18),
+        accent: IndustrialTheme.amber,
+      );
+    }
+    if (s.contains('awaiting') || s.contains('pending')) {
+      return (
+        fill: IndustrialTheme.purple.withValues(alpha: 0.18),
+        accent: IndustrialTheme.purple,
+      );
+    }
+    if (s.contains('delivered') || s.contains('completed')) {
+      return (
+        fill: IndustrialTheme.slateMuted.withValues(alpha: 0.28),
+        accent: IndustrialTheme.textMuted,
+      );
+    }
+    if (s.contains('future') ||
+        s.contains('corp') ||
+        s.contains('customer pick')) {
+      return (
+        fill: IndustrialTheme.purple.withValues(alpha: 0.18),
+        accent: IndustrialTheme.purple,
+      );
+    }
+    return (
+      fill: IndustrialTheme.darkHeader,
+      accent: IndustrialTheme.textMuted,
+    );
+  }
 
+  @override
+  Widget build(BuildContext context) {
+    final colors = colorsFor(status);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
       decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(12),
+        color: colors.fill,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: colors.accent.withValues(alpha: 0.35)),
       ),
       child: Text(
         status.toUpperCase(),
         style: GoogleFonts.inter(
           fontSize: 10,
-          fontWeight: FontWeight.bold,
-          color: fg,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.35,
+          color: colors.accent,
         ),
+      ),
+    );
+  }
+}
+
+/// Accent bar color for a status label (left edge of log / kanban cards).
+Color industrialStatusAccent(String status) =>
+    IndustrialStatusBadge.colorsFor(status).accent;
+
+/// Subtle location / zone chip used in staging & shipped grids.
+class IndustrialZonePill extends StatelessWidget {
+  const IndustrialZonePill(this.location, {super.key});
+
+  final String location;
+
+  @override
+  Widget build(BuildContext context) {
+    final value = location.trim().isEmpty ? '—' : location.trim();
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: IndustrialTheme.darkHeader,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: IndustrialTheme.borderStroke),
+      ),
+      child: Text(
+        value,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: IndustrialTheme.mono(
+          fontSize: 11,
+          color: value == '—'
+              ? IndustrialTheme.textMuted
+              : IndustrialTheme.skyBlue,
+        ),
+      ),
+    );
+  }
+}
+
+/// Muted olive-tint weight chip (matches log mockup + industrial palette).
+class IndustrialWeightPill extends StatelessWidget {
+  const IndustrialWeightPill(this.weight, {super.key});
+
+  final String? weight;
+
+  @override
+  Widget build(BuildContext context) {
+    final value = (weight ?? '').trim();
+    if (value.isEmpty) {
+      return Text(
+        '—',
+        style: IndustrialTheme.mono(
+          fontSize: 12,
+          color: IndustrialTheme.textMuted,
+        ),
+      );
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: const Color(0xFF365314).withValues(alpha: 0.35),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: IndustrialTheme.mintGreen.withValues(alpha: 0.35),
+        ),
+      ),
+      child: Text(
+        value,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: IndustrialTheme.mono(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: const Color(0xFFA3E635),
+        ),
+      ),
+    );
+  }
+}
+
+/// Compact filter dropdown for log toolbars (zone / status / stager / …).
+class IndustrialFilterDropdown extends StatelessWidget {
+  const IndustrialFilterDropdown({
+    super.key,
+    required this.value,
+    required this.items,
+    required this.onChanged,
+    this.width = 140,
+  });
+
+  final String value;
+  final List<String> items;
+  final ValueChanged<String> onChanged;
+  final double width;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: width,
+      height: 38,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        decoration: BoxDecoration(
+          color: IndustrialTheme.darkHeader,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: IndustrialTheme.borderStroke),
+        ),
+        child: DropdownButtonHideUnderline(
+          child: DropdownButton<String>(
+            value: items.contains(value) ? value : items.first,
+            isExpanded: true,
+            isDense: true,
+            icon: const Icon(Icons.expand_more, size: 18),
+            iconEnabledColor: IndustrialTheme.textMuted,
+            dropdownColor: IndustrialTheme.darkSurface,
+            style: GoogleFonts.inter(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w600,
+              color: IndustrialTheme.textPrimary,
+            ),
+            items: [
+              for (final item in items)
+                DropdownMenuItem(value: item, child: Text(item)),
+            ],
+            onChanged: (v) {
+              if (v != null) onChanged(v);
+            },
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Wide summary card used above Active Staging / Shipped logs.
+class LogSummaryCard extends StatelessWidget {
+  const LogSummaryCard({
+    super.key,
+    required this.eyebrow,
+    required this.value,
+    required this.unit,
+    required this.stats,
+  });
+
+  final String eyebrow;
+  final String value;
+  final String unit;
+  final List<({String label, String value, Color? accent})> stats;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      decoration: BoxDecoration(
+        color: IndustrialTheme.darkSurface,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: IndustrialTheme.borderStroke),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            eyebrow.toUpperCase(),
+            style: Theme.of(context).textTheme.labelSmall,
+          ),
+          const SizedBox(height: 8),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                value,
+                style: IndustrialTheme.mono(
+                  fontSize: 32,
+                  fontWeight: FontWeight.w800,
+                  color: IndustrialTheme.textPrimary,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Text(
+                  unit.toUpperCase(),
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.6,
+                    color: IndustrialTheme.textMuted,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (stats.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            IndustrialSummaryStrip(items: stats),
+          ],
+        ],
       ),
     );
   }
@@ -85,18 +451,23 @@ class IndustrialKpiCard extends StatelessWidget {
     final card = Card(
       clipBehavior: Clip.antiAlias,
       child: Padding(
-        padding: EdgeInsets.all(compact ? 10 : 16),
+        padding: EdgeInsets.symmetric(
+          horizontal: compact ? 8 : 16,
+          vertical: compact ? 8 : 16,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               label.toUpperCase(),
-              maxLines: 1,
+              maxLines: compact ? 2 : 1,
               overflow: TextOverflow.ellipsis,
+              softWrap: true,
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
                     fontSize: compact ? 9 : null,
-                    letterSpacing: compact ? 0.5 : null,
+                    height: compact ? 1.1 : null,
+                    letterSpacing: compact ? 0.2 : null,
                   ),
             ),
             SizedBox(height: compact ? 4 : 6),
@@ -115,7 +486,7 @@ class IndustrialKpiCard extends StatelessWidget {
               Text(
                 subtext,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontSize: compact ? 10 : null,
+                      fontSize: compact ? 9 : null,
                     ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -125,7 +496,6 @@ class IndustrialKpiCard extends StatelessWidget {
         ),
       ),
     );
-    // Compact strip cards fill their Expanded slot width.
     final sized = compact
         ? SizedBox(width: double.infinity, child: card)
         : card;
@@ -193,16 +563,18 @@ class SlideOverInspector extends StatelessWidget {
     required this.title,
     required this.body,
     required this.onClose,
+    this.width = 400,
   });
 
   final String title;
   final Widget body;
   final VoidCallback onClose;
+  final double width;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 400,
+      width: width,
       decoration: const BoxDecoration(
         color: IndustrialTheme.darkSurface,
         border: Border(
@@ -221,7 +593,14 @@ class SlideOverInspector extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(title, style: Theme.of(context).textTheme.titleMedium),
+                Expanded(
+                  child: Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
                 IconButton(
                   icon: const Icon(
                     Icons.close,
@@ -268,5 +647,28 @@ class IndustrialIdText extends StatelessWidget {
       overflow: TextOverflow.ellipsis,
       style: IndustrialTheme.mono(fontSize: fontSize, color: color),
     );
+  }
+}
+
+/// Column header label for custom industrial log grids.
+class IndustrialColumnHeader extends StatelessWidget {
+  const IndustrialColumnHeader(this.text, {super.key, this.width});
+
+  final String text;
+  final double? width;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = Text(
+      text.toUpperCase(),
+      style: GoogleFonts.inter(
+        fontSize: 10,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0.7,
+        color: IndustrialTheme.textMuted,
+      ),
+    );
+    if (width == null) return label;
+    return SizedBox(width: width, child: label);
   }
 }

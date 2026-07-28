@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/theme.dart';
 import '../../data/app_state.dart';
+import '../shared/industrial_widgets.dart';
 import '../shared/widgets.dart';
 
 class ContactsScreen extends ConsumerStatefulWidget {
@@ -37,10 +38,16 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen> {
     final contacts = ref.watch(contactsProvider);
     final scheme = Theme.of(context).colorScheme;
 
-    return Column(
+    return ColoredBox(
+      color: IndustrialTheme.darkBase,
+      child: Column(
       children: [
         Padding(
-          padding: slstPagePadding(context, top: 12, bottom: 8),
+          padding: slstPagePadding(context, top: 16, bottom: 8),
+          child: const IndustrialPageTitle('Contacts'),
+        ),
+        Padding(
+          padding: slstPagePadding(context, top: 0, bottom: 8),
           child: SearchField(
             controller: _search,
             hint: 'Search name, email, branch…',
@@ -77,12 +84,12 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen> {
                         children: [
                           CircleAvatar(
                             radius: 22,
-                            backgroundColor: SlstColors.brandSoft,
+                            backgroundColor: IndustrialTheme.skyBlue.withValues(alpha: 0.18),
                             child: Text(
                               _initials(c.name),
                               style: const TextStyle(
                                 fontWeight: FontWeight.w800,
-                                color: SlstColors.brand,
+                                color: IndustrialTheme.skyBlue,
                               ),
                             ),
                           ),
@@ -148,7 +155,7 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen> {
                             IconButton.filledTonal(
                               tooltip: 'Direct ${c.direct}',
                               style: IconButton.styleFrom(
-                                backgroundColor: SlstColors.brandSoft,
+                                backgroundColor: IndustrialTheme.skyBlue.withValues(alpha: 0.18),
                                 foregroundColor: SlstColors.brand,
                               ),
                               onPressed: () => launchUrl(
@@ -166,6 +173,7 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen> {
           ),
         ),
       ],
+    ),
     );
   }
 }

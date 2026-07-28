@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme.dart';
 import '../../data/app_state.dart';
 import '../../domain/location_intelligence.dart';
+import '../../domain/location_prediction.dart';
+import '../../domain/models.dart';
 import 'widgets.dart';
 
 typedef LocationSelection = ({String value, LocationCategory category});
@@ -108,8 +110,16 @@ class _LocationSelectorDialogState
 
   void _select(String value) {
     final category = _category;
-    final clean = value.trim();
+    var clean = value.trim();
     if (category == null || clean.isEmpty) return;
+    // Legacy B-02 A/B slots → combined partial-box bay.
+    if (category == LocationCategory.aisle &&
+        supersededAisleLocations.contains(locationKey(clean))) {
+      clean = b02PartialLocation;
+    } else {
+      final parsed = parseAisleLocation(clean);
+      if (parsed != null) clean = parsed.normalized;
+    }
     Navigator.pop(context, (value: clean, category: category));
   }
 
@@ -300,6 +310,7 @@ class _LocationSelectorDialogState
                       ignoreEntryId: widget.ignoreEntryId,
                     );
                     final occupied = !assessment.vacant;
+                    final sharedPartial = isB02PartialLocation(value);
                     final occupantText = assessment.occupants
                         .map(
                           (entry) =>
@@ -326,23 +337,32 @@ class _LocationSelectorDialogState
                     final movementText = movement.isEmpty
                         ? ''
                         : '\nMovement: $movement';
+                    final subtitle = sharedPartial
+                        ? (occupied
+                              ? 'Shared partial-box bay · ${assessment.occupants.length} active ${assessment.occupants.length == 1 ? 'entry' : 'entries'}$history$movementText'
+                              : 'Shared partial-box bay (multiple box entries OK)$history$movementText')
+                        : (occupied
+                              ? 'Occupied: $occupantText$history$movementText'
+                              : 'Vacant$history$movementText');
                     return ListTile(
                       leading: Icon(
-                        occupied
-                            ? Icons.warning_amber_rounded
-                            : Icons.check_circle_outline,
-                        color: occupied
-                            ? SlstColors.warning
-                            : SlstColors.success,
+                        sharedPartial
+                            ? Icons.inventory_2_outlined
+                            : occupied
+                                ? Icons.warning_amber_rounded
+                                : Icons.check_circle_outline,
+                        color: sharedPartial
+                            ? IndustrialTheme.amber
+                            : occupied
+                                ? SlstColors.warning
+                                : SlstColors.success,
                       ),
                       title: Text(
                         value,
                         style: const TextStyle(fontWeight: FontWeight.w700),
                       ),
                       subtitle: Text(
-                        occupied
-                            ? 'Occupied: $occupantText$history$movementText'
-                            : 'Vacant$history$movementText',
+                        subtitle,
                         maxLines: 4,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -371,9 +391,16 @@ Future<LocationAdvisoryDecision> confirmLocationAdvisory(
   required String location,
   required String so,
   String? ignoreEntryId,
+  ContainerCounts? containers,
 }) async {
   // Loose floor / shipping / outside areas are freeflow — skip conflict UI.
   if (classifyLocation(location) != LocationCategory.aisle) {
+    return LocationAdvisoryDecision.proceed;
+  }
+  // B-02-Partial is a shared bay for partial boxes: many SOs/entries are
+  // expected. Only warn when staging a skid or crate into that space.
+  if (isB02PartialLocation(location) &&
+      !partialBayRequiresConflictWarning(containers)) {
     return LocationAdvisoryDecision.proceed;
   }
   // Refresh immediately before confirmation where practical. A failure leaves
@@ -401,7 +428,35 @@ Future<LocationAdvisoryDecision> confirmLocationAdvisory(
   }
 
   final signedIn = ref.read(currentUserProvider) != null;
+
+  // Predictive advisory: show a single “better” alternate aisle slot (if we
+  // can infer one from remembered locations). This is informational; saving
+  // is still blocked only by the existing Proceed/Cancel flow.
+  LocationPrediction? suggestion;
+  try {
+    final candidates =
+        await ref.read(locationSuggestionsProvider(LocationCategory.aisle).future);
+    suggestion = await suggestAlternateAisleLocation(
+      currentLocation: location,
+      so: so,
+      activeStaging: data.staging,
+      shipped: data.shipped,
+      candidateLocations: candidates,
+      ignoreEntryId: ignoreEntryId,
+    );
+  } catch (_) {
+    // Advisory only: never block saving because suggestions failed.
+    suggestion = null;
+  }
+
+  if (!context.mounted) return LocationAdvisoryDecision.cancel;
+
   final lines = <String>[
+    if (isB02PartialLocation(location) &&
+        partialBayRequiresConflictWarning(containers))
+      'B-02-Partial is the shared partial-box bay. Skids/crates usually belong in a normal aisle slot.',
+    if (suggestion != null)
+      'Suggestion: Consider staging at ${suggestion.suggestedLocation} — ${suggestion.reason}.',
     if (differentHere.isNotEmpty)
       '${differentHere.length} active ${differentHere.length == 1 ? 'entry uses' : 'entries use'} this location for a different SO.',
     if (sameHere.isNotEmpty)

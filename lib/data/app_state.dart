@@ -79,25 +79,33 @@ class AppData {
     this.staging = const [],
     this.shipped = const [],
     this.loading = false,
+    this.syncing = false,
     this.error,
   });
 
   final List<StagingEntry> staging;
   final List<ShippedEntry> shipped;
+
+  /// Blocking first load (empty lists) — screens may show a spinner.
   final bool loading;
+
+  /// Background refresh while existing rows stay on screen (Live → Syncing chip).
+  final bool syncing;
   final String? error;
 
   AppData copyWith({
     List<StagingEntry>? staging,
     List<ShippedEntry>? shipped,
     bool? loading,
-    String? error,
+    bool? syncing,
+    Object? error = _unset,
   }) {
     return AppData(
       staging: staging ?? this.staging,
       shipped: shipped ?? this.shipped,
       loading: loading ?? this.loading,
-      error: error,
+      syncing: syncing ?? this.syncing,
+      error: identical(error, _unset) ? this.error : error as String?,
     );
   }
 
@@ -148,55 +156,163 @@ class AppData {
   }
 }
 
+const Object _unset = Object();
+
 class AppDataNotifier extends StateNotifier<AppData> {
   AppDataNotifier(this._ref, {bool initialize = true})
     : super(AppData(loading: initialize)) {
     if (initialize) {
       refresh();
       _bindRealtime();
+      _startPolling();
     }
   }
 
   final Ref _ref;
   RealtimeChannel? _channel;
-  int _refreshGeneration = 0;
+  Timer? _realtimeDebounce;
+  Timer? _pollTimer;
+  Timer? _reconnectTimer;
+  bool _refreshInFlight = false;
+  bool _refreshQueued = false;
+  bool _disposed = false;
+  bool _rebindingRealtime = false;
+  int _channelEpoch = 0;
+  static const _pollInterval = Duration(seconds: 15);
+  static const _fetchTimeout = Duration(seconds: 25);
 
-  Future<void> refresh() async {
-    final generation = ++_refreshGeneration;
-    state = state.copyWith(loading: true, error: null);
+  /// Pull latest staging + shipped. Concurrent callers coalesce into one
+  /// in-flight round-trip plus at most one follow-up (no discarded results).
+  ///
+  /// [quiet] skips the Syncing chip (used by background polling).
+  Future<void> refresh({bool quiet = false}) async {
+    if (_refreshInFlight) {
+      _refreshQueued = true;
+      return;
+    }
+    _refreshInFlight = true;
     try {
-      final staging = await _ref.read(stagingRepoProvider).fetchAll();
-      final shipped = await _ref.read(shippedRepoProvider).fetchAll();
-      if (generation != _refreshGeneration) return;
-      state = AppData(staging: staging, shipped: shipped);
-    } catch (e) {
-      if (generation != _refreshGeneration) return;
-      state = state.copyWith(loading: false, error: e.toString());
+      do {
+        _refreshQueued = false;
+        await _refreshOnce(quiet: quiet);
+      } while (_refreshQueued);
+    } finally {
+      _refreshInFlight = false;
     }
   }
 
+  Future<void> _refreshOnce({required bool quiet}) async {
+    final hasCachedRows =
+        state.staging.isNotEmpty || state.shipped.isNotEmpty;
+    // Keep existing rows painted during Supabase round-trips. Only the initial
+    // empty load uses blocking `loading` (dashboard spinner).
+    if (!hasCachedRows) {
+      state = state.copyWith(loading: true, syncing: true, error: null);
+    } else if (!quiet) {
+      state = state.copyWith(syncing: true, error: null);
+    } else if (state.error != null) {
+      state = state.copyWith(error: null);
+    }
+    try {
+      final results = await Future.wait([
+        _ref.read(stagingRepoProvider).fetchAll(),
+        _ref.read(shippedRepoProvider).fetchAll(),
+      ]).timeout(_fetchTimeout);
+      if (_disposed) return;
+      state = AppData(
+        staging: results[0] as List<StagingEntry>,
+        shipped: results[1] as List<ShippedEntry>,
+      );
+    } catch (e) {
+      if (_disposed) return;
+      state = state.copyWith(
+        loading: false,
+        syncing: false,
+        error: e.toString(),
+      );
+    }
+  }
+
+  void _scheduleRealtimeRefresh() {
+    _realtimeDebounce?.cancel();
+    // Burst of staging/shipped changes → one fetch after things settle.
+    _realtimeDebounce = Timer(
+      const Duration(milliseconds: 200),
+      () => refresh(),
+    );
+  }
+
+  void _startPolling() {
+    _pollTimer?.cancel();
+    // Safety net when realtime drops: keep the floor current without pull.
+    _pollTimer = Timer.periodic(
+      _pollInterval,
+      (_) => refresh(quiet: true),
+    );
+  }
+
   void _bindRealtime() {
+    if (_disposed) return;
     final client = _ref.read(supabaseClientProvider);
-    _channel = client
-        .channel('slst-live')
+    final epoch = ++_channelEpoch;
+    _reconnectTimer?.cancel();
+    _rebindingRealtime = true;
+    final previous = _channel;
+    _channel = null;
+    // Intentional teardown must not trigger soft-reconnect (closed → bind loop).
+    unawaited(previous?.unsubscribe());
+    _rebindingRealtime = false;
+
+    final channel = client.channel('slst-live-$epoch');
+    _channel = channel
         .onPostgresChanges(
           event: PostgresChangeEvent.all,
           schema: 'public',
           table: 'staging',
-          callback: (_) => refresh(),
+          callback: (_) {
+            if (epoch != _channelEpoch || _disposed) return;
+            _scheduleRealtimeRefresh();
+          },
         )
         .onPostgresChanges(
           event: PostgresChangeEvent.all,
           schema: 'public',
           table: 'shipped',
-          callback: (_) => refresh(),
+          callback: (_) {
+            if (epoch != _channelEpoch || _disposed) return;
+            _scheduleRealtimeRefresh();
+          },
         )
-        .subscribe();
+        .subscribe((status, error) {
+          if (epoch != _channelEpoch || _disposed) return;
+          if (status == RealtimeSubscribeStatus.subscribed) {
+            // Catch up anything missed while reconnecting.
+            unawaited(refresh(quiet: true));
+            return;
+          }
+          if (_rebindingRealtime) return;
+          if (status == RealtimeSubscribeStatus.channelError ||
+              status == RealtimeSubscribeStatus.timedOut ||
+              status == RealtimeSubscribeStatus.closed) {
+            // Soft-reconnect; polling covers the gap until this succeeds.
+            _reconnectTimer?.cancel();
+            _reconnectTimer = Timer(const Duration(seconds: 2), () {
+              if (_disposed || epoch != _channelEpoch) return;
+              _bindRealtime();
+            });
+          }
+        });
   }
 
   @override
   void dispose() {
-    _channel?.unsubscribe();
+    _disposed = true;
+    _channelEpoch++;
+    _realtimeDebounce?.cancel();
+    _pollTimer?.cancel();
+    _reconnectTimer?.cancel();
+    unawaited(_channel?.unsubscribe());
+    _channel = null;
     super.dispose();
   }
 }
@@ -318,10 +434,14 @@ final locationSuggestionsProvider =
         ...data.staging.map((entry) => entry.location),
         ...data.shipped.map((entry) => entry.location),
       ].where((value) => classifyLocation(value) == category);
-      return filterRememberedValues([
+      final merged = filterRememberedValues([
         ...roster,
         ...fromRecords,
       ], hidden: prefs.hiddenMemory);
+      if (category == LocationCategory.aisle) {
+        return normalizeAisleSuggestionList(merged);
+      }
+      return merged;
     });
 
 final recentBinMovementsProvider = FutureProvider<List<ChangelogEntry>>((

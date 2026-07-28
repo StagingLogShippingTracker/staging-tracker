@@ -149,17 +149,22 @@ class _QuickShipSheetState extends ConsumerState<QuickShipSheet> {
           children: [
             Row(
               children: [
-                const Icon(Icons.bolt, color: SlstColors.green),
+                const Icon(Icons.bolt, color: IndustrialTheme.mintGreen),
                 const SizedBox(width: 8),
                 Text(
                   'Quick Ship',
-                  style: Theme.of(context).textTheme.titleLarge,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: IndustrialTheme.textPrimary,
+                      ),
                 ),
                 const Spacer(),
                 IconButton(
                   tooltip: 'Close',
                   onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close),
+                  icon: const Icon(
+                    Icons.close,
+                    color: IndustrialTheme.textMuted,
+                  ),
                 ),
               ],
             ),

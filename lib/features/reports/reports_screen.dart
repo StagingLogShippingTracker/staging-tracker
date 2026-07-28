@@ -60,6 +60,10 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
       child: ListView(
         padding: slstPagePadding(context),
         children: [
+          const IndustrialPageTitle(
+            'Reports & Analytics',
+            subtitle: 'Operational tallies and staging verification',
+          ),
           LayoutBuilder(
             builder: (context, constraints) {
               final cols = constraints.maxWidth >= 900

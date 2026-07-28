@@ -6,6 +6,7 @@ import '../../data/app_state.dart';
 import '../../domain/models.dart';
 import '../../platform/photo_picker.dart';
 import '../shared/entry_suggestion_fields.dart';
+import '../shared/industrial_widgets.dart';
 import '../shared/widgets.dart';
 
 enum _NotifyKind { po, bulkPo, returnNotify }
@@ -162,18 +163,27 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     final user = ref.watch(currentUserProvider);
     final scheme = Theme.of(context).colorScheme;
 
-    return ListView(
+    return ColoredBox(
+      color: IndustrialTheme.darkBase,
+      child: ListView(
       padding: slstPagePadding(context),
       children: [
+          const IndustrialPageTitle(
+            'Notifications',
+            subtitle: 'PM email / SMS via authenticated notify-pm',
+          ),
         Card(
           margin: EdgeInsets.zero,
-          color: SlstColors.blue.withValues(alpha: 0.08),
+          color: IndustrialTheme.skyBlue.withValues(alpha: 0.10),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: BorderSide(color: SlstColors.blue.withValues(alpha: 0.25)),
+            borderRadius: BorderRadius.circular(6),
+            side: BorderSide(
+              color: IndustrialTheme.skyBlue.withValues(alpha: 0.35),
+            ),
           ),
           child: const ListTile(
-            leading: Icon(Icons.shield_outlined, color: SlstColors.blue),
+            leading:
+                Icon(Icons.shield_outlined, color: IndustrialTheme.skyBlue),
             title: Text(
               'Secure delivery',
               style: TextStyle(fontWeight: FontWeight.w700),
@@ -239,6 +249,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
         ),
         const BrandFooter(),
       ],
+    ),
     );
   }
 

@@ -402,6 +402,7 @@ class _AuditDialogState extends ConsumerState<_AuditDialog> {
           location: selection.value,
           so: item.so,
           ignoreEntryId: item.id,
+          containers: ContainerCounts.parse(item.type),
         );
         if (decision == LocationAdvisoryDecision.cancel) return;
         try {
@@ -562,7 +563,7 @@ class _AuditDialogState extends ConsumerState<_AuditDialog> {
 
   Widget _buildItem(BuildContext context, StagingEntry item) {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final muted = dark ? SlstColors.darkMuted : SlstColors.muted;
+    final muted = IndustrialTheme.textMuted;
 
     Widget infoRow(String label, String value, {Color? color, FontWeight? w}) {
       return Padding(
@@ -650,11 +651,11 @@ class _AuditDialogState extends ConsumerState<_AuditDialog> {
                   padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
                   decoration: BoxDecoration(
                     color: dark
-                        ? SlstColors.darkSurfaceMuted
-                        : SlstColors.surfaceMuted,
+                        ? IndustrialTheme.darkHeader
+                        : IndustrialTheme.darkHeader,
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
-                      color: dark ? SlstColors.darkBorder : SlstColors.border,
+                      color: IndustrialTheme.borderStroke,
                     ),
                   ),
                   child: Column(

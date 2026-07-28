@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/app_config.dart';
@@ -113,7 +114,7 @@ class AppShell extends ConsumerWidget {
       scheme: 'mailto',
       path: AppConfig.accessRequestEmail,
       queryParameters: {
-        'subject': 'Access Request: Staging Log & Shipping Tracker',
+        'subject': 'Access Request: SST (Swift Staging Tracker)',
       },
     );
     await launchUrl(uri);
@@ -135,35 +136,41 @@ class AppShell extends ConsumerWidget {
         child: compact
             ? _CompactShell(
                 selectedPath: current.path,
+                location: location,
                 title: current.sectionTitle,
                 onRequestAccess: _requestAccess,
                 child: child,
               )
             : Scaffold(
                 backgroundColor: IndustrialTheme.darkBase,
-                body: Column(
-                  children: [
-                    Expanded(
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          _IndustrialRail(selectedPath: current.path),
-                          Expanded(
-                            child: Column(
-                              children: [
-                                _TopHeader(
-                                  title: current.sectionTitle,
-                                  onRequestAccess: _requestAccess,
-                                ),
-                                Expanded(child: child),
-                              ],
+                // Tablet/desktop shell draws under Android edge-to-edge
+                // system bars unless inset — otherwise status + nav overlap
+                // the header and command dock (seen on Galaxy Tab).
+                body: SafeArea(
+                  child: Column(
+                    children: [
+                      Expanded(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _IndustrialRail(selectedPath: current.path),
+                            Expanded(
+                              child: Column(
+                                children: [
+                                  _TopHeader(
+                                    title: current.sectionTitle,
+                                    onRequestAccess: _requestAccess,
+                                  ),
+                                  Expanded(child: child),
+                                ],
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                    ShellCommandDock(location: location),
-                  ],
+                      ShellCommandDock(location: location),
+                    ],
+                  ),
                 ),
               ),
       ),
@@ -174,12 +181,14 @@ class AppShell extends ConsumerWidget {
 class _CompactShell extends ConsumerWidget {
   const _CompactShell({
     required this.selectedPath,
+    required this.location,
     required this.title,
     required this.onRequestAccess,
     required this.child,
   });
 
   final String selectedPath;
+  final String location;
   final String title;
   final Future<void> Function() onRequestAccess;
   final Widget child;
@@ -198,6 +207,22 @@ class _CompactShell extends ConsumerWidget {
       for (final p in _compactBarPaths)
         _destinations.firstWhere((d) => d.path == p),
     ];
+    final loading = ref.watch(appDataProvider).loading;
+    final syncing = ref.watch(appDataProvider).syncing;
+    final dockActions = ShellCommandDock.actionsFor(context, ref, location);
+    // Primary floor actions only — skip pure navigation chips already in the bar.
+    final compactActions = dockActions
+        .where(
+          (a) =>
+              a.label != 'Settings' &&
+              a.label != 'Staging Log' &&
+              a.label != 'Shipped Log' &&
+              a.label != 'Reports' &&
+              a.label != 'Notifications' &&
+              a.label != 'Contacts',
+        )
+        .take(4)
+        .toList();
 
     return Scaffold(
       backgroundColor: IndustrialTheme.darkBase,
@@ -207,12 +232,41 @@ class _CompactShell extends ConsumerWidget {
         elevation: 0,
         title: Text(
           title,
-          style: const TextStyle(
+          style: GoogleFonts.inter(
             fontSize: 15,
             fontWeight: FontWeight.w700,
+            color: IndustrialTheme.textPrimary,
           ),
         ),
         actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 4),
+            child: Center(
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: IndustrialTheme.mintGreen.withValues(alpha: 0.16),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: IndustrialTheme.mintGreen.withValues(alpha: 0.45),
+                  ),
+                ),
+                child: SizedBox(
+                  width: 56,
+                  child: Text(
+                    (loading || syncing) ? 'Syncing…' : 'Live',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: IndustrialTheme.mintGreen,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
           IconButton(
             tooltip: 'Notifications',
             onPressed: () => context.go('/notifications'),
@@ -234,7 +288,7 @@ class _CompactShell extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'SWIFT STAGING TRACKER',
+                      'SST',
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w800,
@@ -244,7 +298,7 @@ class _CompactShell extends ConsumerWidget {
                     ),
                     SizedBox(height: 4),
                     Text(
-                      'NISKU MAIN TERMINAL',
+                      'Swift Staging Tracker',
                       style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w600,
@@ -255,7 +309,7 @@ class _CompactShell extends ConsumerWidget {
                   ],
                 ),
               ),
-              const Divider(height: 1, color: IndustrialTheme.darkSurface),
+              const Divider(height: 1, color: IndustrialTheme.borderStroke),
               Expanded(
                 child: ListView(
                   padding: const EdgeInsets.symmetric(vertical: 8),
@@ -273,7 +327,7 @@ class _CompactShell extends ConsumerWidget {
                         ),
                         title: Text(
                           d.label,
-                          style: TextStyle(
+                          style: GoogleFonts.inter(
                             fontSize: 13,
                             fontWeight: d.path == selectedPath
                                 ? FontWeight.w700
@@ -295,22 +349,111 @@ class _CompactShell extends ConsumerWidget {
           ),
         ),
       ),
-      body: child,
-      bottomNavigationBar: NavigationBar(
-        height: 64,
-        backgroundColor: IndustrialTheme.darkHeader,
-        indicatorColor: IndustrialTheme.skyBlue.withValues(alpha: 0.22),
-        selectedIndex: barIndex,
-        labelBehavior: NavigationDestinationLabelBehavior.alwaysHide,
-        onDestinationSelected: (i) => context.go(barDestinations[i].path),
-        destinations: [
-          for (final d in barDestinations)
-            NavigationDestination(
-              icon: Icon(d.icon, color: IndustrialTheme.textMuted),
-              selectedIcon: Icon(d.selectedIcon, color: IndustrialTheme.skyBlue),
-              label: d.label,
-            ),
+      body: Column(
+        children: [
+          if (compactActions.isNotEmpty)
+            _CompactActionStrip(actions: compactActions),
+          Expanded(child: child),
         ],
+      ),
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: NavigationBar(
+          height: 68,
+          backgroundColor: IndustrialTheme.darkHeader,
+          indicatorColor: IndustrialTheme.skyBlue.withValues(alpha: 0.22),
+          selectedIndex: barIndex,
+          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+          onDestinationSelected: (i) => context.go(barDestinations[i].path),
+          destinations: [
+            for (final d in barDestinations)
+              NavigationDestination(
+                icon: Icon(d.icon, color: IndustrialTheme.textMuted),
+                selectedIcon:
+                    Icon(d.selectedIcon, color: IndustrialTheme.skyBlue),
+                label: _compactNavLabel(d.path),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static String _compactNavLabel(String path) {
+    switch (path) {
+      case '/':
+        return 'Home';
+      case '/staging':
+        return 'Staging';
+      case '/shipped':
+        return 'Shipped';
+      case '/reports':
+        return 'Reports';
+      case '/settings':
+        return 'Settings';
+      default:
+        return 'App';
+    }
+  }
+}
+
+/// Phone/tablet parity with the Windows command dock — primary actions only.
+class _CompactActionStrip extends StatelessWidget {
+  const _CompactActionStrip({required this.actions});
+
+  final List<DockAction> actions;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: IndustrialTheme.darkHeader,
+      child: Container(
+        width: double.infinity,
+        decoration: const BoxDecoration(
+          border: Border(
+            bottom: BorderSide(color: IndustrialTheme.borderStroke),
+          ),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              for (var i = 0; i < actions.length; i++) ...[
+                if (i > 0) const SizedBox(width: 6),
+                FilledButton.tonal(
+                  onPressed: actions[i].onPressed,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: IndustrialTheme.darkSurface,
+                    foregroundColor: actions[i].onPressed == null
+                        ? IndustrialTheme.textMuted
+                        : IndustrialTheme.textPrimary,
+                    disabledForegroundColor: IndustrialTheme.textMuted,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    minimumSize: const Size(0, 36),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(6),
+                      side: const BorderSide(
+                        color: IndustrialTheme.borderStroke,
+                      ),
+                    ),
+                  ),
+                  child: Text(
+                    actions[i].label,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -429,7 +572,7 @@ class _IndustrialRail extends ConsumerWidget {
       decoration: const BoxDecoration(
         color: IndustrialTheme.darkBase,
         border: Border(
-          right: BorderSide(color: IndustrialTheme.darkSurface, width: 1),
+          right: BorderSide(color: IndustrialTheme.borderStroke, width: 1),
         ),
       ),
       child: Column(
@@ -445,7 +588,7 @@ class _IndustrialRail extends ConsumerWidget {
             child: collapsed
                 ? const Center(
                     child: Tooltip(
-                      message: 'Swift Staging Tracker',
+                      message: 'SST',
                       child: Icon(
                         Icons.bolt,
                         size: 26,
@@ -457,7 +600,7 @@ class _IndustrialRail extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'SWIFT STAGING TRACKER',
+                        'SST',
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w800,
@@ -468,7 +611,7 @@ class _IndustrialRail extends ConsumerWidget {
                       ),
                       SizedBox(height: 4),
                       Text(
-                        'NISKU MAIN TERMINAL',
+                        'Swift Staging Tracker',
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w600,
@@ -479,7 +622,7 @@ class _IndustrialRail extends ConsumerWidget {
                     ],
                   ),
           ),
-          const Divider(height: 1, color: IndustrialTheme.darkSurface),
+          const Divider(height: 1, color: IndustrialTheme.borderStroke),
           Expanded(
             child: ListView(
               padding: EdgeInsets.symmetric(
@@ -496,7 +639,7 @@ class _IndustrialRail extends ConsumerWidget {
               ],
             ),
           ),
-          const Divider(height: 1, color: IndustrialTheme.darkSurface),
+          const Divider(height: 1, color: IndustrialTheme.borderStroke),
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 6),
             child: Tooltip(
@@ -580,7 +723,7 @@ class _RailNavTile extends StatelessWidget {
                           item.label,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
+                          style: GoogleFonts.inter(
                             fontSize: 12,
                             height: 1.2,
                             fontWeight:
@@ -613,7 +756,8 @@ class _TopHeader extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final loading = ref.watch(appDataProvider).loading;
+    final data = ref.watch(appDataProvider);
+    final syncing = data.syncing || data.loading;
 
     return Container(
       height: 52,
@@ -631,7 +775,7 @@ class _TopHeader extends ConsumerWidget {
               title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: GoogleFonts.inter(
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
                 color: IndustrialTheme.textPrimary,
@@ -659,12 +803,16 @@ class _TopHeader extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(width: 6),
-                Text(
-                  loading ? 'Syncing…' : 'Live sync',
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: IndustrialTheme.mintGreen,
+                SizedBox(
+                  width: 72,
+                  child: Text(
+                    syncing ? 'Syncing…' : 'Live sync',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: IndustrialTheme.mintGreen,
+                    ),
                   ),
                 ),
               ],

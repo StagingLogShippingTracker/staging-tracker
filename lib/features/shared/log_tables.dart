@@ -16,8 +16,14 @@ import 'so_advisories.dart';
 import 'widgets.dart';
 
 final _dateFmt = DateFormat('M/d/yy h:mm a');
+final _mutedStampFmt = DateFormat('MMM d, h:mm a');
 
 String _fmtDate(DateTime? d) => d == null ? '—' : _dateFmt.format(d.toLocal());
+
+String _fmtStamp(DateTime? d) {
+  if (d == null) return '—';
+  return _mutedStampFmt.format(d.toLocal()).toUpperCase();
+}
 
 String _stagingStatusLabel(String status) {
   if (StatusRules.isYmd(status) && StatusRules.formatUi(status) == status) {
@@ -26,7 +32,19 @@ String _stagingStatusLabel(String status) {
   return StatusRules.formatUi(status);
 }
 
-Widget _clipText(String text, {double maxWidth = 220, FontWeight? weight}) {
+Color _zebraRowColor(int index, {bool selected = false}) {
+  if (selected) return IndustrialTheme.skyBlue.withValues(alpha: 0.12);
+  return index.isOdd
+      ? IndustrialTheme.darkHeader.withValues(alpha: 0.55)
+      : Colors.transparent;
+}
+
+Widget _clipText(
+  String text, {
+  double maxWidth = 220,
+  FontWeight? weight,
+  bool muted = false,
+}) {
   final value = text.isEmpty ? '—' : text;
   return Tooltip(
     message: value,
@@ -37,7 +55,43 @@ Widget _clipText(String text, {double maxWidth = 220, FontWeight? weight}) {
         value,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: weight == null ? null : TextStyle(fontWeight: weight),
+        style: TextStyle(
+          fontWeight: weight ?? FontWeight.w500,
+          fontSize: 13,
+          color: muted
+              ? IndustrialTheme.textMuted
+              : IndustrialTheme.textPrimary,
+        ),
+      ),
+    ),
+  );
+}
+
+Widget _mutedStamp(DateTime? d) {
+  return Text(
+    _fmtStamp(d),
+    style: IndustrialTheme.mono(
+      fontSize: 11,
+      color: IndustrialTheme.textMuted,
+    ),
+  );
+}
+
+Widget _containerCell(String type, int qty) {
+  final label = type.trim().isEmpty ? '$qty' : type.trim();
+  return Tooltip(
+    message: label,
+    waitDuration: const Duration(milliseconds: 500),
+    child: ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 200),
+      child: Text(
+        label,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        style: IndustrialTheme.mono(
+          fontSize: 12,
+          color: IndustrialTheme.textPrimary,
+        ),
       ),
     ),
   );
@@ -45,13 +99,19 @@ Widget _clipText(String text, {double maxWidth = 220, FontWeight? weight}) {
 
 Widget _photosButton(BuildContext context, String so, List<String> paths) {
   if (paths.isEmpty) {
-    return const Text('—');
+    return Text(
+      '—',
+      style: IndustrialTheme.mono(
+        fontSize: 12,
+        color: IndustrialTheme.textMuted,
+      ),
+    );
   }
   return TextButton.icon(
     style: TextButton.styleFrom(
       padding: const EdgeInsets.symmetric(horizontal: 8),
       minimumSize: const Size(0, 32),
-      foregroundColor: SlstColors.info,
+      foregroundColor: IndustrialTheme.skyBlue,
     ),
     onPressed: () =>
         showPhotosDialog(context, title: 'Photos — SO $so', paths: paths),
@@ -64,7 +124,8 @@ Widget _soHistoryLink(
   BuildContext context,
   WidgetRef ref,
   String so, {
-  double maxWidth = 110,
+  double maxWidth = 120,
+  bool large = false,
 }) {
   return Tooltip(
     message: 'Open Order History for SO $so',
@@ -73,11 +134,7 @@ Widget _soHistoryLink(
         padding: EdgeInsets.zero,
         minimumSize: const Size(0, 32),
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        foregroundColor: SlstColors.brand,
-        textStyle: TextStyle(
-          fontWeight: FontWeight.w700,
-          decoration: TextDecoration.underline,
-        ),
+        foregroundColor: IndustrialTheme.skyBlue,
       ),
       onPressed: () => showOrderHistoryDialog(context, ref, so: so),
       child: ConstrainedBox(
@@ -86,34 +143,21 @@ Widget _soHistoryLink(
           so.isEmpty ? '—' : so,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
+          style: IndustrialTheme.mono(
+            fontSize: large ? 15 : 13,
+            fontWeight: FontWeight.w700,
+            color: IndustrialTheme.skyBlue,
+          ),
         ),
       ),
     ),
   );
 }
 
-Widget _editButton(VoidCallback onPressed) {
-  return OutlinedButton(
-    style: OutlinedButton.styleFrom(
-      foregroundColor: SlstColors.brand,
-      side: const BorderSide(color: SlstColors.brand),
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      minimumSize: const Size(0, 32),
-      textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-    ),
-    onPressed: onPressed,
-    child: const Text('Edit'),
-  );
-}
-
-/// Orange pill switch (list ↔ cards), styled like a classic iOS toggle.
-/// Off (left) = list, On (right, orange track) = cards.
+/// Industrial list ↔ cards toggle (sky accent when cards active).
 Widget _logViewModeToggle(WidgetRef ref) {
   final mode = ref.watch(logViewModeProvider);
   final isCards = mode == LogViewMode.card;
-  const orange = Color(0xFFE85D04);
-  const trackOff = Color(0xFFD1D5DB);
-  const knob = Colors.white;
 
   return Tooltip(
     message: isCards ? 'Card view' : 'List view',
@@ -130,8 +174,11 @@ Widget _logViewModeToggle(WidgetRef ref) {
           height: 22,
           padding: const EdgeInsets.all(2),
           decoration: BoxDecoration(
-            color: isCards ? orange : trackOff,
+            color: isCards
+                ? IndustrialTheme.skyBlue
+                : IndustrialTheme.darkHeader,
             borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: IndustrialTheme.borderStroke),
           ),
           child: AnimatedAlign(
             duration: const Duration(milliseconds: 180),
@@ -140,16 +187,9 @@ Widget _logViewModeToggle(WidgetRef ref) {
             child: Container(
               width: 18,
               height: 18,
-              decoration: BoxDecoration(
-                color: knob,
+              decoration: const BoxDecoration(
+                color: IndustrialTheme.textPrimary,
                 shape: BoxShape.circle,
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x33000000),
-                    blurRadius: 2,
-                    offset: Offset(0, 1),
-                  ),
-                ],
               ),
             ),
           ),
@@ -172,7 +212,6 @@ Future<void> showChangelogDialog(
   return showDialog<void>(
     context: context,
     builder: (context) {
-      final dark = Theme.of(context).brightness == Brightness.dark;
       return Dialog(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 760, maxHeight: 600),
@@ -280,11 +319,9 @@ Future<void> showChangelogDialog(
                                       const SizedBox(height: 2),
                                       Text(
                                         '${r.userEmail.isEmpty ? 'system' : r.userEmail} · ${_fmtDate(r.createdAt)}',
-                                        style: TextStyle(
+                                        style: const TextStyle(
                                           fontSize: 11.5,
-                                          color: dark
-                                              ? SlstColors.darkMuted
-                                              : SlstColors.muted,
+                                          color: IndustrialTheme.textMuted,
                                         ),
                                       ),
                                     ],
@@ -451,12 +488,18 @@ class StagingLogCard extends ConsumerStatefulWidget {
 
 class _StagingLogCardState extends ConsumerState<StagingLogCard> {
   static const _previewRows = 12;
+  static const _allZones = 'All Zones';
+  static const _allStatuses = 'All Statuses';
+  static const _allStagers = 'All Stagers';
 
   StagingSort _sort = StagingSort.urgency;
   bool _batch = false;
   final _selected = <String>{};
   final _hScroll = ScrollController();
   StagingEntry? _inspect;
+  String _zoneFilter = _allZones;
+  String _statusFilter = _allStatuses;
+  String _stagerFilter = _allStagers;
 
   @override
   void dispose() {
@@ -464,8 +507,25 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
     super.dispose();
   }
 
+  List<StagingEntry> _filtered() {
+    return widget.entries.where((e) {
+      if (_zoneFilter != _allZones && e.location.trim() != _zoneFilter) {
+        return false;
+      }
+      if (_statusFilter != _allStatuses &&
+          _stagingStatusLabel(e.status) != _statusFilter) {
+        return false;
+      }
+      final stager = (e.stagedBy ?? '').trim();
+      if (_stagerFilter != _allStagers && stager != _stagerFilter) {
+        return false;
+      }
+      return true;
+    }).toList();
+  }
+
   List<StagingEntry> _sorted() {
-    final list = [...widget.entries];
+    final list = _filtered();
     switch (_sort) {
       case StagingSort.urgency:
         list.sort((a, b) {
@@ -491,6 +551,16 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
               a.customer.toLowerCase().compareTo(b.customer.toLowerCase()),
         );
     }
+    return list;
+  }
+
+  List<String> _uniqueSorted(Iterable<String> values) {
+    final set = <String>{};
+    for (final v in values) {
+      final t = v.trim();
+      if (t.isNotEmpty) set.add(t);
+    }
+    final list = set.toList()..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
     return list;
   }
 
@@ -554,8 +624,21 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
     final rows = widget.expanded ? sorted : sorted.take(_previewRows).toList();
     _selected.removeWhere((id) => !sorted.any((e) => e.id == id));
 
+    final zones = [_allZones, ..._uniqueSorted(widget.entries.map((e) => e.location))];
+    final statuses = [
+      _allStatuses,
+      ..._uniqueSorted(widget.entries.map((e) => _stagingStatusLabel(e.status))),
+    ];
+    final stagers = [
+      _allStagers,
+      ..._uniqueSorted(widget.entries.map((e) => e.stagedBy ?? '')),
+    ];
+    if (!zones.contains(_zoneFilter)) _zoneFilter = _allZones;
+    if (!statuses.contains(_statusFilter)) _statusFilter = _allStatuses;
+    if (!stagers.contains(_stagerFilter)) _stagerFilter = _allStagers;
+
     return SectionCard(
-      title: 'Staging Entries',
+      title: 'Active Staging Entries',
       expandChild: widget.fillViewport,
       headerActions: [
         _SortDropdown<StagingSort>(
@@ -573,7 +656,7 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
           PillButton(
             label: 'New Entry',
             icon: Icons.add,
-            color: SlstColors.brand,
+            color: IndustrialTheme.skyBlue,
             compact: true,
             onPressed: () => showStagingFormSheet(context, ref),
           ),
@@ -581,7 +664,7 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
           PillButton(
             label: _batch ? 'Exit Batch' : 'Batch Mode',
             icon: Icons.checklist,
-            color: SlstColors.notify,
+            color: IndustrialTheme.skyBlue,
             compact: true,
             onPressed: () => setState(() {
               _batch = !_batch;
@@ -591,7 +674,7 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
         PillButton(
           label: 'Changelog',
           icon: Icons.history,
-          color: SlstColors.info,
+          color: IndustrialTheme.slateMuted,
           compact: true,
           onPressed: () => showChangelogDialog(context, ref, table: 'staging'),
         ),
@@ -599,7 +682,7 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
           PillButton(
             label: 'Expand',
             icon: Icons.open_in_full,
-            color: SlstColors.brand,
+            color: IndustrialTheme.skyBlue,
             compact: true,
             onPressed: widget.onExpand,
           ),
@@ -607,6 +690,39 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
       subHeader: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              IndustrialFilterDropdown(
+                value: _zoneFilter,
+                items: zones,
+                width: 132,
+                onChanged: (v) => setState(() => _zoneFilter = v),
+              ),
+              IndustrialFilterDropdown(
+                value: _statusFilter,
+                items: statuses,
+                width: 168,
+                onChanged: (v) => setState(() => _statusFilter = v),
+              ),
+              IndustrialFilterDropdown(
+                value: _stagerFilter,
+                items: stagers,
+                width: 140,
+                onChanged: (v) => setState(() => _stagerFilter = v),
+              ),
+              Text(
+                '${sorted.length} entr${sorted.length == 1 ? 'y' : 'ies'}',
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: IndustrialTheme.textMuted,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
           const StagingStatusLegend(),
           if (_batch) ...[
             const SizedBox(height: 10),
@@ -620,12 +736,13 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
                   style: const TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: 12.5,
+                    color: IndustrialTheme.textPrimary,
                   ),
                 ),
                 PillButton(
                   label: 'Consolidate Selected',
                   icon: Icons.merge_type,
-                  color: SlstColors.purple,
+                  color: IndustrialTheme.purple,
                   compact: true,
                   onPressed: _selected.length >= 2
                       ? () => _consolidateSelected(sorted)
@@ -654,9 +771,8 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
     );
   }
 
-  /// DataTable is fine on desktop; on Android it lays out every cell at once
-  /// inside a parent ListView and causes scroll stutter. Use a virtualized
-  /// dense list there instead.
+  /// Desktop uses a custom dense industrial grid (not Material DataTable).
+  /// Mobile list mode uses a virtualized dense list for scroll performance.
   Widget _buildStagingEntriesBody({
     required BuildContext context,
     required bool canWrite,
@@ -664,7 +780,7 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
     required List<StagingEntry> rows,
   }) {
     final viewMode = ref.watch(logViewModeProvider);
-    final useDataTable =
+    final useDesktopGrid =
         viewMode == LogViewMode.list && usesDesktopPopupChrome(context);
 
     if (rows.isEmpty) {
@@ -688,7 +804,7 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
         rows: rows,
         sortedLength: sorted.length,
       );
-    } else if (!useDataTable) {
+    } else if (!useDesktopGrid) {
       body = _stagingDenseList(
         canWrite: canWrite,
         rows: rows,
@@ -706,7 +822,10 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
                   controller: _hScroll,
                   scrollDirection: Axis.horizontal,
                   child: SingleChildScrollView(
-                    child: _stagingDataTable(canWrite: canWrite, rows: rows),
+                    child: _stagingIndustrialGrid(
+                      canWrite: canWrite,
+                      rows: rows,
+                    ),
                   ),
                 ),
               ),
@@ -717,7 +836,7 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
               child: SingleChildScrollView(
                 controller: _hScroll,
                 scrollDirection: Axis.horizontal,
-                child: _stagingDataTable(canWrite: canWrite, rows: rows),
+                child: _stagingIndustrialGrid(canWrite: canWrite, rows: rows),
               ),
             ),
           if (!widget.expanded && sorted.length > rows.length)
@@ -725,7 +844,10 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
               child: Text(
                 'Showing ${rows.length} of ${sorted.length} — use Expand to view all.',
-                style: const TextStyle(fontSize: 12, color: SlstColors.muted),
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: IndustrialTheme.textMuted,
+                ),
               ),
             )
           else
@@ -758,11 +880,9 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
           title: e.so,
           subtitle: e.customer,
           dbStatus: e.status,
-          color: statusRowColor(context, e.status),
           details: [
-            e.type,
-            e.location,
-            e.id,
+            if (e.location.trim().isNotEmpty) e.location,
+            if (e.type.trim().isNotEmpty) e.type,
             if ((e.weight ?? '').isNotEmpty) 'Wt: ${e.weight}',
             if ((e.stagedBy ?? '').isNotEmpty) 'Staged by: ${e.stagedBy}',
             if ((e.comments ?? '').isNotEmpty) e.comments!,
@@ -771,7 +891,11 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
           trailing: canWrite
               ? PopupMenuButton<String>(
                   tooltip: 'Actions',
-                  icon: const Icon(Icons.more_vert, size: 20),
+                  icon: const Icon(
+                    Icons.more_vert,
+                    size: 20,
+                    color: IndustrialTheme.textMuted,
+                  ),
                   onSelected: (v) {
                     switch (v) {
                       case 'edit':
@@ -844,92 +968,128 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
     required List<StagingEntry> rows,
     required int sortedLength,
   }) {
-    Widget rowFor(StagingEntry e) {
+    Widget rowFor(StagingEntry e, int index) {
       final statusLabel = _stagingStatusLabel(e.status);
+      final selected = _inspect?.id == e.id;
+      final accent = industrialStatusAccent(statusLabel);
       return Material(
-        color: statusRowColor(context, e.status),
+        color: _zebraRowColor(index, selected: selected),
         child: InkWell(
           onTap: () => setState(() => _inspect = e),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+          child: IntrinsicHeight(
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (_batch)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8, top: 2),
-                    child: Checkbox(
-                      value: _selected.contains(e.id),
-                      onChanged: (v) => setState(() {
-                        if (v == true) {
-                          _selected.add(e.id);
-                        } else {
-                          _selected.remove(e.id);
-                        }
-                      }),
+                Container(width: 3, color: accent),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 12, 8, 12),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (_batch)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 8, top: 2),
+                            child: Checkbox(
+                              value: _selected.contains(e.id),
+                              onChanged: (v) => setState(() {
+                                if (v == true) {
+                                  _selected.add(e.id);
+                                } else {
+                                  _selected.remove(e.id);
+                                }
+                              }),
+                            ),
+                          ),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      e.so,
+                                      style: IndustrialTheme.mono(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w700,
+                                        color: IndustrialTheme.textPrimary,
+                                      ),
+                                    ),
+                                  ),
+                                  IndustrialStatusBadge(status: statusLabel),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                e.customer.isEmpty ? '—' : e.customer,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: 13,
+                                  color: IndustrialTheme.textMuted,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Wrap(
+                                spacing: 6,
+                                runSpacing: 6,
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                children: [
+                                  IndustrialZonePill(e.location),
+                                  _containerCell(e.type, e.qty),
+                                  if ((e.weight ?? '').trim().isNotEmpty)
+                                    IndustrialWeightPill(e.weight),
+                                  _mutedStamp(e.entryDate),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (canWrite)
+                          PopupMenuButton<String>(
+                            tooltip: 'Actions',
+                            icon: const Icon(
+                              Icons.more_vert,
+                              size: 20,
+                              color: IndustrialTheme.textMuted,
+                            ),
+                            onSelected: (v) {
+                              switch (v) {
+                                case 'edit':
+                                  showStagingFormSheet(context, ref, existing: e);
+                                case 'ship':
+                                  showShipDialog(context, ref, entry: e);
+                                case 'split':
+                                  showSplitDialog(context, ref, entry: e);
+                                case 'return':
+                                  showReturnDialog(context, ref, entry: e);
+                                case 'delete':
+                                  _deleteOne(e);
+                              }
+                            },
+                            itemBuilder: (context) => const [
+                              PopupMenuItem(value: 'edit', child: Text('Edit')),
+                              PopupMenuItem(value: 'ship', child: Text('Ship')),
+                              PopupMenuItem(
+                                value: 'split',
+                                child: Text('Split Entry'),
+                              ),
+                              PopupMenuItem(
+                                value: 'return',
+                                child: Text('Return to Stock'),
+                              ),
+                              PopupMenuItem(
+                                value: 'delete',
+                                child: Text('Delete'),
+                              ),
+                            ],
+                          ),
+                      ],
                     ),
                   ),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        e.so,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 15,
-                        ),
-                      ),
-                      Text(
-                        e.customer,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                      const SizedBox(height: 2),
-                      IndustrialIdText(e.id, fontSize: 11),
-                      const SizedBox(height: 2),
-                      Text(
-                        '$statusLabel · ${e.type} · ${e.location}',
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
                 ),
-                if (canWrite)
-                  PopupMenuButton<String>(
-                    tooltip: 'Actions',
-                    icon: const Icon(Icons.more_vert, size: 20),
-                    onSelected: (v) {
-                      switch (v) {
-                        case 'edit':
-                          showStagingFormSheet(context, ref, existing: e);
-                        case 'ship':
-                          showShipDialog(context, ref, entry: e);
-                        case 'split':
-                          showSplitDialog(context, ref, entry: e);
-                        case 'return':
-                          showReturnDialog(context, ref, entry: e);
-                        case 'delete':
-                          _deleteOne(e);
-                      }
-                    },
-                    itemBuilder: (context) => const [
-                      PopupMenuItem(value: 'edit', child: Text('Edit')),
-                      PopupMenuItem(value: 'ship', child: Text('Ship')),
-                      PopupMenuItem(value: 'split', child: Text('Split Entry')),
-                      PopupMenuItem(
-                        value: 'return',
-                        child: Text('Return to Stock'),
-                      ),
-                      PopupMenuItem(value: 'delete', child: Text('Delete')),
-                    ],
-                  ),
               ],
             ),
           ),
@@ -943,18 +1103,24 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
         physics: const AlwaysScrollableScrollPhysics(),
         itemCount:
             rows.length + (!widget.expanded && sortedLength > rows.length ? 1 : 0),
-        separatorBuilder: (_, _) => const Divider(height: 1),
+        separatorBuilder: (_, _) => const Divider(
+          height: 1,
+          color: IndustrialTheme.borderStroke,
+        ),
         itemBuilder: (context, index) {
           if (index >= rows.length) {
             return Padding(
               padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
               child: Text(
                 'Showing ${rows.length} of $sortedLength — use Expand to view all.',
-                style: const TextStyle(fontSize: 12, color: SlstColors.muted),
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: IndustrialTheme.textMuted,
+                ),
               ),
             );
           }
-          return rowFor(rows[index]);
+          return rowFor(rows[index], index);
         },
       );
     }
@@ -964,15 +1130,19 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
       child: Column(
         children: [
           for (var i = 0; i < rows.length; i++) ...[
-            if (i > 0) const Divider(height: 1),
-            rowFor(rows[i]),
+            if (i > 0)
+              const Divider(height: 1, color: IndustrialTheme.borderStroke),
+            rowFor(rows[i], i),
           ],
           if (!widget.expanded && sortedLength > rows.length)
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
               child: Text(
                 'Showing ${rows.length} of $sortedLength — use Expand to view all.',
-                style: const TextStyle(fontSize: 12, color: SlstColors.muted),
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: IndustrialTheme.textMuted,
+                ),
               ),
             ),
         ],
@@ -980,124 +1150,257 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
     );
   }
 
-  Widget _stagingDataTable({
+  Widget _stagingIndustrialGrid({
     required bool canWrite,
     required List<StagingEntry> rows,
   }) {
-    return DataTable(
-      showCheckboxColumn: false,
-      horizontalMargin: 12,
-      columnSpacing: 16,
-      headingRowHeight: 40,
-      dataRowMinHeight: 40,
-      dataRowMaxHeight: 48,
-      columns: [
-        if (_batch) const DataColumn(label: SizedBox(width: 24)),
-        const DataColumn(label: Text('UUID')),
-        if (canWrite) const DataColumn(label: Text('EDIT')),
-        const DataColumn(label: Text('PHOTOS')),
-        const DataColumn(label: Text('SO')),
-        const DataColumn(label: Text('CUSTOMER')),
-        const DataColumn(label: Text('ENTRY DATE')),
-        const DataColumn(label: Text('CONTAINERS')),
-        const DataColumn(label: Text('LOCATION')),
-        const DataColumn(label: Text('WEIGHT')),
-        const DataColumn(label: Text('COMMENTS')),
-        const DataColumn(label: Text('STATUS')),
-        const DataColumn(label: Text('STAGED BY')),
-        if (canWrite) const DataColumn(label: Text('ACTIONS')),
-      ],
-      rows: [
-        for (final e in rows)
-          DataRow(
-            selected: _inspect?.id == e.id,
-            onSelectChanged: (_) => setState(() => _inspect = e),
-            color: WidgetStatePropertyAll(statusRowColor(context, e.status)),
-            cells: [
-              if (_batch)
-                DataCell(
-                  Checkbox(
-                    value: _selected.contains(e.id),
-                    onChanged: (v) => setState(() {
-                      if (v == true) {
-                        _selected.add(e.id);
-                      } else {
-                        _selected.remove(e.id);
-                      }
-                    }),
-                  ),
-                ),
-              DataCell(
-                SizedBox(
-                  width: 96,
-                  child: IndustrialIdText(e.id, fontSize: 11),
-                ),
-              ),
-              if (canWrite)
-                DataCell(
-                  _editButton(
-                    () => showStagingFormSheet(context, ref, existing: e),
-                  ),
-                ),
-              DataCell(_photosButton(context, e.so, e.photoUrls)),
-              DataCell(_soHistoryLink(context, ref, e.so)),
-              DataCell(_clipText(e.customer, maxWidth: 180)),
-              DataCell(Text(_fmtDate(e.entryDate))),
-              DataCell(_clipText(e.type, maxWidth: 170)),
-              DataCell(_clipText(e.location, maxWidth: 110)),
-              DataCell(_clipText(e.weight ?? '', maxWidth: 90)),
-              DataCell(_clipText(e.comments ?? '', maxWidth: 220)),
-              DataCell(
-                IndustrialStatusBadge(status: _stagingStatusLabel(e.status)),
-              ),
-              DataCell(_clipText(e.stagedBy ?? '', maxWidth: 110)),
-              if (canWrite)
-                DataCell(
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      PillButton(
-                        label: 'Ship',
-                        color: SlstColors.success,
-                        compact: true,
-                        onPressed: () =>
-                            showShipDialog(context, ref, entry: e),
-                      ),
-                      const SizedBox(width: 6),
-                      PopupMenuButton<String>(
-                        tooltip: 'More actions',
-                        icon: const Icon(Icons.more_vert, size: 20),
-                        onSelected: (v) {
-                          switch (v) {
-                            case 'split':
-                              showSplitDialog(context, ref, entry: e);
-                            case 'return':
-                              showReturnDialog(context, ref, entry: e);
-                            case 'delete':
-                              _deleteOne(e);
-                          }
-                        },
-                        itemBuilder: (context) => const [
-                          PopupMenuItem(
-                            value: 'split',
-                            child: Text('Split Entry'),
-                          ),
-                          PopupMenuItem(
-                            value: 'return',
-                            child: Text('Return to Stock'),
-                          ),
-                          PopupMenuItem(
-                            value: 'delete',
-                            child: Text('Delete'),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-            ],
+    const soW = 118.0;
+    const clientW = 168.0;
+    const zoneW = 100.0;
+    const containerW = 130.0;
+    const weightW = 88.0;
+    const statusW = 140.0;
+    const stagerW = 110.0;
+    const timeW = 128.0;
+    const photosW = 72.0;
+    const actionsW = 132.0;
+    final batchW = _batch ? 44.0 : 0.0;
+    final totalW = 3 +
+        batchW +
+        soW +
+        clientW +
+        zoneW +
+        containerW +
+        weightW +
+        statusW +
+        stagerW +
+        timeW +
+        photosW +
+        (canWrite ? actionsW : 0) +
+        48;
+
+    Widget headerCell(String label, double width) => SizedBox(
+          width: width,
+          child: IndustrialColumnHeader(label),
+        );
+
+    return SizedBox(
+      width: totalW,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            color: IndustrialTheme.darkHeader,
+            padding: const EdgeInsets.fromLTRB(0, 10, 12, 10),
+            child: Row(
+              children: [
+                const SizedBox(width: 3),
+                if (_batch) SizedBox(width: batchW),
+                headerCell('SO Number', soW),
+                headerCell('Client', clientW),
+                headerCell('Zone', zoneW),
+                headerCell('Containers', containerW),
+                headerCell('Weight', weightW),
+                headerCell('Status', statusW),
+                headerCell('Stager', stagerW),
+                headerCell('Timestamp', timeW),
+                headerCell('Photos', photosW),
+                if (canWrite) headerCell('Actions', actionsW),
+              ],
+            ),
           ),
-      ],
+          const Divider(height: 1, color: IndustrialTheme.borderStroke),
+          for (var i = 0; i < rows.length; i++) ...[
+            if (i > 0)
+              const Divider(height: 1, color: IndustrialTheme.borderStroke),
+            () {
+              final e = rows[i];
+              final statusLabel = _stagingStatusLabel(e.status);
+              final selected = _inspect?.id == e.id;
+              final accent = industrialStatusAccent(statusLabel);
+              return Material(
+                color: _zebraRowColor(i, selected: selected),
+                child: InkWell(
+                  onTap: () => setState(() => _inspect = e),
+                  child: IntrinsicHeight(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Container(width: 3, color: accent),
+                        if (_batch)
+                          SizedBox(
+                            width: batchW,
+                            child: Center(
+                              child: Checkbox(
+                                value: _selected.contains(e.id),
+                                onChanged: (v) => setState(() {
+                                  if (v == true) {
+                                    _selected.add(e.id);
+                                  } else {
+                                    _selected.remove(e.id);
+                                  }
+                                }),
+                              ),
+                            ),
+                          ),
+                        SizedBox(
+                          width: soW,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 10,
+                            ),
+                            child: _soHistoryLink(
+                              context,
+                              ref,
+                              e.so,
+                              maxWidth: soW - 8,
+                              large: true,
+                            ),
+                          ),
+                        ),
+                        SizedBox(
+                          width: clientW,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            child: _clipText(
+                              e.customer,
+                              maxWidth: clientW - 8,
+                              muted: true,
+                            ),
+                          ),
+                        ),
+                        SizedBox(
+                          width: zoneW,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            child: IndustrialZonePill(e.location),
+                          ),
+                        ),
+                        SizedBox(
+                          width: containerW,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            child: _containerCell(e.type, e.qty),
+                          ),
+                        ),
+                        SizedBox(
+                          width: weightW,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            child: IndustrialWeightPill(e.weight),
+                          ),
+                        ),
+                        SizedBox(
+                          width: statusW,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            child: IndustrialStatusBadge(status: statusLabel),
+                          ),
+                        ),
+                        SizedBox(
+                          width: stagerW,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            child: _clipText(
+                              e.stagedBy ?? '',
+                              maxWidth: stagerW - 8,
+                              muted: true,
+                            ),
+                          ),
+                        ),
+                        SizedBox(
+                          width: timeW,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            child: _mutedStamp(e.entryDate),
+                          ),
+                        ),
+                        SizedBox(
+                          width: photosW,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 6),
+                            child: _photosButton(context, e.so, e.photoUrls),
+                          ),
+                        ),
+                        if (canWrite)
+                          SizedBox(
+                            width: actionsW,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 6),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  PillButton(
+                                    label: 'Ship',
+                                    color: IndustrialTheme.mintGreen,
+                                    compact: true,
+                                    onPressed: () =>
+                                        showShipDialog(context, ref, entry: e),
+                                  ),
+                                  PopupMenuButton<String>(
+                                    tooltip: 'More actions',
+                                    icon: const Icon(
+                                      Icons.more_vert,
+                                      size: 20,
+                                      color: IndustrialTheme.textMuted,
+                                    ),
+                                    onSelected: (v) {
+                                      switch (v) {
+                                        case 'edit':
+                                          showStagingFormSheet(
+                                            context,
+                                            ref,
+                                            existing: e,
+                                          );
+                                        case 'split':
+                                          showSplitDialog(
+                                            context,
+                                            ref,
+                                            entry: e,
+                                          );
+                                        case 'return':
+                                          showReturnDialog(
+                                            context,
+                                            ref,
+                                            entry: e,
+                                          );
+                                        case 'delete':
+                                          _deleteOne(e);
+                                      }
+                                    },
+                                    itemBuilder: (context) => const [
+                                      PopupMenuItem(
+                                        value: 'edit',
+                                        child: Text('Edit'),
+                                      ),
+                                      PopupMenuItem(
+                                        value: 'split',
+                                        child: Text('Split Entry'),
+                                      ),
+                                      PopupMenuItem(
+                                        value: 'return',
+                                        child: Text('Return to Stock'),
+                                      ),
+                                      PopupMenuItem(
+                                        value: 'delete',
+                                        child: Text('Delete'),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }(),
+          ],
+        ],
+      ),
     );
   }
 }
@@ -1130,12 +1433,18 @@ class ShippedLogCard extends ConsumerStatefulWidget {
 
 class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
   static const _previewRows = 10;
+  static const _allCarriers = 'All Carriers';
+  static const _allZones = 'All Zones';
+  static const _allShippers = 'All Shippers';
 
   ShippedSort _sort = ShippedSort.newest;
   bool _batch = false;
   final _selected = <String>{};
   final _hScroll = ScrollController();
   ShippedEntry? _inspect;
+  String _carrierFilter = _allCarriers;
+  String _zoneFilter = _allZones;
+  String _shipperFilter = _allShippers;
 
   @override
   void dispose() {
@@ -1143,8 +1452,36 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
     super.dispose();
   }
 
+  List<String> _uniqueSorted(Iterable<String> values) {
+    final set = <String>{};
+    for (final v in values) {
+      final t = v.trim();
+      if (t.isNotEmpty) set.add(t);
+    }
+    final list = set.toList()
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    return list;
+  }
+
+  List<ShippedEntry> _filtered() {
+    return widget.entries.where((e) {
+      if (_carrierFilter != _allCarriers &&
+          e.carrier.trim() != _carrierFilter) {
+        return false;
+      }
+      if (_zoneFilter != _allZones && e.location.trim() != _zoneFilter) {
+        return false;
+      }
+      final shipper = (e.shippedBy ?? '').trim();
+      if (_shipperFilter != _allShippers && shipper != _shipperFilter) {
+        return false;
+      }
+      return true;
+    }).toList();
+  }
+
   List<ShippedEntry> _sorted() {
-    final list = [...widget.entries];
+    final list = _filtered();
     switch (_sort) {
       case ShippedSort.newest:
         list.sort(
@@ -1262,8 +1599,24 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
     final rows = widget.expanded ? sorted : sorted.take(_previewRows).toList();
     _selected.removeWhere((id) => !sorted.any((e) => e.id == id));
 
+    final carriers = [
+      _allCarriers,
+      ..._uniqueSorted(widget.entries.map((e) => e.carrier)),
+    ];
+    final zones = [
+      _allZones,
+      ..._uniqueSorted(widget.entries.map((e) => e.location)),
+    ];
+    final shippers = [
+      _allShippers,
+      ..._uniqueSorted(widget.entries.map((e) => e.shippedBy ?? '')),
+    ];
+    if (!carriers.contains(_carrierFilter)) _carrierFilter = _allCarriers;
+    if (!zones.contains(_zoneFilter)) _zoneFilter = _allZones;
+    if (!shippers.contains(_shipperFilter)) _shipperFilter = _allShippers;
+
     return SectionCard(
-      title: 'Shipped Log',
+      title: 'Shipped Staging Entries',
       expandChild: widget.fillViewport,
       headerActions: [
         _SortDropdown<ShippedSort>(
@@ -1281,7 +1634,7 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
           PillButton(
             label: 'Quick Ship',
             icon: Icons.flash_on,
-            color: SlstColors.success,
+            color: IndustrialTheme.mintGreen,
             compact: true,
             onPressed: widget.onQuickShip,
           ),
@@ -1289,7 +1642,7 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
           PillButton(
             label: _batch ? 'Exit Batch' : 'Batch Mode',
             icon: Icons.checklist,
-            color: SlstColors.notify,
+            color: IndustrialTheme.skyBlue,
             compact: true,
             onPressed: () => setState(() {
               _batch = !_batch;
@@ -1299,7 +1652,7 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
         PillButton(
           label: 'Changelog',
           icon: Icons.history,
-          color: SlstColors.info,
+          color: IndustrialTheme.slateMuted,
           compact: true,
           onPressed: () => showChangelogDialog(context, ref, table: 'shipped'),
         ),
@@ -1307,13 +1660,49 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
           PillButton(
             label: 'Expand',
             icon: Icons.open_in_full,
-            color: SlstColors.brand,
+            color: IndustrialTheme.skyBlue,
             compact: true,
             onPressed: widget.onExpand,
           ),
       ],
-      subHeader: _batch
-          ? Wrap(
+      subHeader: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              IndustrialFilterDropdown(
+                value: _carrierFilter,
+                items: carriers,
+                width: 150,
+                onChanged: (v) => setState(() => _carrierFilter = v),
+              ),
+              IndustrialFilterDropdown(
+                value: _zoneFilter,
+                items: zones,
+                width: 132,
+                onChanged: (v) => setState(() => _zoneFilter = v),
+              ),
+              IndustrialFilterDropdown(
+                value: _shipperFilter,
+                items: shippers,
+                width: 140,
+                onChanged: (v) => setState(() => _shipperFilter = v),
+              ),
+              Text(
+                '${sorted.length} entr${sorted.length == 1 ? 'y' : 'ies'}',
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: IndustrialTheme.textMuted,
+                ),
+              ),
+            ],
+          ),
+          if (_batch) ...[
+            const SizedBox(height: 10),
+            Wrap(
               spacing: 8,
               runSpacing: 6,
               crossAxisAlignment: WrapCrossAlignment.center,
@@ -1323,6 +1712,7 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
                   style: const TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: 12.5,
+                    color: IndustrialTheme.textPrimary,
                   ),
                 ),
                 PillButton(
@@ -1335,8 +1725,10 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
                       : () => _deleteSelected(sorted),
                 ),
               ],
-            )
-          : null,
+            ),
+          ],
+        ],
+      ),
       child: _buildShippedEntriesBody(
         canWrite: canWrite,
         dark: dark,
@@ -1353,7 +1745,7 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
     required List<ShippedEntry> rows,
   }) {
     final viewMode = ref.watch(logViewModeProvider);
-    final useDataTable =
+    final useDesktopGrid =
         viewMode == LogViewMode.list && usesDesktopPopupChrome(context);
 
     if (rows.isEmpty) {
@@ -1378,7 +1770,7 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
         rows: rows,
         sortedLength: sorted.length,
       );
-    } else if (!useDataTable) {
+    } else if (!useDesktopGrid) {
       body = _shippedDenseList(
         canWrite: canWrite,
         dark: dark,
@@ -1397,9 +1789,8 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
                   controller: _hScroll,
                   scrollDirection: Axis.horizontal,
                   child: SingleChildScrollView(
-                    child: _shippedDataTable(
+                    child: _shippedIndustrialGrid(
                       canWrite: canWrite,
-                      dark: dark,
                       rows: rows,
                     ),
                   ),
@@ -1412,11 +1803,7 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
               child: SingleChildScrollView(
                 controller: _hScroll,
                 scrollDirection: Axis.horizontal,
-                child: _shippedDataTable(
-                  canWrite: canWrite,
-                  dark: dark,
-                  rows: rows,
-                ),
+                child: _shippedIndustrialGrid(canWrite: canWrite, rows: rows),
               ),
             ),
           if (!widget.expanded && sorted.length > rows.length)
@@ -1424,7 +1811,10 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
               child: Text(
                 'Showing ${rows.length} of ${sorted.length} — use Expand to view all.',
-                style: const TextStyle(fontSize: 12, color: SlstColors.muted),
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: IndustrialTheme.textMuted,
+                ),
               ),
             )
           else
@@ -1458,15 +1848,12 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
           title: e.so,
           subtitle: e.customer,
           color: e.carrier.toUpperCase() == 'RETURNED TO STOCK'
-              ? (dark
-                    ? SlstColors.statusPartialDark
-                    : SlstColors.statusPartial)
+              ? SlstColors.statusPartialDark
               : null,
           details: [
-            e.type,
-            e.carrier,
-            e.location,
-            e.id,
+            if (e.type.trim().isNotEmpty) e.type,
+            if (e.carrier.trim().isNotEmpty) e.carrier,
+            if (e.location.trim().isNotEmpty) e.location,
             if ((e.weight ?? '').isNotEmpty) 'Wt: ${e.weight}',
             if ((e.shippedBy ?? '').isNotEmpty) 'Shipped by: ${e.shippedBy}',
             if ((e.comments ?? '').isNotEmpty) e.comments!,
@@ -1475,7 +1862,11 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
           trailing: canWrite
               ? PopupMenuButton<String>(
                   tooltip: 'Actions',
-                  icon: const Icon(Icons.more_vert, size: 20),
+                  icon: const Icon(
+                    Icons.more_vert,
+                    size: 20,
+                    color: IndustrialTheme.textMuted,
+                  ),
                   onSelected: (v) {
                     switch (v) {
                       case 'undo':
@@ -1544,89 +1935,141 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
     required List<ShippedEntry> rows,
     required int sortedLength,
   }) {
-    Widget rowFor(ShippedEntry e) {
+    Widget rowFor(ShippedEntry e, int index) {
       final returned = e.carrier.toUpperCase() == 'RETURNED TO STOCK';
+      final statusLabel = returned ? 'Returned' : 'Shipped';
+      final selected = _inspect?.id == e.id;
+      final accent = industrialStatusAccent(statusLabel);
       return Material(
         color: returned
-            ? (dark ? SlstColors.statusPartialDark : SlstColors.statusPartial)
-            : Colors.transparent,
+            ? SlstColors.statusPartialDark
+            : _zebraRowColor(index, selected: selected),
         child: InkWell(
           onTap: () => setState(() => _inspect = e),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+          child: IntrinsicHeight(
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (_batch)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8, top: 2),
-                    child: Checkbox(
-                      value: _selected.contains(e.id),
-                      onChanged: (v) => setState(() {
-                        if (v == true) {
-                          _selected.add(e.id);
-                        } else {
-                          _selected.remove(e.id);
-                        }
-                      }),
+                Container(width: 3, color: accent),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 12, 8, 12),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (_batch)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 8, top: 2),
+                            child: Checkbox(
+                              value: _selected.contains(e.id),
+                              onChanged: (v) => setState(() {
+                                if (v == true) {
+                                  _selected.add(e.id);
+                                } else {
+                                  _selected.remove(e.id);
+                                }
+                              }),
+                            ),
+                          ),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      e.so,
+                                      style: IndustrialTheme.mono(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w700,
+                                        color: IndustrialTheme.textPrimary,
+                                      ),
+                                    ),
+                                  ),
+                                  IndustrialStatusBadge(status: statusLabel),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                e.customer.isEmpty ? '—' : e.customer,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: 13,
+                                  color: IndustrialTheme.textMuted,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Wrap(
+                                spacing: 6,
+                                runSpacing: 6,
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                children: [
+                                  IndustrialZonePill(e.location),
+                                  _containerCell(e.type, e.qty),
+                                  if (e.carrier.trim().isNotEmpty)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 3,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: IndustrialTheme.darkHeader,
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
+                                          color: IndustrialTheme.borderStroke,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        e.carrier,
+                                        style: const TextStyle(
+                                          fontSize: 11.5,
+                                          color: IndustrialTheme.textMuted,
+                                        ),
+                                      ),
+                                    ),
+                                  if ((e.weight ?? '').trim().isNotEmpty)
+                                    IndustrialWeightPill(e.weight),
+                                  _mutedStamp(e.shippedAt),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (canWrite)
+                          PopupMenuButton<String>(
+                            tooltip: 'Actions',
+                            icon: const Icon(
+                              Icons.more_vert,
+                              size: 20,
+                              color: IndustrialTheme.textMuted,
+                            ),
+                            onSelected: (v) {
+                              switch (v) {
+                                case 'undo':
+                                  _undo(e);
+                                case 'delete':
+                                  _deleteOne(e);
+                              }
+                            },
+                            itemBuilder: (context) => [
+                              if (!returned)
+                                const PopupMenuItem(
+                                  value: 'undo',
+                                  child: Text('Undo Shipment'),
+                                ),
+                              const PopupMenuItem(
+                                value: 'delete',
+                                child: Text('Delete'),
+                              ),
+                            ],
+                          ),
+                      ],
                     ),
                   ),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        e.so,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 15,
-                        ),
-                      ),
-                      Text(
-                        e.customer,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                      const SizedBox(height: 2),
-                      IndustrialIdText(e.id, fontSize: 11),
-                      const SizedBox(height: 2),
-                      Text(
-                        '${e.carrier} · ${e.type} · ${e.location}',
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
                 ),
-                if (canWrite)
-                  PopupMenuButton<String>(
-                    tooltip: 'Actions',
-                    icon: const Icon(Icons.more_vert, size: 20),
-                    onSelected: (v) {
-                      switch (v) {
-                        case 'undo':
-                          _undo(e);
-                        case 'delete':
-                          _deleteOne(e);
-                      }
-                    },
-                    itemBuilder: (context) => [
-                      if (!returned)
-                        const PopupMenuItem(
-                          value: 'undo',
-                          child: Text('Undo Shipment'),
-                        ),
-                      const PopupMenuItem(
-                        value: 'delete',
-                        child: Text('Delete'),
-                      ),
-                    ],
-                  ),
               ],
             ),
           ),
@@ -1640,18 +2083,24 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
         physics: const AlwaysScrollableScrollPhysics(),
         itemCount: rows.length +
             (!widget.expanded && sortedLength > rows.length ? 1 : 0),
-        separatorBuilder: (_, _) => const Divider(height: 1),
+        separatorBuilder: (_, _) => const Divider(
+          height: 1,
+          color: IndustrialTheme.borderStroke,
+        ),
         itemBuilder: (context, index) {
           if (index >= rows.length) {
             return Padding(
               padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
               child: Text(
                 'Showing ${rows.length} of $sortedLength — use Expand to view all.',
-                style: const TextStyle(fontSize: 12, color: SlstColors.muted),
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: IndustrialTheme.textMuted,
+                ),
               ),
             );
           }
-          return rowFor(rows[index]);
+          return rowFor(rows[index], index);
         },
       );
     }
@@ -1661,15 +2110,19 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
       child: Column(
         children: [
           for (var i = 0; i < rows.length; i++) ...[
-            if (i > 0) const Divider(height: 1),
-            rowFor(rows[i]),
+            if (i > 0)
+              const Divider(height: 1, color: IndustrialTheme.borderStroke),
+            rowFor(rows[i], i),
           ],
           if (!widget.expanded && sortedLength > rows.length)
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
               child: Text(
                 'Showing ${rows.length} of $sortedLength — use Expand to view all.',
-                style: const TextStyle(fontSize: 12, color: SlstColors.muted),
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: IndustrialTheme.textMuted,
+                ),
               ),
             ),
         ],
@@ -1677,121 +2130,256 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
     );
   }
 
-  Widget _shippedDataTable({
+  Widget _shippedIndustrialGrid({
     required bool canWrite,
-    required bool dark,
     required List<ShippedEntry> rows,
   }) {
-    return DataTable(
-      showCheckboxColumn: false,
-      horizontalMargin: 12,
-      columnSpacing: 16,
-      headingRowHeight: 40,
-      dataRowMinHeight: 40,
-      dataRowMaxHeight: 48,
-      columns: [
-        if (_batch) const DataColumn(label: SizedBox(width: 24)),
-        const DataColumn(label: Text('UUID')),
-        const DataColumn(label: Text('PHOTOS')),
-        const DataColumn(label: Text('SO')),
-        const DataColumn(label: Text('CUSTOMER')),
-        const DataColumn(label: Text('CONTAINERS')),
-        const DataColumn(label: Text('CARRIER')),
-        const DataColumn(label: Text('LOCATION')),
-        const DataColumn(label: Text('WEIGHT')),
-        const DataColumn(label: Text('COMMENTS')),
-        const DataColumn(label: Text('SHIPPED AT')),
-        const DataColumn(label: Text('SHIPPED BY')),
-        const DataColumn(label: Text("PM'D")),
-        if (canWrite) const DataColumn(label: Text('ACTIONS')),
-      ],
-      rows: [
-        for (final e in rows)
-          DataRow(
-            selected: _inspect?.id == e.id,
-            onSelectChanged: (_) => setState(() => _inspect = e),
-            color: e.carrier.toUpperCase() == 'RETURNED TO STOCK'
-                ? WidgetStatePropertyAll(
-                    dark
-                        ? SlstColors.statusPartialDark
-                        : SlstColors.statusPartial,
-                  )
-                : null,
-            cells: [
-              if (_batch)
-                DataCell(
-                  Checkbox(
-                    value: _selected.contains(e.id),
-                    onChanged: (v) => setState(() {
-                      if (v == true) {
-                        _selected.add(e.id);
-                      } else {
-                        _selected.remove(e.id);
-                      }
-                    }),
-                  ),
-                ),
-              DataCell(
-                SizedBox(
-                  width: 96,
-                  child: IndustrialIdText(e.id, fontSize: 11),
-                ),
-              ),
-              DataCell(_photosButton(context, e.so, e.photoUrls)),
-              DataCell(_soHistoryLink(context, ref, e.so)),
-              DataCell(_clipText(e.customer, maxWidth: 180)),
-              DataCell(_clipText(e.type, maxWidth: 170)),
-              DataCell(_clipText(e.carrier, maxWidth: 150)),
-              DataCell(_clipText(e.location, maxWidth: 110)),
-              DataCell(_clipText(e.weight ?? '', maxWidth: 90)),
-              DataCell(_clipText(e.comments ?? '', maxWidth: 220)),
-              DataCell(Text(_fmtDate(e.shippedAt))),
-              DataCell(_clipText(e.shippedBy ?? '', maxWidth: 110)),
-              DataCell(
-                (e.pmdEmail ?? '').isEmpty
-                    ? const Text('—')
-                    : Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.check_circle,
-                            size: 15,
-                            color: SlstColors.success,
-                          ),
-                          const SizedBox(width: 4),
-                          _clipText(e.pmdEmail!, maxWidth: 100),
-                        ],
-                      ),
-              ),
-              if (canWrite)
-                DataCell(
-                  PopupMenuButton<String>(
-                    tooltip: 'Actions',
-                    icon: const Icon(Icons.more_vert, size: 20),
-                    onSelected: (v) {
-                      switch (v) {
-                        case 'undo':
-                          _undo(e);
-                        case 'delete':
-                          _deleteOne(e);
-                      }
-                    },
-                    itemBuilder: (context) => [
-                      if (e.carrier.toUpperCase() != 'RETURNED TO STOCK')
-                        const PopupMenuItem(
-                          value: 'undo',
-                          child: Text('Undo Shipment'),
-                        ),
-                      const PopupMenuItem(
-                        value: 'delete',
-                        child: Text('Delete'),
-                      ),
-                    ],
-                  ),
-                ),
-            ],
+    const soW = 118.0;
+    const clientW = 160.0;
+    const containerW = 120.0;
+    const carrierW = 130.0;
+    const zoneW = 100.0;
+    const weightW = 88.0;
+    const shippedW = 128.0;
+    const byW = 100.0;
+    const pmdW = 120.0;
+    const photosW = 72.0;
+    const actionsW = 56.0;
+    final batchW = _batch ? 44.0 : 0.0;
+    final totalW = 3 +
+        batchW +
+        soW +
+        clientW +
+        containerW +
+        carrierW +
+        zoneW +
+        weightW +
+        shippedW +
+        byW +
+        pmdW +
+        photosW +
+        (canWrite ? actionsW : 0) +
+        48;
+
+    Widget headerCell(String label, double width) => SizedBox(
+          width: width,
+          child: IndustrialColumnHeader(label),
+        );
+
+    return SizedBox(
+      width: totalW,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            color: IndustrialTheme.darkHeader,
+            padding: const EdgeInsets.fromLTRB(0, 10, 12, 10),
+            child: Row(
+              children: [
+                const SizedBox(width: 3),
+                if (_batch) SizedBox(width: batchW),
+                headerCell('SO Number', soW),
+                headerCell('Client', clientW),
+                headerCell('Containers', containerW),
+                headerCell('Carrier', carrierW),
+                headerCell('Zone', zoneW),
+                headerCell('Weight', weightW),
+                headerCell('Shipped', shippedW),
+                headerCell('By', byW),
+                headerCell("PM'd", pmdW),
+                headerCell('Photos', photosW),
+                if (canWrite) headerCell('Actions', actionsW),
+              ],
+            ),
           ),
-      ],
+          const Divider(height: 1, color: IndustrialTheme.borderStroke),
+          for (var i = 0; i < rows.length; i++) ...[
+            if (i > 0)
+              const Divider(height: 1, color: IndustrialTheme.borderStroke),
+            () {
+              final e = rows[i];
+              final returned = e.carrier.toUpperCase() == 'RETURNED TO STOCK';
+              final statusLabel = returned ? 'Returned' : 'Shipped';
+              final selected = _inspect?.id == e.id;
+              final accent = industrialStatusAccent(statusLabel);
+              return Material(
+                color: returned
+                    ? SlstColors.statusPartialDark
+                    : _zebraRowColor(i, selected: selected),
+                child: InkWell(
+                  onTap: () => setState(() => _inspect = e),
+                  child: IntrinsicHeight(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Container(width: 3, color: accent),
+                        if (_batch)
+                          SizedBox(
+                            width: batchW,
+                            child: Center(
+                              child: Checkbox(
+                                value: _selected.contains(e.id),
+                                onChanged: (v) => setState(() {
+                                  if (v == true) {
+                                    _selected.add(e.id);
+                                  } else {
+                                    _selected.remove(e.id);
+                                  }
+                                }),
+                              ),
+                            ),
+                          ),
+                        SizedBox(
+                          width: soW,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 10,
+                            ),
+                            child: _soHistoryLink(
+                              context,
+                              ref,
+                              e.so,
+                              maxWidth: soW - 8,
+                              large: true,
+                            ),
+                          ),
+                        ),
+                        SizedBox(
+                          width: clientW,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            child: _clipText(
+                              e.customer,
+                              maxWidth: clientW - 8,
+                              muted: true,
+                            ),
+                          ),
+                        ),
+                        SizedBox(
+                          width: containerW,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            child: _containerCell(e.type, e.qty),
+                          ),
+                        ),
+                        SizedBox(
+                          width: carrierW,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            child: returned
+                                ? IndustrialStatusBadge(status: 'Returned')
+                                : _clipText(e.carrier, maxWidth: carrierW - 8),
+                          ),
+                        ),
+                        SizedBox(
+                          width: zoneW,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            child: IndustrialZonePill(e.location),
+                          ),
+                        ),
+                        SizedBox(
+                          width: weightW,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            child: IndustrialWeightPill(e.weight),
+                          ),
+                        ),
+                        SizedBox(
+                          width: shippedW,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            child: _mutedStamp(e.shippedAt),
+                          ),
+                        ),
+                        SizedBox(
+                          width: byW,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            child: _clipText(
+                              e.shippedBy ?? '',
+                              maxWidth: byW - 8,
+                              muted: true,
+                            ),
+                          ),
+                        ),
+                        SizedBox(
+                          width: pmdW,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            child: (e.pmdEmail ?? '').isEmpty
+                                ? Text(
+                                    '—',
+                                    style: IndustrialTheme.mono(
+                                      fontSize: 12,
+                                      color: IndustrialTheme.textMuted,
+                                    ),
+                                  )
+                                : Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(
+                                        Icons.check_circle,
+                                        size: 15,
+                                        color: IndustrialTheme.mintGreen,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      _clipText(
+                                        e.pmdEmail!,
+                                        maxWidth: pmdW - 28,
+                                      ),
+                                    ],
+                                  ),
+                          ),
+                        ),
+                        SizedBox(
+                          width: photosW,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 6),
+                            child: _photosButton(context, e.so, e.photoUrls),
+                          ),
+                        ),
+                        if (canWrite)
+                          SizedBox(
+                            width: actionsW,
+                            child: PopupMenuButton<String>(
+                              tooltip: 'Actions',
+                              icon: const Icon(
+                                Icons.more_vert,
+                                size: 20,
+                                color: IndustrialTheme.textMuted,
+                              ),
+                              onSelected: (v) {
+                                switch (v) {
+                                  case 'undo':
+                                    _undo(e);
+                                  case 'delete':
+                                    _deleteOne(e);
+                                }
+                              },
+                              itemBuilder: (context) => [
+                                if (!returned)
+                                  const PopupMenuItem(
+                                    value: 'undo',
+                                    child: Text('Undo Shipment'),
+                                  ),
+                                const PopupMenuItem(
+                                  value: 'delete',
+                                  child: Text('Delete'),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }(),
+          ],
+        ],
+      ),
     );
   }
 }
@@ -1813,32 +2401,34 @@ class _SortDropdown<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
+    return SizedBox(
       height: 34,
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      decoration: BoxDecoration(
-        border: Border.all(
-          color: dark ? SlstColors.darkBorderStrong : SlstColors.borderStrong,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        decoration: BoxDecoration(
+          color: IndustrialTheme.darkHeader,
+          border: Border.all(color: IndustrialTheme.borderStroke),
+          borderRadius: BorderRadius.circular(6),
         ),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<T>(
-          value: value,
-          isDense: true,
-          style: TextStyle(
-            fontSize: 12.5,
-            fontWeight: FontWeight.w600,
-            color: dark ? SlstColors.darkInk : SlstColors.ink,
+        child: DropdownButtonHideUnderline(
+          child: DropdownButton<T>(
+            value: value,
+            isDense: true,
+            dropdownColor: IndustrialTheme.darkSurface,
+            iconEnabledColor: IndustrialTheme.textMuted,
+            style: const TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w600,
+              color: IndustrialTheme.textPrimary,
+            ),
+            items: [
+              for (final (v, label) in items)
+                DropdownMenuItem(value: v, child: Text(label)),
+            ],
+            onChanged: (v) {
+              if (v != null) onChanged(v);
+            },
           ),
-          items: [
-            for (final (v, label) in items)
-              DropdownMenuItem(value: v, child: Text(label)),
-          ],
-          onChanged: (v) {
-            if (v != null) onChanged(v);
-          },
         ),
       ),
     );

@@ -68,5 +68,7 @@ class StatusRules {
     return 0;
   }
 
-  static const aislePattern = r'^[A-Z]-\d{2}-[A-F]-[12]$';
+  /// Standard aisle bins, dual-slot skids (`…-1+2`), and `B-02-Partial`.
+  static const aislePattern =
+      r'^(?:B-02-PARTIAL|[A-Z]-\d{2}-[A-F]-(?:[12]|1\+2))$';
 }

@@ -330,33 +330,69 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // Section A — KPI strip (evenly fills content width)
-                      IntrinsicHeight(
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            for (var i = 0; i < kpis.length; i++) ...[
-                              if (i > 0) const SizedBox(width: _kpiGap),
-                              Expanded(
-                                child: IndustrialKpiCard.compact(
-                                  label: kpis[i].label,
-                                  value: '${totals[kpis[i].key] ?? 0}',
-                                  subtext: kpis[i].subtext,
-                                  onTap: kpis[i].detail == null
-                                      ? () => context.go('/shipped')
-                                      : () => showStatDetailDialog(
-                                            context,
-                                            kpis[i].detail!,
-                                          ),
-                                ),
+                      // Section A — KPI strip. On narrow widths, scroll
+                      // horizontally with a minimum card width so labels
+                      // (Orders, Skids, …) stay readable instead of "O…".
+                      Builder(
+                        builder: (context) {
+                          final minCell = _kpiPreferredCardWidth;
+                          final needed = kpis.length * minCell +
+                              (kpis.length - 1) * _kpiGap;
+                          final scroll = contentWidth < needed;
+
+                          Widget cardAt(int i) => IndustrialKpiCard.compact(
+                                label: kpis[i].label,
+                                value: '${totals[kpis[i].key] ?? 0}',
+                                subtext: kpis[i].subtext,
+                                onTap: kpis[i].detail == null
+                                    ? () => context.go('/shipped')
+                                    : () => showStatDetailDialog(
+                                          context,
+                                          kpis[i].detail!,
+                                        ),
+                              );
+
+                          if (!scroll) {
+                            return IntrinsicHeight(
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  for (var i = 0; i < kpis.length; i++) ...[
+                                    if (i > 0) const SizedBox(width: _kpiGap),
+                                    Expanded(child: cardAt(i)),
+                                  ],
+                                ],
                               ),
-                            ],
-                          ],
-                        ),
+                            );
+                          }
+
+                          // Tall enough for 2-line labels + value + subtext.
+                          return SizedBox(
+                            height: 86,
+                            child: ListView.separated(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: kpis.length,
+                              separatorBuilder: (_, _) =>
+                                  const SizedBox(width: _kpiGap),
+                              itemBuilder: (context, i) => SizedBox(
+                                width: minCell,
+                                child: cardAt(i),
+                              ),
+                            ),
+                          );
+                        },
                       ),
                       const SizedBox(height: _sectionGap),
                       // Section B — Floor map (same width; scales with container)
-                      WarehouseFloorMap(staging: data.staging),
+                      RepaintBoundary(
+                        child: NotificationListener<ScrollNotification>(
+                          // Keep horizontal map pans from fighting the page
+                          // ListView / RefreshIndicator after occupancy paints.
+                          onNotification: (n) =>
+                              n.metrics.axis == Axis.horizontal,
+                          child: WarehouseFloorMap(staging: data.staging),
+                        ),
+                      ),
                       const SizedBox(height: _sectionGap),
                       SearchField(
                         controller: _search,
@@ -392,10 +428,38 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       ),
     );
 
+    final compact =
+        MediaQuery.sizeOf(context).width < _boardStackBreakpoint;
+
     if (_inspect == null) {
       return ColoredBox(
         color: IndustrialTheme.darkBase,
         child: scrollBody,
+      );
+    }
+
+    // Phones: overlay inspector so the floor map keeps full width / gestures.
+    // Desktop: side panel beside the board (Windows layout).
+    if (compact) {
+      return ColoredBox(
+        color: IndustrialTheme.darkBase,
+        child: Stack(
+          children: [
+            scrollBody,
+            Positioned.fill(
+              child: ColoredBox(
+                color: Colors.black.withValues(alpha: 0.45),
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: OrderInspector(
+                    entry: _inspect!,
+                    onClose: () => setState(() => _inspect = null),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       );
     }
 
@@ -481,83 +545,72 @@ class _ActiveStagingBoard extends StatelessWidget {
             child: Center(child: CircularProgressIndicator()),
           )
         else
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final narrow = constraints.maxWidth < stackBreakpoint;
-              final columns = [
-                _BoardColumn(
+          Builder(
+            builder: (context) {
+              // Always a fixed-height horizontal kanban (matches Windows).
+              // Stacking inside the page ListView previously used Expanded
+              // with unbounded height → blank Active Staging on Android and
+              // layout thrash that broke floor-map pan/tap after data load.
+              final phone =
+                  MediaQuery.sizeOf(context).width < stackBreakpoint;
+              final columns = <({
+                String title,
+                Color accent,
+                List<StagingEntry> entries,
+              })>[
+                (
                   title: 'SHIP TODAY',
                   accent: IndustrialTheme.mintGreen,
                   entries: shipToday,
-                  selectedId: selectedId,
-                  onSelect: onSelect,
                 ),
-                _BoardColumn(
+                (
                   title: 'SHIP TOMORROW',
                   accent: IndustrialTheme.skyBlue,
                   entries: shipTomorrow,
-                  selectedId: selectedId,
-                  onSelect: onSelect,
                 ),
-                _BoardColumn(
+                (
                   title: 'PARTIAL STAGED',
                   accent: IndustrialTheme.amber,
                   entries: partial,
-                  selectedId: selectedId,
-                  onSelect: onSelect,
                 ),
-                _BoardColumn(
+                (
                   title: 'FUTURE',
                   accent: const Color(0xFF8B5CF6),
                   entries: future,
-                  selectedId: selectedId,
-                  onSelect: onSelect,
                 ),
-                _BoardColumn(
+                (
                   title: 'CORP PICK',
                   accent: IndustrialTheme.purple,
                   entries: corpPick,
-                  selectedId: selectedId,
-                  onSelect: onSelect,
                 ),
-                _BoardColumn(
+                (
                   title: 'CUSTOMER PICK-UP',
                   accent: const Color(0xFFEC4899),
                   entries: customerPick,
-                  selectedId: selectedId,
-                  onSelect: onSelect,
                 ),
-                _BoardColumn(
+                (
                   title: 'AWAITING INSTRUCTIONS',
                   accent: IndustrialTheme.slateMuted,
                   entries: awaiting,
-                  selectedId: selectedId,
-                  onSelect: onSelect,
                 ),
               ];
 
-              if (narrow) {
-                return Column(
-                  children: [
-                    for (var i = 0; i < columns.length; i++) ...[
-                      if (i > 0) const SizedBox(height: 12),
-                      columns[i],
-                    ],
-                  ],
-                );
-              }
-
-              // Horizontal scroll keeps all status lists readable without
-              // crushing Future / Corp / Customer into Awaiting.
               return SizedBox(
-                height: 420,
+                height: phone ? 360 : 420,
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
+                  primary: false,
                   itemCount: columns.length,
                   separatorBuilder: (_, _) => const SizedBox(width: 10),
                   itemBuilder: (context, i) => SizedBox(
-                    width: 210,
-                    child: columns[i],
+                    width: phone ? 188 : 210,
+                    child: _BoardColumn(
+                      title: columns[i].title,
+                      accent: columns[i].accent,
+                      entries: columns[i].entries,
+                      selectedId: selectedId,
+                      onSelect: onSelect,
+                    ),
                   ),
                 ),
               );
@@ -586,7 +639,6 @@ class _BoardColumn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      constraints: const BoxConstraints(minHeight: 160),
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: IndustrialTheme.darkHeader,
@@ -654,14 +706,16 @@ class _BoardColumn extends StatelessWidget {
           else
             Expanded(
               child: ListView(
+                padding: EdgeInsets.zero,
+                primary: false,
                 children: [
-                  for (final e in entries) ...[
+                  for (var i = 0; i < entries.length; i++) ...[
+                    if (i > 0) const SizedBox(height: 8),
                     _StagingSoCard(
-                      entry: e,
-                      selected: e.id == selectedId,
-                      onTap: () => onSelect(e),
+                      entry: entries[i],
+                      selected: entries[i].id == selectedId,
+                      onTap: () => onSelect(entries[i]),
                     ),
-                    const SizedBox(height: 8),
                   ],
                 ],
               ),
@@ -685,8 +739,14 @@ class _StagingSoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final urgent = StatusRules.formatUi(entry.status) == 'Ship Today' ||
-        StatusRules.isOverdue(entry.status);
+    final ui = StatusRules.formatUi(entry.status);
+    final overdue = StatusRules.isOverdue(entry.status);
+    final statusLabel = overdue
+        ? 'Overdue'
+        : (StatusRules.isYmd(entry.status) && ui == entry.status
+            ? 'Future: ${entry.status}'
+            : ui);
+    final accent = industrialStatusAccent(statusLabel);
     final weight = (entry.weight ?? '').trim();
     final stager = (entry.stagedBy ?? '').trim();
 
@@ -698,102 +758,89 @@ class _StagingSoCard extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(6),
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(
-              color: selected
-                  ? IndustrialTheme.skyBlue.withValues(alpha: 0.55)
-                  : IndustrialTheme.borderStroke,
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      entry.so,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: IndustrialTheme.mono(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: IndustrialTheme.textPrimary,
-                      ),
-                    ),
+              Container(
+                width: 3,
+                decoration: BoxDecoration(
+                  color: accent,
+                  borderRadius: const BorderRadius.horizontal(
+                    left: Radius.circular(6),
                   ),
-                  if (urgent)
-                    Container(
-                      margin: const EdgeInsets.only(left: 6),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFEF4444).withValues(alpha: 0.16),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color:
-                              const Color(0xFFEF4444).withValues(alpha: 0.5),
-                        ),
-                      ),
-                      child: const Text(
-                        'URGENT',
-                        style: TextStyle(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.4,
-                          color: Color(0xFFEF4444),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Text(
-                entry.customer.isEmpty ? '—' : entry.customer,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: IndustrialTheme.textMuted,
                 ),
               ),
-              const SizedBox(height: 8),
-              if (entry.location.trim().isNotEmpty)
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
                   decoration: BoxDecoration(
-                    color: IndustrialTheme.darkHeader,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: IndustrialTheme.borderStroke),
-                  ),
-                  child: Text(
-                    entry.location,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: IndustrialTheme.mono(
-                      fontSize: 10,
-                      color: IndustrialTheme.skyBlue,
+                    borderRadius: const BorderRadius.horizontal(
+                      right: Radius.circular(6),
+                    ),
+                    border: Border.all(
+                      color: selected
+                          ? IndustrialTheme.skyBlue.withValues(alpha: 0.55)
+                          : IndustrialTheme.borderStroke,
                     ),
                   ),
-                ),
-              const SizedBox(height: 8),
-              Text(
-                [
-                  if (weight.isNotEmpty) weight,
-                  '${entry.qty} ${entry.type}',
-                  if (stager.isNotEmpty) stager,
-                ].join(' · '),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: IndustrialTheme.mono(
-                  fontSize: 10,
-                  color: IndustrialTheme.textMuted,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              entry.so,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: IndustrialTheme.mono(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: IndustrialTheme.textPrimary,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          IndustrialStatusBadge(status: statusLabel),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        entry.customer.isEmpty ? '—' : entry.customer,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: IndustrialTheme.textMuted,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          IndustrialZonePill(entry.location),
+                          if (weight.isNotEmpty) IndustrialWeightPill(weight),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        [
+                          '${entry.qty} ${entry.type}',
+                          if (stager.isNotEmpty) stager,
+                        ].join(' · '),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: IndustrialTheme.mono(
+                          fontSize: 10,
+                          color: IndustrialTheme.textMuted,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -803,3 +850,4 @@ class _StagingSoCard extends StatelessWidget {
     );
   }
 }
+

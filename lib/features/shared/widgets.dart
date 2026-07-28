@@ -8,6 +8,7 @@ import '../../domain/models.dart';
 import '../../domain/status.dart';
 import '../../platform/photo_picker.dart';
 import '../scanner/scanner_screen.dart';
+import 'industrial_widgets.dart';
 
 bool usesDesktopPopupChrome(BuildContext context) {
   final platform = Theme.of(context).platform;
@@ -64,11 +65,7 @@ EdgeInsets slstPagePadding(BuildContext context, {double top = 20, double bottom
   return EdgeInsets.fromLTRB(h, top, h, bottom);
 }
 
-/// SLST wordmark image ("SLST — Staging Log & Shipping Tracker").
-///
-/// The source art is charcoal on transparent; in dark mode it is tinted to the
-/// light ink colour so it stays legible. Asset-missing fallback uses the theme
-/// body font (Inter).
+/// SST wordmark ("SST — Swift Staging Tracker") for compact brand placements.
 class BrandWordmark extends StatelessWidget {
   const BrandWordmark({super.key, required this.height});
 
@@ -76,26 +73,45 @@ class BrandWordmark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    return Image.asset(
-      dark ? 'assets/slst-wordmark-dark.png' : 'assets/slst-wordmark.png',
-      height: height,
-      fit: BoxFit.contain,
-      alignment: Alignment.centerLeft,
-      errorBuilder: (_, _, _) => Text(
-        'SLST',
-        style: TextStyle(
-          fontSize: height * 0.75,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 1.2,
-          color: dark ? SlstColors.darkInk : SlstColors.brand,
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        BrandMark(size: height),
+        SizedBox(width: height * 0.28),
+        Flexible(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'SST',
+                style: TextStyle(
+                  fontSize: height * 0.52,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.0,
+                  color: IndustrialTheme.textPrimary,
+                  height: 1.05,
+                ),
+              ),
+              Text(
+                'Swift Staging Tracker',
+                style: TextStyle(
+                  fontSize: height * 0.28,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.4,
+                  color: IndustrialTheme.textMuted,
+                  height: 1.1,
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
+      ],
     );
   }
 }
 
-/// Full SLST logo (light/dark) for login and large brand placements.
+/// Full SST logo for login and large brand placements.
 class BrandLogo extends StatelessWidget {
   const BrandLogo({super.key, this.height = 96});
 
@@ -103,21 +119,37 @@ class BrandLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    return Image.asset(
-      dark ? 'assets/slst-logo-dark.png' : 'assets/slst-logo-light.png',
-      height: height,
-      fit: BoxFit.contain,
-      errorBuilder: (_, _, _) => Icon(
-        Icons.local_shipping,
-        size: height * 0.7,
-        color: SlstColors.brand,
-      ),
+    final iconSize = (height * 0.72).clamp(56.0, 96.0);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        BrandMark(size: iconSize),
+        SizedBox(height: height * 0.12),
+        Text(
+          'SST',
+          style: TextStyle(
+            fontSize: height * 0.28,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 1.4,
+            color: IndustrialTheme.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          'Swift Staging Tracker',
+          style: TextStyle(
+            fontSize: height * 0.145,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.6,
+            color: IndustrialTheme.textMuted,
+          ),
+        ),
+      ],
     );
   }
 }
 
-/// Compact square-ish mark for app bars / nav.
+/// Compact square SST app icon for app bars / nav.
 class BrandMark extends StatelessWidget {
   const BrandMark({super.key, this.size = 32});
 
@@ -125,14 +157,14 @@ class BrandMark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
     return Image.asset(
-      dark ? 'assets/slst-mark-dark.png' : 'assets/slst-mark.png',
+      'assets/sst-app-icon.png',
       width: size,
       height: size,
       fit: BoxFit.contain,
+      filterQuality: FilterQuality.high,
       errorBuilder: (_, _, _) => Icon(
-        Icons.local_shipping,
+        Icons.inventory_2_outlined,
         color: SlstColors.brand,
         size: size * 0.95,
       ),
@@ -140,97 +172,28 @@ class BrandMark extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// KPI stat card (Windows: white card with red top accent + Win11 concept icon)
-// ---------------------------------------------------------------------------
-
+/// Legacy KPI wrapper — prefers [IndustrialKpiCard].
 class KpiCard extends StatelessWidget {
   const KpiCard({
     super.key,
     required this.label,
     required this.value,
-    required this.icon,
+    this.icon,
     this.onTap,
   });
 
   final String label;
   final int value;
-  final IconData icon;
+  final IconData? icon;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    final body = Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Container(height: 3.5, color: SlstColors.brand),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        label.toUpperCase(),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 1.1,
-                          color: dark ? SlstColors.darkMuted : SlstColors.muted,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '$value',
-                        style: TextStyle(
-                          fontSize: 26,
-                          height: 1.05,
-                          fontWeight: FontWeight.w700,
-                          color: dark ? SlstColors.darkInk : SlstColors.ink,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(
-                  icon,
-                  size: 26,
-                  color: dark ? SlstColors.darkMuted : SlstColors.subtle,
-                ),
-              ],
-            ),
-          ),
-        ],
-    );
-
-    return Container(
-      decoration: BoxDecoration(
-        color: dark ? SlstColors.darkSurface : SlstColors.surface,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: dark ? SlstColors.darkBorder : SlstColors.border),
-        boxShadow: dark
-            ? null
-            : const [
-                BoxShadow(
-                  color: Color(0x0A0F172A),
-                  blurRadius: 20,
-                  offset: Offset(0, 6),
-                ),
-              ],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: onTap == null
-          ? body
-          : Material(
-              color: Colors.transparent,
-              child: InkWell(onTap: onTap, child: body),
-            ),
+    return IndustrialKpiCard(
+      label: label,
+      value: '$value',
+      subtext: '',
+      onTap: onTap,
     );
   }
 }
@@ -259,18 +222,19 @@ class PillButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final style = FilledButton.styleFrom(
       backgroundColor: color,
-      foregroundColor: Colors.white,
+      foregroundColor: IndustrialTheme.textPrimary,
       disabledBackgroundColor: color.withValues(alpha: 0.4),
-      disabledForegroundColor: Colors.white70,
+      disabledForegroundColor: IndustrialTheme.textMuted,
       padding: compact
           ? const EdgeInsets.symmetric(horizontal: 12, vertical: 8)
           : const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       minimumSize: compact ? const Size(0, 34) : const Size(0, 42),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
       textStyle: TextStyle(
         fontWeight: FontWeight.w600,
-        letterSpacing: 0.4,
-        fontSize: compact ? 12.5 : 13.5,
+        letterSpacing: 0.3,
+        fontSize: compact ? 12 : 13,
+        color: IndustrialTheme.textPrimary,
       ),
     );
     if (icon == null) {
@@ -285,7 +249,7 @@ class PillButton extends StatelessWidget {
   }
 }
 
-/// Small status pill matching the legacy web legend colors.
+/// Small status pill — muted pastel industrial badge language.
 class StatusChip extends StatelessWidget {
   const StatusChip({super.key, required this.dbStatus, this.compact = false});
 
@@ -295,31 +259,7 @@ class StatusChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final style = statusStyleOf(context, dbStatus);
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: compact ? 8 : 10,
-        vertical: compact ? 2 : 4,
-      ),
-      decoration: BoxDecoration(
-        color: style.fill,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(style.icon, size: compact ? 12 : 14, color: style.accent),
-          const SizedBox(width: 4),
-          Text(
-            style.label,
-            style: TextStyle(
-              fontSize: compact ? 11 : 12,
-              fontWeight: FontWeight.w700,
-              color: style.accent,
-            ),
-          ),
-        ],
-      ),
-    );
+    return IndustrialStatusBadge(status: style.label);
   }
 }
 
@@ -348,22 +288,12 @@ class SectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
     final body = Padding(padding: padding, child: child);
     return Container(
       decoration: BoxDecoration(
-        color: dark ? SlstColors.darkSurface : SlstColors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: dark ? SlstColors.darkBorder : SlstColors.border),
-        boxShadow: dark
-            ? null
-            : const [
-                BoxShadow(
-                  color: Color(0x0D0F172A),
-                  blurRadius: 20,
-                  offset: Offset(0, 6),
-                ),
-              ],
+        color: IndustrialTheme.darkSurface,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: IndustrialTheme.borderStroke),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
@@ -377,13 +307,12 @@ class SectionCard extends StatelessWidget {
               runSpacing: 8,
               children: [
                 Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.2,
-                    color: dark ? SlstColors.darkInk : SlstColors.ink,
-                  ),
+                  title.toUpperCase(),
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        fontSize: 12,
+                        letterSpacing: 0.9,
+                        color: IndustrialTheme.textPrimary,
+                      ),
                 ),
                 if (headerActions.isNotEmpty)
                   Wrap(
@@ -400,7 +329,7 @@ class SectionCard extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
               child: subHeader!,
             ),
-          const Divider(),
+          const Divider(height: 1, color: IndustrialTheme.borderStroke),
           if (expandChild) Expanded(child: body) else body,
         ],
       ),
@@ -413,25 +342,22 @@ class SectionCard extends StatelessWidget {
 // Customer Pick-Up / Awaiting Instructions)
 // ---------------------------------------------------------------------------
 
-typedef _LegendEntry = ({String label, Color light, Color dark});
-
-const List<_LegendEntry> _legend = [
-  (label: 'Partial', light: SlstColors.statusPartial, dark: SlstColors.statusPartialDark),
-  (label: 'Ship Today', light: SlstColors.statusToday, dark: SlstColors.statusTodayDark),
-  (label: 'Ship Tomorrow', light: SlstColors.statusTomorrow, dark: SlstColors.statusTomorrowDark),
-  (label: 'Ship On Future Date', light: SlstColors.statusFuture, dark: SlstColors.statusFutureDark),
-  (label: 'Corp Pick', light: SlstColors.statusCorpPick, dark: SlstColors.statusCorpPickDark),
-  (label: 'Customer Pick-Up', light: SlstColors.statusCustomerPick, dark: SlstColors.statusCustomerPickDark),
-  (label: 'Awaiting Instructions', light: SlstColors.surface, dark: SlstColors.darkSurfaceMuted),
+const List<({String label, Color accent})> _legend = [
+  (label: 'Partial', accent: IndustrialTheme.amber),
+  (label: 'Ship Today', accent: IndustrialTheme.mintGreen),
+  (label: 'Ship Tomorrow', accent: IndustrialTheme.skyBlue),
+  (label: 'Ship On Future Date', accent: IndustrialTheme.purple),
+  (label: 'Corp Pick', accent: IndustrialTheme.mintGreen),
+  (label: 'Customer Pick-Up', accent: IndustrialTheme.purple),
+  (label: 'Awaiting Instructions', accent: IndustrialTheme.slateMuted),
 ];
 
-/// Windows/desktop swatch legend (compact colour chips + labels).
+/// Desktop swatch legend (muted pastel chips + Inter labels).
 class StagingStatusLegend extends StatelessWidget {
   const StagingStatusLegend({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
     return Wrap(
       spacing: 12,
       runSpacing: 6,
@@ -441,25 +367,23 @@ class StagingStatusLegend extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 12,
-                height: 12,
+                width: 10,
+                height: 10,
                 decoration: BoxDecoration(
-                  color: dark ? item.dark : item.light,
-                  borderRadius: BorderRadius.circular(4),
+                  color: item.accent.withValues(alpha: 0.22),
+                  borderRadius: BorderRadius.circular(3),
                   border: Border.all(
-                    color: dark
-                        ? Colors.white.withValues(alpha: 0.18)
-                        : const Color(0x140F172A),
+                    color: item.accent.withValues(alpha: 0.55),
                   ),
                 ),
               ),
               const SizedBox(width: 6),
               Text(
                 item.label,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w500,
-                  color: dark ? SlstColors.darkMuted : SlstColors.muted,
+                  color: IndustrialTheme.textMuted,
                 ),
               ),
             ],
@@ -469,28 +393,17 @@ class StagingStatusLegend extends StatelessWidget {
   }
 }
 
-/// Row highlight color for a staging status (theme aware).
+/// Soft row wash for a staging status (industrial dark only).
 Color? statusRowColor(BuildContext context, String dbStatus) {
-  final dark = Theme.of(context).brightness == Brightness.dark;
   final ui = StatusRules.formatUi(dbStatus).toLowerCase();
   if (ui == 'ship today' || StatusRules.isOverdue(dbStatus)) {
-    return dark ? SlstColors.statusTodayDark : SlstColors.statusToday;
+    return SlstColors.statusTodayDark;
   }
-  if (ui == 'ship tomorrow') {
-    return dark ? SlstColors.statusTomorrowDark : SlstColors.statusTomorrow;
-  }
-  if (StatusRules.isYmd(dbStatus)) {
-    return dark ? SlstColors.statusFutureDark : SlstColors.statusFuture;
-  }
-  if (ui == 'partial') {
-    return dark ? SlstColors.statusPartialDark : SlstColors.statusPartial;
-  }
-  if (ui.contains('corp pick')) {
-    return dark ? SlstColors.statusCorpPickDark : SlstColors.statusCorpPick;
-  }
-  if (ui.contains('customer pick')) {
-    return dark ? SlstColors.statusCustomerPickDark : SlstColors.statusCustomerPick;
-  }
+  if (ui == 'ship tomorrow') return SlstColors.statusTomorrowDark;
+  if (StatusRules.isYmd(dbStatus)) return SlstColors.statusFutureDark;
+  if (ui == 'partial') return SlstColors.statusPartialDark;
+  if (ui.contains('corp pick')) return SlstColors.statusCorpPickDark;
+  if (ui.contains('customer pick')) return SlstColors.statusCustomerPickDark;
   return null;
 }
 
@@ -512,27 +425,40 @@ class SearchField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     return TextField(
       controller: controller,
       onChanged: onChanged,
       textInputAction: TextInputAction.search,
+      style: const TextStyle(
+        fontSize: 13.5,
+        color: IndustrialTheme.textPrimary,
+      ),
       decoration: InputDecoration(
         hintText: hint,
-        prefixIcon: Icon(Icons.search, color: scheme.onSurfaceVariant),
+        hintStyle: const TextStyle(
+          fontSize: 13,
+          color: IndustrialTheme.textMuted,
+        ),
+        prefixIcon: const Icon(
+          Icons.search,
+          size: 20,
+          color: IndustrialTheme.textMuted,
+        ),
         isDense: true,
-        contentPadding: const EdgeInsets.symmetric(vertical: 12),
+        filled: true,
+        fillColor: IndustrialTheme.darkHeader,
+        contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(28),
-          borderSide: BorderSide(color: scheme.outlineVariant),
+          borderRadius: BorderRadius.circular(6),
+          borderSide: const BorderSide(color: IndustrialTheme.borderStroke),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(28),
-          borderSide: BorderSide(color: scheme.outlineVariant),
+          borderRadius: BorderRadius.circular(6),
+          borderSide: const BorderSide(color: IndustrialTheme.borderStroke),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(28),
-          borderSide: BorderSide(color: scheme.primary, width: 2),
+          borderRadius: BorderRadius.circular(6),
+          borderSide: const BorderSide(color: IndustrialTheme.skyBlue, width: 1.5),
         ),
         suffixIcon: ListenableBuilder(
           listenable: controller,
@@ -544,7 +470,11 @@ class SearchField extends StatelessWidget {
                 controller.clear();
                 onChanged?.call('');
               },
-              icon: const Icon(Icons.close),
+              icon: const Icon(
+                Icons.close,
+                size: 18,
+                color: IndustrialTheme.textMuted,
+              ),
             );
           },
         ),
@@ -565,32 +495,31 @@ class ComingSoonCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: dark ? SlstColors.darkSurfaceMuted : const Color(0xFFF9FAFB),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: dark ? SlstColors.darkBorder : SlstColors.border),
+        color: IndustrialTheme.darkHeader,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: IndustrialTheme.borderStroke),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             title,
-            style: TextStyle(
-              fontSize: 15,
+            style: const TextStyle(
+              fontSize: 14,
               fontWeight: FontWeight.w700,
-              color: dark ? SlstColors.darkMuted : SlstColors.subtle,
+              color: IndustrialTheme.textMuted,
             ),
           ),
           const SizedBox(height: 6),
           Text(
             text,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 12.5,
-              color: dark ? SlstColors.darkMuted : SlstColors.subtle,
+              color: IndustrialTheme.textMuted,
             ),
           ),
         ],
@@ -870,8 +799,8 @@ class EntryCard extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final style = dbStatus == null ? null : statusStyleOf(context, dbStatus!);
     return Card(
-      color: color,
-      margin: const EdgeInsets.symmetric(vertical: 4),
+      color: color ?? IndustrialTheme.darkSurface,
+      margin: const EdgeInsets.symmetric(vertical: 5),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
@@ -879,10 +808,13 @@ class EntryCard extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Container(width: 5, color: style?.accent ?? scheme.outlineVariant),
+              Container(
+                width: 4,
+                color: style?.accent ?? IndustrialTheme.borderStroke,
+              ),
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -891,33 +823,59 @@ class EntryCard extends StatelessWidget {
                           Expanded(
                             child: Text(
                               title,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
-                                  ?.copyWith(fontSize: 16),
+                              style: IndustrialTheme.mono(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: IndustrialTheme.textPrimary,
+                              ),
                             ),
                           ),
                           if (style != null)
-                            StatusChip(dbStatus: dbStatus!, compact: true),
+                            IndustrialStatusBadge(status: style.label),
                         ],
                       ),
-                      const SizedBox(height: 2),
+                      const SizedBox(height: 4),
                       Text(
                         subtitle,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                      for (final d in details)
-                        Text(
-                          d,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 12.5,
-                            color: scheme.onSurfaceVariant,
-                          ),
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: IndustrialTheme.textPrimary,
                         ),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [
+                          for (final d in details)
+                            if (d.trim().isNotEmpty)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 3,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: IndustrialTheme.darkHeader,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: IndustrialTheme.borderStroke,
+                                  ),
+                                ),
+                                child: Text(
+                                  d,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 11.5,
+                                    color: scheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
@@ -947,7 +905,7 @@ class BrandFooter extends StatelessWidget {
       child: Column(
         children: [
           Text(
-            'SLST — STAGING LOG & SHIPPING TRACKER',
+            'SST — SWIFT STAGING TRACKER',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 11,

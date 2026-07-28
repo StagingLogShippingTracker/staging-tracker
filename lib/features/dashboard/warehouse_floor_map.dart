@@ -1,3 +1,5 @@
+import 'dart:math' show min;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -6,6 +8,7 @@ import '../../data/app_state.dart';
 import '../../domain/location_intelligence.dart';
 import '../../domain/models.dart';
 import '../../domain/status.dart';
+import '../shared/order_history_dialog.dart';
 
 /// Persisted collapse state for the dashboard Warehouse Floor Map section.
 final floorMapCollapsedProvider =
@@ -106,6 +109,29 @@ class WarehouseFloorMap extends ConsumerWidget {
     final long = longBays();
     final short = shortBays();
 
+    // Density metric for the “yard efficiency” dashboard direction.
+    // Total seats = long aisles × long bays + short aisles × short bays.
+    final longAisles = [..._recvAisles, ..._shipLong];
+    final shortAisles = [..._shipShort];
+    final totalSeats =
+        longAisles.length * long.length + shortAisles.length * short.length;
+    var occupiedSeats = 0;
+    for (final a in longAisles) {
+      for (final bay in long) {
+        final key = '$a-$bay';
+        if (index.bayEntries(key).isNotEmpty) occupiedSeats++;
+      }
+    }
+    for (final a in shortAisles) {
+      for (final bay in short) {
+        final key = '$a-$bay';
+        if (index.bayEntries(key).isNotEmpty) occupiedSeats++;
+      }
+    }
+    final densityPct = totalSeats == 0
+        ? 0
+        : ((occupiedSeats / totalSeats) * 100).round().clamp(0, 100);
+
     final longRows = _recvAisles.length + _shipLong.length;
     final shortRows = _shipShort.length;
     final longH = longRows * _rowH;
@@ -121,7 +147,8 @@ class WarehouseFloorMap extends ConsumerWidget {
             header(),
             const SizedBox(height: 2),
             Text(
-              'Nisku terminal · click bays, zones, or A–F / 1–2 slots',
+              'Nisku terminal · click bays, zones, or A–F / 1–2 slots · '
+              'Density $densityPct%',
               style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: 8),
@@ -143,6 +170,9 @@ class WarehouseFloorMap extends ConsumerWidget {
                 const shortAisleFlex = 11;
                 const biteFlex = 18;
                 const shortFlexTotal = shortAisleFlex + biteFlex; // 29
+                const compactMapWidth = 720.0;
+                final narrow = constraints.maxWidth < 700;
+                final layoutW = narrow ? compactMapWidth : constraints.maxWidth;
 
                 final bodyH = aislePadTop + westH;
                 final totalH = headerH + corpH + bodyH + southH;
@@ -151,13 +181,14 @@ class WarehouseFloorMap extends ConsumerWidget {
 
                 // Well = aisle column between west rail and east stainless.
                 final wellW =
-                    constraints.maxWidth - westW - vRuleW - vRuleW - eastW;
+                    layoutW - westW - vRuleW - vRuleW - eastW;
                 final wellInner = (wellW - aislePadLeft).clamp(0.0, wellW);
                 // Bite covers empty flex right of short aisles + east VRule + east rail.
                 final biteW =
                     wellInner * (biteFlex / shortFlexTotal) + vRuleW + eastW;
 
-                return SizedBox(
+                final mapBody = SizedBox(
+                  width: layoutW,
                   height: totalH,
                   child: Stack(
                     clipBehavior: Clip.hardEdge,
@@ -358,8 +389,7 @@ class WarehouseFloorMap extends ConsumerWidget {
                             child: Row(
                               children: [
                                 SizedBox(
-                                  width: (constraints.maxWidth - biteW)
-                                      .clamp(0.0, constraints.maxWidth),
+                                  width: (layoutW - biteW).clamp(0.0, layoutW),
                                   height: southH,
                                   child: DecoratedBox(
                                     decoration: BoxDecoration(
@@ -393,6 +423,24 @@ class WarehouseFloorMap extends ConsumerWidget {
                     ],
                   ),
                 );
+                // Phone/narrow: horizontal ScrollView (not InteractiveViewer).
+                // Nesting is orthogonal to the page ListView so pan keeps
+                // working after bay InkWells paint occupancy colors.
+                if (narrow) {
+                  return SizedBox(
+                    height: totalH,
+                    width: constraints.maxWidth,
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      primary: false,
+                      physics: const ClampingScrollPhysics(
+                        parent: AlwaysScrollableScrollPhysics(),
+                      ),
+                      child: mapBody,
+                    ),
+                  );
+                }
+                return mapBody;
               },
             ),
           ],
@@ -409,102 +457,247 @@ class WarehouseFloorMap extends ConsumerWidget {
     final bayEntries = index.bayEntries(bayKey);
     final qty = bayEntries.fold<int>(0, (s, e) => s + e.qty);
 
-    return showDialog<void>(
+    return _showFloorMapDialog(
       context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          backgroundColor: IndustrialTheme.darkSurface,
-          title: Text(
-            bayKey,
-            style: IndustrialTheme.mono(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: IndustrialTheme.textPrimary,
-            ),
-          ),
-          content: SizedBox(
-            width: 280,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                for (final level in _levels)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 6),
-                    child: Row(
-                      children: [
-                        SizedBox(
-                          width: 18,
-                          child: Text(
-                            level,
-                            style: IndustrialTheme.mono(
-                              fontSize: 11,
-                              color: IndustrialTheme.textMuted,
-                            ),
-                          ),
-                        ),
-                        for (final side in ['1', '2']) ...[
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: _SubSlotChip(
-                              label: '$level-$side',
-                              fullLocation: '$bayKey-$level-$side',
-                              entries:
-                                  index.slotEntries('$bayKey-$level-$side'),
-                            ),
-                          ),
-                        ],
-                      ],
+      title: bayKey,
+      titleMono: true,
+      body: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final level in _levels)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 18,
+                    child: Text(
+                      level,
+                      style: IndustrialTheme.mono(
+                        fontSize: 11,
+                        color: IndustrialTheme.textMuted,
+                      ),
                     ),
                   ),
-                const SizedBox(height: 8),
+                  for (final side in ['1', '2']) ...[
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: _SubSlotChip(
+                        label: '$level-$side',
+                        fullLocation: '$bayKey-$level-$side',
+                        entries: index.slotEntries('$bayKey-$level-$side'),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          const SizedBox(height: 8),
+          Text(
+            bayEntries.isEmpty
+                ? 'Empty bay'
+                : '${bayEntries.length} jobs · $qty containers',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Shared floor-map dialog: fixed footer Close (no AlertDialog actions float).
+Future<void> _showFloorMapDialog({
+  required BuildContext context,
+  required String title,
+  required Widget body,
+  bool titleMono = false,
+}) {
+  final size = MediaQuery.sizeOf(context);
+  final maxW = min(420.0, size.width - 40);
+  final maxH = size.height * 0.8;
+
+  return showDialog<void>(
+    context: context,
+    builder: (ctx) {
+      return Dialog(
+        backgroundColor: IndustrialTheme.darkSurface,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: maxW, maxHeight: maxH),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
                 Text(
-                  bayEntries.isEmpty
-                      ? 'Empty bay'
-                      : '${bayEntries.length} jobs · $qty containers',
-                  style: Theme.of(ctx).textTheme.bodySmall,
+                  title,
+                  style: titleMono
+                      ? IndustrialTheme.mono(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: IndustrialTheme.textPrimary,
+                        )
+                      : const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: IndustrialTheme.textPrimary,
+                        ),
+                ),
+                const SizedBox(height: 12),
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: body,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    child: const Text('Close'),
+                  ),
                 ),
               ],
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Close'),
-            ),
-          ],
-        );
-      },
+        ),
+      );
+    },
+  );
+}
+
+/// Column card for a staging entry — SO is a tappable order-history link.
+class _FloorEntryCard extends ConsumerWidget {
+  const _FloorEntryCard({
+    required this.entry,
+    this.showLocation = false,
+  });
+
+  final StagingEntry entry;
+  final bool showLocation;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => showOrderHistoryDialog(context, ref, so: entry.so),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                entry.so,
+                style: IndustrialTheme.mono(
+                  fontWeight: FontWeight.w700,
+                  color: IndustrialTheme.skyBlue,
+                ).copyWith(
+                  decoration: TextDecoration.underline,
+                  decorationColor: IndustrialTheme.skyBlue,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                showLocation
+                    ? '${entry.customer} · ${entry.location} · ${entry.type}'
+                    : '${entry.customer} · ${entry.type} · ${entry.stagedBy}',
+                style: const TextStyle(
+                  color: IndustrialTheme.textMuted,
+                  fontSize: 12,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                StatusRules.formatUi(entry.status),
+                style: IndustrialTheme.mono(
+                  fontSize: 10,
+                  color: IndustrialTheme.skyBlue,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
 
 /// Single SE bite cut out of the warehouse outline (one shape).
+/// Lighter blue + diagonal hatch marks “not applicable” floor space.
 class _NotUsBite extends StatelessWidget {
   const _NotUsBite();
 
+  static const _fill = Color(0xFF1E3A5F); // lighter than dark map panes
+  static const _stripe = Color(0xFF3B6EA5);
+  static const _label = Color(0xFF93C5FD);
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      alignment: Alignment.center,
+    const corner = BorderRadius.only(topLeft: Radius.circular(4));
+    return DecoratedBox(
       decoration: BoxDecoration(
-        color: const Color(0xFFF3F4F6),
         border: Border.all(color: IndustrialTheme.borderStroke, width: 1.5),
-        // Only the inner L-corner is rounded; bottom/right stay squared to the frame.
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(4),
-        ),
+        borderRadius: corner,
       ),
-      child: Text(
-        'NOT US',
-        textAlign: TextAlign.center,
-        style: IndustrialTheme.mono(
-          fontSize: 18,
-          fontWeight: FontWeight.bold,
-          color: const Color(0xFF111827),
+      child: ClipRRect(
+        borderRadius: corner,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            const ColoredBox(color: _fill),
+            const CustomPaint(painter: _NotUsHatchPainter(color: _stripe)),
+            Center(
+              child: Text(
+                'NOT US',
+                textAlign: TextAlign.center,
+                style: IndustrialTheme.mono(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: _label,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
+}
+
+class _NotUsHatchPainter extends CustomPainter {
+  const _NotUsHatchPainter({required this.color});
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 1.25
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.butt;
+
+    const spacing = 8.0;
+    // Diagonal stripes (\\) across the full bite.
+    final extent = size.width + size.height;
+    for (var d = -size.height; d < extent; d += spacing) {
+      canvas.drawLine(
+        Offset(d, 0),
+        Offset(d + size.height, size.height),
+        paint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _NotUsHatchPainter oldDelegate) =>
+      oldDelegate.color != color;
 }
 
 class _WestRail extends StatelessWidget {
@@ -585,31 +778,21 @@ class _WestRail extends StatelessWidget {
                         compact: true,
                       ),
                     ),
-                    const Spacer(),
+                    Expanded(
+                      child: _Pane(
+                        label: 'W-Doors',
+                        entries: index.zoneEntries('W-Doors'),
+                        compact: true,
+                      ),
+                    ),
                   ],
                 ),
               ),
               _VRule(),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    SizedBox(
-                      height: beforeShipBox,
-                      child: _Pane(
-                        label: 'Shipping',
-                        entries: const [],
-                        muted: true,
-                        compact: true,
-                      ),
-                    ),
-                    Expanded(
-                      child: _Pane(
-                        label: 'Shipping\nAreas',
-                        entries: index.zoneEntries('Shipping Areas'),
-                      ),
-                    ),
-                  ],
+                child: _Pane(
+                  label: 'Shipping\nAreas',
+                  entries: index.zoneEntries('Shipping Areas'),
                 ),
               ),
             ],
@@ -626,7 +809,7 @@ class _VRule extends StatelessWidget {
       Container(width: 1, color: IndustrialTheme.borderStroke);
 }
 
-class _Pane extends StatelessWidget {
+class _Pane extends ConsumerWidget {
   const _Pane({
     required this.label,
     required this.entries,
@@ -644,75 +827,30 @@ class _Pane extends StatelessWidget {
   void _openZone(BuildContext context) {
     if (muted) return;
     final title = label.replaceAll('\n', ' ');
-    showDialog<void>(
+    _showFloorMapDialog(
       context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          backgroundColor: IndustrialTheme.darkSurface,
-          title: Text(
-            title,
-            style: const TextStyle(
-              fontWeight: FontWeight.w800,
-              color: IndustrialTheme.textPrimary,
+      title: title,
+      body: entries.isEmpty
+          ? const Text(
+              'No active staging in this zone.',
+              style: TextStyle(color: IndustrialTheme.textMuted),
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (var i = 0; i < entries.length; i++) ...[
+                  if (i > 0) const Divider(height: 1),
+                  _FloorEntryCard(entry: entries[i], showLocation: true),
+                ],
+              ],
             ),
-          ),
-          content: SizedBox(
-            width: 360,
-            child: entries.isEmpty
-                ? const Text(
-                    'No active staging in this zone.',
-                    style: TextStyle(color: IndustrialTheme.textMuted),
-                  )
-                : ListView.separated(
-                    shrinkWrap: true,
-                    itemCount: entries.length,
-                    separatorBuilder: (_, _) => const Divider(height: 1),
-                    itemBuilder: (context, i) {
-                      final e = entries[i];
-                      return ListTile(
-                        dense: true,
-                        title: Text(
-                          e.so,
-                          style: IndustrialTheme.mono(
-                            fontWeight: FontWeight.w700,
-                            color: IndustrialTheme.textPrimary,
-                          ),
-                        ),
-                        subtitle: Text(
-                          '${e.customer} · ${e.location} · ${e.type}',
-                          style: const TextStyle(
-                            color: IndustrialTheme.textMuted,
-                            fontSize: 12,
-                          ),
-                        ),
-                        trailing: Text(
-                          StatusRules.formatUi(e.status),
-                          style: IndustrialTheme.mono(
-                            fontSize: 10,
-                            color: IndustrialTheme.skyBlue,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Close'),
-            ),
-          ],
-        );
-      },
     );
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final occupied = entries.isNotEmpty && !muted;
-    final fill = muted
-        ? IndustrialTheme.darkHeader.withValues(alpha: 0.55)
-        : _colorForEntries(entries);
     final border =
         muted ? IndustrialTheme.borderStroke : _borderForEntries(entries);
     final tip = muted
@@ -737,15 +875,24 @@ class _Pane extends StatelessWidget {
       overflow: TextOverflow.ellipsis,
     );
 
-    final body = Container(
-      alignment: Alignment.center,
-      padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
-      decoration: BoxDecoration(
-        color: fill,
-        border: Border.all(color: border.withValues(alpha: 0.85)),
-      ),
-      child: verticalText ? RotatedBox(quarterTurns: 1, child: text) : text,
-    );
+    final body = muted
+        ? Container(
+            alignment: Alignment.center,
+            padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
+            decoration: BoxDecoration(
+              color: IndustrialTheme.darkHeader.withValues(alpha: 0.55),
+              border: Border.all(color: border.withValues(alpha: 0.85)),
+            ),
+            child:
+                verticalText ? RotatedBox(quarterTurns: 1, child: text) : text,
+          )
+        : _OccupancyBox(
+            colors: _statusBandColors(entries),
+            borderColor: border.withValues(alpha: 0.85),
+            padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
+            child:
+                verticalText ? RotatedBox(quarterTurns: 1, child: text) : text,
+          );
 
     if (muted) {
       return Tooltip(
@@ -899,7 +1046,6 @@ class _BaySeat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fill = _colorForEntries(entries);
     final border = _borderForEntries(entries);
     final jobs = entries.length;
     final qty = entries.fold<int>(0, (s, e) => s + e.qty);
@@ -907,12 +1053,10 @@ class _BaySeat extends StatelessWidget {
         ? '$bayKey · empty'
         : '$bayKey · $jobs jobs · $qty containers';
 
-    final box = DecoratedBox(
-      decoration: BoxDecoration(
-        color: fill,
-        borderRadius: BorderRadius.circular(3),
-        border: Border.all(color: border, width: 1),
-      ),
+    final box = _OccupancyBox(
+      colors: _statusBandColors(entries),
+      borderColor: border,
+      borderRadius: BorderRadius.circular(3),
     );
 
     return Tooltip(
@@ -932,7 +1076,7 @@ class _BaySeat extends StatelessWidget {
   }
 }
 
-class _SubSlotChip extends StatelessWidget {
+class _SubSlotChip extends ConsumerWidget {
   const _SubSlotChip({
     required this.label,
     required this.fullLocation,
@@ -944,73 +1088,30 @@ class _SubSlotChip extends StatelessWidget {
   final List<StagingEntry> entries;
 
   void _openSlot(BuildContext context) {
-    showDialog<void>(
+    _showFloorMapDialog(
       context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          backgroundColor: IndustrialTheme.darkSurface,
-          title: Text(
-            fullLocation,
-            style: IndustrialTheme.mono(
-              fontSize: 15,
-              fontWeight: FontWeight.bold,
-              color: IndustrialTheme.textPrimary,
+      title: fullLocation,
+      titleMono: true,
+      body: entries.isEmpty
+          ? const Text(
+              'Empty slot — no active staging here.',
+              style: TextStyle(color: IndustrialTheme.textMuted),
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (var i = 0; i < entries.length; i++) ...[
+                  if (i > 0) const Divider(height: 1),
+                  _FloorEntryCard(entry: entries[i]),
+                ],
+              ],
             ),
-          ),
-          content: SizedBox(
-            width: 340,
-            child: entries.isEmpty
-                ? const Text(
-                    'Empty slot — no active staging here.',
-                    style: TextStyle(color: IndustrialTheme.textMuted),
-                  )
-                : ListView.separated(
-                    shrinkWrap: true,
-                    itemCount: entries.length,
-                    separatorBuilder: (_, _) => const Divider(height: 1),
-                    itemBuilder: (context, i) {
-                      final e = entries[i];
-                      return ListTile(
-                        dense: true,
-                        title: Text(
-                          e.so,
-                          style: IndustrialTheme.mono(
-                            fontWeight: FontWeight.w700,
-                            color: IndustrialTheme.textPrimary,
-                          ),
-                        ),
-                        subtitle: Text(
-                          '${e.customer} · ${e.type} · ${e.stagedBy}',
-                          style: const TextStyle(
-                            color: IndustrialTheme.textMuted,
-                            fontSize: 12,
-                          ),
-                        ),
-                        trailing: Text(
-                          StatusRules.formatUi(e.status),
-                          style: IndustrialTheme.mono(
-                            fontSize: 10,
-                            color: IndustrialTheme.skyBlue,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Close'),
-            ),
-          ],
-        );
-      },
     );
   }
 
   @override
-  Widget build(BuildContext context) {
-    final fill = _colorForEntries(entries);
+  Widget build(BuildContext context, WidgetRef ref) {
     final border = _borderForEntries(entries);
     final tip = entries.isEmpty
         ? '$fullLocation · empty · click'
@@ -1024,22 +1125,21 @@ class _SubSlotChip extends StatelessWidget {
         child: InkWell(
           onTap: () => _openSlot(context),
           borderRadius: BorderRadius.circular(4),
-          child: Container(
+          child: SizedBox(
             height: 28,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: fill,
+            child: _OccupancyBox(
+              colors: _statusBandColors(entries),
+              borderColor: border,
               borderRadius: BorderRadius.circular(4),
-              border: Border.all(color: border),
-            ),
-            child: Text(
-              label,
-              style: IndustrialTheme.mono(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: entries.isEmpty
-                    ? IndustrialTheme.textMuted
-                    : IndustrialTheme.textPrimary,
+              child: Text(
+                label,
+                style: IndustrialTheme.mono(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: entries.isEmpty
+                      ? IndustrialTheme.textMuted
+                      : IndustrialTheme.textPrimary,
+                ),
               ),
             ),
           ),
@@ -1052,23 +1152,31 @@ class _SubSlotChip extends StatelessWidget {
 Color _emptyFill() => IndustrialTheme.darkHeader;
 Color _emptyBorder() => IndustrialTheme.borderStroke;
 
-Color _colorForEntries(List<StagingEntry> entries) {
-  if (entries.isEmpty) return _emptyFill();
-  StagingEntry? worst;
-  var worstWeight = -1;
+/// Distinct status colors for a location, urgency-sorted (highest first).
+List<Color> _statusBandColors(List<StagingEntry> entries) {
+  if (entries.isEmpty) return [_emptyFill()];
+  final bestByUi = <String, StagingEntry>{};
   for (final e in entries) {
-    final w = StatusRules.urgencyWeight(e.status);
-    if (w > worstWeight) {
-      worstWeight = w;
-      worst = e;
+    final ui = StatusRules.formatUi(e.status);
+    final prev = bestByUi[ui];
+    if (prev == null ||
+        StatusRules.urgencyWeight(e.status) >
+            StatusRules.urgencyWeight(prev.status)) {
+      bestByUi[ui] = e;
     }
   }
-  return _colorForStatus(worst!.status);
+  final ordered = bestByUi.values.toList()
+    ..sort(
+      (a, b) =>
+          StatusRules.urgencyWeight(b.status) -
+          StatusRules.urgencyWeight(a.status),
+    );
+  return [for (final e in ordered) _colorForStatus(e.status)];
 }
 
 Color _borderForEntries(List<StagingEntry> entries) {
   if (entries.isEmpty) return _emptyBorder();
-  return _colorForEntries(entries);
+  return _statusBandColors(entries).first;
 }
 
 Color _colorForStatus(String dbStatus) {
@@ -1094,6 +1202,109 @@ Color _colorForStatus(String dbStatus) {
   return IndustrialTheme.slateMuted;
 }
 
+/// Paints equal vertical status bands + a full outer border (grid outline intact).
+class _OccupancyBox extends StatelessWidget {
+  const _OccupancyBox({
+    required this.colors,
+    required this.borderColor,
+    this.borderRadius = BorderRadius.zero,
+    this.padding,
+    this.child,
+  });
+
+  final List<Color> colors;
+  final Color borderColor;
+  final BorderRadius borderRadius;
+  final EdgeInsetsGeometry? padding;
+  final Widget? child;
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      painter: _OccupancyPainter(
+        colors: colors.isEmpty ? [_emptyFill()] : colors,
+        borderColor: borderColor,
+        borderRadius: borderRadius,
+      ),
+      child: child == null
+          ? null
+          : Padding(
+              padding: padding ?? EdgeInsets.zero,
+              child: Center(child: child),
+            ),
+    );
+  }
+}
+
+class _OccupancyPainter extends CustomPainter {
+  const _OccupancyPainter({
+    required this.colors,
+    required this.borderColor,
+    required this.borderRadius,
+  });
+
+  final List<Color> colors;
+  final Color borderColor;
+  final BorderRadius borderRadius;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.isEmpty) return;
+    final outer = Offset.zero & size;
+    final rrect = borderRadius.toRRect(outer);
+
+    canvas.save();
+    canvas.clipRRect(rrect);
+    if (colors.length == 1) {
+      canvas.drawRect(outer, Paint()..color = colors.first);
+    } else {
+      final bandW = size.width / colors.length;
+      for (var i = 0; i < colors.length; i++) {
+        // Slight overlap avoids sub-pixel seams between bands.
+        final left = i * bandW;
+        final right = (i == colors.length - 1) ? size.width : (i + 1) * bandW + 0.5;
+        canvas.drawRect(
+          Rect.fromLTRB(left, 0, right, size.height),
+          Paint()..color = colors[i],
+        );
+      }
+      // Subtle separators between bands (not the outer grid).
+      final sep = Paint()
+        ..color = const Color(0x66000000)
+        ..strokeWidth = 1;
+      for (var i = 1; i < colors.length; i++) {
+        final x = i * bandW;
+        canvas.drawLine(Offset(x, 0), Offset(x, size.height), sep);
+      }
+    }
+    canvas.restore();
+
+    // Full block outline — same role as the old DecoratedBox border.
+    canvas.drawRRect(
+      rrect.deflate(0.5),
+      Paint()
+        ..color = borderColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _OccupancyPainter oldDelegate) =>
+      oldDelegate.borderColor != borderColor ||
+      oldDelegate.borderRadius != borderRadius ||
+      !_listEquals(oldDelegate.colors, colors);
+
+  static bool _listEquals(List<Color> a, List<Color> b) {
+    if (identical(a, b)) return true;
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
+}
+
 class _FloorOccupancyIndex {
   _FloorOccupancyIndex(List<StagingEntry> staging) : _all = staging {
     for (final e in staging) {
@@ -1103,16 +1314,10 @@ class _FloorOccupancyIndex {
       final parsed = parseAisleLocation(loc);
 
       if (parsed != null) {
-        final bay =
-            '${parsed.aisle}-${parsed.bay.toString().padLeft(2, '0')}';
-        final slotSuffix = parsed.suffix == '1+2' ? '1' : parsed.suffix;
-        final slot = '$bay-${parsed.level}-$slotSuffix';
+        final bay = parsed.bayKey;
         _bay.putIfAbsent(bay, () => []).add(e);
-        _slot.putIfAbsent(slot.toUpperCase(), () => []).add(e);
-        if (parsed.suffix == '1+2') {
-          _slot
-              .putIfAbsent('$bay-${parsed.level}-2'.toUpperCase(), () => [])
-              .add(e);
+        for (final slot in parsed.coveredSlots) {
+          _slot.putIfAbsent(slot.toUpperCase(), () => []).add(e);
         }
         continue;
       }
@@ -1171,7 +1376,11 @@ class _FloorOccupancyIndex {
         return ['box rack', 'boxrack', 'box shelves', 'box shelf'];
       case 'shipping box rack':
         return ['shipping box rack', 'ship box rack', 'shipping boxrack'];
+      case 'w-doors':
+        // Needles for free-text labels; door numbers matched via regex below.
+        return ['w-doors', 'w doors', 'wdoors'];
       case 'shipping areas':
+        // No broad 'w-' — W-17..W-23 belong to W-Doors only.
         return [
           'shipping areas',
           'shipping area',
@@ -1180,7 +1389,6 @@ class _FloorOccupancyIndex {
           'murray',
           'murrays',
           'misc',
-          'w-',
         ];
       case 'south wall':
         return ['south wall', 'southwall'];
@@ -1193,6 +1401,21 @@ class _FloorOccupancyIndex {
     }
   }
 
+  /// W-Doors: doors W-17 through W-23 (inclusive), plus free-text zone labels.
+  /// Matches even when parseAisleLocation would treat a fuller bin as aisle W.
+  static final _wDoorsDoorRe = RegExp(r'\bw-(1[7-9]|2[0-3])\b');
+
+  static bool _isWDoorsLocation(String location) {
+    final loc = location.trim().toLowerCase();
+    if (loc.isEmpty) return false;
+    if (loc.contains('w-doors') ||
+        loc.contains('w doors') ||
+        loc.contains('wdoors')) {
+      return true;
+    }
+    return _wDoorsDoorRe.hasMatch(loc);
+  }
+
   static bool _matchesZone(
     String location,
     List<String> needles,
@@ -1200,12 +1423,22 @@ class _FloorOccupancyIndex {
   ) {
     final loc = location.trim().toLowerCase();
     if (loc.isEmpty) return false;
+
+    final zone = zoneName.toLowerCase();
+
+    // W-Doors wins even for aisle-parseable W-17..W-23 forms.
+    if (zone == 'w-doors') return _isWDoorsLocation(location);
+
     if (parseAisleLocation(location) != null) return false;
-    if (zoneName.toLowerCase() == 'shipping areas' &&
+
+    // Bay-only W-17..W-23 must not light Shipping Areas (or other zones).
+    if (_isWDoorsLocation(location)) return false;
+
+    if (zone == 'shipping areas' &&
         (loc.contains('box rack') || loc.contains('boxrack'))) {
       return false;
     }
-    if (zoneName.toLowerCase() == 'box rack' && loc.contains('shipping')) {
+    if (zone == 'box rack' && loc.contains('shipping')) {
       return false;
     }
     return needles.any(loc.contains);

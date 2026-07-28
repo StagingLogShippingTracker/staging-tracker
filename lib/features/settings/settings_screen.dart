@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/app_config.dart';
 import '../../core/theme.dart';
 import '../../data/app_state.dart';
+import '../shared/industrial_widgets.dart';
 import '../shared/widgets.dart';
 import 'pair_watch_card.dart';
 
@@ -17,7 +18,7 @@ class SettingsScreen extends ConsumerWidget {
       scheme: 'mailto',
       path: AppConfig.accessRequestEmail,
       queryParameters: {
-        'subject': 'Access Request: Staging Log & Shipping Tracker',
+        'subject': 'Access Request: SST (Swift Staging Tracker)',
       },
     );
     await launchUrl(uri);
@@ -27,9 +28,16 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(currentUserProvider);
 
-    return ListView(
+    // Pair Watch first so it is above the fold on phone/emulator and OCR
+    // automation can find "Pair Watch" without scrolling past Account.
+    return ColoredBox(
+      color: IndustrialTheme.darkBase,
+      child: ListView(
       padding: slstPagePadding(context),
       children: [
+        const IndustrialPageTitle('Settings'),
+        const PairWatchCard(),
+        const SizedBox(height: 16),
         Card(
           child: Padding(
             padding: const EdgeInsets.all(20),
@@ -118,10 +126,9 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
         ),
-        const SizedBox(height: 16),
-        const PairWatchCard(),
         const BrandFooter(),
       ],
+    ),
     );
   }
 }

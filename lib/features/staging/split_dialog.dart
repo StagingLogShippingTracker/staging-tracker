@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/theme.dart';
 import '../../data/app_state.dart';
 import '../../domain/models.dart';
 import '../shared/widgets.dart';
@@ -88,7 +89,11 @@ class _SplitDialogState extends ConsumerState<SplitDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text('Split SO ${widget.entry.so}'),
+      backgroundColor: IndustrialTheme.darkSurface,
+      title: Text(
+        'Split SO ${widget.entry.so}',
+        style: IndustrialTheme.mono(fontSize: 16, fontWeight: FontWeight.w700),
+      ),
       content: SizedBox(
         width: 460,
         child: SingleChildScrollView(

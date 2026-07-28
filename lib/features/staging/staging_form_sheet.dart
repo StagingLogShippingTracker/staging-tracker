@@ -214,6 +214,7 @@ class _StagingFormSheetState extends ConsumerState<StagingFormSheet> {
         location: _location.text,
         so: _so.text,
         ignoreEntryId: widget.existing?.id,
+        containers: counts,
       );
       if (locationDecision == LocationAdvisoryDecision.cancel) return;
       if (!mounted) return;
@@ -321,20 +322,25 @@ class _StagingFormSheetState extends ConsumerState<StagingFormSheet> {
                   widget.existing == null
                       ? Icons.add_box_outlined
                       : Icons.edit_outlined,
-                  color: SlstColors.brand,
+                  color: IndustrialTheme.skyBlue,
                 ),
                 const SizedBox(width: 8),
                 Text(
                   widget.existing == null
                       ? 'New Staging Entry'
                       : 'Edit Staging Entry',
-                  style: Theme.of(context).textTheme.titleLarge,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: IndustrialTheme.textPrimary,
+                      ),
                 ),
                 const Spacer(),
                 IconButton(
                   tooltip: 'Close',
                   onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close),
+                  icon: const Icon(
+                    Icons.close,
+                    color: IndustrialTheme.textMuted,
+                  ),
                 ),
               ],
             ),
@@ -368,7 +374,7 @@ class _StagingFormSheetState extends ConsumerState<StagingFormSheet> {
               controller: _location,
               soController: _so,
               ignoreEntryId: widget.existing?.id,
-              label: 'Location (e.g. A-01-A-1)',
+              label: 'Location (e.g. A-01-A-1, D-02-B-1+2, B-02-Partial)',
               onCategoryChanged: (value) => _locationCategory = value,
             ),
             const SizedBox(height: 8),
