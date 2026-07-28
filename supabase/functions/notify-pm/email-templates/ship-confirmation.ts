@@ -1,5 +1,5 @@
 /**
- * SLST ship-confirmation HTML email — concept-matched layout.
+ * SST ship-confirmation HTML email — industrial dark layout.
  */
 import {
   DEFAULT_EMAIL_ASSET_BASE,
@@ -46,7 +46,7 @@ export function renderShipConfirmationEmail(
     logoUrl: data.logoUrl,
     title: "Your order has now been shipped!",
     preview: `SO# ${so} for ${customer} has shipped via ${carrier}.`,
-    subtitle: "Order details:",
+    subtitle: "Shipment details:",
     attachmentUrls,
     ctaUrl: data.ctaUrl,
     emailContact: data.emailContact,
@@ -56,7 +56,7 @@ export function renderShipConfirmationEmail(
       {
         iconKey: "icon-clipboard",
         title: "ORDER SUMMARY",
-        accent: "orange",
+        accent: "amber",
         rows: [
           { label: "SO#", value: so || "None" },
           { label: "Customer", value: customer },
@@ -65,7 +65,7 @@ export function renderShipConfirmationEmail(
       {
         iconKey: "icon-truck",
         title: "SHIPPING INFORMATION",
-        accent: "blue",
+        accent: "sky",
         rows: [
           { label: "Carrier", value: carrier },
           { label: "Shipped At", value: shippedAt },
@@ -75,7 +75,7 @@ export function renderShipConfirmationEmail(
       {
         iconKey: "icon-cargo",
         title: "CARGO DETAILS",
-        accent: "orange",
+        accent: "mint",
         rows: [
           { label: "Container(s)", value: containers },
           { label: "Total Weight (In lbs)", value: weight },
@@ -84,7 +84,7 @@ export function renderShipConfirmationEmail(
       {
         iconKey: "icon-chat",
         title: "ADDITIONAL NOTES",
-        accent: "blue",
+        accent: "purple",
         rows: [{ label: "Comments", value: comments }],
       },
     ],
@@ -95,7 +95,7 @@ export function renderShipConfirmationPlain(data: ShipConfirmationData): string 
   return [
     "Your order has now been shipped!",
     "",
-    "Order details:",
+    "Shipment details:",
     `SO#: ${data.so || "None"}`,
     `Customer: ${data.customer || "None"}`,
     `Carrier: ${data.carrier || "None"}`,
@@ -136,7 +136,7 @@ export function shipDataFromPayload(
     containers: pick("containers", "type", "container"),
     weight: pick("weight"),
     comments: pick("comments"),
-    // Optional payload logo override; branded layout always uses light SLST logo.
+    // Optional payload logo override; layout uses Swift + SST badge.
     logoUrl: logoFromPayload || undefined,
     ctaUrl: pick("cta_url", "ctaUrl", "tracking_url", "trackingUrl") ||
       undefined,

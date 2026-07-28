@@ -1,5 +1,5 @@
 /**
- * Branded HTML for non-ship PM notifications (return, PO, etc.).
+ * Branded HTML for non-ship PM notifications (return, PO, etc.) — SST industrial.
  */
 
 import {
@@ -44,7 +44,7 @@ export function renderReturnNotificationEmail(
       {
         iconKey: "icon-clipboard",
         title: "RETURN DETAILS",
-        accent: "orange",
+        accent: "amber",
         rows: [
           { label: "SO#", value: so },
           { label: "Customer", value: customer },
@@ -53,7 +53,7 @@ export function renderReturnNotificationEmail(
       {
         iconKey: "icon-chat",
         title: "NOTES",
-        accent: "blue",
+        accent: "purple",
         rows: [{ label: "Details", value: details }],
       },
     ],
@@ -78,7 +78,7 @@ export function renderReturnToStockEmail(
       {
         iconKey: "icon-truck",
         title: "RETURN TO STOCK",
-        accent: "orange",
+        accent: "mint",
         rows: [
           { label: "SO#", value: so },
           { label: "Customer", value: customer },
@@ -89,7 +89,7 @@ export function renderReturnToStockEmail(
       {
         iconKey: "icon-chat",
         title: "REASON",
-        accent: "blue",
+        accent: "sky",
         rows: [{ label: "Reason", value: reason }],
       },
     ],
@@ -113,18 +113,18 @@ export function renderPoNotificationEmail(
     ...baseFromBody(body, attachmentUrls),
     title: "PO notification",
     preview: `PO notification: ${po}`,
-    subtitle: "Order details:",
+    subtitle: "PO details:",
     cards: [
       {
         iconKey: "icon-clipboard",
         title: "PO NOTIFICATION",
-        accent: "orange",
+        accent: "amber",
         rows,
       },
       {
         iconKey: "icon-chat",
         title: "DETAILS",
-        accent: "blue",
+        accent: "sky",
         rows: [{ label: "Notes", value: details }],
       },
     ],
@@ -137,6 +137,7 @@ export function renderBulkPoNotificationEmail(
 ): string {
   const raw = body.pos;
   const list = Array.isArray(raw) ? raw : [];
+  const tones = ["amber", "sky", "mint", "purple"] as const;
   const cards = list.slice(0, 12).map((item, i) => {
     const row = (item && typeof item === "object")
       ? item as Record<string, unknown>
@@ -148,7 +149,7 @@ export function renderBulkPoNotificationEmail(
     return {
       iconKey: i % 2 === 0 ? "icon-clipboard" : "icon-cargo",
       title: `PO ${po}`,
-      accent: (i % 2 === 0 ? "orange" : "blue") as "orange" | "blue",
+      accent: tones[i % tones.length],
       rows: [
         { label: "PO#", value: po },
         { label: "Vendor", value: vendor },
@@ -161,7 +162,7 @@ export function renderBulkPoNotificationEmail(
     cards.push({
       iconKey: "icon-clipboard",
       title: "BULK PO",
-      accent: "orange",
+      accent: "amber",
       rows: [{ label: "POs", value: "None" }],
     });
   }
@@ -169,7 +170,7 @@ export function renderBulkPoNotificationEmail(
     ...baseFromBody(body, attachmentUrls),
     title: "Bulk PO notification",
     preview: `Bulk PO notification (${list.length} POs)`,
-    subtitle: "Order details:",
+    subtitle: "PO details:",
     cards,
   });
 }
