@@ -2,15 +2,15 @@
 $ErrorActionPreference = 'Stop'
 $root = Resolve-Path (Join-Path $PSScriptRoot '..\..')
 Set-Location $root
+. (Join-Path $PSScriptRoot '_common.ps1')
 
-$flutter = Join-Path $root '.tools\flutter\bin\flutter.bat'
-if (-not (Test-Path $flutter)) { $flutter = 'flutter' }
-
-& $flutter pub get
+Invoke-SlstFlutter -Arguments @('pub', 'get')
 
 $dist = Join-Path $root 'dist'
 New-Item -ItemType Directory -Force -Path $dist | Out-Null
-& $flutter build apk --release
+Invoke-SlstFlutter -Arguments @('build', 'apk', '--release')
 $apk = Join-Path $root 'build\app\outputs\flutter-apk\app-release.apk'
-Copy-Item -Force $apk (Join-Path $dist 'SLST-Android.apk')
-Write-Host "Wrote dist\SLST-Android.apk"
+$output = Join-Path $dist 'SST-Android.apk'
+Copy-Item -Force $apk $output
+Write-SlstSha256 -Path $output
+Write-Host "Wrote dist\SST-Android.apk"

@@ -126,8 +126,7 @@ class AppShell extends ConsumerWidget {
     final path = _normalizePath(location);
     final current = _destinationFor(path);
     final dockActions = ShellCommandDock.actionsFor(context, ref, location);
-    final compact =
-        MediaQuery.sizeOf(context).width < kCompactShellBreakpoint;
+    final compact = MediaQuery.sizeOf(context).width < kCompactShellBreakpoint;
 
     return CallbackShortcuts(
       bindings: ShellCommandDock.shortcutBindings(dockActions),
@@ -243,8 +242,7 @@ class _CompactShell extends ConsumerWidget {
             padding: const EdgeInsets.only(right: 4),
             child: Center(
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: IndustrialTheme.mintGreen.withValues(alpha: 0.16),
                   borderRadius: BorderRadius.circular(10),
@@ -317,8 +315,9 @@ class _CompactShell extends ConsumerWidget {
                     for (final d in _destinations)
                       ListTile(
                         selected: d.path == selectedPath,
-                        selectedTileColor:
-                            IndustrialTheme.skyBlue.withValues(alpha: 0.14),
+                        selectedTileColor: IndustrialTheme.skyBlue.withValues(
+                          alpha: 0.14,
+                        ),
                         leading: Icon(
                           d.path == selectedPath ? d.selectedIcon : d.icon,
                           color: d.path == selectedPath
@@ -369,8 +368,10 @@ class _CompactShell extends ConsumerWidget {
             for (final d in barDestinations)
               NavigationDestination(
                 icon: Icon(d.icon, color: IndustrialTheme.textMuted),
-                selectedIcon:
-                    Icon(d.selectedIcon, color: IndustrialTheme.skyBlue),
+                selectedIcon: Icon(
+                  d.selectedIcon,
+                  color: IndustrialTheme.skyBlue,
+                ),
                 label: _compactNavLabel(d.path),
               ),
           ],
@@ -433,8 +434,8 @@ class _CompactActionStrip extends StatelessWidget {
                       horizontal: 12,
                       vertical: 8,
                     ),
-                    minimumSize: const Size(0, 36),
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    minimumSize: const Size(0, 48),
+                    tapTargetSize: MaterialTapTargetSize.padded,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(6),
                       side: const BorderSide(
@@ -649,9 +650,7 @@ class _IndustrialRail extends ConsumerWidget {
                   ref.read(railCollapsedProvider.notifier).state = !collapsed;
                 },
                 icon: Icon(
-                  collapsed
-                      ? Icons.chevron_right
-                      : Icons.chevron_left,
+                  collapsed ? Icons.chevron_right : Icons.chevron_left,
                   color: IndustrialTheme.textMuted,
                 ),
               ),
@@ -726,8 +725,9 @@ class _RailNavTile extends StatelessWidget {
                           style: GoogleFonts.inter(
                             fontSize: 12,
                             height: 1.2,
-                            fontWeight:
-                                selected ? FontWeight.w700 : FontWeight.w500,
+                            fontWeight: selected
+                                ? FontWeight.w700
+                                : FontWeight.w500,
                             color: fg,
                           ),
                         ),
@@ -746,10 +746,7 @@ class _RailNavTile extends StatelessWidget {
 }
 
 class _TopHeader extends ConsumerWidget {
-  const _TopHeader({
-    required this.title,
-    required this.onRequestAccess,
-  });
+  const _TopHeader({required this.title, required this.onRequestAccess});
 
   final String title;
   final Future<void> Function() onRequestAccess;

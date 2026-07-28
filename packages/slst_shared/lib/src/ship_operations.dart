@@ -1,30 +1,28 @@
 import 'dart:typed_data';
 
-import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app_config.dart';
+import 'formatters.dart';
+import 'inventory_rpc.dart';
 import 'models.dart';
 import 'repositories.dart';
-
-final _shipEmailDateFmt = DateFormat('yyyy-MM-dd HH:mm');
+import 'validation.dart';
 
 /// Shared ship-confirm path used by Wear (and available to phone/desktop).
 class ShipOperations {
   ShipOperations(SupabaseClient client)
       : _staging = StagingRepository(client),
-        _shipped = ShippedRepository(client),
-        _log = ChangelogRepository(client),
         _roster = RosterRepository(client),
         _photos = PhotoStorage(client),
-        _notify = NotifyRepository(client);
+        _notify = NotifyRepository(client),
+        _rpc = InventoryRpc(client);
 
   final StagingRepository _staging;
-  final ShippedRepository _shipped;
-  final ChangelogRepository _log;
   final RosterRepository _roster;
   final PhotoStorage _photos;
   final NotifyRepository _notify;
+  final InventoryRpc _rpc;
 
   StagingRepository get staging => _staging;
   RosterRepository get roster => _roster;
@@ -39,6 +37,12 @@ class ShipOperations {
     bool notifyPm = false,
     List<PhotoBytes> extraPhotos = const [],
   }) async {
+    SlstValidation.ensureShipFields(
+      so: entry.so,
+      customer: entry.customer,
+      carrier: carrier,
+      shippedBy: shippedBy,
+    );
     final paths = [...entry.photoUrls];
     for (final p in extraPhotos) {
       paths.add(
@@ -49,33 +53,28 @@ class ShipOperations {
       );
     }
     final pmName = _pmDisplay(pmEmail);
-    await _shipped.insert({
-      'so': entry.so,
-      'customer': entry.customer,
-      'type': entry.type,
-      'qty': entry.qty,
-      'carrier': carrier.trim(),
-      'location': entry.location,
-      'weight': entry.weight,
-      'comments': entry.comments,
-      'shipped_by': shippedBy.trim(),
-      'pmd_email': pmName,
-      'photo_urls': paths,
-    });
-    await _staging.delete(entry.id);
-    await _roster.remember('carrier', carrier);
-    await _roster.remember('person_by', shippedBy);
-    await _log.log('staging', 'Ship Confirmed SO: ${entry.so}');
-    await _log.log('shipped', 'Added via Ship Confirm: SO: ${entry.so}');
-    await _log.log(
-      'staging',
-      'Bin Movement: To Shipped Log — SO ${entry.so}: ${entry.type} moved from Staging Log to Shipped Log (${entry.location})',
+    final notifStatus =
+        notifyPm && pmEmail != null && pmEmail.contains('@') ? 'pending' : 'none';
+    final shipped = await _rpc.shipStagingEntry(
+      stagingId: entry.id,
+      carrier: carrier.trim(),
+      shippedBy: shippedBy.trim(),
+      photoUrls: paths,
+      pmdEmail: pmName,
+      notificationStatus: notifStatus,
     );
+    try {
+      await _roster.remember('carrier', carrier);
+      await _roster.remember('person_by', shippedBy);
+    } catch (_) {
+      // Roster memory is best-effort; inventory already moved.
+    }
 
-    final shippedAt = _shipEmailDateFmt.format(DateTime.now());
+    final shippedAt = formatShipNotificationTimestamp();
     return _notifyPmIfRequested(
       notifyPm: notifyPm,
       pmEmail: pmEmail,
+      shippedId: shipped.id,
       payload: {
         'to': pmEmail,
         'cc': AppConfig.warehouseCc,
@@ -92,8 +91,6 @@ class ShipOperations {
         'comments': entry.comments?.trim() ?? '',
         'attachments': paths,
         'notification_type': 'ship_confirm',
-        'website_url': AppConfig.publicWebsiteUrl,
-        'cta_url': AppConfig.publicWebsiteUrl,
       },
     );
   }
@@ -101,16 +98,31 @@ class ShipOperations {
   Future<String?> _notifyPmIfRequested({
     required bool notifyPm,
     required String? pmEmail,
+    required String shippedId,
     required Map<String, dynamic> payload,
   }) async {
     if (!notifyPm) return null;
     if (pmEmail == null || !pmEmail.contains('@')) {
+      await _rpc.updateShippedNotificationStatus(
+        shippedId: shippedId,
+        status: 'failed',
+        error: 'No valid email',
+      );
       return 'Saved, but PM was not notified (no valid email).';
     }
     try {
       await _notify.sendPmNotification(payload);
+      await _rpc.updateShippedNotificationStatus(
+        shippedId: shippedId,
+        status: 'sent',
+      );
       return null;
     } catch (e) {
+      await _rpc.updateShippedNotificationStatus(
+        shippedId: shippedId,
+        status: 'failed',
+        error: '$e',
+      );
       return 'Saved, but PM notification failed: $e';
     }
   }

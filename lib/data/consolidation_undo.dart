@@ -7,25 +7,29 @@ const consolidationUndoWindow = Duration(minutes: 2);
 class ConsolidationUndoSnapshot {
   const ConsolidationUndoSnapshot({
     required this.mergedId,
+    required this.undoId,
     required this.sources,
     required this.at,
+    required this.expiresAt,
   });
 
   /// New UUID of the consolidated survivor (deleted on undo).
   final String mergedId;
+  final String undoId;
 
   /// All pre-consolidate rows (re-inserted on undo with fresh UUIDs).
   final List<StagingEntry> sources;
   final DateTime at;
+  final DateTime expiresAt;
 
-  bool get isActive =>
-      DateTime.now().difference(at) <= consolidationUndoWindow;
+  bool get isActive => DateTime.now().isBefore(expiresAt);
 
   Duration get remaining {
-    final left = consolidationUndoWindow - DateTime.now().difference(at);
+    final left = expiresAt.difference(DateTime.now());
     return left.isNegative ? Duration.zero : left;
   }
 }
 
-final consolidationUndoProvider =
-    StateProvider<ConsolidationUndoSnapshot?>((ref) => null);
+final consolidationUndoProvider = StateProvider<ConsolidationUndoSnapshot?>(
+  (ref) => null,
+);

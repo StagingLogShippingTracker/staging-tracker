@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:slst_shared/slst_shared.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -13,30 +15,92 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
-  late final ShipOperations _ops =
-      ShipOperations(Supabase.instance.client);
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
+  late final ShipOperations _ops = ShipOperations(Supabase.instance.client);
   List<StagingEntry>? _entries;
   String? _error;
   bool _loading = true;
+  RealtimeChannel? _channel;
+  Timer? _realtimeDebounce;
+  int _channelEpoch = 0;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _refresh();
+    _bindRealtime();
   }
 
-  Future<void> _refresh() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _realtimeDebounce?.cancel();
+    _unbindRealtime();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _bindRealtime();
+      _refresh(quiet: true);
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      _unbindRealtime();
+    }
+  }
+
+  void _scheduleRealtimeRefresh() {
+    _realtimeDebounce?.cancel();
+    _realtimeDebounce = Timer(
+      const Duration(milliseconds: 250),
+      () => _refresh(quiet: true),
+    );
+  }
+
+  void _unbindRealtime() {
+    final ch = _channel;
+    _channel = null;
+    if (ch != null) {
+      unawaited(Supabase.instance.client.removeChannel(ch));
+    }
+  }
+
+  void _bindRealtime() {
+    _unbindRealtime();
+    final epoch = ++_channelEpoch;
+    final client = Supabase.instance.client;
+    final channel = client.channel('wear-staging-$epoch');
+    channel.onPostgresChanges(
+      event: PostgresChangeEvent.all,
+      schema: 'public',
+      table: 'staging',
+      callback: (_) {
+        if (!mounted || epoch != _channelEpoch) return;
+        _scheduleRealtimeRefresh();
+      },
+    );
+    channel.subscribe();
+    _channel = channel;
+  }
+
+  Future<void> _refresh({bool quiet = false}) async {
+    if (!quiet || _entries == null) {
+      setState(() {
+        _loading = true;
+        _error = null;
+      });
+    } else if (_error != null) {
+      setState(() => _error = null);
+    }
     try {
       final rows = await _ops.fetchStaging();
       if (!mounted) return;
       setState(() {
         _entries = rows;
         _loading = false;
+        _error = null;
       });
     } catch (e) {
       if (!mounted) return;
@@ -48,6 +112,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _signOut() async {
+    _unbindRealtime();
     await Supabase.instance.client.auth.signOut();
   }
 
@@ -96,7 +161,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   IconButton(
                     tooltip: 'Refresh',
-                    onPressed: _loading ? null : _refresh,
+                    onPressed: _loading ? null : () => _refresh(),
                     icon: const Icon(Icons.refresh, size: 18),
                     color: WearTheme.muted,
                   ),
@@ -131,10 +196,24 @@ class _HomeScreenState extends State<HomeScreen> {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(12),
-          child: Text(
-            _error!,
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: WearTheme.danger, fontSize: 11),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                _error!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: WearTheme.danger, fontSize: 11),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                height: 48,
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: () => _refresh(),
+                  child: const Text('Retry'),
+                ),
+              ),
+            ],
           ),
         ),
       );
@@ -155,41 +234,39 @@ class _HomeScreenState extends State<HomeScreen> {
           const Divider(height: 1, color: WearTheme.border),
       itemBuilder: (context, i) {
         final e = entries[i];
-        return InkWell(
-          onTap: () async {
-            final shipped = await Navigator.of(context).push<bool>(
-              MaterialPageRoute(
-                builder: (_) => ShipConfirmScreen(entry: e, ops: _ops),
-              ),
-            );
-            if (shipped == true) _refresh();
-          },
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'SO ${e.so}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 13,
+        return SizedBox(
+          height: 64,
+          child: InkWell(
+            onTap: () async {
+              final shipped = await Navigator.of(context).push<bool>(
+                MaterialPageRoute<bool>(
+                  builder: (_) => ShipConfirmScreen(entry: e, ops: _ops),
+                ),
+              );
+              if (shipped == true) _refresh();
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(e.so, style: Theme.of(context).textTheme.titleSmall),
+                  Text(
+                    e.customer,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall,
                   ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  e.customer,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-                Text(
-                  '${e.location} · ${e.type} ×${e.qty}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ],
+                  const SizedBox(height: 2),
+                  Text(
+                    '${e.location} · ${e.type}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelSmall,
+                  ),
+                ],
+              ),
             ),
           ),
         );

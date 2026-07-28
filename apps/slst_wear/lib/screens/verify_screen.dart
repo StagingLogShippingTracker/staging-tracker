@@ -13,8 +13,7 @@ class VerifyScreen extends StatefulWidget {
 }
 
 class _VerifyScreenState extends State<VerifyScreen> {
-  late final ShipOperations _ops =
-      ShipOperations(Supabase.instance.client);
+  late final ShipOperations _ops = ShipOperations(Supabase.instance.client);
   List<StagingEntry> _queue = const [];
   int _index = 0;
   int _ok = 0;
@@ -69,7 +68,7 @@ class _VerifyScreenState extends State<VerifyScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Verify'),
+        title: const Text('Local checklist'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, size: 18),
           onPressed: () => Navigator.of(context).pop(),
@@ -117,25 +116,28 @@ class _VerifyScreenState extends State<VerifyScreen> {
           children: [
             const Icon(Icons.check_circle, color: WearTheme.ok, size: 28),
             const SizedBox(height: 8),
-            Text(
-              'Done',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
+            Text('Done', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 6),
             Text(
-              'Verified $_ok · Skipped $_skipped',
+              'Checked $_ok · Skipped $_skipped',
               style: Theme.of(context).textTheme.bodySmall,
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 14),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Close'),
+            SizedBox(
+              height: 48,
+              child: FilledButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Close'),
+              ),
             ),
             const SizedBox(height: 6),
-            OutlinedButton(
-              onPressed: _load,
-              child: const Text('Restart'),
+            SizedBox(
+              height: 48,
+              child: OutlinedButton(
+                onPressed: _load,
+                child: const Text('Restart'),
+              ),
             ),
           ],
         ),
@@ -154,6 +156,12 @@ class _VerifyScreenState extends State<VerifyScreen> {
             progress,
             style: Theme.of(context).textTheme.labelSmall,
             textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Local checklist — results are not saved.',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: 8),
           Text(
@@ -186,7 +194,7 @@ class _VerifyScreenState extends State<VerifyScreen> {
           ),
           const Spacer(),
           Text(
-            'Is this bin correct?',
+            'Does this match the staging list?',
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyMedium,
           ),
@@ -194,16 +202,22 @@ class _VerifyScreenState extends State<VerifyScreen> {
           Row(
             children: [
               Expanded(
-                child: OutlinedButton(
-                  onPressed: () => _mark(false),
-                  child: const Text('Skip'),
+                child: SizedBox(
+                  height: 48,
+                  child: OutlinedButton(
+                    onPressed: () => _mark(false),
+                    child: const Text('Skip'),
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: FilledButton(
-                  onPressed: () => _mark(true),
-                  child: const Text('Yes'),
+                child: SizedBox(
+                  height: 48,
+                  child: FilledButton(
+                    onPressed: () => _mark(true),
+                    child: const Text('Matches'),
+                  ),
                 ),
               ),
             ],

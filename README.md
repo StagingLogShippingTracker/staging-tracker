@@ -99,7 +99,7 @@ PM SMS routing lives **only** inside `supabase/functions/notify-pm`.
 .\scripts\packaging\build-windows-portable.ps1
 ```
 
-Output: `dist/SLST-Windows-Portable.zip`
+Output: `dist/SST-Windows-Portable.zip`
 
 ### Windows per-user installer (no admin)
 
@@ -109,7 +109,7 @@ Requires [Inno Setup 6](https://jrsoftware.org/isinfo.php):
 .\scripts\packaging\build-windows-installer.ps1
 ```
 
-Output: `dist/SLST-Setup-User.exe` (installs under `%LOCALAPPDATA%\Programs\SLST`)
+Output: `dist/SST-Setup-User.exe` (installs under `%LOCALAPPDATA%\Programs\SLST`)
 
 ### Android APK
 
@@ -117,7 +117,7 @@ Output: `dist/SLST-Setup-User.exe` (installs under `%LOCALAPPDATA%\Programs\SLST
 .\scripts\packaging\build-android-apk.ps1
 ```
 
-Output: `dist/SLST-Android.apk`. For production signing, create
+Output: `dist/SST-Android.apk`. For production signing, create
 `android/key.properties` (gitignored) pointing at a keystore. Without it, the
 release build is debug-key signed for internal sideload testing.
 
@@ -127,10 +127,10 @@ release build is debug-key signed for internal sideload testing.
 .\scripts\packaging\build-wear-apk.ps1
 ```
 
-Output: `dist/SLST-Wear.apk`. Details: [`apps/slst_wear/README.md`](apps/slst_wear/README.md).
+Output: `dist/SST-Wear.apk`. Details: [`apps/slst_wear/README.md`](apps/slst_wear/README.md).
 
-After packaging, `dist/SHA256SUMS.txt` contains lowercase SHA-256 hashes for the
-portable ZIP, installer, and APKs when produced by the full packaging flow.
+Each produced artifact has a lowercase SHA-256 sidecar, such as
+`dist/SST-Android.apk.sha256`.
 
 ## CI
 

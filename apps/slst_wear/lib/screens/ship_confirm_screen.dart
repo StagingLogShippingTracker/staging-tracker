@@ -1,15 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:slst_shared/slst_shared.dart';
 
 import '../theme.dart';
 
 /// Lean ship-confirm for a single staging row.
 class ShipConfirmScreen extends StatefulWidget {
-  const ShipConfirmScreen({
-    super.key,
-    required this.entry,
-    required this.ops,
-  });
+  const ShipConfirmScreen({super.key, required this.entry, required this.ops});
 
   final StagingEntry entry;
   final ShipOperations ops;
@@ -78,6 +75,8 @@ class _ShipConfirmScreenState extends State<ShipConfirmScreen> {
         notifyPm: false,
       );
       if (!mounted) return;
+      await HapticFeedback.mediumImpact();
+      if (!mounted) return;
       Navigator.of(context).pop(true);
     } catch (e) {
       if (!mounted) return;
@@ -86,6 +85,111 @@ class _ShipConfirmScreenState extends State<ShipConfirmScreen> {
         _busy = false;
       });
     }
+  }
+
+  Future<void> _pickRosterValue({
+    required String title,
+    required List<String> values,
+    required TextEditingController controller,
+  }) async {
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: WearTheme.base,
+      isScrollControlled: true,
+      builder: (context) => SafeArea(
+        child: SizedBox(
+          height: MediaQuery.sizeOf(context).height,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 12, 4, 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Select $title',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Close',
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1, color: WearTheme.border),
+              Expanded(
+                child: ListView.separated(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  itemCount: values.length,
+                  separatorBuilder: (_, _) =>
+                      const Divider(height: 1, color: WearTheme.border),
+                  itemBuilder: (context, index) {
+                    final value = values[index];
+                    return SizedBox(
+                      height: 48,
+                      child: ListTile(
+                        title: Text(value),
+                        trailing: value == controller.text
+                            ? const Icon(Icons.check, color: WearTheme.ok)
+                            : null,
+                        onTap: () => Navigator.of(context).pop(value),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (selected != null && mounted) {
+      setState(() => controller.text = selected);
+    }
+  }
+
+  Widget _rosterField({
+    required String label,
+    required String emptyHint,
+    required List<String> values,
+    required TextEditingController controller,
+  }) {
+    if (values.isEmpty) {
+      return SizedBox(
+        height: 48,
+        child: TextField(
+          controller: controller,
+          decoration: InputDecoration(hintText: emptyHint),
+        ),
+      );
+    }
+
+    return SizedBox(
+      height: 48,
+      child: OutlinedButton(
+        onPressed: () => _pickRosterValue(
+          title: label.toLowerCase(),
+          values: values,
+          controller: controller,
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                controller.text.isEmpty ? 'Select $label' : controller.text,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.left,
+              ),
+            ),
+            const Icon(Icons.expand_more),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -112,56 +216,21 @@ class _ShipConfirmScreenState extends State<ShipConfirmScreen> {
             const SizedBox(height: 12),
             Text('CARRIER', style: Theme.of(context).textTheme.labelSmall),
             const SizedBox(height: 4),
-            TextField(
+            _rosterField(
+              label: 'Carrier',
+              emptyHint: 'Enter carrier',
+              values: _carriers,
               controller: _carrierCtrl,
-              decoration: InputDecoration(
-                hintText: _carriers.isEmpty ? 'Carrier' : null,
-              ),
             ),
-            if (_carriers.length > 1) ...[
-              const SizedBox(height: 4),
-              Wrap(
-                spacing: 4,
-                runSpacing: 4,
-                children: [
-                  for (final c in _carriers.take(4))
-                    ActionChip(
-                      label: Text(c, style: const TextStyle(fontSize: 10)),
-                      onPressed: () =>
-                          setState(() => _carrierCtrl.text = c),
-                      visualDensity: VisualDensity.compact,
-                      backgroundColor: WearTheme.header,
-                      side: const BorderSide(color: WearTheme.border),
-                    ),
-                ],
-              ),
-            ],
             const SizedBox(height: 10),
             Text('SHIPPED BY', style: Theme.of(context).textTheme.labelSmall),
             const SizedBox(height: 4),
-            TextField(
+            _rosterField(
+              label: 'Staff member',
+              emptyHint: 'Enter staff name',
+              values: _people,
               controller: _byCtrl,
-              decoration: InputDecoration(
-                hintText: _people.isEmpty ? 'Name' : null,
-              ),
             ),
-            if (_people.length > 1) ...[
-              const SizedBox(height: 4),
-              Wrap(
-                spacing: 4,
-                runSpacing: 4,
-                children: [
-                  for (final p in _people.take(4))
-                    ActionChip(
-                      label: Text(p, style: const TextStyle(fontSize: 10)),
-                      onPressed: () => setState(() => _byCtrl.text = p),
-                      visualDensity: VisualDensity.compact,
-                      backgroundColor: WearTheme.header,
-                      side: const BorderSide(color: WearTheme.border),
-                    ),
-                ],
-              ),
-            ],
             if (_error != null) ...[
               const SizedBox(height: 10),
               Text(

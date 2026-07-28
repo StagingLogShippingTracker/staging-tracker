@@ -68,9 +68,7 @@ class ShellCommandDock extends ConsumerWidget {
           (
             key: 'F1',
             label: 'Quick Ship',
-            onPressed: signedIn
-                ? () => showQuickShipSheet(context, ref)
-                : null,
+            onPressed: signedIn ? () => showQuickShipSheet(context, ref) : null,
           ),
           (
             key: 'F2',
@@ -199,9 +197,7 @@ class ShellCommandDock extends ConsumerWidget {
           (
             key: 'F2',
             label: 'Quick Ship',
-            onPressed: signedIn
-                ? () => showQuickShipSheet(context, ref)
-                : null,
+            onPressed: signedIn ? () => showQuickShipSheet(context, ref) : null,
           ),
           (
             key: 'F3',
@@ -307,8 +303,8 @@ class _HotkeyChip extends StatelessWidget {
             ? IndustrialTheme.textPrimary
             : IndustrialTheme.textMuted,
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-        minimumSize: Size.zero,
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        minimumSize: const Size(0, 40),
+        tapTargetSize: MaterialTapTargetSize.padded,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

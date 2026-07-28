@@ -20,10 +20,12 @@ class OrderInspector extends ConsumerWidget {
     super.key,
     required this.entry,
     required this.onClose,
+    this.width = 400,
   });
 
   final StagingEntry entry;
   final VoidCallback onClose;
+  final double width;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -35,6 +37,7 @@ class OrderInspector extends ConsumerWidget {
     return SlideOverInspector(
       title: 'ORDER INSPECTOR: ${entry.so}',
       onClose: onClose,
+      width: width,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -44,8 +47,10 @@ class OrderInspector extends ConsumerWidget {
               if (urgent) ...[
                 const SizedBox(width: 8),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFEF4444).withValues(alpha: 0.18),
                     borderRadius: BorderRadius.circular(10),
@@ -179,10 +184,7 @@ class _ProofOfStagingGrid extends StatelessWidget {
             SizedBox(height: 8),
             Text(
               'No proof-of-staging photos',
-              style: TextStyle(
-                fontSize: 12,
-                color: IndustrialTheme.textMuted,
-              ),
+              style: TextStyle(fontSize: 12, color: IndustrialTheme.textMuted),
             ),
           ],
         ),
@@ -334,10 +336,7 @@ class _LiveAuditTrail extends ConsumerWidget {
             ),
             child: const Text(
               'No changelog entries for this SO yet.',
-              style: TextStyle(
-                fontSize: 12,
-                color: IndustrialTheme.textMuted,
-              ),
+              style: TextStyle(fontSize: 12, color: IndustrialTheme.textMuted),
             ),
           );
         }

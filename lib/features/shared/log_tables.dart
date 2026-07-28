@@ -70,9 +70,41 @@ Widget _clipText(
 Widget _mutedStamp(DateTime? d) {
   return Text(
     _fmtStamp(d),
-    style: IndustrialTheme.mono(
-      fontSize: 11,
-      color: IndustrialTheme.textMuted,
+    style: IndustrialTheme.mono(fontSize: 11, color: IndustrialTheme.textMuted),
+  );
+}
+
+Widget _pmNotificationCell(ShippedEntry entry, {double maxWidth = 120}) {
+  final email = entry.pmdEmail?.trim() ?? '';
+  if (email.isEmpty) {
+    return Text(
+      '—',
+      style: IndustrialTheme.mono(
+        fontSize: 12,
+        color: IndustrialTheme.textMuted,
+      ),
+    );
+  }
+
+  final status = entry.notificationStatus;
+  final (icon, color, label) = switch (status) {
+    'sent' => (Icons.check_circle, IndustrialTheme.mintGreen, 'Sent'),
+    'failed' => (Icons.error, SlstColors.danger, 'Failed'),
+    'pending' => (Icons.schedule, Colors.amber, 'Pending'),
+    _ => (Icons.mail_outline, IndustrialTheme.textMuted, 'Not requested'),
+  };
+  final message = entry.notificationError?.trim();
+  return Tooltip(
+    message: message == null || message.isEmpty
+        ? 'PM notification: $label'
+        : 'PM notification failed: $message',
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 15, color: color),
+        const SizedBox(width: 4),
+        _clipText(email, maxWidth: maxWidth - 28),
+      ],
     ),
   );
 }
@@ -473,14 +505,23 @@ class StagingLogCard extends ConsumerStatefulWidget {
     this.expanded = false,
     this.onExpand,
     this.fillViewport = false,
+    this.selectedId,
+    this.onInspect,
   });
 
   /// Pre-filtered (search) staging entries.
   final List<StagingEntry> entries;
   final bool expanded;
   final VoidCallback? onExpand;
+
   /// When true, own the vertical scroll (parent should give a bounded height).
   final bool fillViewport;
+
+  /// Highlighted row id owned by the parent screen inspector host.
+  final String? selectedId;
+
+  /// Parent hosts the slide-over; cards must not embed Column+Expanded in ListView.
+  final ValueChanged<StagingEntry>? onInspect;
 
   @override
   ConsumerState<StagingLogCard> createState() => _StagingLogCardState();
@@ -496,7 +537,6 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
   bool _batch = false;
   final _selected = <String>{};
   final _hScroll = ScrollController();
-  StagingEntry? _inspect;
   String _zoneFilter = _allZones;
   String _statusFilter = _allStatuses;
   String _stagerFilter = _allStagers;
@@ -506,6 +546,8 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
     _hScroll.dispose();
     super.dispose();
   }
+
+  void _inspect(StagingEntry entry) => widget.onInspect?.call(entry);
 
   List<StagingEntry> _filtered() {
     return widget.entries.where((e) {
@@ -560,7 +602,8 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
       final t = v.trim();
       if (t.isNotEmpty) set.add(t);
     }
-    final list = set.toList()..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    final list = set.toList()
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
     return list;
   }
 
@@ -624,10 +667,15 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
     final rows = widget.expanded ? sorted : sorted.take(_previewRows).toList();
     _selected.removeWhere((id) => !sorted.any((e) => e.id == id));
 
-    final zones = [_allZones, ..._uniqueSorted(widget.entries.map((e) => e.location))];
+    final zones = [
+      _allZones,
+      ..._uniqueSorted(widget.entries.map((e) => e.location)),
+    ];
     final statuses = [
       _allStatuses,
-      ..._uniqueSorted(widget.entries.map((e) => _stagingStatusLabel(e.status))),
+      ..._uniqueSorted(
+        widget.entries.map((e) => _stagingStatusLabel(e.status)),
+      ),
     ];
     final stagers = [
       _allStagers,
@@ -856,19 +904,7 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
       );
     }
 
-    if (_inspect == null) return body;
-
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Expanded(child: body),
-        SlideOverInspector(
-          title: 'SO ${_inspect!.so}',
-          onClose: () => setState(() => _inspect = null),
-          body: _StagingInspectorBody(entry: _inspect!),
-        ),
-      ],
-    );
+    return body;
   }
 
   Widget _stagingCardList({
@@ -877,58 +913,56 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
     required int sortedLength,
   }) {
     Widget cardFor(StagingEntry e) => EntryCard(
-          title: e.so,
-          subtitle: e.customer,
-          dbStatus: e.status,
-          details: [
-            if (e.location.trim().isNotEmpty) e.location,
-            if (e.type.trim().isNotEmpty) e.type,
-            if ((e.weight ?? '').isNotEmpty) 'Wt: ${e.weight}',
-            if ((e.stagedBy ?? '').isNotEmpty) 'Staged by: ${e.stagedBy}',
-            if ((e.comments ?? '').isNotEmpty) e.comments!,
-          ],
-          onTap: () => setState(() => _inspect = e),
-          trailing: canWrite
-              ? PopupMenuButton<String>(
-                  tooltip: 'Actions',
-                  icon: const Icon(
-                    Icons.more_vert,
-                    size: 20,
-                    color: IndustrialTheme.textMuted,
-                  ),
-                  onSelected: (v) {
-                    switch (v) {
-                      case 'edit':
-                        showStagingFormSheet(context, ref, existing: e);
-                      case 'ship':
-                        showShipDialog(context, ref, entry: e);
-                      case 'split':
-                        showSplitDialog(context, ref, entry: e);
-                      case 'return':
-                        showReturnDialog(context, ref, entry: e);
-                      case 'delete':
-                        _deleteOne(e);
-                    }
-                  },
-                  itemBuilder: (context) => const [
-                    PopupMenuItem(value: 'edit', child: Text('Edit')),
-                    PopupMenuItem(value: 'ship', child: Text('Ship')),
-                    PopupMenuItem(value: 'split', child: Text('Split Entry')),
-                    PopupMenuItem(
-                      value: 'return',
-                      child: Text('Return to Stock'),
-                    ),
-                    PopupMenuItem(value: 'delete', child: Text('Delete')),
-                  ],
-                )
-              : null,
-        );
+      title: e.so,
+      subtitle: e.customer,
+      dbStatus: e.status,
+      details: [
+        if (e.location.trim().isNotEmpty) e.location,
+        if (e.type.trim().isNotEmpty) e.type,
+        if ((e.weight ?? '').isNotEmpty) 'Wt: ${e.weight}',
+        if ((e.stagedBy ?? '').isNotEmpty) 'Staged by: ${e.stagedBy}',
+        if ((e.comments ?? '').isNotEmpty) e.comments!,
+      ],
+      onTap: () => _inspect(e),
+      trailing: canWrite
+          ? PopupMenuButton<String>(
+              tooltip: 'Actions',
+              icon: const Icon(
+                Icons.more_vert,
+                size: 20,
+                color: IndustrialTheme.textMuted,
+              ),
+              onSelected: (v) {
+                switch (v) {
+                  case 'edit':
+                    showStagingFormSheet(context, ref, existing: e);
+                  case 'ship':
+                    showShipDialog(context, ref, entry: e);
+                  case 'split':
+                    showSplitDialog(context, ref, entry: e);
+                  case 'return':
+                    showReturnDialog(context, ref, entry: e);
+                  case 'delete':
+                    _deleteOne(e);
+                }
+              },
+              itemBuilder: (context) => const [
+                PopupMenuItem(value: 'edit', child: Text('Edit')),
+                PopupMenuItem(value: 'ship', child: Text('Ship')),
+                PopupMenuItem(value: 'split', child: Text('Split Entry')),
+                PopupMenuItem(value: 'return', child: Text('Return to Stock')),
+                PopupMenuItem(value: 'delete', child: Text('Delete')),
+              ],
+            )
+          : null,
+    );
 
     if (widget.fillViewport) {
       return ListView.builder(
         padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
         physics: const AlwaysScrollableScrollPhysics(),
-        itemCount: rows.length +
+        itemCount:
+            rows.length +
             (!widget.expanded && sortedLength > rows.length ? 1 : 0),
         itemBuilder: (context, index) {
           if (index >= rows.length) {
@@ -970,12 +1004,12 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
   }) {
     Widget rowFor(StagingEntry e, int index) {
       final statusLabel = _stagingStatusLabel(e.status);
-      final selected = _inspect?.id == e.id;
+      final selected = widget.selectedId == e.id;
       final accent = industrialStatusAccent(statusLabel);
       return Material(
         color: _zebraRowColor(index, selected: selected),
         child: InkWell(
-          onTap: () => setState(() => _inspect = e),
+          onTap: () => _inspect(e),
           child: IntrinsicHeight(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1058,7 +1092,11 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
                             onSelected: (v) {
                               switch (v) {
                                 case 'edit':
-                                  showStagingFormSheet(context, ref, existing: e);
+                                  showStagingFormSheet(
+                                    context,
+                                    ref,
+                                    existing: e,
+                                  );
                                 case 'ship':
                                   showShipDialog(context, ref, entry: e);
                                 case 'split':
@@ -1102,11 +1140,10 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
         padding: const EdgeInsets.only(bottom: 12),
         physics: const AlwaysScrollableScrollPhysics(),
         itemCount:
-            rows.length + (!widget.expanded && sortedLength > rows.length ? 1 : 0),
-        separatorBuilder: (_, _) => const Divider(
-          height: 1,
-          color: IndustrialTheme.borderStroke,
-        ),
+            rows.length +
+            (!widget.expanded && sortedLength > rows.length ? 1 : 0),
+        separatorBuilder: (_, _) =>
+            const Divider(height: 1, color: IndustrialTheme.borderStroke),
         itemBuilder: (context, index) {
           if (index >= rows.length) {
             return Padding(
@@ -1165,7 +1202,8 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
     const photosW = 72.0;
     const actionsW = 132.0;
     final batchW = _batch ? 44.0 : 0.0;
-    final totalW = 3 +
+    final totalW =
+        3 +
         batchW +
         soW +
         clientW +
@@ -1179,10 +1217,8 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
         (canWrite ? actionsW : 0) +
         48;
 
-    Widget headerCell(String label, double width) => SizedBox(
-          width: width,
-          child: IndustrialColumnHeader(label),
-        );
+    Widget headerCell(String label, double width) =>
+        SizedBox(width: width, child: IndustrialColumnHeader(label));
 
     return SizedBox(
       width: totalW,
@@ -1216,12 +1252,12 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
             () {
               final e = rows[i];
               final statusLabel = _stagingStatusLabel(e.status);
-              final selected = _inspect?.id == e.id;
+              final selected = widget.selectedId == e.id;
               final accent = industrialStatusAccent(statusLabel);
               return Material(
                 color: _zebraRowColor(i, selected: selected),
                 child: InkWell(
-                  onTap: () => setState(() => _inspect = e),
+                  onTap: () => _inspect(e),
                   child: IntrinsicHeight(
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1287,14 +1323,14 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
                         SizedBox(
                           width: weightW,
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            padding: const EdgeInsets.fromLTRB(8, 10, 4, 10),
                             child: IndustrialWeightPill(e.weight),
                           ),
                         ),
                         SizedBox(
                           width: statusW,
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            padding: const EdgeInsets.fromLTRB(16, 10, 8, 10),
                             child: IndustrialStatusBadge(status: statusLabel),
                           ),
                         ),
@@ -1419,6 +1455,8 @@ class ShippedLogCard extends ConsumerStatefulWidget {
     this.onExpand,
     this.onQuickShip,
     this.fillViewport = false,
+    this.selectedId,
+    this.onInspect,
   });
 
   final List<ShippedEntry> entries;
@@ -1426,6 +1464,12 @@ class ShippedLogCard extends ConsumerStatefulWidget {
   final VoidCallback? onExpand;
   final VoidCallback? onQuickShip;
   final bool fillViewport;
+
+  /// Highlighted row id owned by the parent screen inspector host.
+  final String? selectedId;
+
+  /// Parent hosts the slide-over; cards must not embed Column+Expanded in ListView.
+  final ValueChanged<ShippedEntry>? onInspect;
 
   @override
   ConsumerState<ShippedLogCard> createState() => _ShippedLogCardState();
@@ -1441,7 +1485,6 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
   bool _batch = false;
   final _selected = <String>{};
   final _hScroll = ScrollController();
-  ShippedEntry? _inspect;
   String _carrierFilter = _allCarriers;
   String _zoneFilter = _allZones;
   String _shipperFilter = _allShippers;
@@ -1451,6 +1494,8 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
     _hScroll.dispose();
     super.dispose();
   }
+
+  void _inspect(ShippedEntry entry) => widget.onInspect?.call(entry);
 
   List<String> _uniqueSorted(Iterable<String> values) {
     final set = <String>{};
@@ -1823,19 +1868,7 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
       );
     }
 
-    if (_inspect == null) return body;
-
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Expanded(child: body),
-        SlideOverInspector(
-          title: 'SO ${_inspect!.so}',
-          onClose: () => setState(() => _inspect = null),
-          body: _ShippedInspectorBody(entry: _inspect!),
-        ),
-      ],
-    );
+    return body;
   }
 
   Widget _shippedCardList({
@@ -1845,56 +1878,54 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
     required int sortedLength,
   }) {
     Widget cardFor(ShippedEntry e) => EntryCard(
-          title: e.so,
-          subtitle: e.customer,
-          color: e.carrier.toUpperCase() == 'RETURNED TO STOCK'
-              ? SlstColors.statusPartialDark
-              : null,
-          details: [
-            if (e.type.trim().isNotEmpty) e.type,
-            if (e.carrier.trim().isNotEmpty) e.carrier,
-            if (e.location.trim().isNotEmpty) e.location,
-            if ((e.weight ?? '').isNotEmpty) 'Wt: ${e.weight}',
-            if ((e.shippedBy ?? '').isNotEmpty) 'Shipped by: ${e.shippedBy}',
-            if ((e.comments ?? '').isNotEmpty) e.comments!,
-          ],
-          onTap: () => setState(() => _inspect = e),
-          trailing: canWrite
-              ? PopupMenuButton<String>(
-                  tooltip: 'Actions',
-                  icon: const Icon(
-                    Icons.more_vert,
-                    size: 20,
-                    color: IndustrialTheme.textMuted,
+      title: e.so,
+      subtitle: e.customer,
+      color: e.carrier.toUpperCase() == 'RETURNED TO STOCK'
+          ? SlstColors.statusPartial
+          : null,
+      details: [
+        if (e.type.trim().isNotEmpty) e.type,
+        if (e.carrier.trim().isNotEmpty) e.carrier,
+        if (e.location.trim().isNotEmpty) e.location,
+        if ((e.weight ?? '').isNotEmpty) 'Wt: ${e.weight}',
+        if ((e.shippedBy ?? '').isNotEmpty) 'Shipped by: ${e.shippedBy}',
+        if ((e.comments ?? '').isNotEmpty) e.comments!,
+      ],
+      onTap: () => _inspect(e),
+      trailing: canWrite
+          ? PopupMenuButton<String>(
+              tooltip: 'Actions',
+              icon: const Icon(
+                Icons.more_vert,
+                size: 20,
+                color: IndustrialTheme.textMuted,
+              ),
+              onSelected: (v) {
+                switch (v) {
+                  case 'undo':
+                    _undo(e);
+                  case 'delete':
+                    _deleteOne(e);
+                }
+              },
+              itemBuilder: (context) => [
+                if (e.carrier.toUpperCase() != 'RETURNED TO STOCK')
+                  const PopupMenuItem(
+                    value: 'undo',
+                    child: Text('Undo Shipment'),
                   ),
-                  onSelected: (v) {
-                    switch (v) {
-                      case 'undo':
-                        _undo(e);
-                      case 'delete':
-                        _deleteOne(e);
-                    }
-                  },
-                  itemBuilder: (context) => [
-                    if (e.carrier.toUpperCase() != 'RETURNED TO STOCK')
-                      const PopupMenuItem(
-                        value: 'undo',
-                        child: Text('Undo Shipment'),
-                      ),
-                    const PopupMenuItem(
-                      value: 'delete',
-                      child: Text('Delete'),
-                    ),
-                  ],
-                )
-              : null,
-        );
+                const PopupMenuItem(value: 'delete', child: Text('Delete')),
+              ],
+            )
+          : null,
+    );
 
     if (widget.fillViewport) {
       return ListView.builder(
         padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
         physics: const AlwaysScrollableScrollPhysics(),
-        itemCount: rows.length +
+        itemCount:
+            rows.length +
             (!widget.expanded && sortedLength > rows.length ? 1 : 0),
         itemBuilder: (context, index) {
           if (index >= rows.length) {
@@ -1938,14 +1969,14 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
     Widget rowFor(ShippedEntry e, int index) {
       final returned = e.carrier.toUpperCase() == 'RETURNED TO STOCK';
       final statusLabel = returned ? 'Returned' : 'Shipped';
-      final selected = _inspect?.id == e.id;
+      final selected = widget.selectedId == e.id;
       final accent = industrialStatusAccent(statusLabel);
       return Material(
         color: returned
-            ? SlstColors.statusPartialDark
+            ? SlstColors.statusPartial
             : _zebraRowColor(index, selected: selected),
         child: InkWell(
-          onTap: () => setState(() => _inspect = e),
+          onTap: () => _inspect(e),
           child: IntrinsicHeight(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -2081,12 +2112,11 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
       return ListView.separated(
         padding: const EdgeInsets.only(bottom: 12),
         physics: const AlwaysScrollableScrollPhysics(),
-        itemCount: rows.length +
+        itemCount:
+            rows.length +
             (!widget.expanded && sortedLength > rows.length ? 1 : 0),
-        separatorBuilder: (_, _) => const Divider(
-          height: 1,
-          color: IndustrialTheme.borderStroke,
-        ),
+        separatorBuilder: (_, _) =>
+            const Divider(height: 1, color: IndustrialTheme.borderStroke),
         itemBuilder: (context, index) {
           if (index >= rows.length) {
             return Padding(
@@ -2146,7 +2176,8 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
     const photosW = 72.0;
     const actionsW = 56.0;
     final batchW = _batch ? 44.0 : 0.0;
-    final totalW = 3 +
+    final totalW =
+        3 +
         batchW +
         soW +
         clientW +
@@ -2161,10 +2192,8 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
         (canWrite ? actionsW : 0) +
         48;
 
-    Widget headerCell(String label, double width) => SizedBox(
-          width: width,
-          child: IndustrialColumnHeader(label),
-        );
+    Widget headerCell(String label, double width) =>
+        SizedBox(width: width, child: IndustrialColumnHeader(label));
 
     return SizedBox(
       width: totalW,
@@ -2200,14 +2229,14 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
               final e = rows[i];
               final returned = e.carrier.toUpperCase() == 'RETURNED TO STOCK';
               final statusLabel = returned ? 'Returned' : 'Shipped';
-              final selected = _inspect?.id == e.id;
+              final selected = widget.selectedId == e.id;
               final accent = industrialStatusAccent(statusLabel);
               return Material(
                 color: returned
-                    ? SlstColors.statusPartialDark
+                    ? SlstColors.statusPartial
                     : _zebraRowColor(i, selected: selected),
                 child: InkWell(
-                  onTap: () => setState(() => _inspect = e),
+                  onTap: () => _inspect(e),
                   child: IntrinsicHeight(
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -2308,29 +2337,7 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
                           width: pmdW,
                           child: Padding(
                             padding: const EdgeInsets.symmetric(vertical: 10),
-                            child: (e.pmdEmail ?? '').isEmpty
-                                ? Text(
-                                    '—',
-                                    style: IndustrialTheme.mono(
-                                      fontSize: 12,
-                                      color: IndustrialTheme.textMuted,
-                                    ),
-                                  )
-                                : Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Icon(
-                                        Icons.check_circle,
-                                        size: 15,
-                                        color: IndustrialTheme.mintGreen,
-                                      ),
-                                      const SizedBox(width: 4),
-                                      _clipText(
-                                        e.pmdEmail!,
-                                        maxWidth: pmdW - 28,
-                                      ),
-                                    ],
-                                  ),
+                            child: _pmNotificationCell(e, maxWidth: pmdW),
                           ),
                         ),
                         SizedBox(
@@ -2435,8 +2442,8 @@ class _SortDropdown<T> extends StatelessWidget {
   }
 }
 
-class _StagingInspectorBody extends StatelessWidget {
-  const _StagingInspectorBody({required this.entry});
+class StagingInspectorBody extends StatelessWidget {
+  const StagingInspectorBody({super.key, required this.entry});
   final StagingEntry entry;
 
   @override
@@ -2463,8 +2470,8 @@ class _StagingInspectorBody extends StatelessWidget {
   }
 }
 
-class _ShippedInspectorBody extends StatelessWidget {
-  const _ShippedInspectorBody({required this.entry});
+class ShippedInspectorBody extends StatelessWidget {
+  const ShippedInspectorBody({super.key, required this.entry});
   final ShippedEntry entry;
 
   @override
@@ -2473,9 +2480,7 @@ class _ShippedInspectorBody extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        IndustrialStatusBadge(
-          status: returned ? 'Returned' : 'Shipped',
-        ),
+        IndustrialStatusBadge(status: returned ? 'Returned' : 'Shipped'),
         const SizedBox(height: 14),
         Text('UUID', style: Theme.of(context).textTheme.labelSmall),
         const SizedBox(height: 4),
@@ -2501,7 +2506,10 @@ Widget _inspectorField(BuildContext context, String label, String value) {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label.toUpperCase(), style: Theme.of(context).textTheme.labelSmall),
+        Text(
+          label.toUpperCase(),
+          style: Theme.of(context).textTheme.labelSmall,
+        ),
         const SizedBox(height: 4),
         Text(
           value.isEmpty ? '—' : value,
@@ -2511,4 +2519,3 @@ Widget _inspectorField(BuildContext context, String label, String value) {
     ),
   );
 }
-

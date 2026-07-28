@@ -26,6 +26,14 @@ dist/
 *.exe
 !scripts/**/*.iss
 
+# Local deployment and recovery scratch files
+.tmp-*
+_mcp_deploy/
+_mcp_*.json
+_ops_backup*
+_wear_home*
+_notify_pm*
+
 # OS / editor
 .DS_Store
 Thumbs.db

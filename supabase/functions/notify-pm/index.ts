@@ -164,11 +164,47 @@ Deno.serve(async (req: Request) => {
 
     const body = await req.json();
     const to = String(body.to ?? "").trim();
-    if (!to) {
-      return new Response(JSON.stringify({ error: "Missing to" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    if (!to || !to.includes("@")) {
+      return new Response(
+        JSON.stringify({ error: "Missing or invalid to email" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    const notificationType = String(body.notification_type ?? "").trim();
+    const missing: string[] = [];
+    if (
+      notificationType === "ship_confirm" ||
+      notificationType === "quick_ship"
+    ) {
+      if (!String(body.so ?? "").trim()) missing.push("so");
+      if (!String(body.customer ?? "").trim()) missing.push("customer");
+      if (!String(body.carrier ?? "").trim()) missing.push("carrier");
+    } else if (notificationType === "return_to_stock") {
+      if (!String(body.so ?? "").trim()) missing.push("so");
+      if (!String(body.reason ?? "").trim()) missing.push("reason");
+    } else if (notificationType === "po_notification") {
+      if (!String(body.po ?? "").trim()) missing.push("po");
+      if (!String(body.vendor ?? body.customer ?? "").trim()) {
+        missing.push("vendor");
+      }
+    } else if (notificationType === "return_notification") {
+      if (!String(body.so ?? "").trim()) missing.push("so");
+      if (!String(body.customer ?? "").trim()) missing.push("customer");
+    }
+    if (missing.length > 0) {
+      return new Response(
+        JSON.stringify({
+          error: `Missing required fields: ${missing.join(", ")}`,
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     const attachments = normalizeAttachments(body.attachments);

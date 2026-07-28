@@ -2,6 +2,7 @@
 $ErrorActionPreference = 'Stop'
 $root = Resolve-Path (Join-Path $PSScriptRoot '..\..')
 Set-Location $root
+. (Join-Path $PSScriptRoot '_common.ps1')
 
 & (Join-Path $PSScriptRoot 'build-windows-portable.ps1')
 
@@ -17,4 +18,13 @@ if (-not $iscc) {
 
 $iss = Join-Path $PSScriptRoot 'slst-user-install.iss'
 & $iscc $iss
-Write-Host "Installer written under dist\SLST-Setup-User.exe"
+if ($LASTEXITCODE -ne 0) {
+  throw "Inno Setup compilation failed (exit $LASTEXITCODE)."
+}
+
+$installer = Join-Path $root 'dist\SST-Setup-User.exe'
+if (-not (Test-Path $installer)) {
+  throw "Installer missing after compilation: $installer"
+}
+Write-SlstSha256 -Path $installer
+Write-Host "Installer written under dist\SST-Setup-User.exe"

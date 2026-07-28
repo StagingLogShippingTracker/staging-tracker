@@ -1,3 +1,5 @@
+import 'dart:ui' show lerpDouble;
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -6,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 /// Windows overhaul default. Prefer [IndustrialTheme] tokens and helpers for
 /// new UI; [SlstColors] / [buildSlstTheme] remain for existing call sites.
 class IndustrialTheme {
+  static const tokens = SlstLayoutTokens();
   // Deep dark operations palette.
   static const Color darkBase = Color(0xFF090D16); // Scaffold background
   static const Color darkSurface = Color(0xFF1F2937); // Card & panel
@@ -24,10 +27,7 @@ class IndustrialTheme {
   static ThemeData get darkTheme {
     final inter = GoogleFonts.interTextTheme(
       ThemeData(brightness: Brightness.dark).textTheme,
-    ).apply(
-      bodyColor: textPrimary,
-      displayColor: textPrimary,
-    );
+    ).apply(bodyColor: textPrimary, displayColor: textPrimary);
 
     final textTheme = inter.copyWith(
       headlineMedium: GoogleFonts.inter(
@@ -74,29 +74,30 @@ class IndustrialTheme {
       ),
     );
 
-    final scheme = ColorScheme.fromSeed(
-      seedColor: skyBlue,
-      brightness: Brightness.dark,
-      surface: darkSurface,
-    ).copyWith(
-      primary: skyBlue,
-      onPrimary: textPrimary,
-      secondary: mintGreen,
-      onSecondary: darkBase,
-      tertiary: purple,
-      onTertiary: textPrimary,
-      surface: darkSurface,
-      onSurface: textPrimary,
-      onSurfaceVariant: textMuted,
-      surfaceContainerLowest: darkBase,
-      surfaceContainerLow: darkHeader,
-      surfaceContainer: darkSurface,
-      surfaceContainerHigh: const Color(0xFF273549),
-      surfaceContainerHighest: borderStroke,
-      outline: borderStroke,
-      outlineVariant: borderStroke,
-      error: const Color(0xFFEF4444),
-    );
+    final scheme =
+        ColorScheme.fromSeed(
+          seedColor: skyBlue,
+          brightness: Brightness.dark,
+          surface: darkSurface,
+        ).copyWith(
+          primary: skyBlue,
+          onPrimary: textPrimary,
+          secondary: mintGreen,
+          onSecondary: darkBase,
+          tertiary: purple,
+          onTertiary: textPrimary,
+          surface: darkSurface,
+          onSurface: textPrimary,
+          onSurfaceVariant: textMuted,
+          surfaceContainerLowest: darkBase,
+          surfaceContainerLow: darkHeader,
+          surfaceContainer: darkSurface,
+          surfaceContainerHigh: const Color(0xFF273549),
+          surfaceContainerHighest: borderStroke,
+          outline: borderStroke,
+          outlineVariant: borderStroke,
+          error: const Color(0xFFEF4444),
+        );
 
     return ThemeData(
       useMaterial3: true,
@@ -105,6 +106,7 @@ class IndustrialTheme {
       scaffoldBackgroundColor: darkBase,
       primaryColor: darkHeader,
       textTheme: textTheme,
+      extensions: const [SlstLayoutTokens()],
       fontFamily: GoogleFonts.inter().fontFamily,
       appBarTheme: AppBarTheme(
         backgroundColor: darkHeader,
@@ -128,8 +130,10 @@ class IndustrialTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: darkHeader,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 10,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(6),
           borderSide: const BorderSide(color: borderStroke),
@@ -291,12 +295,18 @@ class SlstColors {
   static const statusCorpPick = Color(0x3310B981);
   static const statusCustomerPick = Color(0x338B5CF6);
 
-  static const statusPartialDark = Color(0x33F59E0B);
-  static const statusTodayDark = Color(0x3310B981);
-  static const statusTomorrowDark = Color(0x333B82F6);
-  static const statusFutureDark = Color(0x338B5CF6);
-  static const statusCorpPickDark = Color(0x3310B981);
-  static const statusCustomerPickDark = Color(0x338B5CF6);
+  @Deprecated('Use statusPartial.')
+  static const statusPartialDark = statusPartial;
+  @Deprecated('Use statusToday.')
+  static const statusTodayDark = statusToday;
+  @Deprecated('Use statusTomorrow.')
+  static const statusTomorrowDark = statusTomorrow;
+  @Deprecated('Use statusFuture.')
+  static const statusFutureDark = statusFuture;
+  @Deprecated('Use statusCorpPick.')
+  static const statusCorpPickDark = statusCorpPick;
+  @Deprecated('Use statusCustomerPick.')
+  static const statusCustomerPickDark = statusCustomerPick;
 
   // Legacy status fills used by [statusStyleFor].
   static const shipToday = Color(0x3310B981);
@@ -306,6 +316,75 @@ class SlstColors {
   static const ready = Color(0x3310B981);
   static const pickup = Color(0x338B5CF6);
   static const hold = Color(0x334B5563);
+}
+
+/// Shared layout scale for desktop and Android industrial surfaces.
+class SlstLayoutTokens extends ThemeExtension<SlstLayoutTokens> {
+  const SlstLayoutTokens({
+    this.space1 = 4,
+    this.space2 = 8,
+    this.space3 = 12,
+    this.space4 = 16,
+    this.radiusSmall = 6,
+    this.radiusMedium = 8,
+    this.compactBreakpoint = 700,
+    this.inspectorBreakpoint = 1024,
+  });
+
+  final double space1;
+  final double space2;
+  final double space3;
+  final double space4;
+  final double radiusSmall;
+  final double radiusMedium;
+  final double compactBreakpoint;
+  final double inspectorBreakpoint;
+
+  @override
+  SlstLayoutTokens copyWith({
+    double? space1,
+    double? space2,
+    double? space3,
+    double? space4,
+    double? radiusSmall,
+    double? radiusMedium,
+    double? compactBreakpoint,
+    double? inspectorBreakpoint,
+  }) {
+    return SlstLayoutTokens(
+      space1: space1 ?? this.space1,
+      space2: space2 ?? this.space2,
+      space3: space3 ?? this.space3,
+      space4: space4 ?? this.space4,
+      radiusSmall: radiusSmall ?? this.radiusSmall,
+      radiusMedium: radiusMedium ?? this.radiusMedium,
+      compactBreakpoint: compactBreakpoint ?? this.compactBreakpoint,
+      inspectorBreakpoint: inspectorBreakpoint ?? this.inspectorBreakpoint,
+    );
+  }
+
+  @override
+  SlstLayoutTokens lerp(covariant SlstLayoutTokens? other, double t) {
+    if (other == null) return this;
+    return SlstLayoutTokens(
+      space1: lerpDouble(space1, other.space1, t)!,
+      space2: lerpDouble(space2, other.space2, t)!,
+      space3: lerpDouble(space3, other.space3, t)!,
+      space4: lerpDouble(space4, other.space4, t)!,
+      radiusSmall: lerpDouble(radiusSmall, other.radiusSmall, t)!,
+      radiusMedium: lerpDouble(radiusMedium, other.radiusMedium, t)!,
+      compactBreakpoint: lerpDouble(
+        compactBreakpoint,
+        other.compactBreakpoint,
+        t,
+      )!,
+      inspectorBreakpoint: lerpDouble(
+        inspectorBreakpoint,
+        other.inspectorBreakpoint,
+        t,
+      )!,
+    );
+  }
 }
 
 /// Resolved colours + icon for one staging status.

@@ -157,7 +157,12 @@ class _DocumentScannerScreenState extends State<DocumentScannerScreen> {
                           ? ListView(
                               padding: const EdgeInsets.all(12),
                               children: [
-                                SizedBox(height: 390, child: preview),
+                                ConstrainedBox(
+                                  constraints: const BoxConstraints(
+                                    maxHeight: 360,
+                                  ),
+                                  child: SizedBox(height: 360, child: preview),
+                                ),
                                 const SizedBox(height: 12),
                                 tools,
                               ],

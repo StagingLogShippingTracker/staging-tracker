@@ -23,7 +23,36 @@ class StagingRepository {
   }
 
   Future<void> delete(String id) async {
-    await _client.from('staging').delete().eq('id', id);
+    final row = await _client
+        .from('staging')
+        .delete()
+        .eq('id', id)
+        .select()
+        .maybeSingle();
+    if (row == null) {
+      throw StateError(
+        'Staging entry $id was not found or could not be deleted.',
+      );
+    }
+  }
+
+  Future<StagingEntry> insert(Map<String, dynamic> payload) async {
+    final row = await _client.from('staging').insert(payload).select().single();
+    return StagingEntry.fromMap(Map<String, dynamic>.from(row));
+  }
+
+  Future<void> update(String id, Map<String, dynamic> payload) async {
+    final row = await _client
+        .from('staging')
+        .update(payload)
+        .eq('id', id)
+        .select()
+        .maybeSingle();
+    if (row == null) {
+      throw StateError(
+        'Staging entry $id was not found or could not be updated.',
+      );
+    }
   }
 }
 
@@ -31,8 +60,57 @@ class ShippedRepository {
   ShippedRepository(this._client);
   final SupabaseClient _client;
 
-  Future<void> insert(Map<String, dynamic> payload) async {
-    await _client.from('shipped').insert(payload);
+  Future<List<ShippedEntry>> fetchAll() async {
+    final rows = await _client
+        .from('shipped')
+        .select()
+        .order('shipped_at', ascending: false);
+    return (rows as List)
+        .map((e) => ShippedEntry.fromMap(Map<String, dynamic>.from(e as Map)))
+        .toList();
+  }
+
+  Future<ShippedEntry> insert(Map<String, dynamic> payload) async {
+    final row = await _client.from('shipped').insert(payload).select().single();
+    return ShippedEntry.fromMap(Map<String, dynamic>.from(row));
+  }
+
+  Future<void> update(String id, Map<String, dynamic> payload) async {
+    final row = await _client
+        .from('shipped')
+        .update(payload)
+        .eq('id', id)
+        .select()
+        .maybeSingle();
+    if (row == null) {
+      throw StateError(
+        'Shipped entry $id was not found or could not be updated.',
+      );
+    }
+  }
+
+  Future<void> delete(String id) async {
+    final row = await _client
+        .from('shipped')
+        .delete()
+        .eq('id', id)
+        .select()
+        .maybeSingle();
+    if (row == null) {
+      throw StateError(
+        'Shipped entry $id was not found or could not be deleted.',
+      );
+    }
+  }
+
+  Future<ShippedEntry?> getById(String id) async {
+    final row = await _client
+        .from('shipped')
+        .select()
+        .eq('id', id)
+        .maybeSingle();
+    if (row == null) return null;
+    return ShippedEntry.fromMap(Map<String, dynamic>.from(row));
   }
 }
 
@@ -42,11 +120,39 @@ class ChangelogRepository {
 
   Future<void> log(String table, String action) async {
     final email = _client.auth.currentUser?.email;
+    final user = (email == null || email.isEmpty)
+        ? 'Guest'
+        : email.split('@').first;
     await _client.from('changelog').insert({
       'table_name': table,
       'action': action,
-      'user_email': email,
+      'user_email': user,
     });
+  }
+
+  Future<List<ChangelogEntry>> recent({int limit = 200}) async {
+    final rows = await _client
+        .from('changelog')
+        .select()
+        .order('created_at', ascending: false)
+        .limit(limit);
+    return (rows as List)
+        .map((e) => ChangelogEntry.fromMap(Map<String, dynamic>.from(e as Map)))
+        .toList();
+  }
+
+  Future<List<ChangelogEntry>> forOrder(String so) async {
+    final needle = so.trim();
+    final pattern =
+        '%${needle.replaceAll(r'\', r'\\').replaceAll('%', r'\%').replaceAll('_', r'\_')}%';
+    final rows = await _client
+        .from('changelog')
+        .select()
+        .ilike('action', pattern)
+        .order('created_at', ascending: false);
+    return (rows as List)
+        .map((e) => ChangelogEntry.fromMap(Map<String, dynamic>.from(e as Map)))
+        .toList();
   }
 }
 
@@ -89,7 +195,9 @@ class PhotoStorage {
     final safe = fileName.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
     final path =
         '$folder/${DateTime.now().millisecondsSinceEpoch}_${_uuid.v4()}_$safe';
-    await _client.storage.from(AppConfig.freightPhotosBucket).uploadBinary(
+    await _client.storage
+        .from(AppConfig.freightPhotosBucket)
+        .uploadBinary(
           path,
           bytes,
           fileOptions: FileOptions(

@@ -2,7 +2,12 @@
  * Local preview renderer for notify-pm email templates.
  * Run: deno run --allow-write --allow-read scripts/preview-email-templates.ts
  */
-import { renderPoNotificationEmail, renderBulkPoNotificationEmail, renderReturnNotificationEmail } from "../supabase/functions/notify-pm/email-templates/notification-email.ts";
+import {
+  renderPoNotificationEmail,
+  renderBulkPoNotificationEmail,
+  renderReturnNotificationEmail,
+  renderReturnToStockEmail,
+} from "../supabase/functions/notify-pm/email-templates/notification-email.ts";
 import { renderShipConfirmationEmail } from "../supabase/functions/notify-pm/email-templates/ship-confirmation.ts";
 import { ASSET_VERSION } from "../supabase/functions/notify-pm/email-templates/email-shared.ts";
 
@@ -16,126 +21,158 @@ function forceTheme(html: string, theme: "light" | "dark"): string {
         "@media (prefers-color-scheme: dark) and (min-width: 99999px) {",
       )
       .replace(
+        '<body class="og-page"',
+        '<body class="og-page preview-light" data-preview="light"',
+      )
+      .replace(
         '<body class="body og-page"',
         '<body class="body og-page preview-light" data-preview="light"',
       );
   }
-  // Inject forced dark overrides after themeCss so preview matches concept dark
   const darkForce = `
   <style type="text/css">
-    body, .og-page { background-color:#1F1F1F !important; background-image:linear-gradient(#1F1F1F,#1F1F1F) !important; }
-    .og-shell, .og-footer, .og-logo-cell { background-color:#2B2B2B !important; background-image:linear-gradient(#2B2B2B,#2B2B2B) !important; }
-    .og-card, .og-white { background-color:#0D0D0D !important; background-image:linear-gradient(#0D0D0D,#0D0D0D) !important; }
-    .og-text, .og-text strong, .og-text h1, .og-value { color:#F5F5F5 !important; }
-    .og-body { color:#E0E0E0 !important; }
-    .og-muted, .og-label { color:#A8A8A8 !important; }
-    .og-section-orange, .og-brand { color:#E85D04 !important; }
-    .og-section-blue { color:#3B82F6 !important; }
-    .og-accent-orange { background-color:#E85D04 !important; background-image:linear-gradient(#E85D04,#E85D04) !important; }
-    .og-accent-blue { background-color:#3B82F6 !important; background-image:linear-gradient(#3B82F6,#3B82F6) !important; }
-    .logo-light, .logo-light-wrap { display:none !important; max-height:0 !important; overflow:hidden !important; width:0 !important; height:0 !important; }
-    .logo-dark-wrap { display:block !important; max-height:60px !important; overflow:hidden !important; width:auto !important; height:auto !important; }
-    .logo-dark { display:block !important; max-height:60px !important; width:auto !important; height:auto !important; }
+    body, .og-page { background-color:#1F1F1F !important; }
+    .email-container, .og-shell { background-color:#2e3033 !important; }
+    .og-card { background-color:#151515 !important; }
+    .og-title-orange, .og-title-blue { color:#f0f0f0 !important; }
+    .og-label { color:#a8a8a8 !important; }
+    .og-value { color:#f2f2f2 !important; }
+    .og-disclaimer { color:#999999 !important; }
+    .logo-light { display:none !important; }
+    .logo-dark { display:block !important; }
   </style>`;
   return html
     .replace("</head>", `${darkForce}</head>`)
     .replace(
+      '<body class="og-page"',
+      '<body class="og-page preview-dark" data-preview="dark"',
+    )
+    .replace(
       '<body class="body og-page"',
-      '<body class="body og-page preview-dark" data-ogsb data-ogsc data-preview="dark"',
+      '<body class="body og-page preview-dark" data-preview="dark"',
     );
 }
 
 const poBody = {
   po: "1223344",
-  vendor: "Test",
-  details: "Test 2",
+  vendor: "Test Vendor Co.",
+  details: "Receiving dock notes for preview",
   notification_type: "po_notification",
 };
 
 const shipData = {
   so: "1233322",
-  customer: "Test",
+  customer: "Aecon Industrial",
   carrier: "Rosenau",
-  shippedAt: "7/14/2026, 11:09:55 PM",
+  shippedAt: "7/27/2026, 11:09:55 PM",
   shippedBy: "Brice Johnson",
   containers: "1 Skid",
   weight: "233",
-  comments: "None",
+  comments: "Leave at south gate",
 };
 
 const poHtml = renderPoNotificationEmail(poBody);
 const shipHtml = renderShipConfirmationEmail(shipData);
 const returnHtml = renderReturnNotificationEmail({
   so: "1233322",
-  customer: "Test",
+  customer: "Aecon Industrial",
   details: "Damaged packaging",
+});
+const returnStockHtml = renderReturnToStockEmail({
+  so: "445566",
+  customer: "Arc Resources Ltd.",
+  reason: "Wrong part staged",
+  picked_by: "Floor Team",
+  returned_by: "Brice Johnson",
 });
 const bulkHtml = renderBulkPoNotificationEmail({
   pos: [
     { po: "1001", vendor: "Acme", containers: "2 Skids", details: "AM receipt" },
     { po: "1002", vendor: "Beta", containers: "1 Crate", details: "None" },
+    { po: "1003", vendor: "Gamma", containers: "3 Boxes", details: "Hold for QC" },
   ],
 });
 
 await Deno.mkdir(outDir, { recursive: true });
 
 const files: Array<[string, string]> = [
-  ["po-light.html", forceTheme(poHtml, "light")],
-  ["po-dark.html", forceTheme(poHtml, "dark")],
   ["ship-light.html", forceTheme(shipHtml, "light")],
   ["ship-dark.html", forceTheme(shipHtml, "dark")],
+  ["po-light.html", forceTheme(poHtml, "light")],
+  ["po-dark.html", forceTheme(poHtml, "dark")],
   ["return-light.html", forceTheme(returnHtml, "light")],
+  ["return-dark.html", forceTheme(returnHtml, "dark")],
+  ["return-stock-light.html", forceTheme(returnStockHtml, "light")],
+  ["return-stock-dark.html", forceTheme(returnStockHtml, "dark")],
   ["bulk-po-light.html", forceTheme(bulkHtml, "light")],
-  ["index.html", `<!DOCTYPE html><html><head><meta charset="utf-8"><title>SLST email preview ${ASSET_VERSION}</title>
-  <style>body{font-family:system-ui;margin:24px;background:#eee} a{display:block;margin:8px 0;font-size:18px}</style></head>
-  <body><h1>Email previews (ASSET ${ASSET_VERSION})</h1>
-  <a href="po-light.html">PO — light</a>
-  <a href="po-dark.html">PO — dark</a>
-  <a href="ship-light.html">Ship — light</a>
-  <a href="ship-dark.html">Ship — dark</a>
-  <a href="return-light.html">Return — light</a>
-  <a href="bulk-po-light.html">Bulk PO — light</a>
-  </body></html>`],
+  ["bulk-po-dark.html", forceTheme(bulkHtml, "dark")],
+  [
+    "index.html",
+    `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SST email previews · ${ASSET_VERSION}</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: #0f1419;
+      color: #e8eaed;
+    }
+    header {
+      padding: 28px 32px 12px;
+      border-bottom: 1px solid #2a3340;
+    }
+    header h1 { margin: 0 0 6px; font-size: 22px; letter-spacing: -0.02em; }
+    header p { margin: 0; color: #9aa3af; font-size: 14px; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 14px;
+      padding: 24px 32px 40px;
+    }
+    a.card {
+      display: block;
+      text-decoration: none;
+      color: inherit;
+      background: #171c24;
+      border: 1px solid #2a3340;
+      border-radius: 12px;
+      padding: 16px 18px;
+    }
+    a.card:hover { border-color: #3b82f6; background: #1b2230; }
+    a.card .type { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: #9aa3af; }
+    a.card .title { margin-top: 6px; font-size: 16px; font-weight: 650; }
+    a.card .meta { margin-top: 8px; font-size: 12px; color: #7d8794; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>SST PM email previews</h1>
+    <p>Generated from live <code>notify-pm</code> templates · asset ${ASSET_VERSION}</p>
+  </header>
+  <div class="grid">
+    <a class="card" href="ship-light.html"><div class="type">ship_confirm / quick_ship</div><div class="title">Ship confirmation — light</div><div class="meta">Order shipped to PM</div></a>
+    <a class="card" href="ship-dark.html"><div class="type">ship_confirm / quick_ship</div><div class="title">Ship confirmation — dark</div><div class="meta">Forced dark preview</div></a>
+    <a class="card" href="po-light.html"><div class="type">po_notification</div><div class="title">PO notification — light</div><div class="meta">Single PO arrival</div></a>
+    <a class="card" href="po-dark.html"><div class="type">po_notification</div><div class="title">PO notification — dark</div><div class="meta">Forced dark preview</div></a>
+    <a class="card" href="bulk-po-light.html"><div class="type">bulk_po_notification</div><div class="title">Bulk PO — light</div><div class="meta">Multiple POs in one mail</div></a>
+    <a class="card" href="bulk-po-dark.html"><div class="type">bulk_po_notification</div><div class="title">Bulk PO — dark</div><div class="meta">Forced dark preview</div></a>
+    <a class="card" href="return-light.html"><div class="type">return_notification</div><div class="title">Return notification — light</div><div class="meta">Customer/return notes</div></a>
+    <a class="card" href="return-dark.html"><div class="type">return_notification</div><div class="title">Return notification — dark</div><div class="meta">Forced dark preview</div></a>
+    <a class="card" href="return-stock-light.html"><div class="type">return_to_stock</div><div class="title">Returned to stock — light</div><div class="meta">Inventory put-back</div></a>
+    <a class="card" href="return-stock-dark.html"><div class="type">return_to_stock</div><div class="title">Returned to stock — dark</div><div class="meta">Forced dark preview</div></a>
+  </div>
+</body>
+</html>`,
+  ],
 ];
 
 for (const [name, content] of files) {
   await Deno.writeTextFile(new URL(name, outDir), content);
-  // structural checks
-  if (name.endsWith(".html") && name !== "index.html") {
-    const checks = [
-      ["cream card", "#F5F0E8"],
-      ["orange accent", "#E85D04"],
-      ["blue accent", "#3B82F6"],
-      ["og-label", "og-label"],
-      ["og-value", "og-value"],
-      ["globe icon", "icon-globe"],
-      ["light logo", "slst-logo-email.png"],
-      ["dark logo", "slst-logo-email-dark.png"],
-      ["large h1", "font-size:32px"],
-    ];
-    for (const [label, needle] of checks) {
-      if (!content.includes(needle)) {
-        console.error(`MISSING in ${name}: ${label} (${needle})`);
-      }
-    }
-  }
 }
 
 console.log("Wrote previews to .tmp-email-preview/");
 console.log("ASSET_VERSION", ASSET_VERSION);
-console.log(
-  "PO light has blue DETAILS accent:",
-  poHtml.includes("og-accent-blue") && poHtml.includes("DETAILS"),
-);
-console.log(
-  "PO subtitle:",
-  poHtml.includes("Order details:"),
-);
-console.log(
-  "Website uses globe:",
-  poHtml.includes("icon-globe"),
-);
-console.log(
-  "Website does NOT reuse mail for globe slot incorrectly paired:",
-  !poHtml.includes('icon-mail.png') || poHtml.includes('icon-globe'),
-);

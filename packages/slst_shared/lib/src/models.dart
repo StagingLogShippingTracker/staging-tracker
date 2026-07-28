@@ -43,6 +43,19 @@ class StagingEntry {
       entryDate: _asDate(m['entry_date']),
     );
   }
+
+  Map<String, dynamic> toInsertMap() => {
+        'so': so,
+        'customer': customer,
+        'status': status,
+        'location': location,
+        'type': type,
+        'qty': qty,
+        'weight': weight,
+        'comments': comments,
+        'staged_by': stagedBy,
+        'photo_urls': photoUrls,
+      };
 }
 
 class ShippedEntry {
@@ -60,6 +73,9 @@ class ShippedEntry {
     this.pmdEmail,
     this.photoUrls = const [],
     this.shippedAt,
+    this.notificationStatus = 'none',
+    this.notificationError,
+    this.notifiedAt,
   });
 
   final String id;
@@ -75,6 +91,13 @@ class ShippedEntry {
   final String? pmdEmail;
   final List<String> photoUrls;
   final DateTime? shippedAt;
+  final String notificationStatus;
+  final String? notificationError;
+  final DateTime? notifiedAt;
+
+  bool get notificationSent => notificationStatus == 'sent';
+  bool get notificationFailed => notificationStatus == 'failed';
+  bool get notificationPending => notificationStatus == 'pending';
 
   factory ShippedEntry.fromMap(Map<String, dynamic> m) {
     return ShippedEntry(
@@ -91,6 +114,35 @@ class ShippedEntry {
       pmdEmail: m['pmd_email']?.toString(),
       photoUrls: _asStringList(m['photo_urls']),
       shippedAt: _asDate(m['shipped_at']),
+      notificationStatus: (m['notification_status'] ?? 'none').toString(),
+      notificationError: m['notification_error']?.toString(),
+      notifiedAt: _asDate(m['notified_at']),
+    );
+  }
+}
+
+class ChangelogEntry {
+  ChangelogEntry({
+    required this.id,
+    required this.tableName,
+    required this.action,
+    required this.userEmail,
+    this.createdAt,
+  });
+
+  final String id;
+  final String tableName;
+  final String action;
+  final String userEmail;
+  final DateTime? createdAt;
+
+  factory ChangelogEntry.fromMap(Map<String, dynamic> m) {
+    return ChangelogEntry(
+      id: '${m['id']}',
+      tableName: (m['table_name'] ?? '').toString(),
+      action: (m['action'] ?? '').toString(),
+      userEmail: (m['user_email'] ?? '').toString(),
+      createdAt: _asDate(m['created_at']),
     );
   }
 }
@@ -133,13 +185,94 @@ class PhotoBytes {
   final String name;
 }
 
+class ContainerCounts {
+  const ContainerCounts({
+    this.skids = 0,
+    this.boxes = 0,
+    this.crates = 0,
+    this.pipe = 0,
+    this.other = 0,
+  });
+
+  final int skids;
+  final int boxes;
+  final int crates;
+  final int pipe;
+  final int other;
+
+  int get total => skids + boxes + crates + pipe + other;
+
+  bool sameCounts(ContainerCounts o) =>
+      skids == o.skids &&
+      boxes == o.boxes &&
+      crates == o.crates &&
+      pipe == o.pipe &&
+      other == o.other;
+
+  ContainerCounts operator +(ContainerCounts o) => ContainerCounts(
+        skids: skids + o.skids,
+        boxes: boxes + o.boxes,
+        crates: crates + o.crates,
+        pipe: pipe + o.pipe,
+        other: other + o.other,
+      );
+
+  factory ContainerCounts.parse(String type) {
+    var skids = 0, boxes = 0, crates = 0, pipe = 0, other = 0;
+    for (final part in type.split(',')) {
+      final seg = part.trim().toLowerCase();
+      if (seg.isEmpty) continue;
+      final n = int.tryParse(RegExp(r'^\d+').stringMatch(seg) ?? '') ?? 1;
+      if (seg.contains('skid')) {
+        skids += n;
+      } else if (seg.contains('box')) {
+        boxes += n;
+      } else if (seg.contains('crate')) {
+        crates += n;
+      } else if (seg.contains('pipe') || seg.contains('rod')) {
+        pipe += n;
+      } else {
+        other += n;
+      }
+    }
+    return ContainerCounts(
+      skids: skids,
+      boxes: boxes,
+      crates: crates,
+      pipe: pipe,
+      other: other,
+    );
+  }
+
+  String get typeLabel {
+    final parts = <String>[];
+    if (skids > 0) parts.add(_fmt(skids, 'Skid'));
+    if (boxes > 0) parts.add(_fmt(boxes, 'Box'));
+    if (crates > 0) parts.add(_fmt(crates, 'Crate'));
+    if (pipe > 0) parts.add(_fmt(pipe, 'Pipe/Rod'));
+    if (other > 0) parts.add(_fmt(other, 'Other'));
+    return parts.join(', ');
+  }
+
+  static String _fmt(int n, String singular) {
+    final plural = singular == 'Pipe/Rod'
+        ? 'Pipe/Rod'
+        : singular == 'Other'
+            ? 'Other'
+            : '${singular}s';
+    return n == 1 ? '1 $singular' : '$n $plural';
+  }
+}
+
 int _asInt(dynamic v) {
   if (v is int) return v;
   return int.tryParse('$v') ?? 0;
 }
 
 List<String> _asStringList(dynamic v) {
-  if (v is List) return v.map((e) => '$e').toList();
+  if (v is List) {
+    return v.map((e) => '$e').where((e) => e.isNotEmpty).toList();
+  }
   return const [];
 }
 

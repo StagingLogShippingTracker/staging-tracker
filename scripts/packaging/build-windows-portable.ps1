@@ -3,15 +3,10 @@
 $ErrorActionPreference = 'Stop'
 $root = Resolve-Path (Join-Path $PSScriptRoot '..\..')
 Set-Location $root
+. (Join-Path $PSScriptRoot '_common.ps1')
 
-$flutter = Join-Path $root '.tools\flutter\bin\flutter.bat'
-if (-not (Test-Path $flutter)) { $flutter = 'flutter' }
-
-& $flutter pub get
-& $flutter build windows --release
-if ($LASTEXITCODE -ne 0) {
-  throw "flutter build windows --release failed (exit $LASTEXITCODE). Close any running slst.exe and retry."
-}
+Invoke-SlstFlutter -Arguments @('pub', 'get')
+Invoke-SlstFlutter -Arguments @('build', 'windows', '--release')
 
 $release = Join-Path $root 'build\windows\x64\runner\Release'
 $exe = Join-Path $release 'slst.exe'
@@ -29,6 +24,7 @@ Copy-Item -Recurse -Force (Join-Path $release '*') $stage
 $zip = Join-Path $dist 'SST-Windows-Portable.zip'
 if (Test-Path $zip) { Remove-Item -Force $zip }
 Compress-Archive -Path (Join-Path $stage '*') -DestinationPath $zip
+Write-SlstSha256 -Path $zip
 
 # Keep extracted portable folder in sync with Release (ZIP alone left this stale).
 $portable = Join-Path $dist 'SST-Windows-Portable'

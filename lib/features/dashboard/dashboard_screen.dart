@@ -35,6 +35,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   String _q = '';
   bool _overduePromptRunning = false;
   final _overduePromptedIds = <String>{};
+  bool _showAllCompactKpis = false;
 
   /// Preferred compact KPI card width at the content-column ceiling.
   static const double _kpiPreferredCardWidth = 112;
@@ -69,8 +70,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   bool _matchesQuickSearch(StagingEntry e) {
     if (_q.isEmpty) return true;
     final ui = StatusRules.formatUi(e.status);
-    final hay =
-        '${e.so} ${e.customer} ${e.location} ${e.status} $ui'.toLowerCase();
+    final hay = '${e.so} ${e.customer} ${e.location} ${e.status} $ui'
+        .toLowerCase();
     return hay.contains(_q);
   }
 
@@ -82,15 +83,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final prefs = await ref.read(prefsProvider.future);
     if (!mounted) return;
     final handled = prefs.overdueHandled;
-    final overdue = data.staging
-        .where(
-          (e) =>
-              StatusRules.isOverdue(e.status) &&
-              !handled.contains(e.id) &&
-              !_overduePromptedIds.contains(e.id),
-        )
-        .toList()
-      ..sort((a, b) => a.status.compareTo(b.status));
+    final overdue =
+        data.staging
+            .where(
+              (e) =>
+                  StatusRules.isOverdue(e.status) &&
+                  !handled.contains(e.id) &&
+                  !_overduePromptedIds.contains(e.id),
+            )
+            .toList()
+          ..sort((a, b) => a.status.compareTo(b.status));
     if (overdue.isEmpty) return;
 
     _overduePromptRunning = true;
@@ -173,7 +175,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         await prefs.markOverdueHandled(entry.id);
         if (!mounted) break;
         if (open == true) {
-          setState(() => _inspect = entry);
+          _openInspector(entry);
           break;
         }
       }
@@ -192,7 +194,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     if (ui == 'Corp Pick' || ui.toLowerCase().contains('corp pick')) {
       return _StagingBoardColumn.corpPick;
     }
-    if (ui == 'Customer Pick-Up' || ui.toLowerCase().contains('customer pick')) {
+    if (ui == 'Customer Pick-Up' ||
+        ui.toLowerCase().contains('customer pick')) {
       return _StagingBoardColumn.customerPick;
     }
     if (ui == 'Awaiting Instructions' ||
@@ -219,6 +222,37 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           StatusRules.urgencyWeight(a.status),
     );
     return list;
+  }
+
+  void _openInspector(StagingEntry entry) {
+    final compact =
+        MediaQuery.sizeOf(context).width <
+        IndustrialTheme.tokens.inspectorBreakpoint;
+    setState(() => _inspect = entry);
+    if (!compact) return;
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => DraggableScrollableSheet(
+        initialChildSize: 0.82,
+        minChildSize: 0.5,
+        maxChildSize: 0.96,
+        expand: false,
+        builder: (context, scrollController) => SafeArea(
+          top: false,
+          child: OrderInspector(
+            entry: entry,
+            width: double.infinity,
+            onClose: () => Navigator.of(sheetContext).pop(),
+          ),
+        ),
+      ),
+    ).whenComplete(() {
+      if (mounted && _inspect?.id == entry.id) {
+        setState(() => _inspect = null);
+      }
+    });
   }
 
   @override
@@ -277,22 +311,21 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         subtext: 'Active',
         detail: StatDetailMode.other,
       ),
-      (
-        key: 'shipped',
-        label: 'Shipped',
-        subtext: 'Done',
-        detail: null,
-      ),
+      (key: 'shipped', label: 'Shipped', subtext: 'Done', detail: null),
     ];
 
     final shipToday = _bucket(filteredStaging, _StagingBoardColumn.shipToday);
-    final shipTomorrow =
-        _bucket(filteredStaging, _StagingBoardColumn.shipTomorrow);
+    final shipTomorrow = _bucket(
+      filteredStaging,
+      _StagingBoardColumn.shipTomorrow,
+    );
     final partial = _bucket(filteredStaging, _StagingBoardColumn.partial);
     final future = _bucket(filteredStaging, _StagingBoardColumn.future);
     final corpPick = _bucket(filteredStaging, _StagingBoardColumn.corpPick);
-    final customerPick =
-        _bucket(filteredStaging, _StagingBoardColumn.customerPick);
+    final customerPick = _bucket(
+      filteredStaging,
+      _StagingBoardColumn.customerPick,
+    );
     final awaiting = _bucket(filteredStaging, _StagingBoardColumn.awaiting);
 
     final scrollBody = RefreshIndicator(
@@ -309,8 +342,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 subtitle: Text(data.error!),
                 trailing: IconButton(
                   icon: const Icon(Icons.refresh),
-                  onPressed: () =>
-                      ref.read(appDataProvider.notifier).refresh(),
+                  onPressed: () => ref.read(appDataProvider.notifier).refresh(),
                 ),
               ),
             ),
@@ -321,8 +353,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             builder: (context, constraints) {
               final contentWidth =
                   constraints.maxWidth < _dashboardContentMaxWidth
-                      ? constraints.maxWidth
-                      : _dashboardContentMaxWidth;
+                  ? constraints.maxWidth
+                  : _dashboardContentMaxWidth;
               return Align(
                 alignment: Alignment.centerLeft,
                 child: SizedBox(
@@ -336,21 +368,62 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       Builder(
                         builder: (context) {
                           final minCell = _kpiPreferredCardWidth;
-                          final needed = kpis.length * minCell +
+                          final needed =
+                              kpis.length * minCell +
                               (kpis.length - 1) * _kpiGap;
                           final scroll = contentWidth < needed;
+                          final phone = contentWidth < _boardStackBreakpoint;
 
                           Widget cardAt(int i) => IndustrialKpiCard.compact(
-                                label: kpis[i].label,
-                                value: '${totals[kpis[i].key] ?? 0}',
-                                subtext: kpis[i].subtext,
-                                onTap: kpis[i].detail == null
-                                    ? () => context.go('/shipped')
-                                    : () => showStatDetailDialog(
-                                          context,
-                                          kpis[i].detail!,
-                                        ),
-                              );
+                            label: kpis[i].label,
+                            value: '${totals[kpis[i].key] ?? 0}',
+                            subtext: kpis[i].subtext,
+                            onTap: kpis[i].detail == null
+                                ? () => context.go('/shipped')
+                                : () => showStatDetailDialog(
+                                    context,
+                                    kpis[i].detail!,
+                                  ),
+                          );
+
+                          if (phone) {
+                            final visible = _showAllCompactKpis
+                                ? kpis
+                                : kpis.take(4).toList();
+                            return Column(
+                              children: [
+                                GridView.count(
+                                  crossAxisCount: 2,
+                                  childAspectRatio: 1.55,
+                                  mainAxisSpacing: _kpiGap,
+                                  crossAxisSpacing: _kpiGap,
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  children: [
+                                    for (var i = 0; i < visible.length; i++)
+                                      cardAt(kpis.indexOf(visible[i])),
+                                  ],
+                                ),
+                                TextButton.icon(
+                                  onPressed: () => setState(
+                                    () => _showAllCompactKpis =
+                                        !_showAllCompactKpis,
+                                  ),
+                                  icon: Icon(
+                                    _showAllCompactKpis
+                                        ? Icons.expand_less
+                                        : Icons.expand_more,
+                                    size: 18,
+                                  ),
+                                  label: Text(
+                                    _showAllCompactKpis
+                                        ? 'Show priority KPIs'
+                                        : 'Show all KPIs',
+                                  ),
+                                ),
+                              ],
+                            );
+                          }
 
                           if (!scroll) {
                             return IntrinsicHeight(
@@ -374,10 +447,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                               itemCount: kpis.length,
                               separatorBuilder: (_, _) =>
                                   const SizedBox(width: _kpiGap),
-                              itemBuilder: (context, i) => SizedBox(
-                                width: minCell,
-                                child: cardAt(i),
-                              ),
+                              itemBuilder: (context, i) =>
+                                  SizedBox(width: minCell, child: cardAt(i)),
                             ),
                           );
                         },
@@ -396,8 +467,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       const SizedBox(height: _sectionGap),
                       SearchField(
                         controller: _search,
-                        hint:
-                            'Quick Search — SO, customer, location, status…',
+                        hint: 'Quick Search — SO, customer, location, status…',
                         onChanged: (v) =>
                             setState(() => _q = v.trim().toLowerCase()),
                       ),
@@ -412,7 +482,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         customerPick: customerPick,
                         awaiting: awaiting,
                         selectedId: _inspect?.id,
-                        onSelect: (e) => setState(() => _inspect = e),
+                        onSelect: _openInspector,
                         loading: data.loading && data.staging.isEmpty,
                         stackBreakpoint: _boardStackBreakpoint,
                         filterActive: _q.isNotEmpty,
@@ -429,38 +499,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
 
     final compact =
-        MediaQuery.sizeOf(context).width < _boardStackBreakpoint;
+        MediaQuery.sizeOf(context).width <
+        IndustrialTheme.tokens.inspectorBreakpoint;
 
     if (_inspect == null) {
-      return ColoredBox(
-        color: IndustrialTheme.darkBase,
-        child: scrollBody,
-      );
+      return ColoredBox(color: IndustrialTheme.darkBase, child: scrollBody);
     }
 
-    // Phones: overlay inspector so the floor map keeps full width / gestures.
-    // Desktop: side panel beside the board (Windows layout).
+    // Compact layouts present the inspector as a modal sheet from [_openInspector].
+    // Desktop keeps a persistent 400px side panel beside the board.
     if (compact) {
-      return ColoredBox(
-        color: IndustrialTheme.darkBase,
-        child: Stack(
-          children: [
-            scrollBody,
-            Positioned.fill(
-              child: ColoredBox(
-                color: Colors.black.withValues(alpha: 0.45),
-                child: Align(
-                  alignment: Alignment.centerRight,
-                  child: OrderInspector(
-                    entry: _inspect!,
-                    onClose: () => setState(() => _inspect = null),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
+      return ColoredBox(color: IndustrialTheme.darkBase, child: scrollBody);
     }
 
     return ColoredBox(
@@ -510,7 +559,8 @@ class _ActiveStagingBoard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final totalVisible = shipToday.length +
+    final totalVisible =
+        shipToday.length +
         shipTomorrow.length +
         partial.length +
         future.length +
@@ -533,8 +583,8 @@ class _ActiveStagingBoard extends StatelessWidget {
               Text(
                 '$totalVisible match${totalVisible == 1 ? '' : 'es'}',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: IndustrialTheme.textMuted,
-                    ),
+                  color: IndustrialTheme.textMuted,
+                ),
               ),
           ],
         ),
@@ -551,49 +601,45 @@ class _ActiveStagingBoard extends StatelessWidget {
               // Stacking inside the page ListView previously used Expanded
               // with unbounded height → blank Active Staging on Android and
               // layout thrash that broke floor-map pan/tap after data load.
-              final phone =
-                  MediaQuery.sizeOf(context).width < stackBreakpoint;
-              final columns = <({
-                String title,
-                Color accent,
-                List<StagingEntry> entries,
-              })>[
-                (
-                  title: 'SHIP TODAY',
-                  accent: IndustrialTheme.mintGreen,
-                  entries: shipToday,
-                ),
-                (
-                  title: 'SHIP TOMORROW',
-                  accent: IndustrialTheme.skyBlue,
-                  entries: shipTomorrow,
-                ),
-                (
-                  title: 'PARTIAL STAGED',
-                  accent: IndustrialTheme.amber,
-                  entries: partial,
-                ),
-                (
-                  title: 'FUTURE',
-                  accent: const Color(0xFF8B5CF6),
-                  entries: future,
-                ),
-                (
-                  title: 'CORP PICK',
-                  accent: IndustrialTheme.purple,
-                  entries: corpPick,
-                ),
-                (
-                  title: 'CUSTOMER PICK-UP',
-                  accent: const Color(0xFFEC4899),
-                  entries: customerPick,
-                ),
-                (
-                  title: 'AWAITING INSTRUCTIONS',
-                  accent: IndustrialTheme.slateMuted,
-                  entries: awaiting,
-                ),
-              ];
+              final phone = MediaQuery.sizeOf(context).width < stackBreakpoint;
+              final columns =
+                  <({String title, Color accent, List<StagingEntry> entries})>[
+                    (
+                      title: 'SHIP TODAY',
+                      accent: IndustrialTheme.mintGreen,
+                      entries: shipToday,
+                    ),
+                    (
+                      title: 'SHIP TOMORROW',
+                      accent: IndustrialTheme.skyBlue,
+                      entries: shipTomorrow,
+                    ),
+                    (
+                      title: 'PARTIAL STAGED',
+                      accent: IndustrialTheme.amber,
+                      entries: partial,
+                    ),
+                    (
+                      title: 'FUTURE',
+                      accent: const Color(0xFF8B5CF6),
+                      entries: future,
+                    ),
+                    (
+                      title: 'CORP PICK',
+                      accent: IndustrialTheme.purple,
+                      entries: corpPick,
+                    ),
+                    (
+                      title: 'CUSTOMER PICK-UP',
+                      accent: IndustrialTheme.purple,
+                      entries: customerPick,
+                    ),
+                    (
+                      title: 'AWAITING INSTRUCTIONS',
+                      accent: IndustrialTheme.slateMuted,
+                      entries: awaiting,
+                    ),
+                  ];
 
               return SizedBox(
                 height: phone ? 360 : 420,
@@ -673,8 +719,7 @@ class _BoardColumn extends StatelessWidget {
                 ),
               ),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                 decoration: BoxDecoration(
                   color: accent.withValues(alpha: 0.16),
                   borderRadius: BorderRadius.circular(10),
@@ -744,8 +789,8 @@ class _StagingSoCard extends StatelessWidget {
     final statusLabel = overdue
         ? 'Overdue'
         : (StatusRules.isYmd(entry.status) && ui == entry.status
-            ? 'Future: ${entry.status}'
-            : ui);
+              ? 'Future: ${entry.status}'
+              : ui);
     final accent = industrialStatusAccent(statusLabel);
     final weight = (entry.weight ?? '').trim();
     final stager = (entry.stagedBy ?? '').trim();
@@ -850,4 +895,3 @@ class _StagingSoCard extends StatelessWidget {
     );
   }
 }
-

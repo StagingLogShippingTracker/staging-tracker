@@ -3,18 +3,15 @@ import 'dart:convert';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:slst_shared/slst_shared.dart' as shared;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../core/app_config.dart';
 import '../domain/models.dart';
 import '../domain/location_intelligence.dart';
 import '../domain/status.dart';
 import 'consolidation_undo.dart';
 import 'supabase_repositories.dart';
-
-final _shipEmailDateFmt = DateFormat('M/d/yyyy, h:mm:ss a');
 
 typedef PhotoBytes = ({Uint8List bytes, String name});
 
@@ -113,10 +110,8 @@ class AppData {
   int get orderCount => {...staging.map((e) => e.so)}.length;
 
   /// True outbound ships only — excludes return-to-stock and consolidate markers.
-  static bool isTrueShip(ShippedEntry e) {
-    final c = e.carrier.trim().toUpperCase();
-    return c != 'RETURNED TO STOCK' && c != 'CONSOLIDATED';
-  }
+  static bool isTrueShip(ShippedEntry e) =>
+      shared.isTrueShipmentCarrier(e.carrier);
 
   int get shippedCount => shipped.where(isTrueShip).length;
 
@@ -202,8 +197,7 @@ class AppDataNotifier extends StateNotifier<AppData> {
   }
 
   Future<void> _refreshOnce({required bool quiet}) async {
-    final hasCachedRows =
-        state.staging.isNotEmpty || state.shipped.isNotEmpty;
+    final hasCachedRows = state.staging.isNotEmpty || state.shipped.isNotEmpty;
     // Keep existing rows painted during Supabase round-trips. Only the initial
     // empty load uses blocking `loading` (dashboard spinner).
     if (!hasCachedRows) {
@@ -245,10 +239,7 @@ class AppDataNotifier extends StateNotifier<AppData> {
   void _startPolling() {
     _pollTimer?.cancel();
     // Safety net when realtime drops: keep the floor current without pull.
-    _pollTimer = Timer.periodic(
-      _pollInterval,
-      (_) => refresh(quiet: true),
-    );
+    _pollTimer = Timer.periodic(_pollInterval, (_) => refresh(quiet: true));
   }
 
   void _bindRealtime() {
@@ -449,10 +440,7 @@ final recentBinMovementsProvider = FutureProvider<List<ChangelogEntry>>((
 ) async {
   final rows = await ref.watch(changelogRepoProvider).recent(limit: 150);
   return rows
-      .where(
-        (entry) =>
-            entry.action.trimLeft().toLowerCase().startsWith('bin movement:'),
-      )
+      .where((entry) => shared.isBinMovementAction(entry.action.trimLeft()))
       .toList();
 });
 
@@ -468,13 +456,19 @@ class OperationsService {
   RosterRepository get _roster => _ref.read(rosterRepoProvider);
   PhotoStorage get _photos => _ref.read(photoStorageProvider);
   NotifyRepository get _notify => _ref.read(notifyRepoProvider);
+  shared.InventoryRpc get _rpc =>
+      shared.InventoryRpc(_ref.read(supabaseClientProvider));
+
+  void _requireAuth() {
+    if (_ref.read(supabaseClientProvider).auth.currentUser == null) {
+      throw Exception('Sign in required. Your session may have expired.');
+    }
+  }
 
   Future<bool> soConflict(String so, {String? ignoreId}) async {
     final data = _ref.read(appDataProvider);
     final order = orderKey(so);
-    return data.staging.any(
-      (e) => orderKey(e.so) == order && e.id != ignoreId,
-    );
+    return data.staging.any((e) => orderKey(e.so) == order && e.id != ignoreId);
   }
 
   Future<StagingEntry> createStaging({
@@ -491,6 +485,13 @@ class OperationsService {
     bool allowExistingSo = false,
     LocationCategory? locationCategory,
   }) async {
+    _requireAuth();
+    final soErr = shared.SlstValidation.requireNonEmpty(so, 'SO');
+    final custErr = shared.SlstValidation.requireNonEmpty(customer, 'Customer');
+    final locErr = shared.SlstValidation.requireNonEmpty(location, 'Location');
+    if (soErr != null) throw Exception(soErr);
+    if (custErr != null) throw Exception(custErr);
+    if (locErr != null) throw Exception(locErr);
     if (containers.total <= 0) {
       throw Exception('At least one container is required.');
     }
@@ -536,6 +537,13 @@ class OperationsService {
     ContainerCounts? containers,
     String? weight,
   }) async {
+    _requireAuth();
+    shared.SlstValidation.ensureShipFields(
+      so: entry.so,
+      customer: entry.customer,
+      carrier: carrier,
+      shippedBy: shippedBy,
+    );
     final counts = containers ?? ContainerCounts.parse(entry.type);
     final typeLabel = counts.total > 0 ? counts.typeLabel : entry.type;
     final qty = counts.total > 0 ? counts.total : entry.qty;
@@ -545,42 +553,36 @@ class OperationsService {
       paths.add(await _photos.uploadBytes(bytes: p.bytes, fileName: p.name));
     }
     final pmName = _pmDisplay(pmEmail);
-    await _shipped.insert({
-      'so': entry.so,
-      'customer': entry.customer,
-      'type': typeLabel,
-      'qty': qty,
-      'carrier': carrier.trim(),
-      'location': entry.location,
-      'weight': weightValue?.trim(),
-      'comments': entry.comments,
-      'shipped_by': shippedBy.trim(),
-      'pmd_email': pmName,
-      'photo_urls': paths,
-    });
-    await _staging.delete(entry.id);
+    final notifStatus = notifyPm && pmEmail != null && pmEmail.contains('@')
+        ? 'pending'
+        : 'none';
+    final shipped = await _rpc.shipStagingEntry(
+      stagingId: entry.id,
+      carrier: carrier.trim(),
+      shippedBy: shippedBy.trim(),
+      type: typeLabel,
+      qty: qty,
+      weight: weightValue?.trim(),
+      photoUrls: paths,
+      pmdEmail: pmName,
+      notificationStatus: notifStatus,
+    );
     await _rememberEntryValues(
       customer: entry.customer,
       person: shippedBy,
       location: entry.location,
     );
     await _rememberCarrier(carrier);
-    await _log.log('staging', 'Ship Confirmed SO: ${entry.so}');
-    await _log.log('shipped', 'Added via Ship Confirm: SO: ${entry.so}');
-    await _log.log(
-      'staging',
-      'Bin Movement: To Shipped Log — SO ${entry.so}: $typeLabel moved from Staging Log to Shipped Log (${entry.location})',
-    );
 
-    final shippedAt = _shipEmailDateFmt.format(DateTime.now());
+    final shippedAt = shared.formatShipNotificationTimestamp();
     final notifyWarning = await _notifyPmIfRequested(
       notifyPm: notifyPm,
       pmEmail: pmEmail,
+      shippedId: shipped.id,
       payload: {
         'to': pmEmail,
-        'cc': 'warehouse1@swiftsupply.ca',
+        'cc': shared.AppConfig.warehouseCc,
         'subject': 'SHIPPED: SO ${entry.so} - ${entry.customer}',
-        // Edge Function notify-pm replaces body with branded HTML for ship_confirm.
         'body':
             'Your order has shipped.<br><br><b>SO#</b> | ${entry.so}<br><b>Customer</b> | ${entry.customer}<br><b>Carrier</b> | ${carrier.trim()}<br><b>Containers</b> | $typeLabel<br><b>Shipped By</b> | ${shippedBy.trim()}',
         'so': entry.so,
@@ -593,8 +595,6 @@ class OperationsService {
         'comments': entry.comments?.trim() ?? '',
         'attachments': paths,
         'notification_type': 'ship_confirm',
-        'website_url': AppConfig.publicWebsiteUrl,
-        'cta_url': AppConfig.publicWebsiteUrl,
       },
     );
     await _ref.read(appDataProvider.notifier).refresh();
@@ -615,11 +615,24 @@ class OperationsService {
     List<PhotoBytes> photos = const [],
     LocationCategory? locationCategory,
   }) async {
+    _requireAuth();
+    shared.SlstValidation.ensureShipFields(
+      so: so,
+      customer: customer,
+      carrier: carrier,
+      shippedBy: shippedBy,
+    );
+    if (containers.total <= 0) {
+      throw Exception('At least one container is required.');
+    }
     final paths = <String>[];
     for (final p in photos) {
       paths.add(await _photos.uploadBytes(bytes: p.bytes, fileName: p.name));
     }
-    await _shipped.insert({
+    final notifStatus = notifyPm && pmEmail != null && pmEmail.contains('@')
+        ? 'pending'
+        : 'none';
+    final inserted = await _shipped.insert({
       'so': so.trim(),
       'customer': customer.trim(),
       'type': containers.typeLabel,
@@ -631,6 +644,7 @@ class OperationsService {
       'shipped_by': shippedBy.trim(),
       'pmd_email': _pmDisplay(pmEmail),
       'photo_urls': paths,
+      'notification_status': notifStatus,
     });
     await _rememberCarrier(carrier);
     await _rememberEntryValues(
@@ -640,15 +654,15 @@ class OperationsService {
       locationCategory: locationCategory,
     );
     await _log.log('shipped', 'Added via Quick Ship: SO: ${so.trim()}');
-    final shippedAt = _shipEmailDateFmt.format(DateTime.now());
+    final shippedAt = shared.formatShipNotificationTimestamp();
     final notifyWarning = await _notifyPmIfRequested(
       notifyPm: notifyPm,
       pmEmail: pmEmail,
+      shippedId: inserted.id,
       payload: {
         'to': pmEmail,
-        'cc': 'warehouse1@swiftsupply.ca',
+        'cc': shared.AppConfig.warehouseCc,
         'subject': 'SHIPPED: SO ${so.trim()} - ${customer.trim()}',
-        // Edge Function notify-pm replaces body with branded HTML for quick_ship.
         'body':
             'Your order has shipped (Quick Ship).<br><br><b>SO#</b> | ${so.trim()}<br><b>Customer</b> | ${customer.trim()}<br><b>Carrier</b> | ${carrier.trim()}',
         'so': so.trim(),
@@ -661,8 +675,6 @@ class OperationsService {
         'comments': comments?.trim() ?? '',
         'attachments': paths,
         'notification_type': 'quick_ship',
-        'website_url': AppConfig.publicWebsiteUrl,
-        'cta_url': AppConfig.publicWebsiteUrl,
       },
     );
     await _ref.read(appDataProvider.notifier).refresh();
@@ -678,37 +690,40 @@ class OperationsService {
     bool notifyPm = false,
     List<PhotoBytes> extraPhotos = const [],
   }) async {
+    _requireAuth();
+    shared.SlstValidation.ensureReturnFields(
+      pickedBy: pickedBy,
+      returnedBy: returnedBy,
+      reason: reason,
+    );
     final paths = [...entry.photoUrls];
     for (final p in extraPhotos) {
       paths.add(await _photos.uploadBytes(bytes: p.bytes, fileName: p.name));
     }
-    await _shipped.insert({
-      'so': entry.so,
-      'customer': entry.customer,
-      'type': entry.type,
-      'qty': entry.qty,
-      'carrier': 'RETURNED TO STOCK',
-      'location': entry.location,
-      'weight': entry.weight,
-      'comments': entry.comments,
-      'shipped_by': returnedBy.trim(),
-      'pmd_email': _pmDisplay(pmEmail) ?? pickedBy.trim(),
-      'photo_urls': paths,
-    });
-    await _staging.delete(entry.id);
+    final notifStatus = notifyPm && pmEmail != null && pmEmail.contains('@')
+        ? 'pending'
+        : 'none';
+    final shipped = await _rpc.returnStagingToStock(
+      stagingId: entry.id,
+      pickedBy: pickedBy.trim(),
+      returnedBy: returnedBy.trim(),
+      reason: reason.trim(),
+      photoUrls: paths,
+      pmdEmail: _pmDisplay(pmEmail),
+      notificationStatus: notifStatus,
+    );
     await _rememberEntryValues(
       customer: entry.customer,
       people: [pickedBy, returnedBy],
       location: entry.location,
     );
-    await _log.log('staging', 'Returned to Stock SO: ${entry.so}');
-    await _log.log('shipped', 'Added Return to Stock log for SO: ${entry.so}');
     final notifyWarning = await _notifyPmIfRequested(
       notifyPm: notifyPm,
       pmEmail: pmEmail,
+      shippedId: shipped.id,
       payload: {
         'to': pmEmail,
-        'cc': 'warehouse1@swiftsupply.ca',
+        'cc': shared.AppConfig.warehouseCc,
         'subject': 'RETURN TO STOCK: SO ${entry.so} - ${entry.customer}',
         'body':
             'Returned to Stock.<br><br><b>Reason</b> | $reason<br><b>SO#</b> | ${entry.so}<br><b>Picked By</b> | $pickedBy<br><b>Returned By</b> | $returnedBy',
@@ -729,25 +744,10 @@ class OperationsService {
     ShippedEntry entry, {
     bool allowExistingSo = false,
   }) async {
-    if (!allowExistingSo && await soConflict(entry.so)) {
-      throw Exception('Cannot undo: SO ${entry.so} already exists in Staging.');
-    }
-    await _staging.insert({
-      'so': entry.so,
-      'customer': entry.customer,
-      'type': entry.type,
-      'qty': entry.qty,
-      'location': entry.location,
-      'weight': entry.weight,
-      'comments': entry.comments,
-      'status': 'Partial',
-      'photo_urls': entry.photoUrls,
-    });
-    await _shipped.delete(entry.id);
-    await _log.log('shipped', 'Undo Shipment Action for SO: ${entry.so}');
-    await _log.log(
-      'staging',
-      'Restored to Staging via Undo for SO: ${entry.so}',
+    _requireAuth();
+    await _rpc.undoShipment(
+      shippedId: entry.id,
+      allowExistingSo: allowExistingSo,
     );
     await _ref.read(appDataProvider.notifier).refresh();
   }
@@ -792,7 +792,7 @@ class OperationsService {
         locationKey(previous.location) != locationKey(nextLocation)) {
       await _log.log(
         'staging',
-        'Bin Movement: Relocated — SO ${payload['so'] ?? previous.so} moved from ${previous.location.isEmpty ? 'Unknown' : previous.location} to $nextLocation',
+        '${shared.InventorySentinels.binMovementPrefix} Relocated — SO ${payload['so'] ?? previous.so} moved from ${previous.location.isEmpty ? 'Unknown' : previous.location} to $nextLocation',
       );
     }
     await _ref.read(appDataProvider.notifier).refresh();
@@ -836,6 +836,7 @@ class OperationsService {
     required ContainerCounts first,
     required ContainerCounts second,
   }) async {
+    _requireAuth();
     if (first.total <= 0 || second.total <= 0) {
       throw Exception('Both split parts need at least one container.');
     }
@@ -853,27 +854,19 @@ class OperationsService {
         'Split parts must add up to the original quantity (${entry.qty}).',
       );
     }
-    final base = entry.toInsertMap();
-    final a = await _staging.insert({
-      ...base,
-      'type': first.typeLabel,
-      'qty': first.total,
-    });
-    final b = await _staging.insert({
-      ...base,
-      'type': second.typeLabel,
-      'qty': second.total,
-    });
-    await _staging.delete(entry.id);
-    await _log.log(
-      'staging',
-      'Split SO ${entry.so}: ${entry.id} → ${a.id}, ${b.id}',
+    await _rpc.splitStaging(
+      stagingId: entry.id,
+      firstType: first.typeLabel,
+      firstQty: first.total,
+      secondType: second.typeLabel,
+      secondQty: second.total,
     );
     await _ref.read(appDataProvider.notifier).refresh();
   }
 
   /// Consolidate multiple same-SO staging rows into one **new**-UUID survivor.
   Future<void> consolidateStaging(List<StagingEntry> entries) async {
+    _requireAuth();
     if (entries.length < 2) {
       throw Exception('Select at least two staging rows to consolidate.');
     }
@@ -881,7 +874,6 @@ class OperationsService {
     if (!entries.every((e) => e.so.trim().toLowerCase() == so)) {
       throw Exception('Consolidate requires the same SO on every row.');
     }
-    final keep = entries.first;
     var skids = 0, boxes = 0, crates = 0, pipe = 0, other = 0;
     final photos = <String>{};
     for (final e in entries) {
@@ -906,50 +898,33 @@ class OperationsService {
     final qty = counts.total > 0
         ? counts.total
         : entries.fold<int>(0, (sum, e) => sum + e.qty);
-    final merged = await _staging.insert({
-      ...keep.toInsertMap(),
-      'type': type,
-      'qty': qty,
-      'photo_urls': photos.toList(),
-    });
-    final oldIds = entries.map((e) => e.id).join(', ');
-    for (final e in entries) {
-      await _staging.delete(e.id);
-    }
-    _ref.read(consolidationUndoProvider.notifier).state =
-        ConsolidationUndoSnapshot(
-      mergedId: merged.id,
+    final result = await _rpc.consolidateStaging(
+      sourceIds: entries.map((e) => e.id).toList(),
+      type: type,
+      qty: qty,
+      photoUrls: photos.toList(),
+    );
+    _ref
+        .read(consolidationUndoProvider.notifier)
+        .state = ConsolidationUndoSnapshot(
+      mergedId: result.merged.id,
+      undoId: result.undoId,
       sources: List<StagingEntry>.from(entries),
       at: DateTime.now(),
-    );
-    await _log.log(
-      'staging',
-      'Consolidated ${entries.length} rows for SO ${keep.so}: '
-      '$oldIds → ${merged.id}',
+      expiresAt: result.expiresAt,
     );
     await _ref.read(appDataProvider.notifier).refresh();
   }
 
   /// Restores rows removed by [consolidateStaging] within the undo window.
   Future<void> reverseConsolidation(ConsolidationUndoSnapshot snap) async {
+    _requireAuth();
     if (!snap.isActive) {
       _ref.read(consolidationUndoProvider.notifier).state = null;
-      throw Exception(
-        'Consolidation can only be reversed within two minutes.',
-      );
+      throw Exception('Consolidation can only be reversed within two minutes.');
     }
-    await _staging.delete(snap.mergedId);
-    final restored = <String>[];
-    for (final e in snap.sources) {
-      final row = await _staging.insert(e.toInsertMap());
-      restored.add(row.id);
-    }
+    await _rpc.reverseConsolidation(snap.undoId);
     _ref.read(consolidationUndoProvider.notifier).state = null;
-    await _log.log(
-      'staging',
-      'Reversed consolidation for SO ${snap.sources.first.so}: '
-      '${snap.mergedId} → ${restored.join(', ')}',
-    );
     await _ref.read(appDataProvider.notifier).refresh();
   }
 
@@ -961,13 +936,19 @@ class OperationsService {
     String? details,
     List<PhotoBytes> photos = const [],
   }) async {
+    _requireAuth();
+    shared.SlstValidation.ensurePoNotification(
+      po: po,
+      vendor: vendor,
+      pmEmail: pmEmail,
+    );
     final paths = <String>[];
     for (final p in photos) {
       paths.add(await _photos.uploadBytes(bytes: p.bytes, fileName: p.name));
     }
     await _notify.sendPmNotification({
       'to': pmEmail,
-      'cc': 'warehouse1@swiftsupply.ca',
+      'cc': shared.AppConfig.warehouseCc,
       'subject':
           'PO Notification: $po${linkedSo == null ? '' : ' (SO $linkedSo)'}',
       'body':
@@ -986,9 +967,7 @@ class OperationsService {
     );
   }
 
-  Future<void> sendBulkPoNotification({
-    required List<BulkPoItem> items,
-  }) async {
+  Future<void> sendBulkPoNotification({required List<BulkPoItem> items}) async {
     if (items.isEmpty) {
       throw Exception('Add at least one PO.');
     }
@@ -1001,12 +980,14 @@ class OperationsService {
       final list = entry.value;
       final to = list.first.pmEmail.trim();
       final poList = list.map((e) => e.po).join(', ');
-      final lines = list.map((e) {
-        return '<b>PO#</b> | ${e.po}<br>'
-            '<b>Vendor</b> | ${e.vendor}<br>'
-            '<b>Containers</b> | ${e.containers.typeLabel}<br>'
-            '${e.details.trim().isEmpty ? '' : '<b>Notes</b> | ${e.details.trim()}<br>'}';
-      }).join('<br>');
+      final lines = list
+          .map((e) {
+            return '<b>PO#</b> | ${e.po}<br>'
+                '<b>Vendor</b> | ${e.vendor}<br>'
+                '<b>Containers</b> | ${e.containers.typeLabel}<br>'
+                '${e.details.trim().isEmpty ? '' : '<b>Notes</b> | ${e.details.trim()}<br>'}';
+          })
+          .join('<br>');
       await _notify.sendPmNotification({
         'to': to,
         'cc': 'warehouse1@swiftsupply.ca',
@@ -1039,13 +1020,19 @@ class OperationsService {
     String? details,
     List<PhotoBytes> photos = const [],
   }) async {
+    _requireAuth();
+    shared.SlstValidation.ensureReturnNotification(
+      so: so,
+      customer: customer,
+      pmEmail: pmEmail,
+    );
     final paths = <String>[];
     for (final p in photos) {
       paths.add(await _photos.uploadBytes(bytes: p.bytes, fileName: p.name));
     }
     await _notify.sendPmNotification({
       'to': pmEmail,
-      'cc': 'warehouse1@swiftsupply.ca',
+      'cc': shared.AppConfig.warehouseCc,
       'subject': 'Return Notification: SO $so - $customer',
       'body':
           'Return Notification<br><br><b>SO#</b> | $so<br><b>Customer</b> | $customer${details == null || details.isEmpty ? '' : '<br><br>$details'}',
@@ -1063,16 +1050,37 @@ class OperationsService {
   Future<String?> _notifyPmIfRequested({
     required bool notifyPm,
     required String? pmEmail,
+    required String shippedId,
     required Map<String, dynamic> payload,
   }) async {
     if (!notifyPm) return null;
     if (pmEmail == null || !pmEmail.contains('@')) {
+      try {
+        await _rpc.updateShippedNotificationStatus(
+          shippedId: shippedId,
+          status: 'failed',
+          error: 'No valid email',
+        );
+      } catch (_) {}
       return 'Saved, but PM was not notified (no valid email).';
     }
     try {
       await _notify.sendPmNotification(payload);
+      try {
+        await _rpc.updateShippedNotificationStatus(
+          shippedId: shippedId,
+          status: 'sent',
+        );
+      } catch (_) {}
       return null;
     } catch (e) {
+      try {
+        await _rpc.updateShippedNotificationStatus(
+          shippedId: shippedId,
+          status: 'failed',
+          error: '$e',
+        );
+      } catch (_) {}
       return 'Saved, but PM notification failed: $e';
     }
   }

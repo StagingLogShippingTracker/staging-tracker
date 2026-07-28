@@ -1,7 +1,214 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/theme.dart';
+
+/// Standard async-state framing for operational pages.
+///
+/// Existing data stays visible during background synchronization; only an
+/// empty first load blocks the page so KPI placeholders are never mistaken for
+/// live inventory.
+class AsyncPanel extends StatelessWidget {
+  const AsyncPanel({
+    super.key,
+    required this.loading,
+    required this.syncing,
+    required this.isEmpty,
+    required this.error,
+    required this.onRetry,
+    required this.child,
+    this.emptyTitle = 'No records found',
+    this.emptyMessage = 'There are no records to display yet.',
+  });
+
+  final bool loading;
+  final bool syncing;
+  final bool isEmpty;
+  final String? error;
+  final Future<void> Function() onRetry;
+  final Widget child;
+  final String emptyTitle;
+  final String emptyMessage;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasStaleData = !isEmpty;
+    if (loading && !hasStaleData) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(48),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+    if (error != null && !hasStaleData) {
+      return _AsyncMessage(
+        icon: Icons.cloud_off_outlined,
+        title: 'Unable to load records',
+        message: error!,
+        action: SlstAsyncButton(label: 'Retry', onPressed: onRetry),
+      );
+    }
+    if (isEmpty) {
+      return _AsyncMessage(
+        icon: Icons.inventory_2_outlined,
+        title: emptyTitle,
+        message: emptyMessage,
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (error != null)
+          _AsyncBanner(
+            icon: Icons.cloud_off_outlined,
+            message: 'Showing the last available data. ${error!}',
+            action: SlstAsyncButton(
+              label: 'Retry',
+              compact: true,
+              onPressed: onRetry,
+            ),
+          )
+        else if (syncing)
+          const _AsyncBanner(
+            icon: Icons.sync,
+            message: 'Refreshing live operational data…',
+          ),
+        Expanded(child: child),
+      ],
+    );
+  }
+}
+
+class _AsyncBanner extends StatelessWidget {
+  const _AsyncBanner({required this.icon, required this.message, this.action});
+
+  final IconData icon;
+  final String message;
+  final Widget? action;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: IndustrialTheme.skyBlue.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(
+          color: IndustrialTheme.skyBlue.withValues(alpha: 0.35),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: IndustrialTheme.skyBlue),
+          const SizedBox(width: 8),
+          Expanded(child: Text(message, style: const TextStyle(fontSize: 12))),
+          if (action != null) ...[const SizedBox(width: 8), action!],
+        ],
+      ),
+    );
+  }
+}
+
+class _AsyncMessage extends StatelessWidget {
+  const _AsyncMessage({
+    required this.icon,
+    required this.title,
+    required this.message,
+    this.action,
+  });
+
+  final IconData icon;
+  final String title;
+  final String message;
+  final Widget? action;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 420),
+        margin: const EdgeInsets.symmetric(vertical: 32),
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: IndustrialTheme.darkSurface,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: IndustrialTheme.borderStroke),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 30, color: IndustrialTheme.textMuted),
+            const SizedBox(height: 10),
+            Text(title, style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 6),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            if (action != null) ...[const SizedBox(height: 16), action!],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Button that prevents duplicate async operations while work is in flight.
+class SlstAsyncButton extends StatefulWidget {
+  const SlstAsyncButton({
+    super.key,
+    required this.label,
+    required this.onPressed,
+    this.compact = false,
+  });
+
+  final String label;
+  final Future<void> Function() onPressed;
+  final bool compact;
+
+  @override
+  State<SlstAsyncButton> createState() => _SlstAsyncButtonState();
+}
+
+class _SlstAsyncButtonState extends State<SlstAsyncButton> {
+  bool _running = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return FilledButton(
+      onPressed: _running
+          ? null
+          : () async {
+              setState(() => _running = true);
+              try {
+                await widget.onPressed();
+              } finally {
+                if (mounted) setState(() => _running = false);
+              }
+            },
+      style: widget.compact
+          ? FilledButton.styleFrom(
+              minimumSize: const Size(0, 32),
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            )
+          : null,
+      child: _running
+          ? const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : Text(widget.label),
+    );
+  }
+}
 
 /// Page section title — Inter caps with optional trailing actions.
 class IndustrialPageTitle extends StatelessWidget {
@@ -86,10 +293,7 @@ class IndustrialFilterRow extends StatelessWidget {
 
 /// Compact horizontal summary strip (counts / tallies).
 class IndustrialSummaryStrip extends StatelessWidget {
-  const IndustrialSummaryStrip({
-    super.key,
-    required this.items,
-  });
+  const IndustrialSummaryStrip({super.key, required this.items});
 
   final List<({String label, String value, Color? accent})> items;
 
@@ -202,20 +406,28 @@ class IndustrialStatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = colorsFor(status);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-      decoration: BoxDecoration(
-        color: colors.fill,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: colors.accent.withValues(alpha: 0.35)),
-      ),
-      child: Text(
-        status.toUpperCase(),
-        style: GoogleFonts.inter(
-          fontSize: 10,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.35,
-          color: colors.accent,
+    // Align + widthFactor shrink-wraps under fixed column widths so the
+    // decorated Container does not stretch to the full STATUS cell.
+    return Align(
+      alignment: Alignment.centerLeft,
+      widthFactor: 1,
+      heightFactor: 1,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+        decoration: BoxDecoration(
+          color: colors.fill,
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(color: colors.accent.withValues(alpha: 0.35)),
+        ),
+        child: Text(
+          status.toUpperCase(),
+          textAlign: TextAlign.center,
+          style: GoogleFonts.inter(
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.35,
+            color: colors.accent,
+          ),
         ),
       ),
     );
@@ -235,22 +447,27 @@ class IndustrialZonePill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final value = location.trim().isEmpty ? '—' : location.trim();
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: IndustrialTheme.darkHeader,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: IndustrialTheme.borderStroke),
-      ),
-      child: Text(
-        value,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: IndustrialTheme.mono(
-          fontSize: 11,
-          color: value == '—'
-              ? IndustrialTheme.textMuted
-              : IndustrialTheme.skyBlue,
+    return Align(
+      alignment: Alignment.centerLeft,
+      widthFactor: 1,
+      heightFactor: 1,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          color: IndustrialTheme.darkHeader,
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(color: IndustrialTheme.borderStroke),
+        ),
+        child: Text(
+          value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: IndustrialTheme.mono(
+            fontSize: 11,
+            color: value == '—'
+                ? IndustrialTheme.textMuted
+                : IndustrialTheme.skyBlue,
+          ),
         ),
       ),
     );
@@ -275,23 +492,28 @@ class IndustrialWeightPill extends StatelessWidget {
         ),
       );
     }
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: const Color(0xFF365314).withValues(alpha: 0.35),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: IndustrialTheme.mintGreen.withValues(alpha: 0.35),
+    return Align(
+      alignment: Alignment.centerLeft,
+      widthFactor: 1,
+      heightFactor: 1,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          color: const Color(0xFF365314).withValues(alpha: 0.35),
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(
+            color: IndustrialTheme.mintGreen.withValues(alpha: 0.35),
+          ),
         ),
-      ),
-      child: Text(
-        value,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: IndustrialTheme.mono(
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-          color: const Color(0xFFA3E635),
+        child: Text(
+          value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: IndustrialTheme.mono(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: const Color(0xFFA3E635),
+          ),
         ),
       ),
     );
@@ -465,10 +687,10 @@ class IndustrialKpiCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               softWrap: true,
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    fontSize: compact ? 9 : null,
-                    height: compact ? 1.1 : null,
-                    letterSpacing: compact ? 0.2 : null,
-                  ),
+                fontSize: compact ? 9 : null,
+                height: compact ? 1.1 : null,
+                letterSpacing: compact ? 0.2 : null,
+              ),
             ),
             SizedBox(height: compact ? 4 : 6),
             Text(
@@ -485,9 +707,9 @@ class IndustrialKpiCard extends StatelessWidget {
               SizedBox(height: compact ? 2 : 4),
               Text(
                 subtext,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontSize: compact ? 9 : null,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(fontSize: compact ? 9 : null),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -573,8 +795,10 @@ class SlideOverInspector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: width,
+    final size = MediaQuery.sizeOf(context);
+    final panelWidth = math.min(width, size.width * 0.92);
+    final panel = Container(
+      width: panelWidth,
       decoration: const BoxDecoration(
         color: IndustrialTheme.darkSurface,
         border: Border(
@@ -620,6 +844,16 @@ class SlideOverInspector extends StatelessWidget {
           ),
         ],
       ),
+    );
+
+    // Safety net if accidentally parented under unbounded height (ListView).
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (!constraints.hasBoundedHeight) {
+          return SizedBox(height: size.height, child: panel);
+        }
+        return panel;
+      },
     );
   }
 }

@@ -56,22 +56,16 @@ Deno.serve(async (req: Request) => {
       const codeHash = await sha256Hex(code);
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
-      // Invalidate prior unused codes for this user.
-      await admin
-        .from("watch_pairing_codes")
-        .delete()
-        .eq("user_id", userData.user.id)
-        .is("consumed_at", null);
-
-      const { error: insertError } = await admin
-        .from("watch_pairing_codes")
-        .insert({
-          user_id: userData.user.id,
-          code_hash: codeHash,
-          expires_at: expiresAt,
-        });
-      if (insertError) {
-        return json(500, { error: insertError.message });
+      const { error: replaceError } = await admin.rpc(
+        "replace_watch_pairing_code",
+        {
+          p_user_id: userData.user.id,
+          p_code_hash: codeHash,
+          p_expires_at: expiresAt,
+        },
+      );
+      if (replaceError) {
+        return json(500, { error: replaceError.message });
       }
 
       return json(200, { code, expires_at: expiresAt });
@@ -83,16 +77,15 @@ Deno.serve(async (req: Request) => {
         return json(400, { error: "Invalid code" });
       }
       const codeHash = await sha256Hex(code);
-      const { data: row, error: findError } = await admin
-        .from("watch_pairing_codes")
-        .select("*")
-        .eq("code_hash", codeHash)
-        .is("consumed_at", null)
-        .maybeSingle();
-      if (findError) return json(500, { error: findError.message });
-      if (!row) return json(404, { error: "Code not found or already used" });
-      if (new Date(row.expires_at).getTime() < Date.now()) {
-        return json(410, { error: "Code expired" });
+
+      // Atomically claim the code before minting a session.
+      const { data: row, error: claimError } = await admin.rpc(
+        "claim_watch_pairing_code",
+        { p_code_hash: codeHash },
+      );
+      if (claimError) return json(500, { error: claimError.message });
+      if (!row) {
+        return json(404, { error: "Code not found, expired, or already used" });
       }
 
       const { data: userData, error: getUserError } = await admin.auth.admin
@@ -117,7 +110,6 @@ Deno.serve(async (req: Request) => {
         type: "email",
       });
       if (otpError || !otpData.session) {
-        // Retry with magiclink type for GoTrue version differences.
         const retry = await admin.auth.verifyOtp({
           token_hash: linkData.properties.hashed_token,
           type: "magiclink",
@@ -129,10 +121,6 @@ Deno.serve(async (req: Request) => {
               "Failed to create session",
           });
         }
-        await admin
-          .from("watch_pairing_codes")
-          .update({ consumed_at: new Date().toISOString() })
-          .eq("id", row.id);
         return json(200, {
           access_token: retry.data.session.access_token,
           refresh_token: retry.data.session.refresh_token,
@@ -140,11 +128,6 @@ Deno.serve(async (req: Request) => {
           user: retry.data.user,
         });
       }
-
-      await admin
-        .from("watch_pairing_codes")
-        .update({ consumed_at: new Date().toISOString() })
-        .eq("id", row.id);
 
       return json(200, {
         access_token: otpData.session.access_token,

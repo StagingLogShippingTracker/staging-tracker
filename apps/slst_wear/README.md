@@ -52,7 +52,7 @@ Or from repo root:
 .\scripts\packaging\build-wear-apk.ps1
 ```
 
-Output: `dist/SLST-Wear.apk` (sideload / Wear install).
+Output: `dist/SST-Wear.apk` (sideload / Wear install).
 
 ## Screens
 

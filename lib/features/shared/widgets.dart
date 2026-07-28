@@ -59,7 +59,11 @@ StatusStyle statusStyleOf(BuildContext context, String dbStatus) {
 }
 
 /// Shared page insets: 16 on narrow widths, 24 on wide.
-EdgeInsets slstPagePadding(BuildContext context, {double top = 20, double bottom = 8}) {
+EdgeInsets slstPagePadding(
+  BuildContext context, {
+  double top = 20,
+  double bottom = 8,
+}) {
   final narrow = MediaQuery.sizeOf(context).width < 600;
   final h = narrow ? 16.0 : 24.0;
   return EdgeInsets.fromLTRB(h, top, h, bottom);
@@ -238,7 +242,11 @@ class PillButton extends StatelessWidget {
       ),
     );
     if (icon == null) {
-      return FilledButton(onPressed: onPressed, style: style, child: Text(label));
+      return FilledButton(
+        onPressed: onPressed,
+        style: style,
+        child: Text(label),
+      );
     }
     return FilledButton.icon(
       onPressed: onPressed,
@@ -283,6 +291,7 @@ class SectionCard extends StatelessWidget {
   final Widget? subHeader;
   final Widget child;
   final EdgeInsetsGeometry padding;
+
   /// When true, [child] expands to fill leftover height (parent must be bounded).
   final bool expandChild;
 
@@ -309,10 +318,10 @@ class SectionCard extends StatelessWidget {
                 Text(
                   title.toUpperCase(),
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        fontSize: 12,
-                        letterSpacing: 0.9,
-                        color: IndustrialTheme.textPrimary,
-                      ),
+                    fontSize: 12,
+                    letterSpacing: 0.9,
+                    color: IndustrialTheme.textPrimary,
+                  ),
                 ),
                 if (headerActions.isNotEmpty)
                   Wrap(
@@ -397,13 +406,13 @@ class StagingStatusLegend extends StatelessWidget {
 Color? statusRowColor(BuildContext context, String dbStatus) {
   final ui = StatusRules.formatUi(dbStatus).toLowerCase();
   if (ui == 'ship today' || StatusRules.isOverdue(dbStatus)) {
-    return SlstColors.statusTodayDark;
+    return SlstColors.statusToday;
   }
-  if (ui == 'ship tomorrow') return SlstColors.statusTomorrowDark;
-  if (StatusRules.isYmd(dbStatus)) return SlstColors.statusFutureDark;
-  if (ui == 'partial') return SlstColors.statusPartialDark;
-  if (ui.contains('corp pick')) return SlstColors.statusCorpPickDark;
-  if (ui.contains('customer pick')) return SlstColors.statusCustomerPickDark;
+  if (ui == 'ship tomorrow') return SlstColors.statusTomorrow;
+  if (StatusRules.isYmd(dbStatus)) return SlstColors.statusFuture;
+  if (ui == 'partial') return SlstColors.statusPartial;
+  if (ui.contains('corp pick')) return SlstColors.statusCorpPick;
+  if (ui.contains('customer pick')) return SlstColors.statusCustomerPick;
   return null;
 }
 
@@ -447,7 +456,10 @@ class SearchField extends StatelessWidget {
         isDense: true,
         filled: true,
         fillColor: IndustrialTheme.darkHeader,
-        contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+        contentPadding: const EdgeInsets.symmetric(
+          vertical: 12,
+          horizontal: 12,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(6),
           borderSide: const BorderSide(color: IndustrialTheme.borderStroke),
@@ -458,7 +470,10 @@ class SearchField extends StatelessWidget {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(6),
-          borderSide: const BorderSide(color: IndustrialTheme.skyBlue, width: 1.5),
+          borderSide: const BorderSide(
+            color: IndustrialTheme.skyBlue,
+            width: 1.5,
+          ),
         ),
         suffixIcon: ListenableBuilder(
           listenable: controller,
@@ -746,10 +761,10 @@ Future<void> showPhotosDialog(
                         shrinkWrap: true,
                         gridDelegate:
                             const SliverGridDelegateWithMaxCrossAxisExtent(
-                          maxCrossAxisExtent: 220,
-                          mainAxisSpacing: 10,
-                          crossAxisSpacing: 10,
-                        ),
+                              maxCrossAxisExtent: 220,
+                              mainAxisSpacing: 10,
+                              crossAxisSpacing: 10,
+                            ),
                         itemCount: paths.length,
                         itemBuilder: (context, i) => ClipRRect(
                           borderRadius: BorderRadius.circular(10),
@@ -929,20 +944,14 @@ Future<void> showError(BuildContext context, Object error) async {
   if (!context.mounted) return;
   final scheme = Theme.of(context).colorScheme;
   ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text(error.toString()),
-      backgroundColor: scheme.error,
-    ),
+    SnackBar(content: Text(error.toString()), backgroundColor: scheme.error),
   );
 }
 
 Future<void> showOk(BuildContext context, String message) async {
   if (!context.mounted) return;
   ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text(message),
-      backgroundColor: SlstColors.green,
-    ),
+    SnackBar(content: Text(message), backgroundColor: SlstColors.green),
   );
 }
 

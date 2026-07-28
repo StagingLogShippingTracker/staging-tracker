@@ -66,23 +66,26 @@ class _PairScreenState extends State<PairScreen> {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 12),
-              TextField(
-                controller: _controller,
-                keyboardType: TextInputType.number,
-                textAlign: TextAlign.center,
-                maxLength: 6,
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 4,
-                  color: WearTheme.ok,
+              SizedBox(
+                height: 56,
+                child: TextField(
+                  controller: _controller,
+                  keyboardType: TextInputType.number,
+                  textAlign: TextAlign.center,
+                  maxLength: 6,
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 4,
+                    color: WearTheme.ok,
+                  ),
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  decoration: const InputDecoration(
+                    counterText: '',
+                    hintText: '••••••',
+                  ),
+                  onSubmitted: (_) => _redeem(),
                 ),
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                decoration: const InputDecoration(
-                  counterText: '',
-                  hintText: '••••••',
-                ),
-                onSubmitted: (_) => _redeem(),
               ),
               if (_error != null) ...[
                 const SizedBox(height: 6),
@@ -95,9 +98,12 @@ class _PairScreenState extends State<PairScreen> {
                 ),
               ],
               const Spacer(),
-              FilledButton(
-                onPressed: _busy ? null : _redeem,
-                child: Text(_busy ? 'Pairing…' : 'Pair'),
+              SizedBox(
+                height: 48,
+                child: FilledButton(
+                  onPressed: _busy ? null : _redeem,
+                  child: Text(_busy ? 'Pairing…' : 'Pair'),
+                ),
               ),
             ],
           ),
