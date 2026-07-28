@@ -1,0 +1,26 @@
+---
+description: After packaging Windows/Android for distribution, sync GitHub Releases for Settings → Update
+alwaysApply: true
+---
+
+# Keep Settings → Update in sync with dist builds
+
+Settings → **Update** (and Wear **Update**) downloads platform packages from
+GitHub `releases/latest`:
+`SST-Setup-User.exe` / `SST-Windows-Portable.zip`, `SST-Android.apk`, `SST-Wear.apk`.
+
+Whenever you produce **distributable** local packaging that should be installable via that UI
+(`scripts/packaging/build-windows-installer.ps1`, `build-windows-portable.ps1`,
+`build-android-apk.ps1`, `build-wear-apk.ps1`, or equivalent `dist/SST-*` artifacts):
+
+1. **Commit** related code/docs on the working branch (exclude secrets and unrelated junk).
+2. **Push** the branch to origin.
+3. **Publish or update** a GitHub Release so it is the **latest** release and includes fresh assets matching local `dist/`:
+   - `SST-Setup-User.exe` (required for Windows Update)
+   - `SST-Windows-Portable.zip` (preferred)
+   - `SST-Android.apk` (required for Android Update)
+   - `SST-Wear.apk` (required for Wear Update; may ship less often, but include when Wear was rebuilt)
+4. Prefer a version tag aligned with `pubspec.yaml` (e.g. `sst-1.1.0`).
+5. Do **not** leave `releases/latest` pointing at older builds after a successful packaging run meant for distribution.
+
+Skip this sync only when the user explicitly asks for a local-only build (no Update channel publish).

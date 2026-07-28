@@ -1,7 +1,7 @@
 name: slst
 description: Staging Log & Shipping Tracker — Flutter Windows/Android client (shared domain in packages/slst_shared; Wear in apps/slst_wear).
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.1.0+2
 
 environment:
   sdk: ^3.12.2
@@ -23,6 +23,7 @@ dependencies:
   url_launcher: ^6.3.1
   http: ^1.4.0
   image: ^4.8.0
+  package_info_plus: ^8.3.0
   flutter_ocr_native:
     path: third_party/flutter_ocr_native
   path_provider: ^2.1.6

@@ -9,6 +9,7 @@ import '../../data/app_state.dart';
 import '../shared/industrial_widgets.dart';
 import '../shared/widgets.dart';
 import 'pair_watch_card.dart';
+import 'app_update_card.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -37,6 +38,8 @@ class SettingsScreen extends ConsumerWidget {
       children: [
         const IndustrialPageTitle('Settings'),
         const PairWatchCard(),
+        const SizedBox(height: 16),
+        const AppUpdateCard(),
         const SizedBox(height: 16),
         Card(
           child: Padding(

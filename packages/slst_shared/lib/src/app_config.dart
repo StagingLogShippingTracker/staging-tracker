@@ -17,6 +17,12 @@ class AppConfig {
   static const accessRequestEmail = warehouse2Email;
   static const publicWebsiteUrl = 'https://www.swiftsupply.ca';
 
+  /// Public GitHub Releases feed for in-app Update downloads (Win/Android/Wear).
+  static const githubReleasesPage =
+      'https://github.com/StagingLogShippingTracker/staging-tracker/releases';
+  static const githubLatestReleaseApi =
+      'https://api.github.com/repos/StagingLogShippingTracker/staging-tracker/releases/latest';
+
   static String publicPhotoUrl(String path) {
     final clean = path.startsWith('/') ? path.substring(1) : path;
     return '$supabaseUrl/storage/v1/object/public/$freightPhotosBucket/$clean';

@@ -132,6 +132,18 @@ Output: `dist/SST-Wear.apk`. Details: [`apps/slst_wear/README.md`](apps/slst_wea
 Each produced artifact has a lowercase SHA-256 sidecar, such as
 `dist/SST-Android.apk.sha256`.
 
+### In-app Update (Settings)
+
+Windows and Android **Settings → Update** load the latest GitHub Release
+(`releases/latest`) and download the host-platform package:
+
+- Windows: `SST-Setup-User.exe` (preferred) or `SST-Windows-Portable.zip`
+- Android: `SST-Android.apk`
+
+After packaging builds intended for distribution, commit/push and publish or
+refresh that release so assets match local `dist/` (see
+`.cursor/rules/sync-github-releases-after-packaging.mdc`).
+
 ## CI
 
 GitHub Actions workflow `.github/workflows/build.yml` builds Windows and Android artifacts on push/tag.

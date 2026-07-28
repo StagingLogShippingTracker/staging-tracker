@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../theme.dart';
 import 'ship_confirm_screen.dart';
+import 'update_screen.dart';
 import 'verify_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -158,6 +159,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     },
                     icon: const Icon(Icons.checklist, size: 18),
                     color: WearTheme.accent,
+                  ),
+                  IconButton(
+                    tooltip: 'Update',
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const WearUpdateScreen(),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.system_update_alt, size: 18),
+                    color: WearTheme.muted,
                   ),
                   IconButton(
                     tooltip: 'Refresh',
