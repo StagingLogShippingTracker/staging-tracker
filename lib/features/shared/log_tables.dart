@@ -1,3 +1,6 @@
+import 'dart:io' show Platform;
+
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -14,6 +17,13 @@ import 'industrial_widgets.dart';
 import 'order_history_dialog.dart';
 import 'so_advisories.dart';
 import 'widgets.dart';
+
+/// Android: industrial wide-grid + horizontal chrome collapses to zero height
+/// inside a page ListView. Use the virtualized dense list there instead.
+bool get _androidTouchLogList {
+  if (kIsWeb) return false;
+  return Platform.isAndroid;
+}
 
 final _dateFmt = DateFormat('M/d/yy h:mm a');
 final _mutedStampFmt = DateFormat('MMM d, h:mm a');
@@ -873,8 +883,10 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
     required List<StagingEntry> rows,
   }) {
     final viewMode = ref.watch(logViewModeProvider);
-    // Industrial grid for list mode on all platforms (horizontal arrows + bar).
-    final useIndustrialGrid = viewMode == LogViewMode.list;
+    // Windows list = industrial grid. Android list = dense virtualized rows
+    // (wide grid + horizontal scroll was painting zero-height on phone).
+    final useIndustrialGrid =
+        viewMode == LogViewMode.list && !_androidTouchLogList;
 
     if (rows.isEmpty) {
       final empty = const Padding(
@@ -1817,7 +1829,8 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
     required List<ShippedEntry> rows,
   }) {
     final viewMode = ref.watch(logViewModeProvider);
-    final useIndustrialGrid = viewMode == LogViewMode.list;
+    final useIndustrialGrid =
+        viewMode == LogViewMode.list && !_androidTouchLogList;
 
     if (rows.isEmpty) {
       final empty = const Padding(

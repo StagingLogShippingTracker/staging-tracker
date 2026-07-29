@@ -405,7 +405,6 @@ class WarehouseFloorMap extends ConsumerWidget {
                                       label: 'South Wall',
                                       entries:
                                           index.zoneEntries('South Wall'),
-                                      heroTag: 'south-wall-pane',
                                       onOpen: () {
                                         final southW = (layoutW - biteW)
                                             .clamp(1.0, layoutW);
@@ -522,35 +521,28 @@ class WarehouseFloorMap extends ConsumerWidget {
     _FloorOccupancyIndex index, {
     required double aspectRatio,
   }) {
-    return Navigator.of(context).push(
-      PageRouteBuilder<void>(
-        opaque: false,
-        barrierColor: Colors.black54,
-        barrierDismissible: true,
-        transitionDuration: const Duration(milliseconds: 320),
-        reverseTransitionDuration: const Duration(milliseconds: 240),
-        pageBuilder: (context, animation, secondaryAnimation) {
-          return _SouthWallFocusPage(
-            index: index,
-            aspectRatio: aspectRatio,
-          );
-        },
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          final curved = CurvedAnimation(
-            parent: animation,
-            curve: Curves.easeOutCubic,
-            reverseCurve: Curves.easeInCubic,
-          );
-          return FadeTransition(
-            opacity: curved,
-            child: ScaleTransition(
-              scale: Tween<double>(begin: 0.92, end: 1).animate(curved),
-              alignment: Alignment.center,
-              child: child,
-            ),
-          );
-        },
-      ),
+    // Centered modal — no Hero (Hero flight from the map SW corner made the
+    // sheet look off-centre). Keep the map South Wall width/height ratio.
+    return showGeneralDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Close South Wall',
+      barrierColor: Colors.black54,
+      transitionDuration: const Duration(milliseconds: 200),
+      pageBuilder: (ctx, animation, secondaryAnimation) {
+        return _SouthWallFocusPage(
+          index: index,
+          aspectRatio: aspectRatio,
+        );
+      },
+      transitionBuilder: (ctx, animation, secondaryAnimation, child) {
+        final curved = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+          reverseCurve: Curves.easeInCubic,
+        );
+        return FadeTransition(opacity: curved, child: child);
+      },
     );
   }
 }
@@ -865,7 +857,6 @@ class _Pane extends ConsumerWidget {
     this.compact = false,
     this.muted = false,
     this.verticalText = false,
-    this.heroTag,
     this.onOpen,
   });
 
@@ -874,7 +865,6 @@ class _Pane extends ConsumerWidget {
   final bool compact;
   final bool muted;
   final bool verticalText;
-  final Object? heroTag;
   final VoidCallback? onOpen;
 
   void _openZone(BuildContext context) {
@@ -959,22 +949,13 @@ class _Pane extends ConsumerWidget {
       );
     }
 
-    Widget interactive = Material(
+    final interactive = Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: () => _openZone(context),
         child: body,
       ),
     );
-    if (heroTag != null) {
-      interactive = Hero(
-        tag: heroTag!,
-        child: Material(
-          type: MaterialType.transparency,
-          child: interactive,
-        ),
-      );
-    }
 
     return Tooltip(
       message: tip,
@@ -1000,144 +981,143 @@ class _SouthWallFocusPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.sizeOf(context);
-    // Fit the map South Wall rectangle (wide, short) into the viewport —
-    // never pad height into a square-ish dialog.
-    final maxW = min(size.width - 32, 1200.0);
-    final maxH = size.height - 96;
-    var panelW = maxW;
-    var panelH = panelW / aspectRatio;
-    if (panelH > maxH) {
-      panelH = maxH;
-      panelW = panelH * aspectRatio;
+    final mq = MediaQuery.of(context);
+    final size = mq.size;
+    // Exact map South Wall proportions (width/height). Fit inside the viewport
+    // without stretching toward a square dialog.
+    final maxW = min(size.width - 48, 1100.0);
+    final maxH = size.height - mq.padding.vertical - 120;
+    var gridW = maxW;
+    var gridH = gridW / aspectRatio;
+    if (gridH > maxH) {
+      gridH = maxH;
+      gridW = gridH * aspectRatio;
     }
 
-    return Material(
-      type: MaterialType.transparency,
-      child: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: SizedBox(
-              width: panelW,
-              child: Material(
-                color: const Color(0xFF121826),
-                elevation: 12,
-                shadowColor: Colors.black87,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(6),
-                  side: const BorderSide(
-                    color: IndustrialTheme.borderStroke,
-                    width: 1.5,
+    final panel = Material(
+      color: const Color(0xFF121826),
+      elevation: 12,
+      shadowColor: Colors.black87,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(6),
+        side: const BorderSide(
+          color: IndustrialTheme.borderStroke,
+          width: 1.5,
+        ),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: SizedBox(
+        width: gridW,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 6, 4, 4),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'SOUTH WALL',
+                      style: IndustrialTheme.mono(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: IndustrialTheme.textPrimary,
+                      ),
+                    ),
                   ),
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(14, 6, 4, 4),
-                      child: Row(
-                        children: [
+                  IconButton(
+                    tooltip: 'Close',
+                    visualDensity: VisualDensity.compact,
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close, size: 20),
+                    color: IndustrialTheme.textMuted,
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1, color: IndustrialTheme.borderStroke),
+            SizedBox(
+              width: gridW,
+              height: gridH,
+              child: Column(
+                children: [
+                  Expanded(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        for (var i = 0; i < _top.length; i++) ...[
+                          if (i > 0)
+                            const VerticalDivider(
+                              width: 1,
+                              thickness: 1,
+                              color: IndustrialTheme.borderStroke,
+                            ),
                           Expanded(
-                            child: Text(
-                              'SOUTH WALL',
-                              style: IndustrialTheme.mono(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: IndustrialTheme.textPrimary,
+                            child: _SouthWallSectionCell(
+                              section: _top[i],
+                              entries:
+                                  index.southWallSectionEntries(_top[i]),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const Divider(
+                    height: 2,
+                    thickness: 2,
+                    color: IndustrialTheme.borderStroke,
+                  ),
+                  Expanded(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        for (var i = 0; i < _bottom.length; i++) ...[
+                          if (i > 0)
+                            const VerticalDivider(
+                              width: 1,
+                              thickness: 1,
+                              color: IndustrialTheme.borderStroke,
+                            ),
+                          Expanded(
+                            child: _SouthWallSectionCell(
+                              section: _bottom[i],
+                              entries: index.southWallSectionEntries(
+                                _bottom[i],
                               ),
                             ),
                           ),
-                          IconButton(
-                            tooltip: 'Close',
-                            visualDensity: VisualDensity.compact,
-                            onPressed: () => Navigator.of(context).pop(),
-                            icon: const Icon(Icons.close, size: 20),
-                            color: IndustrialTheme.textMuted,
-                          ),
                         ],
-                      ),
+                      ],
                     ),
-                    const Divider(
-                      height: 1,
-                      color: IndustrialTheme.borderStroke,
-                    ),
-                    // Hero + AspectRatio match the map South Wall rectangle.
-                    Hero(
-                      tag: 'south-wall-pane',
-                      child: Material(
-                        color: const Color(0xFF121826),
-                        child: AspectRatio(
-                          aspectRatio: aspectRatio,
-                          child: Column(
-                            children: [
-                              Expanded(
-                                child: Row(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.stretch,
-                                  children: [
-                                    for (var i = 0; i < _top.length; i++) ...[
-                                      if (i > 0)
-                                        const VerticalDivider(
-                                          width: 1,
-                                          thickness: 1,
-                                          color: IndustrialTheme.borderStroke,
-                                        ),
-                                      Expanded(
-                                        child: _SouthWallSectionCell(
-                                          section: _top[i],
-                                          entries: index
-                                              .southWallSectionEntries(_top[i]),
-                                        ),
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              ),
-                              const Divider(
-                                height: 2,
-                                thickness: 2,
-                                color: IndustrialTheme.borderStroke,
-                              ),
-                              Expanded(
-                                child: Row(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.stretch,
-                                  children: [
-                                    for (var i = 0;
-                                        i < _bottom.length;
-                                        i++) ...[
-                                      if (i > 0)
-                                        const VerticalDivider(
-                                          width: 1,
-                                          thickness: 1,
-                                          color: IndustrialTheme.borderStroke,
-                                        ),
-                                      Expanded(
-                                        child: _SouthWallSectionCell(
-                                          section: _bottom[i],
-                                          entries: index
-                                              .southWallSectionEntries(
-                                            _bottom[i],
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
-          ),
+          ],
+        ),
+      ),
+    );
+
+    // Full-screen centered host so the sheet cannot open off to a corner.
+    return Material(
+      type: MaterialType.transparency,
+      child: SafeArea(
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => Navigator.of(context).pop(),
+            ),
+            Center(
+              child: GestureDetector(
+                onTap: () {},
+                child: panel,
+              ),
+            ),
+          ],
         ),
       ),
     );
