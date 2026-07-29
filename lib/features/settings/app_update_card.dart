@@ -73,12 +73,22 @@ class _AppUpdateCardState extends State<AppUpdateCard> {
       final result = await _svc.checkForUpdate(
         installedVersion: info.version,
         installedBuild: info.buildNumber,
+        platform: _hostPlatform,
       );
       if (!mounted) return;
       setState(() {
         _info = info;
         _latest = result.latest;
       });
+
+      if (result.missingPlatformAsset) {
+        setState(() {
+          _status =
+              'Latest ${result.latest.tagName} has no $_platformLabel package '
+              'yet. Other platform builds are ignored on this device.';
+        });
+        return;
+      }
 
       if (!result.updateAvailable) {
         setState(() {
@@ -97,15 +107,18 @@ class _AppUpdateCardState extends State<AppUpdateCard> {
         return;
       }
 
+      final packageLabel =
+          result.latest.assetLabelFor(_hostPlatform) ?? '$_platformLabel package';
       final confirm = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
           title: const Text('Update available'),
           content: Text(
-            'A newer build is available:\n'
+            'A newer $_platformLabel build is available:\n'
             '${result.latest.name.isEmpty ? result.latest.tagName : result.latest.name}\n\n'
-            'Installed: ${info.version} (${info.buildNumber})\n'
-            'Download and install now?',
+            'Package: $packageLabel\n'
+            'Installed: ${info.version} (${info.buildNumber})\n\n'
+            'Download and install this $_platformLabel package only?',
           ),
           actions: [
             TextButton(

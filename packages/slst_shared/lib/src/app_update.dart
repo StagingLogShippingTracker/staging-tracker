@@ -114,6 +114,13 @@ class AppReleaseInfo {
   String? assetFileNameFor(AppUpdatePlatform platform) {
     return assetLabelFor(platform);
   }
+
+  /// Whether this release includes an installable package for [platform].
+  /// Phone/tablet never treat Wear APKs as available (and vice versa).
+  bool hasAssetFor(AppUpdatePlatform platform) {
+    final url = assetUrlFor(platform);
+    return url != null && url.isNotEmpty;
+  }
 }
 
 /// Result of [AppUpdateService.checkForUpdate].
@@ -121,10 +128,19 @@ class AppUpdateCheckResult {
   const AppUpdateCheckResult({
     required this.latest,
     required this.updateAvailable,
+    required this.platform,
+    this.missingPlatformAsset = false,
   });
 
   final AppReleaseInfo latest;
+  final AppUpdatePlatform platform;
+
+  /// True only when the release is newer **and** has this platform's package.
   final bool updateAvailable;
+
+  /// Newer release exists, but it has no package for [platform]
+  /// (e.g. Wear-only asset on a phone check).
+  final bool missingPlatformAsset;
 }
 
 class AppUpdateService {
@@ -162,20 +178,20 @@ class AppUpdateService {
         final name = '${raw['name'] ?? ''}'.trim();
         final url = '${raw['browser_download_url'] ?? ''}'.trim();
         if (name.isEmpty || url.isEmpty) continue;
-        final lower = name.toLowerCase();
-        if (lower.contains('setup') && lower.endsWith('.exe')) {
-          installer = url;
-        } else if (lower.contains('portable') && lower.endsWith('.zip')) {
-          portable = url;
-        } else if (lower.endsWith('.apk') && lower.contains('wear')) {
-          wearApk = url;
-        } else if (lower.endsWith('.apk') &&
-            (lower.contains('android') || lower == 'sst-android.apk')) {
-          androidApk = url;
-        } else if (lower.endsWith('.apk') &&
-            !lower.contains('wear') &&
-            androidApk == null) {
-          androidApk = url;
+        final kind = classifyReleaseAsset(name);
+        switch (kind) {
+          case ReleaseAssetKind.windowsSetup:
+            installer = url;
+          case ReleaseAssetKind.windowsPortable:
+            portable = url;
+          case ReleaseAssetKind.androidApk:
+            // Never assign a Wear package to the phone/tablet slot.
+            androidApk = url;
+          case ReleaseAssetKind.wearApk:
+            // Never assign a phone/tablet package to the Wear slot.
+            wearApk = url;
+          case ReleaseAssetKind.unknown:
+            break;
         }
       }
     }
@@ -199,17 +215,27 @@ class AppUpdateService {
   }
 
   /// Fetches latest release and compares against [installedVersion] / [installedBuild].
+  ///
+  /// [platform] gates the installable package: Android phone/tablet only sees
+  /// `SST-Android.apk`; Wear only sees `SST-Wear.apk`; Windows only sees the
+  /// Setup/portable assets. A newer tag with only another platform's APK does
+  /// **not** count as an update for this device.
   Future<AppUpdateCheckResult> checkForUpdate({
     required String installedVersion,
     String? installedBuild,
+    required AppUpdatePlatform platform,
   }) async {
     final latest = await fetchLatestRelease();
+    final newer = latest.isNewerThanInstalled(
+      installedVersion,
+      installedBuild,
+    );
+    final hasAsset = latest.hasAssetFor(platform);
     return AppUpdateCheckResult(
       latest: latest,
-      updateAvailable: latest.isNewerThanInstalled(
-        installedVersion,
-        installedBuild,
-      ),
+      platform: platform,
+      updateAvailable: newer && hasAsset,
+      missingPlatformAsset: newer && !hasAsset,
     );
   }
 
@@ -225,6 +251,7 @@ class AppUpdateService {
     if (url == null || url.isEmpty || fileName == null) {
       throw Exception('No package asset available for this platform.');
     }
+    _assertAssetMatchesPlatform(platform: platform, url: url, fileName: fileName);
 
     final file = await downloadToTemp(
       url: url,
@@ -233,6 +260,35 @@ class AppUpdateService {
     );
     await installDownloadedFile(platform: platform, file: file);
     return file;
+  }
+
+  void _assertAssetMatchesPlatform({
+    required AppUpdatePlatform platform,
+    required String url,
+    required String fileName,
+  }) {
+    final kind = classifyReleaseAsset(fileName);
+    final urlLower = url.toLowerCase();
+    switch (platform) {
+      case AppUpdatePlatform.windows:
+        if (kind != ReleaseAssetKind.windowsSetup &&
+            kind != ReleaseAssetKind.windowsPortable) {
+          throw Exception('Refusing Windows install of non-Windows asset ($fileName).');
+        }
+      case AppUpdatePlatform.android:
+        if (kind != ReleaseAssetKind.androidApk ||
+            urlLower.contains('wear')) {
+          throw Exception(
+            'Refusing Android phone/tablet install of Wear or unknown APK ($fileName).',
+          );
+        }
+      case AppUpdatePlatform.wear:
+        if (kind != ReleaseAssetKind.wearApk) {
+          throw Exception(
+            'Refusing Wear install of non-Wear APK ($fileName).',
+          );
+        }
+    }
   }
 
   Future<File> downloadToTemp({
@@ -304,3 +360,40 @@ class AppUpdateService {
     }
   }
 }
+
+/// Maps a GitHub asset filename to a platform package kind.
+enum ReleaseAssetKind {
+  windowsSetup,
+  windowsPortable,
+  androidApk,
+  wearApk,
+  unknown,
+}
+
+/// Classifies GitHub Release asset filenames into platform packages.
+///
+/// Wear APKs are identified first (name contains `wear`) so they are never
+/// treated as phone/tablet Android packages. Phone/tablet APKs must include
+/// `android` in the filename (e.g. `SST-Android.apk`). Generic `.apk` names
+/// are ignored to avoid cross-installing the wrong client.
+ReleaseAssetKind classifyReleaseAsset(String fileName) {
+  final lower = fileName.trim().toLowerCase();
+  if (lower.isEmpty) return ReleaseAssetKind.unknown;
+
+  if (lower.endsWith('.exe') && lower.contains('setup')) {
+    return ReleaseAssetKind.windowsSetup;
+  }
+  if (lower.endsWith('.zip') && lower.contains('portable')) {
+    return ReleaseAssetKind.windowsPortable;
+  }
+  if (lower.endsWith('.apk')) {
+    // Wear wins over "android" if both appear in the name.
+    if (lower.contains('wear')) return ReleaseAssetKind.wearApk;
+    if (lower.contains('android') || lower == 'sst-android.apk') {
+      return ReleaseAssetKind.androidApk;
+    }
+    return ReleaseAssetKind.unknown;
+  }
+  return ReleaseAssetKind.unknown;
+}
+

@@ -51,12 +51,21 @@ class _WearUpdateScreenState extends State<WearUpdateScreen> {
       final result = await _svc.checkForUpdate(
         installedVersion: info.version,
         installedBuild: info.buildNumber,
+        platform: AppUpdatePlatform.wear,
       );
       if (!mounted) return;
       setState(() {
         _info = info;
         _latest = result.latest;
       });
+
+      if (result.missingPlatformAsset) {
+        setState(() {
+          _status =
+              'Latest ${result.latest.tagName} has no Wear APK. Phone builds are ignored.';
+        });
+        return;
+      }
 
       if (!result.updateAvailable) {
         setState(() {
@@ -70,7 +79,7 @@ class _WearUpdateScreenState extends State<WearUpdateScreen> {
         builder: (ctx) => AlertDialog(
           title: const Text('Update?', style: TextStyle(fontSize: 16)),
           content: Text(
-            '${result.latest.tagName}\nInstall now?',
+            '${result.latest.tagName}\nInstall SST-Wear.apk?',
             style: const TextStyle(fontSize: 13),
           ),
           actions: [
