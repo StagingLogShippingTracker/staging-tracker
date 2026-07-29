@@ -1048,8 +1048,11 @@ class _HorizontalScrollWithArrowsState
 
   @override
   Widget build(BuildContext context) {
+    // Do not use CrossAxisAlignment.stretch — this widget is often hosted inside
+    // a vertical ListView (unbounded max height). Stretch then collapses the
+    // row to zero height and the staging/shipped grids disappear entirely.
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         _HorizontalScrollArrow(
           icon: Icons.chevron_left,
