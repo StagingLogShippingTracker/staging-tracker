@@ -37,15 +37,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   final _overduePromptedIds = <String>{};
   bool _showAllCompactKpis = false;
 
-  /// Preferred compact KPI card width at the content-column ceiling.
+  /// Preferred KPI card width when the strip must scroll horizontally.
   static const double _kpiPreferredCardWidth = 112;
   static const double _kpiGap = 8;
-  static const int _kpiCount = 8;
-
-  /// Single source of truth: KPIs + map + staging share this max width.
-  /// `8 × 112 + 7 × 8 = 952`.
-  static const double _dashboardContentMaxWidth =
-      _kpiCount * _kpiPreferredCardWidth + (_kpiCount - 1) * _kpiGap;
 
   /// Vertical rhythm between dashboard sections.
   static const double _sectionGap = 18;
@@ -352,18 +346,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             ),
             const SizedBox(height: 14),
           ],
-          // Unified content column: KPIs + map + staging share one width.
+          // Full-bleed content width on large displays; phone keeps its
+          // own KPI expand/collapse + scrollable map behaviour below.
           LayoutBuilder(
             builder: (context, constraints) {
-              final contentWidth =
-                  constraints.maxWidth < _dashboardContentMaxWidth
-                  ? constraints.maxWidth
-                  : _dashboardContentMaxWidth;
-              return Align(
-                alignment: Alignment.centerLeft,
-                child: SizedBox(
-                  width: contentWidth,
-                  child: Column(
+              final contentWidth = constraints.maxWidth;
+              return Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       // Section A — KPI strip. On narrow widths, scroll
@@ -486,9 +474,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         filterActive: _q.isNotEmpty,
                       ),
                     ],
-                  ),
-                ),
-              );
+                  );
             },
           ),
           const BrandFooter(),
@@ -586,8 +572,8 @@ class _ActiveStagingBoard extends StatelessWidget {
             child: Center(child: CircularProgressIndicator()),
           )
         else
-          Builder(
-            builder: (context) {
+          LayoutBuilder(
+            builder: (context, constraints) {
               // Always a fixed-height horizontal kanban (matches Windows).
               // Stacking inside the page ListView previously used Expanded
               // with unbounded height → blank Active Staging on Android and
@@ -632,17 +618,47 @@ class _ActiveStagingBoard extends StatelessWidget {
                     ),
                   ];
 
+              final colW = phone ? 188.0 : 210.0;
+              final gap = 10.0;
+              final needed =
+                  columns.length * colW + (columns.length - 1) * gap;
+              final boardH = phone ? 360.0 : 420.0;
+
+              // Wide desktop: fit all columns in view (no wasted empty margin).
+              if (!phone && constraints.maxWidth >= needed) {
+                return SizedBox(
+                  height: boardH,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      for (var i = 0; i < columns.length; i++) ...[
+                        if (i > 0) SizedBox(width: gap),
+                        Expanded(
+                          child: _BoardColumn(
+                            title: columns[i].title,
+                            accent: columns[i].accent,
+                            entries: columns[i].entries,
+                            selectedId: selectedId,
+                            onSelect: onSelect,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                );
+              }
+
               return SizedBox(
-                height: phone ? 360 : 420,
+                height: boardH,
                 child: HorizontalScrollWithArrows(
                   builder: (context, controller) => ListView.separated(
                     controller: controller,
                     scrollDirection: Axis.horizontal,
                     primary: false,
                     itemCount: columns.length,
-                    separatorBuilder: (_, _) => const SizedBox(width: 10),
+                    separatorBuilder: (_, _) => SizedBox(width: gap),
                     itemBuilder: (context, i) => SizedBox(
-                      width: phone ? 188 : 210,
+                      width: colW,
                       child: _BoardColumn(
                         title: columns[i].title,
                         accent: columns[i].accent,

@@ -67,13 +67,18 @@ Widget _industrialGridWithPinnedHorizontalChrome({
               ? grid
               : SizedBox(
                   height: maxH,
-                  child: Scrollbar(
-                    thumbVisibility: true,
-                    child: SingleChildScrollView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      child: grid,
-                    ),
-                  ),
+                  child: showHorizontalScrollChrome
+                      ? Scrollbar(
+                          thumbVisibility: true,
+                          child: SingleChildScrollView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            child: grid,
+                          ),
+                        )
+                      : SingleChildScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          child: grid,
+                        ),
                 );
           return SingleChildScrollView(
             controller: controller,

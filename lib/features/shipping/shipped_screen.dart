@@ -1,3 +1,6 @@
+import 'dart:io' show Platform;
+
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -107,108 +110,122 @@ class _ShippedScreenState extends ConsumerState<ShippedScreen> {
     final compactShell = size.width < kCompactShellBreakpoint;
     final shortHeight = size.height < 920;
     final gap = shortHeight ? 8.0 : 14.0;
+    final usePageListScroll =
+        compactShell || (!kIsWeb && Platform.isAndroid);
 
-    // Summary + search stay above; the log card fills remaining height so the
-    // industrial grid can pin horizontal arrows/scrollbar in the table viewport.
+    final summaryAndSearch = <Widget>[
+      if (compactShell) ...[
+        Text(
+          'Shipped Staging Entries Log',
+          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+            fontSize: 22,
+            fontWeight: FontWeight.w800,
+            color: IndustrialTheme.textPrimary,
+          ),
+        ),
+        SizedBox(height: gap),
+      ],
+      LayoutBuilder(
+        builder: (context, constraints) {
+          final stacked = constraints.maxWidth < 720;
+          final statusCard = LogSummaryCard(
+            eyebrow: 'Shipment Activity',
+            value: '${trueShips.length}',
+            unit: 'True Ships',
+            compact: shortHeight,
+            stats: [
+              (
+                label: 'Shipped Today',
+                value: '$shippedToday',
+                accent: IndustrialTheme.mintGreen,
+              ),
+              (
+                label: 'Returned',
+                value: '$returned',
+                accent: IndustrialTheme.amber,
+              ),
+              (
+                label: 'All Records',
+                value: '${data.shipped.length}',
+                accent: IndustrialTheme.skyBlue,
+              ),
+            ],
+          );
+          final unitsCard = LogSummaryCard(
+            eyebrow: 'Shipped Units',
+            value: '$units',
+            unit: 'Total Units',
+            compact: shortHeight,
+            stats: [
+              (
+                label: 'Matching Search',
+                value: '${entries.length}',
+                accent: null,
+              ),
+            ],
+          );
+          if (stacked) {
+            return Column(
+              children: [
+                statusCard,
+                SizedBox(height: shortHeight ? 6 : 10),
+                unitsCard,
+              ],
+            );
+          }
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: statusCard),
+              const SizedBox(width: 12),
+              Expanded(child: unitsCard),
+            ],
+          );
+        },
+      ),
+      SizedBox(height: gap),
+      SearchField(
+        controller: _search,
+        hint: 'Global search — SO, customer, carrier, zone, UUID…',
+        onChanged: (v) => setState(() => _q = v.trim().toLowerCase()),
+      ),
+      SizedBox(height: gap),
+    ];
+
+    final logCard = ShippedLogCard(
+      entries: entries,
+      expanded: true,
+      fillsViewport: !usePageListScroll,
+      selectedId: _inspect?.id,
+      onInspect: _openInspector,
+      onQuickShip: () => showQuickShipSheet(context, ref),
+    );
+
     final scrollBody = RefreshIndicator(
       onRefresh: () => ref.read(appDataProvider.notifier).refresh(),
-      notificationPredicate: (n) => n.depth <= 2,
-      child: Padding(
-        padding: slstPagePadding(context, top: shortHeight ? 12 : 20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Shell _TopHeader already shows the section title on desktop.
-            if (compactShell) ...[
-              Text(
-                'Shipped Staging Entries Log',
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                  color: IndustrialTheme.textPrimary,
-                ),
-              ),
-              SizedBox(height: gap),
-            ],
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final stacked = constraints.maxWidth < 720;
-                final statusCard = LogSummaryCard(
-                  eyebrow: 'Shipment Activity',
-                  value: '${trueShips.length}',
-                  unit: 'True Ships',
-                  compact: shortHeight,
-                  stats: [
-                    (
-                      label: 'Shipped Today',
-                      value: '$shippedToday',
-                      accent: IndustrialTheme.mintGreen,
-                    ),
-                    (
-                      label: 'Returned',
-                      value: '$returned',
-                      accent: IndustrialTheme.amber,
-                    ),
-                    (
-                      label: 'All Records',
-                      value: '${data.shipped.length}',
-                      accent: IndustrialTheme.skyBlue,
-                    ),
-                  ],
-                );
-                final unitsCard = LogSummaryCard(
-                  eyebrow: 'Shipped Units',
-                  value: '$units',
-                  unit: 'Total Units',
-                  compact: shortHeight,
-                  stats: [
-                    (
-                      label: 'Matching Search',
-                      value: '${entries.length}',
-                      accent: null,
-                    ),
-                  ],
-                );
-                if (stacked) {
-                  return Column(
-                    children: [
-                      statusCard,
-                      SizedBox(height: shortHeight ? 6 : 10),
-                      unitsCard,
-                    ],
-                  );
-                }
-                return Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(child: statusCard),
-                    const SizedBox(width: 12),
-                    Expanded(child: unitsCard),
-                  ],
-                );
-              },
-            ),
-            SizedBox(height: gap),
-            SearchField(
-              controller: _search,
-              hint: 'Global search — SO, customer, carrier, zone, UUID…',
-              onChanged: (v) => setState(() => _q = v.trim().toLowerCase()),
-            ),
-            SizedBox(height: gap),
-            Expanded(
-              child: ShippedLogCard(
-                entries: entries,
-                expanded: true,
-                fillsViewport: true,
-                selectedId: _inspect?.id,
-                onInspect: _openInspector,
-                onQuickShip: () => showQuickShipSheet(context, ref),
+      notificationPredicate: (n) =>
+          usePageListScroll ? true : n.depth <= 2,
+      child: usePageListScroll
+          ? ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: slstPagePadding(context, top: shortHeight ? 12 : 20),
+              children: [
+                ...summaryAndSearch,
+                logCard,
+                const BrandFooter(),
+              ],
+            )
+          : Padding(
+              padding: slstPagePadding(context, top: shortHeight ? 12 : 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  ...summaryAndSearch,
+                  Expanded(child: logCard),
+                  const BrandFooter(),
+                ],
               ),
             ),
-            const BrandFooter(),
-          ],
-        ),
-      ),
     );
 
     final content = AsyncPanel(

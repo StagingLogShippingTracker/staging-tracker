@@ -1,9 +1,18 @@
 import 'dart:math' as math;
+import 'dart:io' show Platform;
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/theme.dart';
+
+/// Horizontal scrollbar + chevron chrome is for mouse (Windows/desktop).
+/// Android uses finger swipe — hide arrows/scrollbar there.
+bool get showHorizontalScrollChrome {
+  if (kIsWeb) return true;
+  return !Platform.isAndroid;
+}
 
 /// Standard async-state framing for operational pages.
 ///
@@ -1048,6 +1057,19 @@ class _HorizontalScrollWithArrowsState
 
   @override
   Widget build(BuildContext context) {
+    final scrollable = NotificationListener<ScrollMetricsNotification>(
+      onNotification: (_) {
+        _syncArrows();
+        return false;
+      },
+      child: widget.builder(context, _controller),
+    );
+
+    // Android: finger-swipe only — no arrows / forced scrollbar chrome.
+    if (!showHorizontalScrollChrome) {
+      return scrollable;
+    }
+
     // Do not use CrossAxisAlignment.stretch — this widget is often hosted inside
     // a vertical ListView (unbounded max height). Stretch then collapses the
     // row to zero height and the staging/shipped grids disappear entirely.
@@ -1065,13 +1087,7 @@ class _HorizontalScrollWithArrowsState
             controller: _controller,
             thumbVisibility: true,
             notificationPredicate: (n) => n.metrics.axis == Axis.horizontal,
-            child: NotificationListener<ScrollMetricsNotification>(
-              onNotification: (_) {
-                _syncArrows();
-                return false;
-              },
-              child: widget.builder(context, _controller),
-            ),
+            child: scrollable,
           ),
         ),
         _HorizontalScrollArrow(

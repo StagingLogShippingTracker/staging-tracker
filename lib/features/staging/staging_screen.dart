@@ -1,3 +1,6 @@
+import 'dart:io' show Platform;
+
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -108,122 +111,138 @@ class _StagingScreenState extends ConsumerState<StagingScreen> {
     final compactShell = size.width < kCompactShellBreakpoint;
     final shortHeight = size.height < 920;
     final gap = shortHeight ? 8.0 : 14.0;
+    // Android (and compact phones): page ListView so rows always paint.
+    // Windows desktop: pin table in remaining height with horizontal chrome.
+    final usePageListScroll =
+        compactShell || (!kIsWeb && Platform.isAndroid);
 
-    // Summary + search stay above; the log card fills remaining height so the
-    // industrial grid can pin horizontal arrows/scrollbar in the table viewport.
+    final summaryAndSearch = <Widget>[
+      if (compactShell) ...[
+        Text(
+          'Active Staging Entries Log',
+          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+            fontSize: 22,
+            fontWeight: FontWeight.w800,
+            color: IndustrialTheme.textPrimary,
+          ),
+        ),
+        SizedBox(height: gap),
+      ],
+      LayoutBuilder(
+        builder: (context, constraints) {
+          final stacked = constraints.maxWidth < 720;
+          final statusCard = LogSummaryCard(
+            eyebrow: 'Live Staging Status',
+            value: '${data.staging.length}',
+            unit: 'Active Jobs',
+            compact: shortHeight,
+            stats: [
+              (
+                label: 'Ship Today',
+                value: '$shipToday',
+                accent: IndustrialTheme.mintGreen,
+              ),
+              (
+                label: 'Partial',
+                value: '$partial',
+                accent: IndustrialTheme.amber,
+              ),
+              (
+                label: 'Awaiting',
+                value: '$awaiting',
+                accent: IndustrialTheme.purple,
+              ),
+            ],
+          );
+          final floorCard = LogSummaryCard(
+            eyebrow: 'Current Floor Units',
+            value: '${totals['containers'] ?? 0}',
+            unit: 'Total Units',
+            compact: shortHeight,
+            stats: [
+              (
+                label: 'Skids',
+                value: '${totals['skids'] ?? 0}',
+                accent: null,
+              ),
+              (
+                label: 'Boxes',
+                value: '${totals['boxes'] ?? 0}',
+                accent: null,
+              ),
+              (
+                label: 'Crates',
+                value: '${totals['crates'] ?? 0}',
+                accent: null,
+              ),
+              (
+                label: 'Pipe/Rod',
+                value: '${totals['pipe'] ?? 0}',
+                accent: null,
+              ),
+            ],
+          );
+          if (stacked) {
+            return Column(
+              children: [
+                statusCard,
+                SizedBox(height: shortHeight ? 6 : 10),
+                floorCard,
+              ],
+            );
+          }
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: statusCard),
+              const SizedBox(width: 12),
+              Expanded(child: floorCard),
+            ],
+          );
+        },
+      ),
+      SizedBox(height: gap),
+      SearchField(
+        controller: _search,
+        hint: 'Global search — SO, customer, zone, status, UUID…',
+        onChanged: (v) => setState(() => _q = v.trim().toLowerCase()),
+      ),
+      SizedBox(height: gap),
+    ];
+
+    final logCard = StagingLogCard(
+      entries: entries,
+      expanded: true,
+      fillsViewport: !usePageListScroll,
+      selectedId: _inspect?.id,
+      onInspect: _openInspector,
+    );
+
     final scrollBody = RefreshIndicator(
       onRefresh: () => ref.read(appDataProvider.notifier).refresh(),
-      notificationPredicate: (n) => n.depth <= 2,
-      child: Padding(
-        padding: slstPagePadding(context, top: shortHeight ? 12 : 20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Shell _TopHeader already shows the section title on desktop.
-            if (compactShell) ...[
-              Text(
-                'Active Staging Entries Log',
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                  color: IndustrialTheme.textPrimary,
-                ),
-              ),
-              SizedBox(height: gap),
-            ],
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final stacked = constraints.maxWidth < 720;
-                final statusCard = LogSummaryCard(
-                  eyebrow: 'Live Staging Status',
-                  value: '${data.staging.length}',
-                  unit: 'Active Jobs',
-                  compact: shortHeight,
-                  stats: [
-                    (
-                      label: 'Ship Today',
-                      value: '$shipToday',
-                      accent: IndustrialTheme.mintGreen,
-                    ),
-                    (
-                      label: 'Partial',
-                      value: '$partial',
-                      accent: IndustrialTheme.amber,
-                    ),
-                    (
-                      label: 'Awaiting',
-                      value: '$awaiting',
-                      accent: IndustrialTheme.purple,
-                    ),
-                  ],
-                );
-                final floorCard = LogSummaryCard(
-                  eyebrow: 'Current Floor Units',
-                  value: '${totals['containers'] ?? 0}',
-                  unit: 'Total Units',
-                  compact: shortHeight,
-                  stats: [
-                    (
-                      label: 'Skids',
-                      value: '${totals['skids'] ?? 0}',
-                      accent: null,
-                    ),
-                    (
-                      label: 'Boxes',
-                      value: '${totals['boxes'] ?? 0}',
-                      accent: null,
-                    ),
-                    (
-                      label: 'Crates',
-                      value: '${totals['crates'] ?? 0}',
-                      accent: null,
-                    ),
-                    (
-                      label: 'Pipe/Rod',
-                      value: '${totals['pipe'] ?? 0}',
-                      accent: null,
-                    ),
-                  ],
-                );
-                if (stacked) {
-                  return Column(
-                    children: [
-                      statusCard,
-                      SizedBox(height: shortHeight ? 6 : 10),
-                      floorCard,
-                    ],
-                  );
-                }
-                return Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(child: statusCard),
-                    const SizedBox(width: 12),
-                    Expanded(child: floorCard),
-                  ],
-                );
-              },
-            ),
-            SizedBox(height: gap),
-            SearchField(
-              controller: _search,
-              hint: 'Global search — SO, customer, zone, status, UUID…',
-              onChanged: (v) => setState(() => _q = v.trim().toLowerCase()),
-            ),
-            SizedBox(height: gap),
-            Expanded(
-              child: StagingLogCard(
-                entries: entries,
-                expanded: true,
-                fillsViewport: true,
-                selectedId: _inspect?.id,
-                onInspect: _openInspector,
+      notificationPredicate: (n) =>
+          usePageListScroll ? true : n.depth <= 2,
+      child: usePageListScroll
+          ? ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: slstPagePadding(context, top: shortHeight ? 12 : 20),
+              children: [
+                ...summaryAndSearch,
+                logCard,
+                const BrandFooter(),
+              ],
+            )
+          : Padding(
+              padding: slstPagePadding(context, top: shortHeight ? 12 : 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  ...summaryAndSearch,
+                  Expanded(child: logCard),
+                  const BrandFooter(),
+                ],
               ),
             ),
-            const BrandFooter(),
-          ],
-        ),
-      ),
     );
 
     final content = AsyncPanel(
