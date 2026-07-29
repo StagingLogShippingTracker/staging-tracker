@@ -206,7 +206,6 @@ function shellChrome(opts: {
                         </td>
                         <td valign="middle">
                           <div style="font-family: ${FONT}; font-size: 13px; font-weight: 800; letter-spacing: 1px; color: ${TEXT}; line-height: 1.05;">SST</div>
-                          <div style="font-family: ${FONT}; font-size: 10px; font-weight: 600; letter-spacing: 0.4px; color: ${MUTED}; line-height: 1.2; padding-top: 2px;">Swift Staging Tracker</div>
                         </td>
                       </tr>
                     </table>
@@ -612,7 +611,7 @@ export function renderBrandedEmail(opts: BrandedEmailOptions): string {
                 <tr>
                   <td align="center" class="og-footer" style="padding: 20px 16px 22px 16px; font-family: ${FONT};">
                     <div style="font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: ${MUTED}; padding-bottom: 4px;">
-                      SST — SWIFT STAGING TRACKER
+                      SST
                     </div>
                     <div style="font-size: 12px; color: ${MUTED}; padding-bottom: 14px;">
                       Designed &amp; developed by Brice Johnson

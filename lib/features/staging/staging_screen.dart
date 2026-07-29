@@ -109,10 +109,13 @@ class _StagingScreenState extends ConsumerState<StagingScreen> {
     final shortHeight = size.height < 920;
     final gap = shortHeight ? 8.0 : 14.0;
 
-    final scrollBody = Padding(
-      padding: slstPagePadding(context, top: shortHeight ? 12 : 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+    // One primary vertical scroll for chrome + table (touch + mouse wheel).
+    // Horizontal panning lives inside the industrial grid only.
+    final scrollBody = RefreshIndicator(
+      onRefresh: () => ref.read(appDataProvider.notifier).refresh(),
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: slstPagePadding(context, top: shortHeight ? 12 : 20),
         children: [
           // Shell _TopHeader already shows the section title on desktop.
           if (compactShell) ...[
@@ -206,20 +209,13 @@ class _StagingScreenState extends ConsumerState<StagingScreen> {
             onChanged: (v) => setState(() => _q = v.trim().toLowerCase()),
           ),
           SizedBox(height: gap),
-          // Bounded height + fillViewport so the industrial grid scrolls
-          // internally — never nest expanded:true table in an outer ListView.
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: () => ref.read(appDataProvider.notifier).refresh(),
-              child: StagingLogCard(
-                entries: entries,
-                expanded: true,
-                fillViewport: true,
-                selectedId: _inspect?.id,
-                onInspect: _openInspector,
-              ),
-            ),
+          StagingLogCard(
+            entries: entries,
+            expanded: true,
+            selectedId: _inspect?.id,
+            onInspect: _openInspector,
           ),
+          const BrandFooter(),
         ],
       ),
     );

@@ -108,10 +108,12 @@ class _ShippedScreenState extends ConsumerState<ShippedScreen> {
     final shortHeight = size.height < 920;
     final gap = shortHeight ? 8.0 : 14.0;
 
-    final scrollBody = Padding(
-      padding: slstPagePadding(context, top: shortHeight ? 12 : 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+    // One primary vertical scroll for chrome + table (touch + mouse wheel).
+    final scrollBody = RefreshIndicator(
+      onRefresh: () => ref.read(appDataProvider.notifier).refresh(),
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: slstPagePadding(context, top: shortHeight ? 12 : 20),
         children: [
           // Shell _TopHeader already shows the section title on desktop.
           if (compactShell) ...[
@@ -190,19 +192,14 @@ class _ShippedScreenState extends ConsumerState<ShippedScreen> {
             onChanged: (v) => setState(() => _q = v.trim().toLowerCase()),
           ),
           SizedBox(height: gap),
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: () => ref.read(appDataProvider.notifier).refresh(),
-              child: ShippedLogCard(
-                entries: entries,
-                expanded: true,
-                fillViewport: true,
-                selectedId: _inspect?.id,
-                onInspect: _openInspector,
-                onQuickShip: () => showQuickShipSheet(context, ref),
-              ),
-            ),
+          ShippedLogCard(
+            entries: entries,
+            expanded: true,
+            selectedId: _inspect?.id,
+            onInspect: _openInspector,
+            onQuickShip: () => showQuickShipSheet(context, ref),
           ),
+          const BrandFooter(),
         ],
       ),
     );

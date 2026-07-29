@@ -1,4 +1,4 @@
-# SLST — Staging Log & Shipping Tracker (Flutter)
+# SST — Staging & Shipping Tracker (Flutter)
 
 Native Flutter clients for Swift Supply staging and shipping operations.
 Targets **Windows** (portable ZIP + per-user installer), **Android** (sideload APK), and **Wear OS** (`apps/slst_wear`).
@@ -188,7 +188,7 @@ must still resolve concurrent conflicts when warned.
 ## Brand assets
 
 - `assets/slst-mark.png` — forklift-in-tire brand mark (transparent background)
-- `assets/slst-wordmark.png` — "SLST / Staging Log & Shipping Tracker" wordmark
+- `assets/slst-wordmark.png` — legacy "SLST / Staging Log & Shipping Tracker" wordmark (historical)
 - `assets/staging-shipping-logo.png` — legacy horizontal logo (kept for reference, not bundled)
 - `assets/contacts.json` (employee directory)
 - Regenerate app icons / splash logos with `python scripts/generate-app-icons.py`

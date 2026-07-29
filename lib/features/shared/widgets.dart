@@ -80,7 +80,7 @@ EdgeInsets slstPagePadding(
   return EdgeInsets.fromLTRB(h, top, h, b);
 }
 
-/// SST wordmark ("SST — Swift Staging Tracker") for compact brand placements.
+/// SST wordmark — primary letters only; full name is Semantics/tooltip only.
 class BrandWordmark extends StatelessWidget {
   const BrandWordmark({super.key, required this.height});
 
@@ -88,40 +88,25 @@ class BrandWordmark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        BrandMark(size: height),
-        SizedBox(width: height * 0.28),
-        Flexible(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'SST',
-                style: TextStyle(
-                  fontSize: height * 0.52,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 1.0,
-                  color: IndustrialTheme.textPrimary,
-                  height: 1.05,
-                ),
-              ),
-              Text(
-                'Swift Staging Tracker',
-                style: TextStyle(
-                  fontSize: height * 0.28,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.4,
-                  color: IndustrialTheme.textMuted,
-                  height: 1.1,
-                ),
-              ),
-            ],
+    return Semantics(
+      label: 'SST — Staging & Shipping Tracker',
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          BrandMark(size: height),
+          SizedBox(width: height * 0.28),
+          Text(
+            'SST',
+            style: TextStyle(
+              fontSize: height * 0.52,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.0,
+              color: IndustrialTheme.textPrimary,
+              height: 1.05,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -135,31 +120,24 @@ class BrandLogo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final iconSize = (height * 0.72).clamp(56.0, 96.0);
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        BrandMark(size: iconSize),
-        SizedBox(height: height * 0.12),
-        Text(
-          'SST',
-          style: TextStyle(
-            fontSize: height * 0.28,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 1.4,
-            color: IndustrialTheme.textPrimary,
+    return Semantics(
+      label: 'SST — Staging & Shipping Tracker',
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          BrandMark(size: iconSize),
+          SizedBox(height: height * 0.12),
+          Text(
+            'SST',
+            style: TextStyle(
+              fontSize: height * 0.28,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.4,
+              color: IndustrialTheme.textPrimary,
+            ),
           ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          'Swift Staging Tracker',
-          style: TextStyle(
-            fontSize: height * 0.145,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.6,
-            color: IndustrialTheme.textMuted,
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -939,7 +917,7 @@ class BrandFooter extends StatelessWidget {
       child: Column(
         children: [
           Text(
-            'SST — SWIFT STAGING TRACKER',
+            'SST',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 11,

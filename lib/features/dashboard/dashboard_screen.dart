@@ -634,19 +634,22 @@ class _ActiveStagingBoard extends StatelessWidget {
 
               return SizedBox(
                 height: phone ? 360 : 420,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  primary: false,
-                  itemCount: columns.length,
-                  separatorBuilder: (_, _) => const SizedBox(width: 10),
-                  itemBuilder: (context, i) => SizedBox(
-                    width: phone ? 188 : 210,
-                    child: _BoardColumn(
-                      title: columns[i].title,
-                      accent: columns[i].accent,
-                      entries: columns[i].entries,
-                      selectedId: selectedId,
-                      onSelect: onSelect,
+                child: HorizontalScrollWithArrows(
+                  builder: (context, controller) => ListView.separated(
+                    controller: controller,
+                    scrollDirection: Axis.horizontal,
+                    primary: false,
+                    itemCount: columns.length,
+                    separatorBuilder: (_, _) => const SizedBox(width: 10),
+                    itemBuilder: (context, i) => SizedBox(
+                      width: phone ? 188 : 210,
+                      child: _BoardColumn(
+                        title: columns[i].title,
+                        accent: columns[i].accent,
+                        entries: columns[i].entries,
+                        selectedId: selectedId,
+                        onSelect: onSelect,
+                      ),
                     ),
                   ),
                 ),

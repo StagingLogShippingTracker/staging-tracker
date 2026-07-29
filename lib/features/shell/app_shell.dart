@@ -114,7 +114,7 @@ class AppShell extends ConsumerWidget {
       scheme: 'mailto',
       path: AppConfig.accessRequestEmail,
       queryParameters: {
-        'subject': 'Access Request: SST (Swift Staging Tracker)',
+        'subject': 'Access Request: SST (Staging & Shipping Tracker)',
       },
     );
     await launchUrl(uri);
@@ -293,16 +293,6 @@ class _CompactShell extends ConsumerWidget {
                         fontWeight: FontWeight.w800,
                         letterSpacing: 0.5,
                         color: IndustrialTheme.textPrimary,
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      'Swift Staging Tracker',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 1.0,
-                        color: IndustrialTheme.textMuted,
                       ),
                     ),
                   ],
@@ -614,16 +604,6 @@ class _IndustrialRail extends ConsumerWidget {
                           letterSpacing: 0.6,
                           color: IndustrialTheme.textPrimary,
                           height: 1.25,
-                        ),
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        'Swift Staging Tracker',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 1.0,
-                          color: IndustrialTheme.textMuted,
                         ),
                       ),
                     ],

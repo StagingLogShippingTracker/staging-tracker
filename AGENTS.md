@@ -2,7 +2,7 @@
 
 ## What this is
 
-SLST — Staging Log & Shipping Tracker: **Flutter clients** for **Windows**, **Android**, and **Wear OS**, backed by a **hosted Supabase** project. Make.com PM email/SMS is invoked only through the authenticated Edge Function `notify-pm`.
+SLST / SST — Staging & Shipping Tracker: **Flutter clients** for **Windows**, **Android**, and **Wear OS**, backed by a **hosted Supabase** project. Make.com PM email/SMS is invoked only through the authenticated Edge Function `notify-pm`.
 
 There is **no** web/PWA client and **no** Prophet21 / Epicor integration.
 

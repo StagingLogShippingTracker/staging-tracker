@@ -960,16 +960,158 @@ class IndustrialColumnHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final label = Text(
-      text.toUpperCase(),
-      style: GoogleFonts.inter(
-        fontSize: 10,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 0.7,
-        color: IndustrialTheme.textMuted,
+    final label = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      child: Text(
+        text.toUpperCase(),
+        style: GoogleFonts.inter(
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.7,
+          color: IndustrialTheme.textMuted,
+        ),
       ),
     );
     if (width == null) return label;
     return SizedBox(width: width, child: label);
+  }
+}
+
+/// Horizontal scroll chrome: visible [Scrollbar] plus left/right page chevrons.
+///
+/// [builder] must attach [controller] to the horizontal scrollable it returns
+/// (e.g. [ListView] or [SingleChildScrollView]).
+class HorizontalScrollWithArrows extends StatefulWidget {
+  const HorizontalScrollWithArrows({
+    super.key,
+    required this.builder,
+    this.scrollStep,
+  });
+
+  final Widget Function(BuildContext context, ScrollController controller)
+  builder;
+  final double? scrollStep;
+
+  @override
+  State<HorizontalScrollWithArrows> createState() =>
+      _HorizontalScrollWithArrowsState();
+}
+
+class _HorizontalScrollWithArrowsState
+    extends State<HorizontalScrollWithArrows> {
+  final _controller = ScrollController();
+  bool _canBack = false;
+  bool _canForward = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(_syncArrows);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _syncArrows());
+  }
+
+  @override
+  void dispose() {
+    _controller.removeListener(_syncArrows);
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _syncArrows() {
+    if (!_controller.hasClients) return;
+    final pos = _controller.position;
+    final canBack = pos.pixels > pos.minScrollExtent + 0.5;
+    final canForward = pos.pixels < pos.maxScrollExtent - 0.5;
+    if (canBack != _canBack || canForward != _canForward) {
+      setState(() {
+        _canBack = canBack;
+        _canForward = canForward;
+      });
+    }
+  }
+
+  Future<void> _page(bool forward) async {
+    if (!_controller.hasClients) return;
+    final pos = _controller.position;
+    final step =
+        widget.scrollStep ?? math.max(180.0, pos.viewportDimension * 0.8);
+    final target = (pos.pixels + (forward ? step : -step)).clamp(
+      pos.minScrollExtent,
+      pos.maxScrollExtent,
+    );
+    await _controller.animateTo(
+      target,
+      duration: const Duration(milliseconds: 240),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _HorizontalScrollArrow(
+          icon: Icons.chevron_left,
+          tooltip: 'Scroll left',
+          enabled: _canBack,
+          onPressed: () => _page(false),
+        ),
+        Expanded(
+          child: Scrollbar(
+            controller: _controller,
+            thumbVisibility: true,
+            notificationPredicate: (n) => n.metrics.axis == Axis.horizontal,
+            child: NotificationListener<ScrollMetricsNotification>(
+              onNotification: (_) {
+                _syncArrows();
+                return false;
+              },
+              child: widget.builder(context, _controller),
+            ),
+          ),
+        ),
+        _HorizontalScrollArrow(
+          icon: Icons.chevron_right,
+          tooltip: 'Scroll right',
+          enabled: _canForward,
+          onPressed: () => _page(true),
+        ),
+      ],
+    );
+  }
+}
+
+class _HorizontalScrollArrow extends StatelessWidget {
+  const _HorizontalScrollArrow({
+    required this.icon,
+    required this.tooltip,
+    required this.enabled,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final bool enabled;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: IconButton(
+        tooltip: tooltip,
+        onPressed: enabled ? onPressed : null,
+        visualDensity: VisualDensity.compact,
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+        icon: Icon(
+          icon,
+          size: 22,
+          color: enabled
+              ? IndustrialTheme.textPrimary
+              : IndustrialTheme.textMuted.withValues(alpha: 0.35),
+        ),
+      ),
+    );
   }
 }

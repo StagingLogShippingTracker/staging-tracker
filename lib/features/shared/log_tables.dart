@@ -536,16 +536,9 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
   StagingSort _sort = StagingSort.urgency;
   bool _batch = false;
   final _selected = <String>{};
-  final _hScroll = ScrollController();
   String _zoneFilter = _allZones;
   String _statusFilter = _allStatuses;
   String _stagerFilter = _allStagers;
-
-  @override
-  void dispose() {
-    _hScroll.dispose();
-    super.dispose();
-  }
 
   void _inspect(StagingEntry entry) => widget.onInspect?.call(entry);
 
@@ -828,8 +821,8 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
     required List<StagingEntry> rows,
   }) {
     final viewMode = ref.watch(logViewModeProvider);
-    final useDesktopGrid =
-        viewMode == LogViewMode.list && usesDesktopPopupChrome(context);
+    // Industrial grid for list mode on all platforms (horizontal arrows + bar).
+    final useIndustrialGrid = viewMode == LogViewMode.list;
 
     if (rows.isEmpty) {
       final empty = const Padding(
@@ -852,48 +845,35 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
         rows: rows,
         sortedLength: sorted.length,
       );
-    } else if (!useDesktopGrid) {
+    } else if (!useIndustrialGrid) {
       body = _stagingDenseList(
         canWrite: canWrite,
         rows: rows,
         sortedLength: sorted.length,
       );
     } else {
+      final grid = _stagingIndustrialGrid(canWrite: canWrite, rows: rows);
+      final horizontal = HorizontalScrollWithArrows(
+        builder: (context, controller) => SingleChildScrollView(
+          controller: controller,
+          scrollDirection: Axis.horizontal,
+          child: grid,
+        ),
+      );
       body = Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (widget.fillViewport)
             Expanded(
-              // Vertical scroll outer so RefreshIndicator + rows stay reachable;
-              // horizontal pan is nested for wide industrial columns.
               child: Scrollbar(
                 child: SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  child: Scrollbar(
-                    controller: _hScroll,
-                    notificationPredicate: (n) =>
-                        n.metrics.axis == Axis.horizontal,
-                    child: SingleChildScrollView(
-                      controller: _hScroll,
-                      scrollDirection: Axis.horizontal,
-                      child: _stagingIndustrialGrid(
-                        canWrite: canWrite,
-                        rows: rows,
-                      ),
-                    ),
-                  ),
+                  child: horizontal,
                 ),
               ),
             )
           else
-            Scrollbar(
-              controller: _hScroll,
-              child: SingleChildScrollView(
-                controller: _hScroll,
-                scrollDirection: Axis.horizontal,
-                child: _stagingIndustrialGrid(canWrite: canWrite, rows: rows),
-              ),
-            ),
+            horizontal,
           if (!widget.expanded && sorted.length > rows.length)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
@@ -1198,16 +1178,17 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
     required bool canWrite,
     required List<StagingEntry> rows,
   }) {
-    const soW = 118.0;
+    const soW = 120.0;
     const clientW = 168.0;
-    const zoneW = 100.0;
-    const containerW = 130.0;
-    const weightW = 88.0;
+    const zoneW = 118.0;
+    const containerW = 140.0;
+    const weightW = 118.0;
     const statusW = 140.0;
-    const stagerW = 110.0;
+    const stagerW = 118.0;
     const timeW = 128.0;
-    const photosW = 72.0;
+    const photosW = 80.0;
     const actionsW = 132.0;
+    const cellPad = EdgeInsets.symmetric(horizontal: 10, vertical: 10);
     final batchW = _batch ? 44.0 : 0.0;
     final totalW =
         3 +
@@ -1222,7 +1203,7 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
         timeW +
         photosW +
         (canWrite ? actionsW : 0) +
-        48;
+        24;
 
     Widget headerCell(String label, double width) =>
         SizedBox(width: width, child: IndustrialColumnHeader(label));
@@ -1243,7 +1224,7 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
                 headerCell('Client', clientW),
                 headerCell('Zone', zoneW),
                 headerCell('Containers', containerW),
-                headerCell('Weight', weightW),
+                headerCell('Weight (lbs)', weightW),
                 headerCell('Status', statusW),
                 headerCell('Stager', stagerW),
                 headerCell('Timestamp', timeW),
@@ -1289,15 +1270,12 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
                         SizedBox(
                           width: soW,
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 10,
-                            ),
+                            padding: cellPad,
                             child: _soHistoryLink(
                               context,
                               ref,
                               e.so,
-                              maxWidth: soW - 8,
+                              maxWidth: soW - 20,
                               large: true,
                             ),
                           ),
@@ -1305,10 +1283,10 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
                         SizedBox(
                           width: clientW,
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            padding: cellPad,
                             child: _clipText(
                               e.customer,
-                              maxWidth: clientW - 8,
+                              maxWidth: clientW - 20,
                               muted: true,
                             ),
                           ),
@@ -1316,38 +1294,38 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
                         SizedBox(
                           width: zoneW,
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            padding: cellPad,
                             child: IndustrialZonePill(e.location),
                           ),
                         ),
                         SizedBox(
                           width: containerW,
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            padding: cellPad,
                             child: _containerCell(e.type, e.qty),
                           ),
                         ),
                         SizedBox(
                           width: weightW,
                           child: Padding(
-                            padding: const EdgeInsets.fromLTRB(8, 10, 4, 10),
+                            padding: cellPad,
                             child: IndustrialWeightPill(e.weight),
                           ),
                         ),
                         SizedBox(
                           width: statusW,
                           child: Padding(
-                            padding: const EdgeInsets.fromLTRB(16, 10, 8, 10),
+                            padding: cellPad,
                             child: IndustrialStatusBadge(status: statusLabel),
                           ),
                         ),
                         SizedBox(
                           width: stagerW,
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            padding: cellPad,
                             child: _clipText(
                               e.stagedBy ?? '',
-                              maxWidth: stagerW - 8,
+                              maxWidth: stagerW - 20,
                               muted: true,
                             ),
                           ),
@@ -1355,14 +1333,17 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
                         SizedBox(
                           width: timeW,
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            padding: cellPad,
                             child: _mutedStamp(e.entryDate),
                           ),
                         ),
                         SizedBox(
                           width: photosW,
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 6),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
                             child: _photosButton(context, e.so, e.photoUrls),
                           ),
                         ),
@@ -1370,7 +1351,10 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
                           SizedBox(
                             width: actionsW,
                             child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 6),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
@@ -1491,16 +1475,9 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
   ShippedSort _sort = ShippedSort.newest;
   bool _batch = false;
   final _selected = <String>{};
-  final _hScroll = ScrollController();
   String _carrierFilter = _allCarriers;
   String _zoneFilter = _allZones;
   String _shipperFilter = _allShippers;
-
-  @override
-  void dispose() {
-    _hScroll.dispose();
-    super.dispose();
-  }
 
   void _inspect(ShippedEntry entry) => widget.onInspect?.call(entry);
 
@@ -1797,8 +1774,7 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
     required List<ShippedEntry> rows,
   }) {
     final viewMode = ref.watch(logViewModeProvider);
-    final useDesktopGrid =
-        viewMode == LogViewMode.list && usesDesktopPopupChrome(context);
+    final useIndustrialGrid = viewMode == LogViewMode.list;
 
     if (rows.isEmpty) {
       final empty = const Padding(
@@ -1822,7 +1798,7 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
         rows: rows,
         sortedLength: sorted.length,
       );
-    } else if (!useDesktopGrid) {
+    } else if (!useIndustrialGrid) {
       body = _shippedDenseList(
         canWrite: canWrite,
         dark: dark,
@@ -1830,6 +1806,14 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
         sortedLength: sorted.length,
       );
     } else {
+      final grid = _shippedIndustrialGrid(canWrite: canWrite, rows: rows);
+      final horizontal = HorizontalScrollWithArrows(
+        builder: (context, controller) => SingleChildScrollView(
+          controller: controller,
+          scrollDirection: Axis.horizontal,
+          child: grid,
+        ),
+      );
       body = Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -1838,31 +1822,12 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
               child: Scrollbar(
                 child: SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  child: Scrollbar(
-                    controller: _hScroll,
-                    notificationPredicate: (n) =>
-                        n.metrics.axis == Axis.horizontal,
-                    child: SingleChildScrollView(
-                      controller: _hScroll,
-                      scrollDirection: Axis.horizontal,
-                      child: _shippedIndustrialGrid(
-                        canWrite: canWrite,
-                        rows: rows,
-                      ),
-                    ),
-                  ),
+                  child: horizontal,
                 ),
               ),
             )
           else
-            Scrollbar(
-              controller: _hScroll,
-              child: SingleChildScrollView(
-                controller: _hScroll,
-                scrollDirection: Axis.horizontal,
-                child: _shippedIndustrialGrid(canWrite: canWrite, rows: rows),
-              ),
-            ),
+            horizontal,
           if (!widget.expanded && sorted.length > rows.length)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
@@ -2176,17 +2141,18 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
     required bool canWrite,
     required List<ShippedEntry> rows,
   }) {
-    const soW = 118.0;
+    const soW = 120.0;
     const clientW = 160.0;
-    const containerW = 120.0;
+    const containerW = 140.0;
     const carrierW = 130.0;
-    const zoneW = 100.0;
-    const weightW = 88.0;
+    const zoneW = 118.0;
+    const weightW = 118.0;
     const shippedW = 128.0;
-    const byW = 100.0;
+    const byW = 110.0;
     const pmdW = 120.0;
-    const photosW = 72.0;
+    const photosW = 80.0;
     const actionsW = 56.0;
+    const cellPad = EdgeInsets.symmetric(horizontal: 10, vertical: 10);
     final batchW = _batch ? 44.0 : 0.0;
     final totalW =
         3 +
@@ -2202,7 +2168,7 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
         pmdW +
         photosW +
         (canWrite ? actionsW : 0) +
-        48;
+        24;
 
     Widget headerCell(String label, double width) =>
         SizedBox(width: width, child: IndustrialColumnHeader(label));
@@ -2224,7 +2190,7 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
                 headerCell('Containers', containerW),
                 headerCell('Carrier', carrierW),
                 headerCell('Zone', zoneW),
-                headerCell('Weight', weightW),
+                headerCell('Weight (lbs)', weightW),
                 headerCell('Shipped', shippedW),
                 headerCell('By', byW),
                 headerCell("PM'd", pmdW),
@@ -2273,15 +2239,12 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
                         SizedBox(
                           width: soW,
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 10,
-                            ),
+                            padding: cellPad,
                             child: _soHistoryLink(
                               context,
                               ref,
                               e.so,
-                              maxWidth: soW - 8,
+                              maxWidth: soW - 20,
                               large: true,
                             ),
                           ),
@@ -2289,10 +2252,10 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
                         SizedBox(
                           width: clientW,
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            padding: cellPad,
                             child: _clipText(
                               e.customer,
-                              maxWidth: clientW - 8,
+                              maxWidth: clientW - 20,
                               muted: true,
                             ),
                           ),
@@ -2300,47 +2263,50 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
                         SizedBox(
                           width: containerW,
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            padding: cellPad,
                             child: _containerCell(e.type, e.qty),
                           ),
                         ),
                         SizedBox(
                           width: carrierW,
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            padding: cellPad,
                             child: returned
                                 ? IndustrialStatusBadge(status: 'Returned')
-                                : _clipText(e.carrier, maxWidth: carrierW - 8),
+                                : _clipText(
+                                    e.carrier,
+                                    maxWidth: carrierW - 20,
+                                  ),
                           ),
                         ),
                         SizedBox(
                           width: zoneW,
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            padding: cellPad,
                             child: IndustrialZonePill(e.location),
                           ),
                         ),
                         SizedBox(
                           width: weightW,
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            padding: cellPad,
                             child: IndustrialWeightPill(e.weight),
                           ),
                         ),
                         SizedBox(
                           width: shippedW,
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            padding: cellPad,
                             child: _mutedStamp(e.shippedAt),
                           ),
                         ),
                         SizedBox(
                           width: byW,
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            padding: cellPad,
                             child: _clipText(
                               e.shippedBy ?? '',
-                              maxWidth: byW - 8,
+                              maxWidth: byW - 20,
                               muted: true,
                             ),
                           ),
@@ -2348,14 +2314,17 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
                         SizedBox(
                           width: pmdW,
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            child: _pmNotificationCell(e, maxWidth: pmdW),
+                            padding: cellPad,
+                            child: _pmNotificationCell(e, maxWidth: pmdW - 20),
                           ),
                         ),
                         SizedBox(
                           width: photosW,
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 6),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
                             child: _photosButton(context, e.so, e.photoUrls),
                           ),
                         ),

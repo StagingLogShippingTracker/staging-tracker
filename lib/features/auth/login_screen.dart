@@ -206,9 +206,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   path: AppConfig.accessRequestEmail,
                                   queryParameters: {
                                     'subject':
-                                        'Access Request: SST (Swift Staging Tracker)',
+                                        'Access Request: SST (Staging & Shipping Tracker)',
                                     'body':
-                                        'Hello,\n\nI am requesting user access to create and edit entries on SST (Swift Staging Tracker).\n',
+                                        'Hello,\n\nI am requesting user access to create and edit entries on SST (Staging & Shipping Tracker).\n',
                                   },
                                 );
                                 await launchUrl(uri);

@@ -103,7 +103,7 @@ export function renderShipConfirmationEmail(
 
 export function renderShipConfirmationPlain(data: ShipConfirmationData): string {
   return [
-    "SST — Swift Staging Tracker",
+    "SST — Staging & Shipping Tracker",
     "Your order has now been shipped",
     "",
     "Shipment details:",
