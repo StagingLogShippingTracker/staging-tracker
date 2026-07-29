@@ -39,6 +39,53 @@ Color _zebraRowColor(int index, {bool selected = false}) {
       : Colors.transparent;
 }
 
+/// Industrial log grid with left/right arrows + horizontal scrollbar.
+///
+/// When [fillsViewport] is true, the parent must give a bounded height. Rows
+/// scroll vertically inside that viewport so the horizontal chrome stays pinned
+/// to the visible table panel (not at the document end under tall content).
+Widget _industrialGridWithPinnedHorizontalChrome({
+  required Widget grid,
+  required bool fillsViewport,
+}) {
+  if (!fillsViewport) {
+    return HorizontalScrollWithArrows(
+      builder: (context, controller) => SingleChildScrollView(
+        controller: controller,
+        scrollDirection: Axis.horizontal,
+        child: grid,
+      ),
+    );
+  }
+
+  return HorizontalScrollWithArrows(
+    builder: (context, controller) {
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final maxH = constraints.maxHeight;
+          final table = !maxH.isFinite || maxH <= 0
+              ? grid
+              : SizedBox(
+                  height: maxH,
+                  child: Scrollbar(
+                    thumbVisibility: true,
+                    child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      child: grid,
+                    ),
+                  ),
+                );
+          return SingleChildScrollView(
+            controller: controller,
+            scrollDirection: Axis.horizontal,
+            child: table,
+          );
+        },
+      );
+    },
+  );
+}
+
 Widget _clipText(
   String text, {
   double maxWidth = 220,
@@ -504,7 +551,7 @@ class StagingLogCard extends ConsumerStatefulWidget {
     required this.entries,
     this.expanded = false,
     this.onExpand,
-    this.fillViewport = false,
+    this.fillsViewport = false,
     this.selectedId,
     this.onInspect,
   });
@@ -515,7 +562,7 @@ class StagingLogCard extends ConsumerStatefulWidget {
   final VoidCallback? onExpand;
 
   /// When true, own the vertical scroll (parent should give a bounded height).
-  final bool fillViewport;
+  final bool fillsViewport;
 
   /// Highlighted row id owned by the parent screen inspector host.
   final String? selectedId;
@@ -680,7 +727,7 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
 
     return SectionCard(
       title: 'Active Staging Entries',
-      expandChild: widget.fillViewport,
+      expandChild: widget.fillsViewport,
       headerActions: [
         _SortDropdown<StagingSort>(
           value: _sort,
@@ -829,7 +876,7 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
         padding: EdgeInsets.all(28),
         child: Center(child: Text('No staging entries found.')),
       );
-      if (widget.fillViewport) {
+      if (widget.fillsViewport) {
         return ListView(
           physics: const AlwaysScrollableScrollPhysics(),
           children: [empty],
@@ -853,27 +900,16 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
       );
     } else {
       final grid = _stagingIndustrialGrid(canWrite: canWrite, rows: rows);
-      final horizontal = HorizontalScrollWithArrows(
-        builder: (context, controller) => SingleChildScrollView(
-          controller: controller,
-          scrollDirection: Axis.horizontal,
-          child: grid,
-        ),
+      // Pin arrows + horizontal scrollbar to the table panel viewport; scroll
+      // rows vertically inside that bounded height (not the outer page).
+      final horizontal = _industrialGridWithPinnedHorizontalChrome(
+        grid: grid,
+        fillsViewport: widget.fillsViewport,
       );
       body = Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (widget.fillViewport)
-            Expanded(
-              child: Scrollbar(
-                child: SingleChildScrollView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  child: horizontal,
-                ),
-              ),
-            )
-          else
-            horizontal,
+          if (widget.fillsViewport) Expanded(child: horizontal) else horizontal,
           if (!widget.expanded && sorted.length > rows.length)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
@@ -944,7 +980,7 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
           : null,
     );
 
-    if (widget.fillViewport) {
+    if (widget.fillsViewport) {
       return ListView.builder(
         padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
         physics: const AlwaysScrollableScrollPhysics(),
@@ -1122,7 +1158,7 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
       );
     }
 
-    if (widget.fillViewport) {
+    if (widget.fillsViewport) {
       return ListView.separated(
         padding: const EdgeInsets.only(bottom: 12),
         physics: const AlwaysScrollableScrollPhysics(),
@@ -1445,7 +1481,7 @@ class ShippedLogCard extends ConsumerStatefulWidget {
     this.expanded = false,
     this.onExpand,
     this.onQuickShip,
-    this.fillViewport = false,
+    this.fillsViewport = false,
     this.selectedId,
     this.onInspect,
   });
@@ -1454,7 +1490,9 @@ class ShippedLogCard extends ConsumerStatefulWidget {
   final bool expanded;
   final VoidCallback? onExpand;
   final VoidCallback? onQuickShip;
-  final bool fillViewport;
+
+  /// When true, own the vertical scroll (parent should give a bounded height).
+  final bool fillsViewport;
 
   /// Highlighted row id owned by the parent screen inspector host.
   final String? selectedId;
@@ -1646,7 +1684,7 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
 
     return SectionCard(
       title: 'Shipped Staging Entries',
-      expandChild: widget.fillViewport,
+      expandChild: widget.fillsViewport,
       headerActions: [
         _SortDropdown<ShippedSort>(
           value: _sort,
@@ -1781,7 +1819,7 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
         padding: EdgeInsets.all(28),
         child: Center(child: Text('No shipped entries found.')),
       );
-      if (widget.fillViewport) {
+      if (widget.fillsViewport) {
         return ListView(
           physics: const AlwaysScrollableScrollPhysics(),
           children: [empty],
@@ -1807,27 +1845,14 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
       );
     } else {
       final grid = _shippedIndustrialGrid(canWrite: canWrite, rows: rows);
-      final horizontal = HorizontalScrollWithArrows(
-        builder: (context, controller) => SingleChildScrollView(
-          controller: controller,
-          scrollDirection: Axis.horizontal,
-          child: grid,
-        ),
+      final horizontal = _industrialGridWithPinnedHorizontalChrome(
+        grid: grid,
+        fillsViewport: widget.fillsViewport,
       );
       body = Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (widget.fillViewport)
-            Expanded(
-              child: Scrollbar(
-                child: SingleChildScrollView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  child: horizontal,
-                ),
-              ),
-            )
-          else
-            horizontal,
+          if (widget.fillsViewport) Expanded(child: horizontal) else horizontal,
           if (!widget.expanded && sorted.length > rows.length)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
@@ -1897,7 +1922,7 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
           : null,
     );
 
-    if (widget.fillViewport) {
+    if (widget.fillsViewport) {
       return ListView.builder(
         padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
         physics: const AlwaysScrollableScrollPhysics(),
@@ -2085,7 +2110,7 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
       );
     }
 
-    if (widget.fillViewport) {
+    if (widget.fillsViewport) {
       return ListView.separated(
         padding: const EdgeInsets.only(bottom: 12),
         physics: const AlwaysScrollableScrollPhysics(),

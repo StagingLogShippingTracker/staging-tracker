@@ -108,99 +108,106 @@ class _ShippedScreenState extends ConsumerState<ShippedScreen> {
     final shortHeight = size.height < 920;
     final gap = shortHeight ? 8.0 : 14.0;
 
-    // One primary vertical scroll for chrome + table (touch + mouse wheel).
+    // Summary + search stay above; the log card fills remaining height so the
+    // industrial grid can pin horizontal arrows/scrollbar in the table viewport.
     final scrollBody = RefreshIndicator(
       onRefresh: () => ref.read(appDataProvider.notifier).refresh(),
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
+      notificationPredicate: (n) => n.depth <= 2,
+      child: Padding(
         padding: slstPagePadding(context, top: shortHeight ? 12 : 20),
-        children: [
-          // Shell _TopHeader already shows the section title on desktop.
-          if (compactShell) ...[
-            Text(
-              'Shipped Staging Entries Log',
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-                color: IndustrialTheme.textPrimary,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Shell _TopHeader already shows the section title on desktop.
+            if (compactShell) ...[
+              Text(
+                'Shipped Staging Entries Log',
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: IndustrialTheme.textPrimary,
+                ),
               ),
-            ),
-            SizedBox(height: gap),
-          ],
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final stacked = constraints.maxWidth < 720;
-              final statusCard = LogSummaryCard(
-                eyebrow: 'Shipment Activity',
-                value: '${trueShips.length}',
-                unit: 'True Ships',
-                compact: shortHeight,
-                stats: [
-                  (
-                    label: 'Shipped Today',
-                    value: '$shippedToday',
-                    accent: IndustrialTheme.mintGreen,
-                  ),
-                  (
-                    label: 'Returned',
-                    value: '$returned',
-                    accent: IndustrialTheme.amber,
-                  ),
-                  (
-                    label: 'All Records',
-                    value: '${data.shipped.length}',
-                    accent: IndustrialTheme.skyBlue,
-                  ),
-                ],
-              );
-              final unitsCard = LogSummaryCard(
-                eyebrow: 'Shipped Units',
-                value: '$units',
-                unit: 'Total Units',
-                compact: shortHeight,
-                stats: [
-                  (
-                    label: 'Matching Search',
-                    value: '${entries.length}',
-                    accent: null,
-                  ),
-                ],
-              );
-              if (stacked) {
-                return Column(
-                  children: [
-                    statusCard,
-                    SizedBox(height: shortHeight ? 6 : 10),
-                    unitsCard,
+              SizedBox(height: gap),
+            ],
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final stacked = constraints.maxWidth < 720;
+                final statusCard = LogSummaryCard(
+                  eyebrow: 'Shipment Activity',
+                  value: '${trueShips.length}',
+                  unit: 'True Ships',
+                  compact: shortHeight,
+                  stats: [
+                    (
+                      label: 'Shipped Today',
+                      value: '$shippedToday',
+                      accent: IndustrialTheme.mintGreen,
+                    ),
+                    (
+                      label: 'Returned',
+                      value: '$returned',
+                      accent: IndustrialTheme.amber,
+                    ),
+                    (
+                      label: 'All Records',
+                      value: '${data.shipped.length}',
+                      accent: IndustrialTheme.skyBlue,
+                    ),
                   ],
                 );
-              }
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(child: statusCard),
-                  const SizedBox(width: 12),
-                  Expanded(child: unitsCard),
-                ],
-              );
-            },
-          ),
-          SizedBox(height: gap),
-          SearchField(
-            controller: _search,
-            hint: 'Global search — SO, customer, carrier, zone, UUID…',
-            onChanged: (v) => setState(() => _q = v.trim().toLowerCase()),
-          ),
-          SizedBox(height: gap),
-          ShippedLogCard(
-            entries: entries,
-            expanded: true,
-            selectedId: _inspect?.id,
-            onInspect: _openInspector,
-            onQuickShip: () => showQuickShipSheet(context, ref),
-          ),
-          const BrandFooter(),
-        ],
+                final unitsCard = LogSummaryCard(
+                  eyebrow: 'Shipped Units',
+                  value: '$units',
+                  unit: 'Total Units',
+                  compact: shortHeight,
+                  stats: [
+                    (
+                      label: 'Matching Search',
+                      value: '${entries.length}',
+                      accent: null,
+                    ),
+                  ],
+                );
+                if (stacked) {
+                  return Column(
+                    children: [
+                      statusCard,
+                      SizedBox(height: shortHeight ? 6 : 10),
+                      unitsCard,
+                    ],
+                  );
+                }
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: statusCard),
+                    const SizedBox(width: 12),
+                    Expanded(child: unitsCard),
+                  ],
+                );
+              },
+            ),
+            SizedBox(height: gap),
+            SearchField(
+              controller: _search,
+              hint: 'Global search — SO, customer, carrier, zone, UUID…',
+              onChanged: (v) => setState(() => _q = v.trim().toLowerCase()),
+            ),
+            SizedBox(height: gap),
+            Expanded(
+              child: ShippedLogCard(
+                entries: entries,
+                expanded: true,
+                fillsViewport: true,
+                selectedId: _inspect?.id,
+                onInspect: _openInspector,
+                onQuickShip: () => showQuickShipSheet(context, ref),
+              ),
+            ),
+            const BrandFooter(),
+          ],
+        ),
       ),
     );
 

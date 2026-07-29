@@ -244,7 +244,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('SHIPPED STAGING ENTRIES'), findsOneWidget);
     expect(find.textContaining('Day & Ross'), findsWidgets);
-    expect(find.textContaining('RETURNED TO STOCK'), findsWidgets);
+    // Returned rows use the industrial status badge (uppercase label).
+    expect(find.text('RETURNED'), findsWidgets);
   });
 
   testWidgets('Order History is complete and fits a phone', (tester) async {
