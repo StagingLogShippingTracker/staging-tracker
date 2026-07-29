@@ -4,11 +4,12 @@
   Runtime rendering uses ship-confirmation.ts — keep placeholders in sync:
 
   {{so}} {{customer}} {{carrier}} {{shipped_at}} {{shipped_by}}
-  {{containers}} {{weight}} {{comments}} {{logo_url}} {{cta_url}}
+  {{containers}} {{weight}} {{comments}} {{logo_url}}
   {{email_contact}} {{website_url}} {{year}}
 
   Brand: IndustrialTheme sky/mint/amber/purple (lib/core/theme.dart)
   Layout: dark-first SST (Staging & Shipping Tracker) shell via email-shared.ts
+  No CTA button — emails are informational only.
 
   Open assets/email/preview-ship-confirmation.html for a filled browser preview.
 -->
@@ -35,7 +36,6 @@
     <li><strong>Weight</strong> {{weight}}</li>
     <li><strong>Comments</strong> {{comments}}</li>
     <li><strong>Logo URL</strong> {{logo_url}}</li>
-    <li><strong>CTA / tracking URL</strong> {{cta_url}}</li>
     <li><strong>Email contact</strong> {{email_contact}}</li>
     <li><strong>Website</strong> {{website_url}}</li>
     <li><strong>Year</strong> {{year}}</li>

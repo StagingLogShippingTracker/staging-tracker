@@ -51,7 +51,6 @@ for good in [
     "renderBrandedEmail",
     "20260728sst",
     "darkModeCss",
-    "linear-gradient",
     "surfaceBg",
     "swift-supply-logo-email",
     "headerLogosBlock",
@@ -61,7 +60,16 @@ for good in [
 ]:
     assert good in combined, good
 
-for retired in ["slst-logo-email", "alt=\"SLST", "Thank you for using SLST"]:
+for retired in [
+    "slst-logo-email",
+    'alt="SLST',
+    "Thank you for using SLST",
+    "Open Swift Supply",
+    "Open on Swift",
+    "OPEN SWIFT SUPPLY",
+    "og-cta",
+    "Swift Staging Tracker",
+]:
     assert retired not in combined, retired
 
 print("ok", out, out.stat().st_size)

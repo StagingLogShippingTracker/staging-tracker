@@ -10,6 +10,8 @@ There is **no** web/PWA client and **no** Prophet21 / Epicor integration.
 
 Development and Flutter packaging builds run on the **local Windows checkout**. Prefer this machine’s `.tools/flutter` bootstrap (or Flutter on PATH), plus local `build/` / `dist/` artifacts. Do not default to Cursor Cloud Agents for app work unless the user asks.
 
+Preferred local folder name: `sst-staging-shipping-tracker` (product brand **SST** / **Staging & Shipping Tracker**). GitHub remote stays `StagingLogShippingTracker/staging-tracker`.
+
 ## Dev commands (local)
 
 ```bash

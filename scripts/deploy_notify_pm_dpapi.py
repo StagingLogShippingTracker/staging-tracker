@@ -103,11 +103,24 @@ def load_payload() -> dict:
             raise SystemExit(f"refusing to deploy placeholder: {name}")
         files.append({"name": name, "content": content})
     combined = "".join(f["content"] for f in files)
-    for needle in ["fbf9f5", 'width="150"', "renderBrandedEmail", "max-width: 160px", "#e65100"]:
+    for needle in [
+        "renderBrandedEmail",
+        "090D16",
+        "SST",
+        "swift-supply-logo-email",
+        "Missing required fields",
+    ]:
         if needle not in combined:
             raise SystemExit(f"missing expected marker: {needle}")
-    if "via.placeholder.com" in combined:
-        raise SystemExit("refusing to deploy placeholder image URLs")
+    for banned in [
+        "via.placeholder.com",
+        "Open Swift Supply",
+        "Open on Swift",
+        "og-cta",
+        "Swift Staging Tracker",
+    ]:
+        if banned in combined:
+            raise SystemExit(f"refusing banned content: {banned}")
     if 'width="250"' in combined or "font-size: 32px" in combined:
         raise SystemExit("refusing oversized logo/headline styles")
     return {

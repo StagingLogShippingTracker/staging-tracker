@@ -27,7 +27,6 @@ function baseFromBody(
     assetBaseUrl: assetBase,
     attachmentUrls,
     sectionTitle: "Notifications",
-    ctaLabel: "Open Swift Supply",
   };
 }
 

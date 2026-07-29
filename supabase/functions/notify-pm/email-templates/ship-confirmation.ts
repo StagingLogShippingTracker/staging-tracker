@@ -19,7 +19,6 @@ export type ShipConfirmationData = {
   weight: string;
   comments: string;
   logoUrl?: string;
-  ctaUrl?: string;
   emailContact?: string;
   websiteUrl?: string;
   year?: number;
@@ -61,8 +60,6 @@ export function renderShipConfirmationEmail(
       ],
     },
     attachmentUrls,
-    ctaUrl: data.ctaUrl,
-    ctaLabel: "Open Swift Supply",
     emailContact: data.emailContact,
     websiteUrl: data.websiteUrl,
     year: data.year,
@@ -148,8 +145,6 @@ export function shipDataFromPayload(
     weight: pick("weight"),
     comments: pick("comments"),
     logoUrl: logoFromPayload || undefined,
-    ctaUrl: pick("cta_url", "ctaUrl", "tracking_url", "trackingUrl") ||
-      undefined,
     emailContact: pick("email_contact", "emailContact") || undefined,
     websiteUrl: pick("website_url", "websiteUrl") ||
       "https://www.swiftsupply.ca",

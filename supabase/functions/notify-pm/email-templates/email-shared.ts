@@ -435,8 +435,6 @@ export type BrandedEmailOptions = {
   attachmentUrls?: string[];
   assetBaseUrl?: string;
   logoUrl?: string;
-  ctaUrl?: string;
-  ctaLabel?: string;
   emailContact?: string;
   websiteUrl?: string;
   year?: number;
@@ -450,11 +448,6 @@ export function renderBrandedEmail(opts: BrandedEmailOptions): string {
   const preview = esc(opts.preview);
   const sectionTitle = opts.sectionTitle ?? "Notifications";
   const attachmentUrls = opts.attachmentUrls ?? [];
-  const ctaUrl =
-    (opts.ctaUrl ?? "").trim() ||
-    (opts.websiteUrl ?? "").trim() ||
-    "https://www.swiftsupply.ca";
-  const ctaLabel = esc(opts.ctaLabel ?? "OPEN SWIFT SUPPLY");
   const grid = opts.cardsGridHtml ?? cardsGridHtml(opts.cards);
   const year = opts.year ?? new Date().getFullYear();
   const hero = opts.hero
@@ -463,21 +456,6 @@ export function renderBrandedEmail(opts: BrandedEmailOptions): string {
   const badge = opts.statusLabel
     ? `<div style="padding-bottom: 10px;">${statusBadge(opts.statusLabel, opts.statusTone ?? "mint")}</div>`
     : "";
-
-  const ctaBlock = `
-          <tr>
-            <td align="left" style="padding: 18px 16px 8px 16px;">
-              <table role="presentation" border="0" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td align="center" class="og-cta" style="border-radius: 6px; background-color: ${SKY}; padding: 11px 18px;">
-                    <a href="${esc(ctaUrl)}" target="_blank" style="font-family: ${FONT}; font-size: 12.5px; font-weight: 600; color: ${TEXT}; text-decoration: none; display: inline-block; letter-spacing: 0.2px;">
-                      ${ctaLabel}
-                    </a>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>`;
 
   return `<!DOCTYPE html>
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office" data-preview="dark">
@@ -605,7 +583,6 @@ export function renderBrandedEmail(opts: BrandedEmailOptions): string {
                 ${hero}
                 ${grid}
                 ${attachmentsSection(attachmentUrls)}
-                ${ctaBlock}
 
                 <!-- BrandFooter (widgets.dart) -->
                 <tr>
