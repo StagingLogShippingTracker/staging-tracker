@@ -1028,90 +1028,53 @@ class _SouthWallFocusPage extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: SizedBox(
         width: gridW,
+        height: gridH,
         child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 6, 4, 4),
+            Expanded(
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Expanded(
-                    child: Text(
-                      'SOUTH WALL',
-                      style: IndustrialTheme.mono(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        color: IndustrialTheme.textPrimary,
+                  for (var i = 0; i < _top.length; i++) ...[
+                    if (i > 0)
+                      const VerticalDivider(
+                        width: 1,
+                        thickness: 1,
+                        color: IndustrialTheme.borderStroke,
+                      ),
+                    Expanded(
+                      child: _SouthWallSectionCell(
+                        section: _top[i],
+                        entries: index.southWallSectionEntries(_top[i]),
                       ),
                     ),
-                  ),
-                  IconButton(
-                    tooltip: 'Close',
-                    visualDensity: VisualDensity.compact,
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close, size: 20),
-                    color: IndustrialTheme.textMuted,
-                  ),
+                  ],
                 ],
               ),
             ),
-            const Divider(height: 1, color: IndustrialTheme.borderStroke),
-            SizedBox(
-              width: gridW,
-              height: gridH,
-              child: Column(
+            const Divider(
+              height: 2,
+              thickness: 2,
+              color: IndustrialTheme.borderStroke,
+            ),
+            Expanded(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Expanded(
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        for (var i = 0; i < _top.length; i++) ...[
-                          if (i > 0)
-                            const VerticalDivider(
-                              width: 1,
-                              thickness: 1,
-                              color: IndustrialTheme.borderStroke,
-                            ),
-                          Expanded(
-                            child: _SouthWallSectionCell(
-                              section: _top[i],
-                              entries:
-                                  index.southWallSectionEntries(_top[i]),
-                            ),
-                          ),
-                        ],
-                      ],
+                  for (var i = 0; i < _bottom.length; i++) ...[
+                    if (i > 0)
+                      const VerticalDivider(
+                        width: 1,
+                        thickness: 1,
+                        color: IndustrialTheme.borderStroke,
+                      ),
+                    Expanded(
+                      child: _SouthWallSectionCell(
+                        section: _bottom[i],
+                        entries: index.southWallSectionEntries(_bottom[i]),
+                      ),
                     ),
-                  ),
-                  const Divider(
-                    height: 2,
-                    thickness: 2,
-                    color: IndustrialTheme.borderStroke,
-                  ),
-                  Expanded(
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        for (var i = 0; i < _bottom.length; i++) ...[
-                          if (i > 0)
-                            const VerticalDivider(
-                              width: 1,
-                              thickness: 1,
-                              color: IndustrialTheme.borderStroke,
-                            ),
-                          Expanded(
-                            child: _SouthWallSectionCell(
-                              section: _bottom[i],
-                              entries: index.southWallSectionEntries(
-                                _bottom[i],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
+                  ],
                 ],
               ),
             ),
