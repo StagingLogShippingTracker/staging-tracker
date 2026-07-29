@@ -405,6 +405,11 @@ class WarehouseFloorMap extends ConsumerWidget {
                                       label: 'South Wall',
                                       entries:
                                           index.zoneEntries('South Wall'),
+                                      heroTag: 'south-wall-pane',
+                                      onOpen: () => _openSouthWallFocus(
+                                        context,
+                                        index,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -503,6 +508,37 @@ class WarehouseFloorMap extends ConsumerWidget {
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ],
+      ),
+    );
+  }
+
+  static Future<void> _openSouthWallFocus(
+    BuildContext context,
+    _FloorOccupancyIndex index,
+  ) {
+    return Navigator.of(context).push(
+      PageRouteBuilder<void>(
+        opaque: false,
+        barrierColor: Colors.black54,
+        transitionDuration: const Duration(milliseconds: 320),
+        reverseTransitionDuration: const Duration(milliseconds: 240),
+        pageBuilder: (context, animation, secondaryAnimation) {
+          return _SouthWallFocusPage(index: index);
+        },
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          final curved = CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+            reverseCurve: Curves.easeInCubic,
+          );
+          return FadeTransition(
+            opacity: curved,
+            child: ScaleTransition(
+              scale: Tween<double>(begin: 0.88, end: 1).animate(curved),
+              child: child,
+            ),
+          );
+        },
       ),
     );
   }
@@ -818,6 +854,8 @@ class _Pane extends ConsumerWidget {
     this.compact = false,
     this.muted = false,
     this.verticalText = false,
+    this.heroTag,
+    this.onOpen,
   });
 
   final String label;
@@ -825,9 +863,15 @@ class _Pane extends ConsumerWidget {
   final bool compact;
   final bool muted;
   final bool verticalText;
+  final Object? heroTag;
+  final VoidCallback? onOpen;
 
   void _openZone(BuildContext context) {
     if (muted) return;
+    if (onOpen != null) {
+      onOpen!();
+      return;
+    }
     final title = label.replaceAll('\n', ' ');
     _showFloorMapDialog(
       context: context,
@@ -904,14 +948,226 @@ class _Pane extends ConsumerWidget {
       );
     }
 
+    Widget interactive = Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _openZone(context),
+        child: body,
+      ),
+    );
+    if (heroTag != null) {
+      interactive = Hero(
+        tag: heroTag!,
+        child: Material(
+          type: MaterialType.transparency,
+          child: interactive,
+        ),
+      );
+    }
+
+    return Tooltip(
+      message: tip,
+      waitDuration: const Duration(milliseconds: 350),
+      child: interactive,
+    );
+  }
+}
+
+/// Full-screen South Wall staging focus: 2x4 free-flow sections (SW 1-8).
+class _SouthWallFocusPage extends StatelessWidget {
+  const _SouthWallFocusPage({required this.index});
+
+  final _FloorOccupancyIndex index;
+
+  static const _top = [1, 2, 3, 4];
+  static const _bottom = [5, 6, 7, 8];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 920, maxHeight: 640),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Hero(
+                tag: 'south-wall-pane',
+                child: Material(
+                  color: const Color(0xFF121826),
+                  elevation: 12,
+                  shadowColor: Colors.black87,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(6),
+                    side: const BorderSide(
+                      color: IndustrialTheme.borderStroke,
+                      width: 1.5,
+                    ),
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(14, 10, 6, 8),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                'SOUTH WALL',
+                                style: IndustrialTheme.mono(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: IndustrialTheme.textPrimary,
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              tooltip: 'Close',
+                              onPressed: () => Navigator.of(context).pop(),
+                              icon: const Icon(Icons.close, size: 20),
+                              color: IndustrialTheme.textMuted,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Divider(
+                        height: 1,
+                        color: IndustrialTheme.borderStroke,
+                      ),
+                      Expanded(
+                        child: Column(
+                          children: [
+                            Expanded(
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  for (var i = 0; i < _top.length; i++) ...[
+                                    if (i > 0)
+                                      const VerticalDivider(
+                                        width: 1,
+                                        thickness: 1,
+                                        color: IndustrialTheme.borderStroke,
+                                      ),
+                                    Expanded(
+                                      child: _SouthWallSectionCell(
+                                        section: _top[i],
+                                        entries: index
+                                            .southWallSectionEntries(_top[i]),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                            const Divider(
+                              height: 1,
+                              thickness: 1,
+                              color: IndustrialTheme.borderStroke,
+                            ),
+                            Expanded(
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  for (var i = 0; i < _bottom.length; i++) ...[
+                                    if (i > 0)
+                                      const VerticalDivider(
+                                        width: 1,
+                                        thickness: 1,
+                                        color: IndustrialTheme.borderStroke,
+                                      ),
+                                    Expanded(
+                                      child: _SouthWallSectionCell(
+                                        section: _bottom[i],
+                                        entries: index.southWallSectionEntries(
+                                          _bottom[i],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SouthWallSectionCell extends StatelessWidget {
+  const _SouthWallSectionCell({
+    required this.section,
+    required this.entries,
+  });
+
+  final int section;
+  final List<StagingEntry> entries;
+
+  void _openSection(BuildContext context) {
+    final label = 'SW $section';
+    _showFloorMapDialog(
+      context: context,
+      title: label,
+      titleMono: true,
+      body: entries.isEmpty
+          ? const Text(
+              'No active staging in this section.',
+              style: TextStyle(color: IndustrialTheme.textMuted),
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (var i = 0; i < entries.length; i++) ...[
+                  if (i > 0) const Divider(height: 1),
+                  _FloorEntryCard(entry: entries[i], showLocation: true),
+                ],
+              ],
+            ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final border = _borderForEntries(entries);
+    final tip = entries.isEmpty
+        ? 'SW $section · empty · click for details'
+        : 'SW $section · ${entries.length} jobs · '
+            '${entries.fold<int>(0, (s, e) => s + e.qty)} containers · click';
+
     return Tooltip(
       message: tip,
       waitDuration: const Duration(milliseconds: 350),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () => _openZone(context),
-          child: body,
+          onTap: () => _openSection(context),
+          child: _OccupancyBox(
+            colors: _statusBandColors(entries),
+            borderColor: border.withValues(alpha: 0.85),
+            padding: const EdgeInsets.all(8),
+            child: Text(
+              'SW $section',
+              textAlign: TextAlign.center,
+              style: IndustrialTheme.mono(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: entries.isEmpty
+                    ? IndustrialTheme.textMuted
+                    : IndustrialTheme.textPrimary,
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -1387,6 +1643,15 @@ class _FloorOccupancyIndex {
     ];
   }
 
+  /// Entries staged in a specific South Wall section (SW 1–8).
+  List<StagingEntry> southWallSectionEntries(int section) {
+    if (section < 1 || section > 8) return const [];
+    return [
+      for (final e in _all)
+        if (parseSouthWallSection(e.location) == section) e,
+    ];
+  }
+
   static List<String> _zoneNeedles(String zoneName) {
     switch (zoneName.toLowerCase()) {
       case 'corp drop':
@@ -1447,6 +1712,12 @@ class _FloorOccupancyIndex {
 
     // W-Doors wins even for aisle-parseable W-17..W-23 forms.
     if (zone == 'w-doors') return _isWDoorsLocation(location);
+
+    // South Wall: any SW 1–8 section label, or free-text "south wall".
+    if (zone == 'south wall') {
+      if (parseSouthWallSection(location) != null) return true;
+      return needles.any(loc.contains);
+    }
 
     if (parseAisleLocation(location) != null) return false;
 
