@@ -7,6 +7,7 @@ import '../../domain/models.dart';
 import '../shared/industrial_widgets.dart';
 import '../shared/log_tables.dart';
 import '../shared/widgets.dart';
+import '../shell/app_shell.dart';
 import 'quick_ship_sheet.dart';
 
 class ShippedScreen extends ConsumerStatefulWidget {
@@ -102,21 +103,28 @@ class _ShippedScreenState extends ConsumerState<ShippedScreen> {
     }).length;
     final units = trueShips.fold<int>(0, (sum, e) => sum + e.qty);
 
-    final scrollBody = RefreshIndicator(
-      onRefresh: () => ref.read(appDataProvider.notifier).refresh(),
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: slstPagePadding(context),
+    final size = MediaQuery.sizeOf(context);
+    final compactShell = size.width < kCompactShellBreakpoint;
+    final shortHeight = size.height < 920;
+    final gap = shortHeight ? 8.0 : 14.0;
+
+    final scrollBody = Padding(
+      padding: slstPagePadding(context, top: shortHeight ? 12 : 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            'Shipped Staging Entries Log',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: IndustrialTheme.textPrimary,
+          // Shell _TopHeader already shows the section title on desktop.
+          if (compactShell) ...[
+            Text(
+              'Shipped Staging Entries Log',
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                color: IndustrialTheme.textPrimary,
+              ),
             ),
-          ),
-          const SizedBox(height: 14),
+            SizedBox(height: gap),
+          ],
           LayoutBuilder(
             builder: (context, constraints) {
               final stacked = constraints.maxWidth < 720;
@@ -124,6 +132,7 @@ class _ShippedScreenState extends ConsumerState<ShippedScreen> {
                 eyebrow: 'Shipment Activity',
                 value: '${trueShips.length}',
                 unit: 'True Ships',
+                compact: shortHeight,
                 stats: [
                   (
                     label: 'Shipped Today',
@@ -146,6 +155,7 @@ class _ShippedScreenState extends ConsumerState<ShippedScreen> {
                 eyebrow: 'Shipped Units',
                 value: '$units',
                 unit: 'Total Units',
+                compact: shortHeight,
                 stats: [
                   (
                     label: 'Matching Search',
@@ -156,7 +166,11 @@ class _ShippedScreenState extends ConsumerState<ShippedScreen> {
               );
               if (stacked) {
                 return Column(
-                  children: [statusCard, const SizedBox(height: 10), unitsCard],
+                  children: [
+                    statusCard,
+                    SizedBox(height: shortHeight ? 6 : 10),
+                    unitsCard,
+                  ],
                 );
               }
               return Row(
@@ -169,21 +183,26 @@ class _ShippedScreenState extends ConsumerState<ShippedScreen> {
               );
             },
           ),
-          const SizedBox(height: 14),
+          SizedBox(height: gap),
           SearchField(
             controller: _search,
             hint: 'Global search — SO, customer, carrier, zone, UUID…',
             onChanged: (v) => setState(() => _q = v.trim().toLowerCase()),
           ),
-          const SizedBox(height: 14),
-          ShippedLogCard(
-            entries: entries,
-            expanded: true,
-            selectedId: _inspect?.id,
-            onInspect: _openInspector,
-            onQuickShip: () => showQuickShipSheet(context, ref),
+          SizedBox(height: gap),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: () => ref.read(appDataProvider.notifier).refresh(),
+              child: ShippedLogCard(
+                entries: entries,
+                expanded: true,
+                fillViewport: true,
+                selectedId: _inspect?.id,
+                onInspect: _openInspector,
+                onQuickShip: () => showQuickShipSheet(context, ref),
+              ),
+            ),
           ),
-          const BrandFooter(),
         ],
       ),
     );

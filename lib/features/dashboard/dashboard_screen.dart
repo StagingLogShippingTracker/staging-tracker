@@ -429,21 +429,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             );
                           }
 
-                          if (!scroll) {
-                            return IntrinsicHeight(
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  for (var i = 0; i < kpis.length; i++) ...[
-                                    if (i > 0) const SizedBox(width: _kpiGap),
-                                    Expanded(child: cardAt(i)),
-                                  ],
-                                ],
-                              ),
-                            );
-                          }
-
-                          // Tall enough for 2-line labels + value + subtext.
+                          // Always scroll horizontally on desktop/tablet so
+                          // narrow widths never clip the trailing KPI cards.
+                          final cellW = scroll
+                              ? minCell
+                              : (contentWidth -
+                                        (kpis.length - 1) * _kpiGap) /
+                                    kpis.length;
                           return SizedBox(
                             height: 86,
                             child: ListView.separated(
@@ -451,8 +443,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                               itemCount: kpis.length,
                               separatorBuilder: (_, _) =>
                                   const SizedBox(width: _kpiGap),
-                              itemBuilder: (context, i) =>
-                                  SizedBox(width: minCell, child: cardAt(i)),
+                              itemBuilder: (context, i) => SizedBox(
+                                width: cellW < minCell ? minCell : cellW,
+                                child: cardAt(i),
+                              ),
                             ),
                           );
                         },

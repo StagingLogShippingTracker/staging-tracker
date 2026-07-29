@@ -864,15 +864,22 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
         children: [
           if (widget.fillViewport)
             Expanded(
+              // Vertical scroll outer so RefreshIndicator + rows stay reachable;
+              // horizontal pan is nested for wide industrial columns.
               child: Scrollbar(
-                controller: _hScroll,
                 child: SingleChildScrollView(
-                  controller: _hScroll,
-                  scrollDirection: Axis.horizontal,
-                  child: SingleChildScrollView(
-                    child: _stagingIndustrialGrid(
-                      canWrite: canWrite,
-                      rows: rows,
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  child: Scrollbar(
+                    controller: _hScroll,
+                    notificationPredicate: (n) =>
+                        n.metrics.axis == Axis.horizontal,
+                    child: SingleChildScrollView(
+                      controller: _hScroll,
+                      scrollDirection: Axis.horizontal,
+                      child: _stagingIndustrialGrid(
+                        canWrite: canWrite,
+                        rows: rows,
+                      ),
                     ),
                   ),
                 ),
@@ -1829,14 +1836,19 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
           if (widget.fillViewport)
             Expanded(
               child: Scrollbar(
-                controller: _hScroll,
                 child: SingleChildScrollView(
-                  controller: _hScroll,
-                  scrollDirection: Axis.horizontal,
-                  child: SingleChildScrollView(
-                    child: _shippedIndustrialGrid(
-                      canWrite: canWrite,
-                      rows: rows,
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  child: Scrollbar(
+                    controller: _hScroll,
+                    notificationPredicate: (n) =>
+                        n.metrics.axis == Axis.horizontal,
+                    child: SingleChildScrollView(
+                      controller: _hScroll,
+                      scrollDirection: Axis.horizontal,
+                      child: _shippedIndustrialGrid(
+                        canWrite: canWrite,
+                        rows: rows,
+                      ),
                     ),
                   ),
                 ),

@@ -309,7 +309,7 @@ class SectionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final body = Padding(padding: padding, child: child);
-    return Container(
+    final card = Container(
       decoration: BoxDecoration(
         color: IndustrialTheme.darkSurface,
         borderRadius: BorderRadius.circular(6),
@@ -354,6 +354,8 @@ class SectionCard extends StatelessWidget {
         ],
       ),
     );
+    if (expandChild) return SizedBox.expand(child: card);
+    return card;
   }
 }
 

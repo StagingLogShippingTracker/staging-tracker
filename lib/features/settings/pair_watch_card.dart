@@ -81,6 +81,8 @@ class _PairWatchCardState extends ConsumerState<PairWatchCard> {
               Text(
                 'Generate a 6-digit code on this device, then enter it on the '
                 'Wear OS app to sign in with your account.',
+                softWrap: true,
+                overflow: TextOverflow.fade,
                 style: Theme.of(context).textTheme.bodySmall,
               ),
               const SizedBox(height: 16),

@@ -582,6 +582,7 @@ class LogSummaryCard extends StatelessWidget {
     required this.value,
     required this.unit,
     required this.stats,
+    this.compact = false,
   });
 
   final String eyebrow;
@@ -589,10 +590,16 @@ class LogSummaryCard extends StatelessWidget {
   final String unit;
   final List<({String label, String value, Color? accent})> stats;
 
+  /// Dense layout for short viewports so entry lists stay above the fold.
+  final bool compact;
+
   @override
   Widget build(BuildContext context) {
+    final pad = compact
+        ? const EdgeInsets.fromLTRB(12, 8, 12, 8)
+        : const EdgeInsets.fromLTRB(16, 14, 16, 14);
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      padding: pad,
       decoration: BoxDecoration(
         color: IndustrialTheme.darkSurface,
         borderRadius: BorderRadius.circular(6),
@@ -603,27 +610,29 @@ class LogSummaryCard extends StatelessWidget {
         children: [
           Text(
             eyebrow.toUpperCase(),
-            style: Theme.of(context).textTheme.labelSmall,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              fontSize: compact ? 9 : null,
+            ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: compact ? 4 : 8),
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
                 value,
                 style: IndustrialTheme.mono(
-                  fontSize: 32,
+                  fontSize: compact ? 22 : 32,
                   fontWeight: FontWeight.w800,
                   color: IndustrialTheme.textPrimary,
                 ),
               ),
               const SizedBox(width: 8),
               Padding(
-                padding: const EdgeInsets.only(bottom: 6),
+                padding: EdgeInsets.only(bottom: compact ? 2 : 6),
                 child: Text(
                   unit.toUpperCase(),
                   style: GoogleFonts.inter(
-                    fontSize: 11,
+                    fontSize: compact ? 10 : 11,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0.6,
                     color: IndustrialTheme.textMuted,
@@ -633,8 +642,40 @@ class LogSummaryCard extends StatelessWidget {
             ],
           ),
           if (stats.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            IndustrialSummaryStrip(items: stats),
+            SizedBox(height: compact ? 6 : 12),
+            if (compact)
+              Wrap(
+                spacing: 14,
+                runSpacing: 4,
+                children: [
+                  for (final item in stats)
+                    Text.rich(
+                      TextSpan(
+                        children: [
+                          TextSpan(
+                            text: '${item.value} ',
+                            style: IndustrialTheme.mono(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: item.accent ?? IndustrialTheme.textPrimary,
+                            ),
+                          ),
+                          TextSpan(
+                            text: item.label.toUpperCase(),
+                            style: GoogleFonts.inter(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.4,
+                              color: IndustrialTheme.textMuted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              )
+            else
+              IndustrialSummaryStrip(items: stats),
           ],
         ],
       ),
@@ -746,38 +787,43 @@ class CommandDock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 56,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: const BoxDecoration(
-        color: IndustrialTheme.darkHeader,
-        border: Border(
-          top: BorderSide(color: IndustrialTheme.borderStroke, width: 1),
-        ),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            flex: 3,
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(children: hotkeyButtons),
-            ),
+    return Material(
+      color: IndustrialTheme.darkHeader,
+      child: Container(
+        height: 56,
+        constraints: const BoxConstraints(minHeight: 56),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: const BoxDecoration(
+          color: IndustrialTheme.darkHeader,
+          border: Border(
+            top: BorderSide(color: IndustrialTheme.borderStroke, width: 1),
           ),
-          const SizedBox(width: 12),
-          Flexible(
-            child: Text(
-              floorTotalsText,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.right,
-              style: IndustrialTheme.mono(
-                fontSize: 12,
-                color: IndustrialTheme.textMuted,
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              flex: 3,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(children: hotkeyButtons),
               ),
             ),
-          ),
-        ],
+            const SizedBox(width: 12),
+            Flexible(
+              child: Text(
+                floorTotalsText,
+                maxLines: 1,
+                softWrap: false,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.right,
+                style: IndustrialTheme.mono(
+                  fontSize: 12,
+                  color: IndustrialTheme.textMuted,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

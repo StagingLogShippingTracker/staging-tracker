@@ -8,6 +8,7 @@ import '../../domain/status.dart';
 import '../shared/industrial_widgets.dart';
 import '../shared/log_tables.dart';
 import '../shared/widgets.dart';
+import '../shell/app_shell.dart';
 
 class StagingScreen extends ConsumerStatefulWidget {
   const StagingScreen({super.key});
@@ -103,21 +104,28 @@ class _StagingScreenState extends ConsumerState<StagingScreen> {
       }
     }
 
-    final scrollBody = RefreshIndicator(
-      onRefresh: () => ref.read(appDataProvider.notifier).refresh(),
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: slstPagePadding(context),
+    final size = MediaQuery.sizeOf(context);
+    final compactShell = size.width < kCompactShellBreakpoint;
+    final shortHeight = size.height < 920;
+    final gap = shortHeight ? 8.0 : 14.0;
+
+    final scrollBody = Padding(
+      padding: slstPagePadding(context, top: shortHeight ? 12 : 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            'Active Staging Entries Log',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: IndustrialTheme.textPrimary,
+          // Shell _TopHeader already shows the section title on desktop.
+          if (compactShell) ...[
+            Text(
+              'Active Staging Entries Log',
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                color: IndustrialTheme.textPrimary,
+              ),
             ),
-          ),
-          const SizedBox(height: 14),
+            SizedBox(height: gap),
+          ],
           LayoutBuilder(
             builder: (context, constraints) {
               final stacked = constraints.maxWidth < 720;
@@ -125,6 +133,7 @@ class _StagingScreenState extends ConsumerState<StagingScreen> {
                 eyebrow: 'Live Staging Status',
                 value: '${data.staging.length}',
                 unit: 'Active Jobs',
+                compact: shortHeight,
                 stats: [
                   (
                     label: 'Ship Today',
@@ -147,6 +156,7 @@ class _StagingScreenState extends ConsumerState<StagingScreen> {
                 eyebrow: 'Current Floor Units',
                 value: '${totals['containers'] ?? 0}',
                 unit: 'Total Units',
+                compact: shortHeight,
                 stats: [
                   (
                     label: 'Skids',
@@ -172,7 +182,11 @@ class _StagingScreenState extends ConsumerState<StagingScreen> {
               );
               if (stacked) {
                 return Column(
-                  children: [statusCard, const SizedBox(height: 10), floorCard],
+                  children: [
+                    statusCard,
+                    SizedBox(height: shortHeight ? 6 : 10),
+                    floorCard,
+                  ],
                 );
               }
               return Row(
@@ -185,20 +199,27 @@ class _StagingScreenState extends ConsumerState<StagingScreen> {
               );
             },
           ),
-          const SizedBox(height: 14),
+          SizedBox(height: gap),
           SearchField(
             controller: _search,
             hint: 'Global search — SO, customer, zone, status, UUID…',
             onChanged: (v) => setState(() => _q = v.trim().toLowerCase()),
           ),
-          const SizedBox(height: 14),
-          StagingLogCard(
-            entries: entries,
-            expanded: true,
-            selectedId: _inspect?.id,
-            onInspect: _openInspector,
+          SizedBox(height: gap),
+          // Bounded height + fillViewport so the industrial grid scrolls
+          // internally — never nest expanded:true table in an outer ListView.
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: () => ref.read(appDataProvider.notifier).refresh(),
+              child: StagingLogCard(
+                entries: entries,
+                expanded: true,
+                fillViewport: true,
+                selectedId: _inspect?.id,
+                onInspect: _openInspector,
+              ),
+            ),
           ),
-          const BrandFooter(),
         ],
       ),
     );

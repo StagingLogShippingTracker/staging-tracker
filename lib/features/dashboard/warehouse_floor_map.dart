@@ -149,6 +149,8 @@ class WarehouseFloorMap extends ConsumerWidget {
             Text(
               'Nisku terminal · click bays, zones, or A–F / 1–2 slots · '
               'Density $densityPct%',
+              softWrap: true,
+              overflow: TextOverflow.fade,
               style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: 8),
@@ -929,37 +931,54 @@ class _StatusLegend extends StatelessWidget {
       ('Future / Corp', IndustrialTheme.purple),
       ('Occupied', IndustrialTheme.slateMuted),
     ];
-    return Wrap(
-      spacing: 10,
-      runSpacing: 6,
-      children: [
-        for (final item in items)
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 10,
-                height: 10,
-                decoration: BoxDecoration(
-                  color: item.$2,
-                  borderRadius: BorderRadius.circular(2),
-                  border: Border.all(
-                    color: item.$1 == 'Empty'
-                        ? IndustrialTheme.borderStroke
-                        : item.$2,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 4),
-              Text(
-                item.$1,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontSize: 10,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final chips = [
+          for (final item in items)
+            Padding(
+              padding: const EdgeInsets.only(right: 10),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: item.$2,
+                      borderRadius: BorderRadius.circular(2),
+                      border: Border.all(
+                        color: item.$1 == 'Empty'
+                            ? IndustrialTheme.borderStroke
+                            : item.$2,
+                      ),
                     ),
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    item.$1,
+                    softWrap: false,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          fontSize: 10,
+                        ),
+                  ),
+                ],
               ),
-            ],
+            ),
+        ];
+        // Prefer wrapping when width allows; otherwise scroll so labels
+        // like "Future / Corp" are never mid-truncated.
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minWidth: constraints.maxWidth),
+            child: Wrap(
+              spacing: 0,
+              runSpacing: 6,
+              children: chips,
+            ),
           ),
-      ],
+        );
+      },
     );
   }
 }

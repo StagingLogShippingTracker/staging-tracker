@@ -145,31 +145,32 @@ class AppShell extends ConsumerWidget {
                 // Tablet/desktop shell draws under Android edge-to-edge
                 // system bars unless inset — otherwise status + nav overlap
                 // the header and command dock (seen on Galaxy Tab).
+                // Pin the command dock via bottomNavigationBar so Scaffold
+                // always reserves its height — short Windows work areas (~852px)
+                // must never let page content push the dock off-screen.
                 body: SafeArea(
-                  child: Column(
+                  bottom: false,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      _IndustrialRail(selectedPath: current.path),
                       Expanded(
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                        child: Column(
                           children: [
-                            _IndustrialRail(selectedPath: current.path),
-                            Expanded(
-                              child: Column(
-                                children: [
-                                  _TopHeader(
-                                    title: current.sectionTitle,
-                                    onRequestAccess: _requestAccess,
-                                  ),
-                                  Expanded(child: child),
-                                ],
-                              ),
+                            _TopHeader(
+                              title: current.sectionTitle,
+                              onRequestAccess: _requestAccess,
                             ),
+                            Expanded(child: child),
                           ],
                         ),
                       ),
-                      ShellCommandDock(location: location),
                     ],
                   ),
+                ),
+                bottomNavigationBar: SafeArea(
+                  top: false,
+                  child: ShellCommandDock(location: location),
                 ),
               ),
       ),

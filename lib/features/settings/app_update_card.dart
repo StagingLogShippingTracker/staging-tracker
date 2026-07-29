@@ -246,6 +246,8 @@ class _AppUpdateCardState extends State<AppUpdateCard> {
             Text(
               'Check GitHub Releases for a newer $_platformLabel build. '
               'If an update is available you can download and install it here.',
+              softWrap: true,
+              overflow: TextOverflow.fade,
               style: Theme.of(context).textTheme.bodySmall,
             ),
             if (_latest != null) ...[
