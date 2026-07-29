@@ -28,6 +28,12 @@ void main() {
     expect(classifyLocation('Dock staging lane'), LocationCategory.shipping);
     expect(classifyLocation('Outside west yard'), LocationCategory.outside);
     expect(classifyLocation('South Wall'), LocationCategory.floor);
+    expect(classifyLocation('SW 3'), LocationCategory.floor);
+    expect(parseSouthWallSection('SW 1'), 1);
+    expect(parseSouthWallSection('sw-8'), 8);
+    expect(parseSouthWallSection('South Wall / SW 4'), 4);
+    expect(parseSouthWallSection('A-01-A-1'), isNull);
+    expect(parseSouthWallSection('South Wall'), isNull);
     expect(classifyLocation('Ambiguous new place'), LocationCategory.floor);
   });
 

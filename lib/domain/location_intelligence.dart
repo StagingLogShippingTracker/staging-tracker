@@ -37,6 +37,32 @@ const supersededAisleLocations = {
 /// Built-in aisle bins always offered (roster may be empty on a fresh device).
 const seededAisleLocations = [b02PartialLocation];
 
+/// Built-in South Wall section labels for floor location suggestions.
+const seededSouthWallSections = [
+  'SW 1',
+  'SW 2',
+  'SW 3',
+  'SW 4',
+  'SW 5',
+  'SW 6',
+  'SW 7',
+  'SW 8',
+];
+
+/// Matches `SW 1`, `SW-1`, `SW1`, `South Wall / SW 3`, etc. → section 1–8.
+final _southWallSectionPattern = RegExp(
+  r'\bSW[\s\-]*([1-8])\b',
+  caseSensitive: false,
+);
+
+/// Parses a South Wall section number (1–8) from free-text location labels.
+/// Bare "South Wall" (no section) returns null.
+int? parseSouthWallSection(String raw) {
+  final match = _southWallSectionPattern.firstMatch(raw.trim());
+  if (match == null) return null;
+  return int.parse(match.group(1)!);
+}
+
 /// Standard bin: `A-01-A-1` / dual-skid `A-01-A-1+2`.
 /// Special bay: `B-02-Partial` (partial boxes for aisle B bay 02).
 final aisleLocationPattern = RegExp(

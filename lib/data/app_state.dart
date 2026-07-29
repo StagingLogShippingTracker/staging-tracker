@@ -432,6 +432,12 @@ final locationSuggestionsProvider =
       if (category == LocationCategory.aisle) {
         return normalizeAisleSuggestionList(merged);
       }
+      if (category == LocationCategory.floor) {
+        return filterRememberedValues([
+          ...seededSouthWallSections,
+          ...merged,
+        ], hidden: prefs.hiddenMemory);
+      }
       return merged;
     });
 
