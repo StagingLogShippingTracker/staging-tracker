@@ -92,6 +92,29 @@ void main() {
     );
   });
 
+  test('drive-line bays are removed from suggestions and flagged', () {
+    expect(isRemovedDriveBay(aisle: 'B', bay: 7), isTrue);
+    expect(isRemovedDriveBay(aisle: 'B', bay: 13), isTrue);
+    expect(isRemovedDriveBay(aisle: 'B', bay: 24), isTrue);
+    expect(isRemovedDriveBay(aisle: 'B', bay: 6), isFalse);
+    expect(isRemovedDriveBay(aisle: 'B', bay: 8), isFalse);
+    expect(isRemovedDriveBay(aisle: 'P', bay: 7), isTrue);
+    expect(isRemovedDriveBay(aisle: 'P', bay: 13), isFalse);
+    expect(isRemovedDriveLocation('B-07-A-1'), isTrue);
+    expect(isRemovedDriveLocation('O-07-C-2'), isTrue);
+    expect(isRemovedDriveLocation('B-06-A-1'), isFalse);
+    expect(
+      normalizeAisleSuggestionList([
+        'B-06-A-1',
+        'B-07-A-1',
+        'B-13-B-2',
+        'P-07-A-1',
+        'P-08-A-1',
+      ]),
+      [b02PartialLocation, 'B-06-A-1', 'P-08-A-1'],
+    );
+  });
+
   test('active staging alone determines vacancy and occupancy', () {
     final assessment = assessLocation(
       location: 'A-01-A-1',

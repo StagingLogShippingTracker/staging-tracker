@@ -34,6 +34,44 @@ const supersededAisleLocations = {
   'B-02-B-2',
 };
 
+/// Drive-line bay numbers physically removed for reach-truck N/S travel.
+/// Numbers stay reserved (after B-06 comes B-08 — never renumbered to B-07).
+const longAisleDriveGaps = {7, 13, 24}; // aisles A–N
+const shortAisleDriveGaps = {7}; // aisles O–Z
+
+bool isLongAisleLetter(String aisle) {
+  final a = aisle.trim().toUpperCase();
+  return a.length == 1 && a.compareTo('A') >= 0 && a.compareTo('N') <= 0;
+}
+
+bool isShortAisleLetter(String aisle) {
+  final a = aisle.trim().toUpperCase();
+  return a.length == 1 && a.compareTo('O') >= 0 && a.compareTo('Z') <= 0;
+}
+
+/// True when this aisle/bay was removed for a reach-truck drive line.
+bool isRemovedDriveBay({required String aisle, required int bay}) {
+  if (isLongAisleLetter(aisle)) return longAisleDriveGaps.contains(bay);
+  if (isShortAisleLetter(aisle)) return shortAisleDriveGaps.contains(bay);
+  return false;
+}
+
+final _bayOnlyPattern = RegExp(r'^([A-Z])-(\d{2})$');
+
+/// True when [raw] targets a removed drive-line bay (full bin or bay-only).
+bool isRemovedDriveLocation(String raw) {
+  final parsed = parseAisleLocation(raw);
+  if (parsed != null) {
+    return isRemovedDriveBay(aisle: parsed.aisle, bay: parsed.bay);
+  }
+  final match = _bayOnlyPattern.firstMatch(raw.trim().toUpperCase());
+  if (match == null) return false;
+  return isRemovedDriveBay(
+    aisle: match.group(1)!,
+    bay: int.parse(match.group(2)!),
+  );
+}
+
 /// Built-in aisle bins always offered (roster may be empty on a fresh device).
 const seededAisleLocations = [b02PartialLocation];
 
@@ -182,11 +220,13 @@ LocationCategory classifyLocation(String raw) {
 String locationKey(String value) => value.trim().toUpperCase();
 String orderKey(String value) => value.trim().toUpperCase();
 
-/// Drop superseded B-02 A/B slots; ensure [b02PartialLocation] is present.
+/// Drop superseded B-02 A/B slots and removed drive-line bays; ensure Partial.
 List<String> normalizeAisleSuggestionList(Iterable<String> values) {
   final filtered = filterRememberedValues(values).where((value) {
     final key = locationKey(value);
-    return !supersededAisleLocations.contains(key);
+    if (supersededAisleLocations.contains(key)) return false;
+    if (isRemovedDriveLocation(value)) return false;
+    return true;
   });
   return filterRememberedValues([...seededAisleLocations, ...filtered]);
 }

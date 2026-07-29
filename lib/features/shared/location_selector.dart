@@ -122,6 +122,17 @@ class _LocationSelectorDialogState
       final parsed = parseAisleLocation(clean);
       if (parsed != null) clean = parsed.normalized;
     }
+    if (category == LocationCategory.aisle && isRemovedDriveLocation(clean)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'That bay was removed for a reach-truck drive lane. '
+            'Pick another aisle section.',
+          ),
+        ),
+      );
+      return;
+    }
     Navigator.pop(context, (value: clean, category: category));
   }
 
@@ -398,6 +409,27 @@ Future<LocationAdvisoryDecision> confirmLocationAdvisory(
   // Loose floor / shipping / outside areas are freeflow — skip conflict UI.
   if (classifyLocation(location) != LocationCategory.aisle) {
     return LocationAdvisoryDecision.proceed;
+  }
+  if (isRemovedDriveLocation(location)) {
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: IndustrialTheme.darkSurface,
+        title: const Text('Drive-lane bay'),
+        content: Text(
+          'Bay ${location.trim().toUpperCase()} was removed for a '
+          'reach-truck drive line and cannot be used for staging. '
+          'Choose another location.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+    return LocationAdvisoryDecision.cancel;
   }
   // B-02-Partial is a shared bay for partial boxes: many SOs/entries are
   // expected. Only warn when staging a skid or crate into that space.

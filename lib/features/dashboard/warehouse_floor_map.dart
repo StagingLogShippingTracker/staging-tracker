@@ -37,8 +37,8 @@ class FloorMapCollapsedNotifier extends StateNotifier<bool> {
 
 /// Nisku warehouse floor map — layout locked to the Paint reference edit.
 ///
-/// - Long aisles (A–E, G, K, M): seat boxes spanning the full aisle well
-/// - Short aisles (N–Z): shorter seat runs; SE **NOT US** cutout to their right
+/// - Long aisles A–N: seats 02–30 with drive-line gaps at 07 / 13 / 24
+/// - Short aisles O–Z: seats 02–12 with drive-line gap at 07
 /// - South Wall stops where NOT US begins
 /// - East Stainless only beside the long-aisle block (above NOT US)
 class WarehouseFloorMap extends ConsumerWidget {
@@ -46,9 +46,13 @@ class WarehouseFloorMap extends ConsumerWidget {
 
   final List<StagingEntry> staging;
 
-  static const _recvAisles = ['A', 'B', 'C', 'D', 'E', 'G', 'K'];
-  static const _shipLong = ['M'];
-  static const _shipShort = ['N', 'P', 'Q', 'R', 'Y', 'Z'];
+  /// A–N = 30-section (long) aisles. O–Z = 12-section (short) aisles.
+  static const _longAisles = [
+    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N',
+  ];
+  static const _shortAisles = [
+    'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+  ];
   static const _levels = ['A', 'B', 'C', 'D', 'E', 'F'];
 
   /// Modestly compact bay seats — still easy to click, less dashboard height.
@@ -56,13 +60,29 @@ class WarehouseFloorMap extends ConsumerWidget {
   static const double _gap = 1.5;
   static double get _rowH => _seat + _gap;
 
-  /// Long = 02–30 (every bay). Short = 02–12.
+  /// Long layout 02–30 with null cells for removed drive lines (07/13/24).
+  static List<String?> longBayLayout() => [
+        for (var n = 2; n <= 30; n++)
+          longAisleDriveGaps.contains(n)
+              ? null
+              : n.toString().padLeft(2, '0'),
+      ];
+
+  /// Short layout 02–12 with null cell for removed drive line (07).
+  static List<String?> shortBayLayout() => [
+        for (var n = 2; n <= 12; n++)
+          shortAisleDriveGaps.contains(n)
+              ? null
+              : n.toString().padLeft(2, '0'),
+      ];
+
+  /// Physical (clickable) bay numbers only — for density / occupancy counts.
   static List<String> longBays() => [
-        for (var n = 2; n <= 30; n++) n.toString().padLeft(2, '0'),
+        for (final bay in longBayLayout()) ?bay,
       ];
 
   static List<String> shortBays() => [
-        for (var n = 2; n <= 12; n++) n.toString().padLeft(2, '0'),
+        for (final bay in shortBayLayout()) ?bay,
       ];
 
   @override
@@ -106,13 +126,15 @@ class WarehouseFloorMap extends ConsumerWidget {
     }
 
     final index = _FloorOccupancyIndex(staging);
+    final longLayout = longBayLayout();
+    final shortLayout = shortBayLayout();
     final long = longBays();
     final short = shortBays();
 
     // Density metric for the “yard efficiency” dashboard direction.
     // Total seats = long aisles × long bays + short aisles × short bays.
-    final longAisles = [..._recvAisles, ..._shipLong];
-    final shortAisles = [..._shipShort];
+    final longAisles = _longAisles;
+    final shortAisles = _shortAisles;
     final totalSeats =
         longAisles.length * long.length + shortAisles.length * short.length;
     var occupiedSeats = 0;
@@ -132,8 +154,8 @@ class WarehouseFloorMap extends ConsumerWidget {
         ? 0
         : ((occupiedSeats / totalSeats) * 100).round().clamp(0, 100);
 
-    final longRows = _recvAisles.length + _shipLong.length;
-    final shortRows = _shipShort.length;
+    final longRows = _longAisles.length;
+    final shortRows = _shortAisles.length;
     final longH = longRows * _rowH;
     final shortH = shortRows * _rowH;
     final westH = longH + shortH;
@@ -286,7 +308,8 @@ class WarehouseFloorMap extends ConsumerWidget {
                                           top: aislePadTop,
                                         ),
                                         child: _WestRail(
-                                          shortH: shortH,
+                                          longRows: longRows,
+                                          shortRows: shortRows,
                                           rowH: _rowH,
                                           index: index,
                                         ),
@@ -306,13 +329,10 @@ class WarehouseFloorMap extends ConsumerWidget {
                                         crossAxisAlignment:
                                             CrossAxisAlignment.stretch,
                                         children: [
-                                          for (final a in [
-                                            ..._recvAisles,
-                                            ..._shipLong,
-                                          ])
+                                          for (final a in _longAisles)
                                             _AisleRow(
                                               aisle: a,
-                                              bays: long,
+                                              bays: longLayout,
                                               fillWidth: true,
                                               index: index,
                                               onBayTap: (k) =>
@@ -331,10 +351,10 @@ class WarehouseFloorMap extends ConsumerWidget {
                                                   child: Column(
                                                     children: [
                                                       for (final a
-                                                          in _shipShort)
+                                                          in _shortAisles)
                                                         _AisleRow(
                                                           aisle: a,
-                                                          bays: short,
+                                                          bays: shortLayout,
                                                           fillWidth: true,
                                                           index: index,
                                                           onBayTap: (k) =>
@@ -743,26 +763,27 @@ class _NotUsHatchPainter extends CustomPainter {
 
 class _WestRail extends StatelessWidget {
   const _WestRail({
-    required this.shortH,
+    required this.longRows,
+    required this.shortRows,
     required this.rowH,
     required this.index,
   });
 
-  final double shortH;
+  final int longRows;
+  final int shortRows;
   final double rowH;
   final _FloorOccupancyIndex index;
 
   @override
   Widget build(BuildContext context) {
-    // Receiving aisles A B C D E G K — Box Rack at D+E (rows 3–4).
-    const recvCount = 7;
-    final recvH = recvCount * rowH;
-    final beforeBox = 3 * rowH;
-    final boxH = 2 * rowH;
+    // Receiving spans all long aisles A–N. Box Rack stays aligned with D+E.
+    final recvH = longRows * rowH;
+    final beforeBox = 3 * rowH; // A,B,C
+    final boxH = 2 * rowH; // D+E
     final afterBoxInRecv = recvH - beforeBox - boxH;
-    // M is long (in longH after recv). Shipping short starts after M.
-    final mH = rowH;
-    final beforeShipBox = mH; // align S.Box with N–P after M
+    // Shipping spans short aisles O–Z. S.Box stays 2 rows (O+P) — shifted
+    // down automatically because the long/receiving stack grew taller.
+    final shipH = shortRows * rowH;
     final shipBoxH = 2 * rowH;
 
     return Column(
@@ -802,7 +823,7 @@ class _WestRail extends StatelessWidget {
           ),
         ),
         SizedBox(
-          height: mH + shortH,
+          height: shipH,
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -810,7 +831,6 @@ class _WestRail extends StatelessWidget {
                 width: 28,
                 child: Column(
                   children: [
-                    SizedBox(height: beforeShipBox),
                     SizedBox(
                       height: shipBoxH,
                       child: _Pane(
@@ -1274,7 +1294,8 @@ class _AisleRow extends StatelessWidget {
   });
 
   final String aisle;
-  final List<String> bays;
+  /// Bay labels, or `null` for a reach-truck drive-line gap (number reserved).
+  final List<String?> bays;
   final _FloorOccupancyIndex index;
   final ValueChanged<String> onBayTap;
   final bool fillWidth;
@@ -1286,11 +1307,19 @@ class _AisleRow extends StatelessWidget {
         if (i > 0) SizedBox(width: WarehouseFloorMap._gap),
         if (fillWidth)
           Expanded(
-            child: _BaySeat(
-              bayKey: '$aisle-${bays[i]}',
-              entries: index.bayEntries('$aisle-${bays[i]}'),
-              onTap: () => onBayTap('$aisle-${bays[i]}'),
-            ),
+            child: bays[i] == null
+                ? const _DriveGap()
+                : _BaySeat(
+                    bayKey: '$aisle-${bays[i]}',
+                    entries: index.bayEntries('$aisle-${bays[i]}'),
+                    onTap: () => onBayTap('$aisle-${bays[i]}'),
+                  ),
+          )
+        else if (bays[i] == null)
+          SizedBox(
+            width: WarehouseFloorMap._seat,
+            height: WarehouseFloorMap._seat,
+            child: const _DriveGap(),
           )
         else
           _BaySeat(
@@ -1308,7 +1337,7 @@ class _AisleRow extends StatelessWidget {
         height: WarehouseFloorMap._seat,
         child: Row(
           children: [
-              SizedBox(
+            SizedBox(
               width: 12,
               child: Text(
                 aisle,
@@ -1325,6 +1354,24 @@ class _AisleRow extends StatelessWidget {
             else
               ...seats,
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Empty N/S drive-line gap — keeps bay numbering (no seat / no label).
+class _DriveGap extends StatelessWidget {
+  const _DriveGap();
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: const Color(0xFF0B1220),
+      child: Center(
+        child: Container(
+          width: 1.5,
+          color: IndustrialTheme.borderStroke.withValues(alpha: 0.4),
         ),
       ),
     );
