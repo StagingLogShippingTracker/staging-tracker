@@ -39,6 +39,8 @@ class FloorMapCollapsedNotifier extends StateNotifier<bool> {
 ///
 /// - Long aisles A–N: seats 02–30 with drive-line gaps at 07 / 13 / 24
 /// - Short aisles O–Z: seats 02–12 with drive-line gap at 07
+/// - Drive gaps stop at the Z aisle border (do not enter South Wall)
+/// - NOT US west edge aligns with bay 14 (12|14 drive gap clear through A–Z)
 /// - South Wall stops where NOT US begins
 /// - East Stainless only beside the long-aisle block (above NOT US)
 class WarehouseFloorMap extends ConsumerWidget {
@@ -219,23 +221,17 @@ class WarehouseFloorMap extends ConsumerWidget {
                     shortCells * cellW + (shortCells - 1) * _gap;
                 final shortBlockW = _aisleLabelTotal + shortTrackW;
 
-                // NOT US starts at the east edge of short aisles (= after bay 12),
-                // aligned with long-aisle section 13 — no longer over-compressed west.
+                // NOT US west edge = west wall of bay 14 (A–N), so the 12|14
+                // drive gap stays clear through short aisles O–Z as well.
+                final bay14Index = longLayout.indexWhere((b) => b == '14');
+                final bay14West = bay14Index < 0
+                    ? shortBlockW
+                    : _aisleLabelTotal + bay14Index * (cellW + _gap);
+                final twelveFourteenGapW =
+                    (bay14West - shortBlockW).clamp(0.0, bay14West);
                 final biteLeft =
-                    westW + vRuleW + aislePadLeft + shortBlockW;
+                    westW + vRuleW + aislePadLeft + bay14West;
                 final biteW = (layoutW - biteLeft).clamp(0.0, layoutW);
-
-                // Drive lane between 06 and 08: continuous N/S to the south border.
-                final driveGapIndex = longLayout.indexWhere((b) => b == null);
-                final driveGapX = driveGapIndex < 0
-                    ? biteLeft
-                    : westW +
-                        vRuleW +
-                        aislePadLeft +
-                        _aisleLabelTotal +
-                        driveGapIndex * (cellW + _gap);
-                final driveGapTop = headerH + corpH + aislePadTop;
-                final driveGapH = longH + shortH + southH;
 
                 final mapBody = SizedBox(
                   width: layoutW,
@@ -393,6 +389,14 @@ class WarehouseFloorMap extends ConsumerWidget {
                                                     ],
                                                   ),
                                                 ),
+                                                // 12|14 drive gap through O–Z
+                                                // (stops at Z; South Wall unbroken)
+                                                if (twelveFourteenGapW > 0)
+                                                  SizedBox(
+                                                    width: twelveFourteenGapW,
+                                                    height: shortH,
+                                                    child: const _DriveGap(),
+                                                  ),
                                                 // Empty — NOT US Positioned covers SE
                                                 const Expanded(
                                                   child: SizedBox.shrink(),
@@ -468,7 +472,7 @@ class WarehouseFloorMap extends ConsumerWidget {
                           ),
                         ],
                       ),
-                      // ── NOT US: west edge aligned after short bay 12 ──
+                      // ── NOT US: west edge flush with bay 14 ──
                       Positioned(
                         left: biteLeft,
                         top: biteTop,
@@ -476,15 +480,8 @@ class WarehouseFloorMap extends ConsumerWidget {
                         height: biteH,
                         child: const _NotUsBite(),
                       ),
-                      // Drive lane 06|08 continues through short aisles + South Wall
-                      if (driveGapIndex >= 0)
-                        Positioned(
-                          left: driveGapX,
-                          top: driveGapTop,
-                          width: cellW,
-                          height: driveGapH,
-                          child: const _DriveGap(),
-                        ),
+                      // Drive gaps are drawn only inside aisle rows (A–Z);
+                      // they intentionally do not continue into South Wall.
                     ],
                   ),
                 );
