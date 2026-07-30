@@ -10,7 +10,7 @@ $dist = Join-Path $root 'dist'
 New-Item -ItemType Directory -Force -Path $dist | Out-Null
 Invoke-SlstFlutter -Arguments @('build', 'apk', '--release')
 $apk = Join-Path $root 'build\app\outputs\flutter-apk\app-release.apk'
-$output = Join-Path $dist 'SST-Android.apk'
+$output = Join-Path $dist 'SLST-Android.apk'
 Copy-Item -Force $apk $output
 Write-SlstSha256 -Path $output
-Write-Host "Wrote dist\SST-Android.apk"
+Write-Host "Wrote dist\SLST-Android.apk"

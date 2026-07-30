@@ -6,7 +6,7 @@
     <uses-feature android:name="android.hardware.type.watch" android:required="false"/>
 
     <application
-        android:label="SST"
+        android:label="SLST"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

@@ -37,14 +37,14 @@ jobs:
           $release = "build\windows\x64\runner\Release"
           $dist = "dist"
           New-Item -ItemType Directory -Force -Path $dist | Out-Null
-          $artifact = "$dist\SST-Windows-Portable.zip"
+          $artifact = "$dist\SLST-Windows-Portable.zip"
           Compress-Archive -Path "$release\*" -DestinationPath $artifact -Force
           $hash = (Get-FileHash -Algorithm SHA256 -Path $artifact).Hash.ToLowerInvariant()
-          Set-Content -Path "$artifact.sha256" -Value "$hash *SST-Windows-Portable.zip" -NoNewline
+          Set-Content -Path "$artifact.sha256" -Value "$hash *SLST-Windows-Portable.zip" -NoNewline
       - uses: actions/upload-artifact@v4
         with:
-          name: SST-Windows-Portable
-          path: dist/SST-Windows-Portable.zip*
+          name: SLST-Windows-Portable
+          path: dist/SLST-Windows-Portable.zip*
 
   android:
     needs: test
@@ -65,14 +65,14 @@ jobs:
           if [ -f android/key.properties ]; then
             flutter build apk --release
             mkdir -p dist
-            cp build/app/outputs/flutter-apk/app-release.apk dist/SST-Android.apk
+            cp build/app/outputs/flutter-apk/app-release.apk dist/SLST-Android.apk
           else
             flutter build apk --debug
             mkdir -p dist
-            cp build/app/outputs/flutter-apk/app-debug.apk dist/SST-Android.apk
+            cp build/app/outputs/flutter-apk/app-debug.apk dist/SLST-Android.apk
           fi
-          sha256sum dist/SST-Android.apk > dist/SST-Android.apk.sha256
+          sha256sum dist/SLST-Android.apk > dist/SLST-Android.apk.sha256
       - uses: actions/upload-artifact@v4
         with:
-          name: SST-Android
-          path: dist/SST-Android.apk*
+          name: SLST-Android
+          path: dist/SLST-Android.apk*

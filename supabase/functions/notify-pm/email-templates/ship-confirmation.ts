@@ -1,5 +1,5 @@
 /**
- * SST ship-confirmation HTML email — Industrial Command Center shell.
+ * SLST ship-confirmation HTML email — Industrial Command Center shell.
  */
 import {
   DEFAULT_EMAIL_ASSET_BASE,
@@ -48,7 +48,7 @@ export function renderShipConfirmationEmail(
     statusTone: "mint",
     title: "Your order has now been shipped",
     preview: `SO# ${so} for ${customer} has shipped via ${carrier}.`,
-    subtitle: "Shipment recorded in SST — industrial staging & shipping ops",
+    subtitle: "Shipment recorded in SLST — industrial staging & shipping ops",
     hero: {
       eyebrow: "Shipment",
       value: so || "—",
@@ -100,7 +100,7 @@ export function renderShipConfirmationEmail(
 
 export function renderShipConfirmationPlain(data: ShipConfirmationData): string {
   return [
-    "SST — Staging & Shipping Tracker",
+    "SLST — SLST",
     "Your order has now been shipped",
     "",
     "Shipment details:",

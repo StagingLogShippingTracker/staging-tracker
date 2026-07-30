@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/app_config.dart';
 import '../../core/theme.dart';
 import '../../data/app_state.dart';
+import '../shared/widgets.dart';
 import 'command_dock.dart';
 
 /// Width below which phone layout uses NavigationBar + Drawer instead of rail.
@@ -114,7 +115,7 @@ class AppShell extends ConsumerWidget {
       scheme: 'mailto',
       path: AppConfig.accessRequestEmail,
       queryParameters: {
-        'subject': 'Access Request: SST (Staging & Shipping Tracker)',
+        'subject': 'Access Request: SLST',
       },
     );
     await launchUrl(uri);
@@ -283,19 +284,9 @@ class _CompactShell extends ConsumerWidget {
             children: [
               const Padding(
                 padding: EdgeInsets.fromLTRB(20, 20, 20, 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'SST',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0.5,
-                        color: IndustrialTheme.textPrimary,
-                      ),
-                    ),
-                  ],
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: BrandMark(size: 36),
                 ),
               ),
               const Divider(height: 1, color: IndustrialTheme.borderStroke),
@@ -585,28 +576,13 @@ class _IndustrialRail extends ConsumerWidget {
             child: collapsed
                 ? const Center(
                     child: Tooltip(
-                      message: 'SST',
-                      child: Icon(
-                        Icons.bolt,
-                        size: 26,
-                        color: IndustrialTheme.skyBlue,
-                      ),
+                      message: 'SLST',
+                      child: BrandMark(size: 28),
                     ),
                   )
-                : const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'SST',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.6,
-                          color: IndustrialTheme.textPrimary,
-                          height: 1.25,
-                        ),
-                      ),
-                    ],
+                : const Padding(
+                    padding: EdgeInsets.only(left: 2),
+                    child: BrandMark(size: 34),
                   ),
           ),
           const Divider(height: 1, color: IndustrialTheme.borderStroke),

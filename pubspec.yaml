@@ -1,7 +1,7 @@
 name: slst
-description: Staging & Shipping Tracker (SST) — Flutter Windows/Android client (shared domain in packages/slst_shared; Wear in apps/slst_wear).
+description: SLST — Flutter Windows/Android client (shared domain in packages/slst_shared; Wear in apps/slst_wear).
 publish_to: 'none'
-version: 1.1.12+14
+version: 1.1.13+15
 
 environment:
   sdk: ^3.12.2
@@ -41,4 +41,4 @@ flutter:
   uses-material-design: true
   assets:
     - assets/contacts.json
-    - assets/sst-app-icon.png
+    - assets/slst-app-icon.png

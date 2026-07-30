@@ -3,15 +3,15 @@ import 'package:slst_shared/slst_shared.dart';
 
 void main() {
   group('classifyReleaseAsset', () {
-    test('maps SST-Android.apk to android only', () {
+    test('maps SLST-Android.apk to android only', () {
       expect(
-        classifyReleaseAsset('SST-Android.apk'),
+        classifyReleaseAsset('SLST-Android.apk'),
         ReleaseAssetKind.androidApk,
       );
     });
 
-    test('maps SST-Wear.apk to wear only', () {
-      expect(classifyReleaseAsset('SST-Wear.apk'), ReleaseAssetKind.wearApk);
+    test('maps SLST-Wear.apk to wear only', () {
+      expect(classifyReleaseAsset('SLST-Wear.apk'), ReleaseAssetKind.wearApk);
     });
 
     test('wear wins when both tokens appear', () {
@@ -28,11 +28,11 @@ void main() {
 
     test('windows assets', () {
       expect(
-        classifyReleaseAsset('SST-Setup-User.exe'),
+        classifyReleaseAsset('SLST-Setup-User.exe'),
         ReleaseAssetKind.windowsSetup,
       );
       expect(
-        classifyReleaseAsset('SST-Windows-Portable.zip'),
+        classifyReleaseAsset('SLST-Windows-Portable.zip'),
         ReleaseAssetKind.windowsPortable,
       );
     });
@@ -43,19 +43,19 @@ void main() {
       tagName: 'sst-1.2.0',
       name: 'SST 1.2.0',
       htmlUrl: 'https://example.com',
-      androidApkUrl: 'https://example.com/SST-Android.apk',
-      wearApkUrl: 'https://example.com/SST-Wear.apk',
+      androidApkUrl: 'https://example.com/SLST-Android.apk',
+      wearApkUrl: 'https://example.com/SLST-Wear.apk',
     );
 
     test('android platform never reads wear url', () {
       expect(release.hasAssetFor(AppUpdatePlatform.android), isTrue);
       expect(
         release.assetUrlFor(AppUpdatePlatform.android),
-        endsWith('SST-Android.apk'),
+        endsWith('SLST-Android.apk'),
       );
       expect(
         release.assetLabelFor(AppUpdatePlatform.android),
-        'SST-Android.apk',
+        'SLST-Android.apk',
       );
     });
 
@@ -63,9 +63,9 @@ void main() {
       expect(release.hasAssetFor(AppUpdatePlatform.wear), isTrue);
       expect(
         release.assetUrlFor(AppUpdatePlatform.wear),
-        endsWith('SST-Wear.apk'),
+        endsWith('SLST-Wear.apk'),
       );
-      expect(release.assetLabelFor(AppUpdatePlatform.wear), 'SST-Wear.apk');
+      expect(release.assetLabelFor(AppUpdatePlatform.wear), 'SLST-Wear.apk');
     });
 
     test('wear-only release is not an android update', () {
@@ -73,7 +73,7 @@ void main() {
         tagName: 'sst-9.9.9',
         name: 'Wear only',
         htmlUrl: 'https://example.com',
-        wearApkUrl: 'https://example.com/SST-Wear.apk',
+        wearApkUrl: 'https://example.com/SLST-Wear.apk',
       );
       expect(wearOnly.hasAssetFor(AppUpdatePlatform.wear), isTrue);
       expect(wearOnly.hasAssetFor(AppUpdatePlatform.android), isFalse);

@@ -58,6 +58,9 @@ class WarehouseFloorMap extends ConsumerWidget {
   /// Modestly compact bay seats — still easy to click, less dashboard height.
   static const double _seat = 13;
   static const double _gap = 1.5;
+  static const double _aisleLabelW = 12;
+  static const double _aisleLabelPad = 3;
+  static double get _aisleLabelTotal => _aisleLabelW + _aisleLabelPad;
   static double get _rowH => _seat + _gap;
 
   /// Long layout 02–30 with null cells for removed drive lines (07/13/24).
@@ -191,9 +194,6 @@ class WarehouseFloorMap extends ConsumerWidget {
                 const headerH = 30.0;
                 const corpH = 22.0;
                 const southH = 48.0;
-                const shortAisleFlex = 11;
-                const biteFlex = 18;
-                const shortFlexTotal = shortAisleFlex + biteFlex; // 29
                 const compactMapWidth = 720.0;
                 final narrow = constraints.maxWidth < 700;
                 final layoutW = narrow ? compactMapWidth : constraints.maxWidth;
@@ -207,9 +207,35 @@ class WarehouseFloorMap extends ConsumerWidget {
                 final wellW =
                     layoutW - westW - vRuleW - vRuleW - eastW;
                 final wellInner = (wellW - aislePadLeft).clamp(0.0, wellW);
-                // Bite covers empty flex right of short aisles + east VRule + east rail.
-                final biteW =
-                    wellInner * (biteFlex / shortFlexTotal) + vRuleW + eastW;
+
+                // Shared column pitch so O–Z bays line up with A–N (02–12).
+                final longCells = longLayout.length;
+                final shortCells = shortLayout.length;
+                final seatTrackW = (wellInner - _aisleLabelTotal).clamp(0.0, wellInner);
+                final cellW = longCells <= 1
+                    ? seatTrackW
+                    : (seatTrackW - (longCells - 1) * _gap) / longCells;
+                final shortTrackW =
+                    shortCells * cellW + (shortCells - 1) * _gap;
+                final shortBlockW = _aisleLabelTotal + shortTrackW;
+
+                // NOT US starts at the east edge of short aisles (= after bay 12),
+                // aligned with long-aisle section 13 — no longer over-compressed west.
+                final biteLeft =
+                    westW + vRuleW + aislePadLeft + shortBlockW;
+                final biteW = (layoutW - biteLeft).clamp(0.0, layoutW);
+
+                // Drive lane between 06 and 08: continuous N/S to the south border.
+                final driveGapIndex = longLayout.indexWhere((b) => b == null);
+                final driveGapX = driveGapIndex < 0
+                    ? biteLeft
+                    : westW +
+                        vRuleW +
+                        aislePadLeft +
+                        _aisleLabelTotal +
+                        driveGapIndex * (cellW + _gap);
+                final driveGapTop = headerH + corpH + aislePadTop;
+                final driveGapH = longH + shortH + southH;
 
                 final mapBody = SizedBox(
                   width: layoutW,
@@ -333,7 +359,7 @@ class WarehouseFloorMap extends ConsumerWidget {
                                             _AisleRow(
                                               aisle: a,
                                               bays: longLayout,
-                                              fillWidth: true,
+                                              cellWidth: cellW,
                                               index: index,
                                               onBayTap: (k) =>
                                                   _showBayDrillDown(
@@ -346,8 +372,8 @@ class WarehouseFloorMap extends ConsumerWidget {
                                             height: shortH,
                                             child: Row(
                                               children: [
-                                                Expanded(
-                                                  flex: shortAisleFlex,
+                                                SizedBox(
+                                                  width: shortBlockW,
                                                   child: Column(
                                                     children: [
                                                       for (final a
@@ -355,7 +381,7 @@ class WarehouseFloorMap extends ConsumerWidget {
                                                         _AisleRow(
                                                           aisle: a,
                                                           bays: shortLayout,
-                                                          fillWidth: true,
+                                                          cellWidth: cellW,
                                                           index: index,
                                                           onBayTap: (k) =>
                                                               _showBayDrillDown(
@@ -367,9 +393,8 @@ class WarehouseFloorMap extends ConsumerWidget {
                                                     ],
                                                   ),
                                                 ),
-                                                // Empty — single bite covers SE
+                                                // Empty — NOT US Positioned covers SE
                                                 const Expanded(
-                                                  flex: biteFlex,
                                                   child: SizedBox.shrink(),
                                                 ),
                                               ],
@@ -443,14 +468,23 @@ class WarehouseFloorMap extends ConsumerWidget {
                           ),
                         ],
                       ),
-                      // ── ONE continuous NOT US bite (squared bottom) ──
+                      // ── NOT US: west edge aligned after short bay 12 ──
                       Positioned(
-                        right: 0,
+                        left: biteLeft,
                         top: biteTop,
                         width: biteW,
                         height: biteH,
                         child: const _NotUsBite(),
                       ),
+                      // Drive lane 06|08 continues through short aisles + South Wall
+                      if (driveGapIndex >= 0)
+                        Positioned(
+                          left: driveGapX,
+                          top: driveGapTop,
+                          width: cellW,
+                          height: driveGapH,
+                          child: const _DriveGap(),
+                        ),
                     ],
                   ),
                 );
@@ -1253,7 +1287,7 @@ class _AisleRow extends StatelessWidget {
     required this.bays,
     required this.index,
     required this.onBayTap,
-    this.fillWidth = false,
+    this.cellWidth,
   });
 
   final String aisle;
@@ -1261,36 +1295,45 @@ class _AisleRow extends StatelessWidget {
   final List<String?> bays;
   final _FloorOccupancyIndex index;
   final ValueChanged<String> onBayTap;
-  final bool fillWidth;
+  /// Shared pitch with long aisles so O–Z columns align with A–N.
+  final double? cellWidth;
 
   @override
   Widget build(BuildContext context) {
+    Widget seatAt(int i) {
+      final bay = bays[i];
+      final fixedW = cellWidth;
+      if (bay == null) {
+        final gap = const _DriveGap();
+        if (fixedW != null) {
+          return SizedBox(
+            width: fixedW,
+            height: WarehouseFloorMap._seat,
+            child: gap,
+          );
+        }
+        return gap;
+      }
+      final seat = _BaySeat(
+        bayKey: '$aisle-$bay',
+        size: fixedW == null ? WarehouseFloorMap._seat : null,
+        entries: index.bayEntries('$aisle-$bay'),
+        onTap: () => onBayTap('$aisle-$bay'),
+      );
+      if (fixedW != null) {
+        return SizedBox(
+          width: fixedW,
+          height: WarehouseFloorMap._seat,
+          child: seat,
+        );
+      }
+      return seat;
+    }
+
     final seats = <Widget>[
       for (var i = 0; i < bays.length; i++) ...[
         if (i > 0) SizedBox(width: WarehouseFloorMap._gap),
-        if (fillWidth)
-          Expanded(
-            child: bays[i] == null
-                ? const _DriveGap()
-                : _BaySeat(
-                    bayKey: '$aisle-${bays[i]}',
-                    entries: index.bayEntries('$aisle-${bays[i]}'),
-                    onTap: () => onBayTap('$aisle-${bays[i]}'),
-                  ),
-          )
-        else if (bays[i] == null)
-          SizedBox(
-            width: WarehouseFloorMap._seat,
-            height: WarehouseFloorMap._seat,
-            child: const _DriveGap(),
-          )
-        else
-          _BaySeat(
-            bayKey: '$aisle-${bays[i]}',
-            size: WarehouseFloorMap._seat,
-            entries: index.bayEntries('$aisle-${bays[i]}'),
-            onTap: () => onBayTap('$aisle-${bays[i]}'),
-          ),
+        seatAt(i),
       ],
     ];
 
@@ -1301,7 +1344,7 @@ class _AisleRow extends StatelessWidget {
         child: Row(
           children: [
             SizedBox(
-              width: 12,
+              width: WarehouseFloorMap._aisleLabelW,
               child: Text(
                 aisle,
                 style: IndustrialTheme.mono(
@@ -1311,11 +1354,8 @@ class _AisleRow extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(width: 3),
-            if (fillWidth)
-              Expanded(child: Row(children: seats))
-            else
-              ...seats,
+            SizedBox(width: WarehouseFloorMap._aisleLabelPad),
+            ...seats,
           ],
         ),
       ),

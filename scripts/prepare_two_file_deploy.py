@@ -56,19 +56,18 @@ for good in [
     "headerLogosBlock",
     "publicPhotoUrl",
     "public_photo_url",
-    "SST",
+    "SLST",
 ]:
     assert good in combined, good
 
 for retired in [
     "slst-logo-email",
-    'alt="SLST',
-    "Thank you for using SLST",
     "Open Swift Supply",
     "Open on Swift",
     "OPEN SWIFT SUPPLY",
     "og-cta",
     "Swift Staging Tracker",
+    "Staging & Shipping Tracker",
 ]:
     assert retired not in combined, retired
 

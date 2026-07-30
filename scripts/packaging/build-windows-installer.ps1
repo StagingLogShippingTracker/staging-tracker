@@ -22,9 +22,9 @@ if ($LASTEXITCODE -ne 0) {
   throw "Inno Setup compilation failed (exit $LASTEXITCODE)."
 }
 
-$installer = Join-Path $root 'dist\SST-Setup-User.exe'
+$installer = Join-Path $root 'dist\SLST-Setup-User.exe'
 if (-not (Test-Path $installer)) {
   throw "Installer missing after compilation: $installer"
 }
 Write-SlstSha256 -Path $installer
-Write-Host "Installer written under dist\SST-Setup-User.exe"
+Write-Host "Installer written under dist\SLST-Setup-User.exe"

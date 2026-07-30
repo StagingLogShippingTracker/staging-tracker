@@ -19,7 +19,7 @@ class SettingsScreen extends ConsumerWidget {
       scheme: 'mailto',
       path: AppConfig.accessRequestEmail,
       queryParameters: {
-        'subject': 'Access Request: SST (Staging & Shipping Tracker)',
+        'subject': 'Access Request: SLST',
       },
     );
     await launchUrl(uri);

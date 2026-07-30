@@ -2,7 +2,7 @@
 
 ## What this is
 
-SLST / SST — Staging & Shipping Tracker: **Flutter clients** for **Windows**, **Android**, and **Wear OS**, backed by a **hosted Supabase** project. Make.com PM email/SMS is invoked only through the authenticated Edge Function `notify-pm`.
+SLST / SST — SLST: **Flutter clients** for **Windows**, **Android**, and **Wear OS**, backed by a **hosted Supabase** project. Make.com PM email/SMS is invoked only through the authenticated Edge Function `notify-pm`.
 
 There is **no** web/PWA client and **no** Prophet21 / Epicor integration.
 
@@ -10,7 +10,7 @@ There is **no** web/PWA client and **no** Prophet21 / Epicor integration.
 
 Development and Flutter packaging builds run on the **local Windows checkout**. Prefer this machine’s `.tools/flutter` bootstrap (or Flutter on PATH), plus local `build/` / `dist/` artifacts. Do not default to Cursor Cloud Agents for app work unless the user asks.
 
-Preferred local folder name: `sst-staging-shipping-tracker` (product brand **SST** / **Staging & Shipping Tracker**). GitHub remote stays `StagingLogShippingTracker/staging-tracker`.
+Preferred local folder name: `sst-staging-shipping-tracker` (product brand **SST** / **SLST**). GitHub remote stays `StagingLogShippingTracker/staging-tracker`.
 
 ## Dev commands (local)
 

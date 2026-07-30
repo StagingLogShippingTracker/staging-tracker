@@ -1,5 +1,5 @@
 /**
- * SST Industrial Command Center email layout.
+ * SLST Industrial Command Center email layout.
  * Mirrors lib/core/theme.dart IndustrialTheme + app shell chrome
  * (header bar, Live sync pill, surface cards, status badges, BrandFooter).
  */
@@ -9,9 +9,9 @@ export const DEFAULT_EMAIL_ASSET_BASE =
 
 export const ASSET_VERSION = "20260728sst-darkforce";
 
-/** App BrandMark — same asset as Flutter `assets/sst-app-icon.png`. */
-const SST_MARK_URL =
-  "https://raw.githubusercontent.com/StagingLogShippingTracker/staging-tracker/main/assets/sst-app-icon.png";
+/** App BrandMark — same asset as Flutter `assets/slst-app-icon.png`. */
+const SLST_MARK_URL =
+  "https://raw.githubusercontent.com/StagingLogShippingTracker/staging-tracker/main/assets/slst-app-icon.png";
 
 /** Match GoogleFonts.inter / JetBrains Mono from the Flutter app. */
 const FONT =
@@ -184,7 +184,7 @@ function liveSyncPill(): string {
 }
 
 /**
- * App-shell brand strip: SST wordmark (BrandWordmark) + Live sync.
+ * App-shell brand strip: SLST logo mark + Live sync.
  * Optional Swift mark on the right for corporate context.
  */
 function shellChrome(opts: {
@@ -201,11 +201,8 @@ function shellChrome(opts: {
                     <table role="presentation" border="0" cellpadding="0" cellspacing="0">
                       <tr>
                         <td valign="middle" style="padding-right: 10px;">
-                          <img src="${SST_MARK_URL}?v=${ASSET_VERSION}" width="28" height="28" alt="SST"
-                            style="display: block; width: 28px; height: 28px; border-radius: 6px; border: 1px solid ${BORDER};">
-                        </td>
-                        <td valign="middle">
-                          <div style="font-family: ${FONT}; font-size: 13px; font-weight: 800; letter-spacing: 1px; color: ${TEXT}; line-height: 1.05;">SST</div>
+                          <img src="${SLST_MARK_URL}?v=${ASSET_VERSION}" width="36" height="36" alt="SLST"
+                            style="display: block; width: 36px; height: 36px; border-radius: 6px; border: 1px solid ${BORDER};">
                         </td>
                       </tr>
                     </table>
@@ -587,17 +584,18 @@ export function renderBrandedEmail(opts: BrandedEmailOptions): string {
                 <!-- BrandFooter (widgets.dart) -->
                 <tr>
                   <td align="center" class="og-footer" style="padding: 20px 16px 22px 16px; font-family: ${FONT};">
-                    <div style="font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: ${MUTED}; padding-bottom: 4px;">
-                      SST
+                    <div style="padding-bottom: 8px;">
+                      <img src="${SLST_MARK_URL}?v=${ASSET_VERSION}" width="36" height="36" alt="SLST"
+                        style="display: inline-block; width: 36px; height: 36px; border-radius: 6px; border: 1px solid ${BORDER};">
                     </div>
                     <div style="font-size: 12px; color: ${MUTED}; padding-bottom: 14px;">
                       Designed &amp; developed by Brice Johnson
                     </div>
                     <div class="og-disclaimer" style="font-size: 10px; line-height: 1.45; color: ${MUTED}; max-width: 520px;">
-                      SST is an internal operations tool for Swift Nisku warehouse staff. It records what is staged, ready to ship, and departed—and notifies sales when orders leave. It is not a carrier tracking system, proof-of-delivery tool, or comprehensive order-tracking platform.
+                      SLST is an internal operations tool for Swift Nisku warehouse staff. It records what is staged, ready to ship, and departed—and notifies sales when orders leave. It is not a carrier tracking system, proof-of-delivery tool, or comprehensive order-tracking platform.
                     </div>
                     <div class="og-disclaimer" style="margin-top: 8px; font-size: 10px; line-height: 1.45; color: ${MUTED};">
-                      SST is a pilot project and is not an official Swift corporate product. © ${year}
+                      SLST is a pilot project and is not an official Swift corporate product. © ${year}
                     </div>
                   </td>
                 </tr>

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/app_config.dart';
+import '../../core/branding.dart';
 import '../../core/theme.dart';
 import '../../data/app_state.dart';
 import '../../domain/models.dart';
@@ -80,7 +81,7 @@ EdgeInsets slstPagePadding(
   return EdgeInsets.fromLTRB(h, top, h, b);
 }
 
-/// SST wordmark — primary letters only; full name is Semantics/tooltip only.
+/// SLST wordmark — logo art only (letters are in the mark).
 class BrandWordmark extends StatelessWidget {
   const BrandWordmark({super.key, required this.height});
 
@@ -89,29 +90,13 @@ class BrandWordmark extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Semantics(
-      label: 'SST — Staging & Shipping Tracker',
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          BrandMark(size: height),
-          SizedBox(width: height * 0.28),
-          Text(
-            'SST',
-            style: TextStyle(
-              fontSize: height * 0.52,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 1.0,
-              color: IndustrialTheme.textPrimary,
-              height: 1.05,
-            ),
-          ),
-        ],
-      ),
+      label: kProductName,
+      child: BrandMark(size: height),
     );
   }
 }
 
-/// Full SST logo for login and large brand placements.
+/// Full SLST logo for login and large brand placements.
 class BrandLogo extends StatelessWidget {
   const BrandLogo({super.key, this.height = 96});
 
@@ -119,30 +104,15 @@ class BrandLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final iconSize = (height * 0.72).clamp(56.0, 96.0);
+    final iconSize = (height * 0.92).clamp(64.0, 120.0);
     return Semantics(
-      label: 'SST — Staging & Shipping Tracker',
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          BrandMark(size: iconSize),
-          SizedBox(height: height * 0.12),
-          Text(
-            'SST',
-            style: TextStyle(
-              fontSize: height * 0.28,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 1.4,
-              color: IndustrialTheme.textPrimary,
-            ),
-          ),
-        ],
-      ),
+      label: kProductName,
+      child: BrandMark(size: iconSize),
     );
   }
 }
 
-/// Compact square SST app icon for app bars / nav.
+/// Compact square SLST app icon for app bars / nav.
 class BrandMark extends StatelessWidget {
   const BrandMark({super.key, this.size = 32});
 
@@ -151,7 +121,7 @@ class BrandMark extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Image.asset(
-      'assets/sst-app-icon.png',
+      kBrandIconAsset,
       width: size,
       height: size,
       fit: BoxFit.contain,
@@ -916,16 +886,8 @@ class BrandFooter extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 20),
       child: Column(
         children: [
-          Text(
-            'SST',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 11,
-              letterSpacing: 1.5,
-              color: scheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 4),
+          const BrandMark(size: 28),
+          const SizedBox(height: 6),
           Text(
             'Designed & developed by Brice Johnson',
             textAlign: TextAlign.center,

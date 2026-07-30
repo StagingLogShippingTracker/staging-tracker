@@ -1,5 +1,5 @@
-; Non-admin per-user installer for SST (Staging & Shipping Tracker)
-#define MyAppName "Staging & Shipping Tracker"
+; Non-admin per-user installer for SLST
+#define MyAppName "SLST"
 #define MyAppVersion "1.0.0"
 #define MyAppPublisher "Swift Supply"
 #define MyAppExeName "slst.exe"
@@ -15,7 +15,7 @@ DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
 OutputDir=..\..\dist
-OutputBaseFilename=SST-Setup-User
+OutputBaseFilename=SLST-Setup-User
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
@@ -36,4 +36,4 @@ Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{userdesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\{#MyAppExeName}"; Description: "Launch SST"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\{#MyAppExeName}"; Description: "Launch SLST"; Flags: nowait postinstall skipifsilent

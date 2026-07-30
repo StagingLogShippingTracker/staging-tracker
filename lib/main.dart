@@ -49,7 +49,7 @@ class SlstApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
     return MaterialApp.router(
-      title: 'SST',
+      title: 'SLST',
       theme: IndustrialTheme.darkTheme,
       darkTheme: IndustrialTheme.darkTheme,
       themeMode: ThemeMode.dark,

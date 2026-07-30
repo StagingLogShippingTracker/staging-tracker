@@ -106,7 +106,7 @@ def load_payload() -> dict:
     for needle in [
         "renderBrandedEmail",
         "090D16",
-        "SST",
+        "SLST",
         "swift-supply-logo-email",
         "Missing required fields",
     ]:
@@ -118,6 +118,7 @@ def load_payload() -> dict:
         "Open on Swift",
         "og-cta",
         "Swift Staging Tracker",
+        "Staging & Shipping Tracker",
     ]:
         if banned in combined:
             raise SystemExit(f"refusing banned content: {banned}")

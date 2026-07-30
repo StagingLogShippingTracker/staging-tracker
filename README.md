@@ -1,4 +1,4 @@
-# SST — Staging & Shipping Tracker (Flutter)
+# SST — SLST (Flutter)
 
 Native Flutter clients for Swift Supply staging and shipping operations.
 Targets **Windows** (portable ZIP + per-user installer), **Android** (sideload APK), and **Wear OS** (`apps/slst_wear`).
@@ -99,7 +99,7 @@ PM SMS routing lives **only** inside `supabase/functions/notify-pm`.
 .\scripts\packaging\build-windows-portable.ps1
 ```
 
-Output: `dist/SST-Windows-Portable.zip`
+Output: `dist/SLST-Windows-Portable.zip`
 
 ### Windows per-user installer (no admin)
 
@@ -109,7 +109,7 @@ Requires [Inno Setup 6](https://jrsoftware.org/isinfo.php):
 .\scripts\packaging\build-windows-installer.ps1
 ```
 
-Output: `dist/SST-Setup-User.exe` (installs under `%LOCALAPPDATA%\Programs\SLST`)
+Output: `dist/SLST-Setup-User.exe` (installs under `%LOCALAPPDATA%\Programs\SLST`)
 
 ### Android APK
 
@@ -117,7 +117,7 @@ Output: `dist/SST-Setup-User.exe` (installs under `%LOCALAPPDATA%\Programs\SLST`
 .\scripts\packaging\build-android-apk.ps1
 ```
 
-Output: `dist/SST-Android.apk`. For production signing, create
+Output: `dist/SLST-Android.apk`. For production signing, create
 `android/key.properties` (gitignored) pointing at a keystore. Without it, the
 release build is debug-key signed for internal sideload testing.
 
@@ -127,18 +127,18 @@ release build is debug-key signed for internal sideload testing.
 .\scripts\packaging\build-wear-apk.ps1
 ```
 
-Output: `dist/SST-Wear.apk`. Details: [`apps/slst_wear/README.md`](apps/slst_wear/README.md).
+Output: `dist/SLST-Wear.apk`. Details: [`apps/slst_wear/README.md`](apps/slst_wear/README.md).
 
 Each produced artifact has a lowercase SHA-256 sidecar, such as
-`dist/SST-Android.apk.sha256`.
+`dist/SLST-Android.apk.sha256`.
 
 ### In-app Update (Settings)
 
 Windows and Android **Settings → Update** load the latest GitHub Release
 (`releases/latest`) and download the host-platform package:
 
-- Windows: `SST-Setup-User.exe` (preferred) or `SST-Windows-Portable.zip`
-- Android: `SST-Android.apk`
+- Windows: `SLST-Setup-User.exe` (preferred) or `SLST-Windows-Portable.zip`
+- Android: `SLST-Android.apk`
 
 After packaging builds intended for distribution, commit/push and publish or
 refresh that release so assets match local `dist/` (see
@@ -188,7 +188,7 @@ must still resolve concurrent conflicts when warned.
 ## Brand assets
 
 - `assets/slst-mark.png` — forklift-in-tire brand mark (transparent background)
-- `assets/slst-wordmark.png` — legacy "SLST / Staging Log & Shipping Tracker" wordmark (historical)
+- `assets/slst-wordmark.png` — legacy "SLST / SLST" wordmark (historical)
 - `assets/staging-shipping-logo.png` — legacy horizontal logo (kept for reference, not bundled)
 - `assets/contacts.json` (employee directory)
 - Regenerate app icons / splash logos with `python scripts/generate-app-icons.py`

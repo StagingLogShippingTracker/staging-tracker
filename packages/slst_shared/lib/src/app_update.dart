@@ -101,13 +101,13 @@ class AppReleaseInfo {
   String? assetLabelFor(AppUpdatePlatform platform) {
     switch (platform) {
       case AppUpdatePlatform.windows:
-        if (windowsInstallerUrl != null) return 'SST-Setup-User.exe';
-        if (windowsPortableUrl != null) return 'SST-Windows-Portable.zip';
+        if (windowsInstallerUrl != null) return 'SLST-Setup-User.exe';
+        if (windowsPortableUrl != null) return 'SLST-Windows-Portable.zip';
         return null;
       case AppUpdatePlatform.android:
-        return androidApkUrl == null ? null : 'SST-Android.apk';
+        return androidApkUrl == null ? null : 'SLST-Android.apk';
       case AppUpdatePlatform.wear:
-        return wearApkUrl == null ? null : 'SST-Wear.apk';
+        return wearApkUrl == null ? null : 'SLST-Wear.apk';
     }
   }
 
@@ -151,7 +151,7 @@ class AppUpdateService {
       Uri.parse(AppConfig.githubLatestReleaseApi),
       headers: const {
         'Accept': 'application/vnd.github+json',
-        'User-Agent': 'SST-Swift-Staging-Tracker',
+        'User-Agent': 'SLST',
         'X-GitHub-Api-Version': '2022-11-28',
       },
     );
@@ -217,7 +217,7 @@ class AppUpdateService {
   /// Fetches latest release and compares against [installedVersion] / [installedBuild].
   ///
   /// [platform] gates the installable package: Android phone/tablet only sees
-  /// `SST-Android.apk`; Wear only sees `SST-Wear.apk`; Windows only sees the
+  /// `SLST-Android.apk`; Wear only sees `SLST-Wear.apk`; Windows only sees the
   /// Setup/portable assets. A newer tag with only another platform's APK does
   /// **not** count as an update for this device.
   Future<AppUpdateCheckResult> checkForUpdate({
@@ -305,7 +305,7 @@ class AppUpdateService {
     final client = http.Client();
     try {
       final req = http.Request('GET', Uri.parse(url));
-      req.headers['User-Agent'] = 'SST-Swift-Staging-Tracker';
+      req.headers['User-Agent'] = 'SLST';
       final res = await client.send(req);
       if (res.statusCode < 200 || res.statusCode >= 300) {
         throw Exception('Download failed (HTTP ${res.statusCode}).');
@@ -374,7 +374,7 @@ enum ReleaseAssetKind {
 ///
 /// Wear APKs are identified first (name contains `wear`) so they are never
 /// treated as phone/tablet Android packages. Phone/tablet APKs must include
-/// `android` in the filename (e.g. `SST-Android.apk`). Generic `.apk` names
+/// `android` in the filename (e.g. `SLST-Android.apk`). Generic `.apk` names
 /// are ignored to avoid cross-installing the wrong client.
 ReleaseAssetKind classifyReleaseAsset(String fileName) {
   final lower = fileName.trim().toLowerCase();
@@ -389,7 +389,9 @@ ReleaseAssetKind classifyReleaseAsset(String fileName) {
   if (lower.endsWith('.apk')) {
     // Wear wins over "android" if both appear in the name.
     if (lower.contains('wear')) return ReleaseAssetKind.wearApk;
-    if (lower.contains('android') || lower == 'sst-android.apk') {
+    if (lower.contains('android') ||
+        lower == 'sst-android.apk' ||
+        lower == 'slst-android.apk') {
       return ReleaseAssetKind.androidApk;
     }
     return ReleaseAssetKind.unknown;

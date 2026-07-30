@@ -1,5 +1,5 @@
 /**
- * Branded HTML for non-ship PM notifications — SST Industrial Command Center shell.
+ * Branded HTML for non-ship PM notifications — SLST Industrial Command Center shell.
  */
 
 import {
@@ -44,7 +44,7 @@ export function renderReturnNotificationEmail(
     statusTone: "amber",
     title: "Return notification",
     preview: `Return notification for SO ${so}`,
-    subtitle: "Return recorded in SST",
+    subtitle: "Return recorded in SLST",
     hero: {
       eyebrow: "Return",
       value: soRaw || "—",
@@ -87,7 +87,7 @@ export function renderReturnToStockEmail(
     statusTone: "mint",
     title: "Returned to stock",
     preview: `SO ${so} returned to stock`,
-    subtitle: "Stock return recorded in SST",
+    subtitle: "Stock return recorded in SLST",
     hero: {
       eyebrow: "Stock return",
       value: soRaw || "—",
@@ -137,7 +137,7 @@ export function renderPoNotificationEmail(
     statusTone: "amber",
     title: "PO notification",
     preview: `PO notification: ${po}`,
-    subtitle: "Purchase order update from SST",
+    subtitle: "Purchase order update from SLST",
     hero: {
       eyebrow: "Purchase order",
       value: poRaw || "—",
@@ -200,7 +200,7 @@ export function renderBulkPoNotificationEmail(
     statusTone: "purple",
     title: "Bulk PO notification",
     preview: `Bulk PO notification (${list.length} POs)`,
-    subtitle: `${list.length} purchase order${list.length === 1 ? "" : "s"} from SST`,
+    subtitle: `${list.length} purchase order${list.length === 1 ? "" : "s"} from SLST`,
     hero: {
       eyebrow: "Bulk receiving",
       value: String(list.length),

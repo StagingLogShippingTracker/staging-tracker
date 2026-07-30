@@ -116,7 +116,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             Text(
-                              'Sign in to SST to create and edit staging or '
+                              'Sign in to SLST to create and edit staging or '
                               'shipping records. Signed-out users cannot view '
                               'or change operational data.',
                               style: const TextStyle(
@@ -206,9 +206,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   path: AppConfig.accessRequestEmail,
                                   queryParameters: {
                                     'subject':
-                                        'Access Request: SST (Staging & Shipping Tracker)',
+                                        'Access Request: SLST',
                                     'body':
-                                        'Hello,\n\nI am requesting user access to create and edit entries on SST (Staging & Shipping Tracker).\n',
+                                        'Hello,\n\nI am requesting user access to create and edit entries on SLST.\n',
                                   },
                                 );
                                 await launchUrl(uri);
