@@ -11,7 +11,7 @@ export const ASSET_VERSION = "20260728sst-darkforce";
 
 /** App BrandMark — same asset as Flutter `assets/slst-app-icon.png`. */
 const SLST_MARK_URL =
-  "https://raw.githubusercontent.com/StagingLogShippingTracker/staging-tracker/main/assets/slst-app-icon.png";
+  "https://raw.githubusercontent.com/StagingLogShippingTracker/staging-tracker/cursor/sst-industrial-email-redesign/assets/slst-app-icon.png";
 
 /** Match GoogleFonts.inter / JetBrains Mono from the Flutter app. */
 const FONT =
