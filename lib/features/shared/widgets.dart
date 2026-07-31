@@ -81,18 +81,34 @@ EdgeInsets slstPagePadding(
   return EdgeInsets.fromLTRB(h, top, h, b);
 }
 
-/// SLST wordmark — logo art only (letters are in the mark).
+/// Full SLST wordmark (transparent PNG) — sidepanel, footer, login.
 class BrandWordmark extends StatelessWidget {
-  const BrandWordmark({super.key, required this.height});
+  const BrandWordmark({
+    super.key,
+    required this.height,
+    this.colorFilter,
+  });
 
   final double height;
+  final ColorFilter? colorFilter;
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      label: kProductName,
-      child: BrandMark(size: height),
+    Widget image = Image.asset(
+      kBrandWordmarkAsset,
+      height: height,
+      fit: BoxFit.contain,
+      filterQuality: FilterQuality.high,
+      errorBuilder: (_, _, _) => Icon(
+        Icons.inventory_2_outlined,
+        color: SlstColors.brand,
+        size: height * 0.95,
+      ),
     );
+    if (colorFilter != null) {
+      image = ColorFiltered(colorFilter: colorFilter!, child: image);
+    }
+    return Semantics(label: kProductName, child: image);
   }
 }
 
@@ -104,15 +120,12 @@ class BrandLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final iconSize = (height * 0.92).clamp(64.0, 120.0);
-    return Semantics(
-      label: kProductName,
-      child: BrandMark(size: iconSize),
-    );
+    final h = height.clamp(64.0, 140.0);
+    return BrandWordmark(height: h);
   }
 }
 
-/// Compact square SLST app icon for app bars / nav.
+/// Compact square SLST app icon (S + swish) for collapsed nav / app bars.
 class BrandMark extends StatelessWidget {
   const BrandMark({super.key, this.size = 32});
 
@@ -882,16 +895,21 @@ class BrandFooter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final muted = scheme.onSurfaceVariant;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 20),
       child: Column(
         children: [
-          const BrandMark(size: 28),
+          // 2× prior 28px mark; modulate keeps tread dark while greying whites.
+          BrandWordmark(
+            height: 56,
+            colorFilter: ColorFilter.mode(muted, BlendMode.modulate),
+          ),
           const SizedBox(height: 6),
           Text(
             'Designed & developed by Brice Johnson',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+            style: TextStyle(fontSize: 12, color: muted),
           ),
         ],
       ),

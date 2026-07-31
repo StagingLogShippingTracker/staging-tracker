@@ -286,7 +286,8 @@ class _CompactShell extends ConsumerWidget {
                 padding: EdgeInsets.fromLTRB(20, 20, 20, 12),
                 child: Align(
                   alignment: Alignment.centerLeft,
-                  child: BrandMark(size: 36),
+                  // Target 3× prior 36px drawer mark; fit drawer width.
+                  child: _RailBrandWordmark(targetHeight: 108),
                 ),
               ),
               const Divider(height: 1, color: IndustrialTheme.borderStroke),
@@ -545,6 +546,29 @@ class _AccountMenu extends ConsumerWidget {
   }
 }
 
+class _RailBrandWordmark extends StatelessWidget {
+  const _RailBrandWordmark({required this.targetHeight});
+
+  final double targetHeight;
+
+  /// Approximate aspect of assets/slst-wordmark-white.png.
+  static const double _aspect = 1830 / 530;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxH = constraints.maxWidth / _aspect;
+        final h = targetHeight < maxH ? targetHeight : maxH;
+        return Align(
+          alignment: Alignment.centerLeft,
+          child: BrandWordmark(height: h),
+        );
+      },
+    );
+  }
+}
+
 class _IndustrialRail extends ConsumerWidget {
   const _IndustrialRail({required this.selectedPath});
   final String selectedPath;
@@ -577,12 +601,13 @@ class _IndustrialRail extends ConsumerWidget {
                 ? const Center(
                     child: Tooltip(
                       message: 'SLST',
-                      child: BrandMark(size: 28),
+                      child: BrandMark(size: 36),
                     ),
                   )
                 : const Padding(
                     padding: EdgeInsets.only(left: 2),
-                    child: BrandMark(size: 34),
+                    // Target 3× prior 34px mark; fit width of the 220px rail.
+                    child: _RailBrandWordmark(targetHeight: 102),
                   ),
           ),
           const Divider(height: 1, color: IndustrialTheme.borderStroke),

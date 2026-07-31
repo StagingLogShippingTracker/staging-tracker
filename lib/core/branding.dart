@@ -7,5 +7,8 @@ library;
 /// Official product name (short).
 const String kProductName = 'SLST';
 
-/// Asset path for the two-tone SLST logo (also used as launcher source).
+/// Square launcher / app-icon mark (S + swish on #0A1017).
 const String kBrandIconAsset = 'assets/slst-app-icon.png';
+
+/// Full white SLST wordmark on transparent (sidepanel, footer, login).
+const String kBrandWordmarkAsset = 'assets/slst-wordmark-white.png';
