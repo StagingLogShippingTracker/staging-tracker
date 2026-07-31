@@ -286,8 +286,8 @@ class _CompactShell extends ConsumerWidget {
                 padding: EdgeInsets.fromLTRB(20, 20, 20, 12),
                 child: Align(
                   alignment: Alignment.centerLeft,
-                  // Target 3× prior 36px drawer mark; fit drawer width.
-                  child: _RailBrandWordmark(targetHeight: 108),
+                  // Prior ~76px effective drawer mark / 1.5 → ~51px.
+                  child: _RailBrandWordmark(targetHeight: 51),
                 ),
               ),
               const Divider(height: 1, color: IndustrialTheme.borderStroke),
@@ -601,13 +601,13 @@ class _IndustrialRail extends ConsumerWidget {
                 ? const Center(
                     child: Tooltip(
                       message: 'SLST',
-                      child: BrandMark(size: 36),
+                      child: BrandMark(size: 24),
                     ),
                   )
                 : const Padding(
                     padding: EdgeInsets.only(left: 2),
-                    // Target 3× prior 34px mark; fit width of the 220px rail.
-                    child: _RailBrandWordmark(targetHeight: 102),
+                    // ~54px effective / 1.5 → ~36px (was 3× prior 34px target).
+                    child: _RailBrandWordmark(targetHeight: 36),
                   ),
           ),
           const Divider(height: 1, color: IndustrialTheme.borderStroke),

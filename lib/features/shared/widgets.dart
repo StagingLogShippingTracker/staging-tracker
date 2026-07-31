@@ -896,14 +896,19 @@ class BrandFooter extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final muted = scheme.onSurfaceVariant;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    // Match legacy SiteFooter washout (dark 0.35 / light 0.75) on top of
+    // muted modulate so the wordmark reads softer than the credit line.
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 20),
       child: Column(
         children: [
-          // 2× prior 28px mark; modulate keeps tread dark while greying whites.
-          BrandWordmark(
-            height: 56,
-            colorFilter: ColorFilter.mode(muted, BlendMode.modulate),
+          Opacity(
+            opacity: dark ? 0.35 : 0.55,
+            child: BrandWordmark(
+              height: 28,
+              colorFilter: ColorFilter.mode(muted, BlendMode.modulate),
+            ),
           ),
           const SizedBox(height: 6),
           Text(
