@@ -10,5 +10,8 @@ const String kProductName = 'SLST';
 /// Square launcher / app-icon mark (S + swish on #0A1017).
 const String kBrandIconAsset = 'assets/slst-app-icon.png';
 
+/// Transparent S + swish mark for in-app chrome (collapsed rail, etc.).
+const String kBrandMarkAsset = 'assets/slst-mark-s.png';
+
 /// Full white SLST wordmark on transparent (sidepanel, footer, login).
 const String kBrandWordmarkAsset = 'assets/slst-wordmark-white.png';

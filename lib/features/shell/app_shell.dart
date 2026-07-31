@@ -552,7 +552,7 @@ class _RailBrandWordmark extends StatelessWidget {
   final double targetHeight;
 
   /// Approximate aspect of assets/slst-wordmark-white.png.
-  static const double _aspect = 1830 / 530;
+  static const double _aspect = 3108 / 900;
 
   @override
   Widget build(BuildContext context) {

@@ -16,4 +16,5 @@ When a request changes a Flutter client (`lib/`, `windows/`, `android/`, `apps/s
  - Android: `scripts/packaging/build-android-apk.ps1`
  - Wear: `scripts/packaging/build-wear-apk.ps1`
 4. Edge-function / Supabase-only changes do **not** require a Flutter rebuild unless the client also changed.
-5. Keep `.tools/flutter`, `build/`, and `dist/` available for local run/install workflows (including ADB install to phone/Wear).
+5. Keep `.tools/flutter`, `build/`, and `dist/` available for local packaging and Windows portable launches.
+6. Do **not** ADB-install Android/Wear after builds — users update from the apps (Settings → Update). Publish GitHub Release assets instead.

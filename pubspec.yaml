@@ -1,7 +1,7 @@
 name: slst
 description: SLST — Flutter Windows/Android client (shared domain in packages/slst_shared; Wear in apps/slst_wear).
 publish_to: 'none'
-version: 1.1.17+19
+version: 1.1.18+20
 
 environment:
   sdk: ^3.12.2
@@ -42,4 +42,5 @@ flutter:
   assets:
     - assets/contacts.json
     - assets/slst-app-icon.png
+    - assets/slst-mark-s.png
     - assets/slst-wordmark-white.png

@@ -94,11 +94,16 @@ class BrandWordmark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dpr = MediaQuery.devicePixelRatioOf(context);
+    // Oversample decode (≥2× physical) so 100% DPI / large monitors stay sharp
+    // when Flutter paints the bitmap; assets themselves are high-res.
+    final cacheH = (height * dpr * 2.0).round().clamp(64, 4096);
     Widget image = Image.asset(
       kBrandWordmarkAsset,
       height: height,
       fit: BoxFit.contain,
       filterQuality: FilterQuality.high,
+      cacheHeight: cacheH,
       errorBuilder: (_, _, _) => Icon(
         Icons.inventory_2_outlined,
         color: SlstColors.brand,
@@ -125,7 +130,7 @@ class BrandLogo extends StatelessWidget {
   }
 }
 
-/// Compact square SLST app icon (S + swish) for collapsed nav / app bars.
+/// Compact transparent SLST S-mark for collapsed nav / app bars.
 class BrandMark extends StatelessWidget {
   const BrandMark({super.key, this.size = 32});
 
@@ -133,12 +138,16 @@ class BrandMark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dpr = MediaQuery.devicePixelRatioOf(context);
+    final cachePx = (size * dpr * 2.0).round().clamp(48, 2048);
     return Image.asset(
-      kBrandIconAsset,
+      kBrandMarkAsset,
       width: size,
       height: size,
       fit: BoxFit.contain,
       filterQuality: FilterQuality.high,
+      cacheWidth: cachePx,
+      cacheHeight: cachePx,
       errorBuilder: (_, _, _) => Icon(
         Icons.inventory_2_outlined,
         color: SlstColors.brand,

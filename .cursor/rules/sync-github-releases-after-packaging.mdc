@@ -11,7 +11,7 @@ GitHub `releases/latest`:
 
 Whenever you produce **distributable** local packaging that should be installable via that UI
 (`scripts/packaging/build-windows-installer.ps1`, `build-windows-portable.ps1`,
-`build-android-apk.ps1`, `build-wear-apk.ps1`, or equivalent `dist/SST-*` artifacts):
+`build-android-apk.ps1`, `build-wear-apk.ps1`, or equivalent `dist/SLST-*` artifacts):
 
 1. **Commit** related code/docs on the working branch (exclude secrets and unrelated junk).
 2. **Push** the branch to origin.
@@ -20,7 +20,8 @@ Whenever you produce **distributable** local packaging that should be installabl
    - `SLST-Windows-Portable.zip` (preferred)
    - `SLST-Android.apk` (required for Android Update)
    - `SLST-Wear.apk` (required for Wear Update; may ship less often, but include when Wear was rebuilt)
-4. Prefer a version tag aligned with `pubspec.yaml` (e.g. `sst-1.1.0`).
+4. Prefer a version tag aligned with `pubspec.yaml` (e.g. `slst-1.1.13`).
 5. Do **not** leave `releases/latest` pointing at older builds after a successful packaging run meant for distribution.
+6. Do **not** ADB-install Android/Wear afterward — in-app Update is the delivery path.
 
 Skip this sync only when the user explicitly asks for a local-only build (no Update channel publish).

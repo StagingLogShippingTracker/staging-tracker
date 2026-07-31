@@ -2,7 +2,7 @@
 
 ## What this is
 
-SLST / SST — SLST: **Flutter clients** for **Windows**, **Android**, and **Wear OS**, backed by a **hosted Supabase** project. Make.com PM email/SMS is invoked only through the authenticated Edge Function `notify-pm`.
+SLST — Flutter clients for **Windows**, **Android**, and **Wear OS**, backed by a **hosted Supabase** project. Make.com PM email/SMS is invoked only through the authenticated Edge Function `notify-pm`.
 
 There is **no** web/PWA client and **no** Prophet21 / Epicor integration.
 
@@ -10,7 +10,7 @@ There is **no** web/PWA client and **no** Prophet21 / Epicor integration.
 
 Development and Flutter packaging builds run on the **local Windows checkout**. Prefer this machine’s `.tools/flutter` bootstrap (or Flutter on PATH), plus local `build/` / `dist/` artifacts. Do not default to Cursor Cloud Agents for app work unless the user asks.
 
-Preferred local folder name: `sst-staging-shipping-tracker` (product brand **SST** / **SLST**). GitHub remote stays `StagingLogShippingTracker/staging-tracker`.
+Preferred local folder: this Windows checkout (e.g. `Downloads/swift-staging-tracker`). GitHub remote: `StagingLogShippingTracker/staging-tracker`. Product brand is **SLST**.
 
 ## Dev commands (local)
 
@@ -25,7 +25,7 @@ flutter test
 flutter analyze
 ```
 
-Push to devices with ADB when paired (`adb install -r …` for phone and Wear).
+Do **not** ADB wireless-install phone/Wear after packaging — use in-app **Settings → Update** (GitHub Releases). Only use ADB when the user explicitly asks.
 
 ## After app changes — always rebuild (local)
 
@@ -35,6 +35,7 @@ When agents change a Flutter client, they must rebuild the affected platform(s) 
 - Android: `scripts/packaging/build-android-apk.ps1`
 - Wear: `scripts/packaging/build-wear-apk.ps1`
 
+Then publish GitHub `releases/latest` with `SLST-*` assets so clients can self-update.
 ## Live production backend — be careful
 
 - `lib/core/app_config.dart` (and `packages/slst_shared`) points at the **live** Supabase project.

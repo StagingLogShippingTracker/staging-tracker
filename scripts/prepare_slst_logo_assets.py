@@ -2,9 +2,13 @@
 
 Outputs:
   assets/slst-logo-source.png       — archived full source
-  assets/slst-wordmark-white.png    — full wordmark, transparent, tight crop
-  assets/slst-mark-s.png            — S + swish only, transparent, pointed tip
+  assets/slst-wordmark-white.png    — full wordmark, transparent, high-res UI
+  assets/slst-mark-s.png            — S + swish only, transparent, high-res UI
   assets/slst-app-icon.png          — S + swish on #0A1017 square (launcher source)
+
+UI wordmark/mark stay at least UI_WORDMARK_MIN_HEIGHT / UI_MARK_MIN_HEIGHT tall
+so large monitors can downsample crisply. Launcher icon composition still
+downscales the mark onto a 1024 canvas.
 """
 
 from __future__ import annotations
@@ -288,6 +292,47 @@ ICON_MARK_FILL = 0.88
 # Transparent margin kept around mark content when compositing the icon only.
 ICON_MARK_CROP_PAD = 4
 
+# UI assets stay far above on-screen height (28–120 logical px) so large monitors
+# at 100% DPI can downsample crisply. Do not shrink these to display size.
+UI_WORDMARK_MIN_HEIGHT = 900
+UI_MARK_MIN_HEIGHT = 1000
+UI_MAX_DIM = 4096
+
+
+def upscale_min_height(im: Image.Image, min_h: int) -> Image.Image:
+    """LANCZOS upscale so height is at least min_h (capped at UI_MAX_DIM)."""
+    if im.height >= min_h and max(im.size) <= UI_MAX_DIM:
+        return im
+    scale = max(min_h / max(1, im.height), 1.0)
+    nw = int(round(im.width * scale))
+    nh = int(round(im.height * scale))
+    if max(nw, nh) > UI_MAX_DIM:
+        cap = UI_MAX_DIM / max(nw, nh)
+        nw = max(1, int(round(nw * cap)))
+        nh = max(1, int(round(nh * cap)))
+    if (nw, nh) == im.size:
+        return im
+    return im.resize((nw, nh), Image.Resampling.LANCZOS)
+
+
+def purify_white_logo(im: Image.Image) -> Image.Image:
+    """Force logo ink to pure white; keep alpha for anti-aliased edges.
+
+    Soft LANCZOS upscales leave gray fringe RGB that looks muddy/pixelated when
+    ColorFiltered or shown large on low-DPR monitors. White RGB + soft alpha
+    downscales cleanly under FilterQuality.high.
+    """
+    im = im.convert("RGBA")
+    px = im.load()
+    w, h = im.size
+    for y in range(h):
+        for x in range(w):
+            r, g, b, a = px[x, y]
+            if a == 0:
+                continue
+            px[x, y] = (255, 255, 255, a)
+    return im
+
 
 def make_app_icon(mark: Image.Image, size: int = 1024) -> Image.Image:
     """Place transparent S-mark on solid #0A1017 with a tight inset."""
@@ -323,12 +368,8 @@ def main() -> None:
 
     transparent = remove_background_keep_tread(raw)
     wordmark = tight_crop(transparent, pad=10)
-    # Upscale wordmark slightly for crisp UI (@2–3x display).
-    wm_scale = 2
-    wordmark_hd = wordmark.resize(
-        (wordmark.width * wm_scale, wordmark.height * wm_scale),
-        Image.Resampling.LANCZOS,
-    )
+    # High-res UI wordmark — never bake down to sidepanel/footer display size.
+    wordmark_hd = purify_white_logo(upscale_min_height(wordmark, UI_WORDMARK_MIN_HEIGHT))
     wm_path = ASSETS / "slst-wordmark-white.png"
     wordmark_hd.save(wm_path, optimize=True)
     print("wordmark", wm_path, wordmark_hd.size)
@@ -341,12 +382,11 @@ def main() -> None:
     s_region = transparent.crop((0, 0, right + 1, transparent.height))
     s_region = tight_crop(s_region, pad=6)
     # Upscale first, then sharpen at HD so the tip stays solid/crisp.
-    mark_hd = s_region.resize(
-        (s_region.width * 3, s_region.height * 3),
-        Image.Resampling.LANCZOS,
-    )
+    mark_hd = upscale_min_height(s_region, UI_MARK_MIN_HEIGHT)
     mark_hd = sharpen_swirl_tip(mark_hd)
-    mark_hd = tight_crop(mark_hd, pad=10)
+    mark_hd = purify_white_logo(tight_crop(mark_hd, pad=10))
+    # Tip extend / crop can shrink height slightly — restore UI minimum.
+    mark_hd = upscale_min_height(mark_hd, UI_MARK_MIN_HEIGHT)
     mark_path = ASSETS / "slst-mark-s.png"
     mark_hd.save(mark_path, optimize=True)
     print("mark", mark_path, mark_hd.size)
