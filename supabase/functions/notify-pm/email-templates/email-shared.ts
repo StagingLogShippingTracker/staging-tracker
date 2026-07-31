@@ -7,11 +7,22 @@
 export const DEFAULT_EMAIL_ASSET_BASE =
   "https://gdrpdiwykmnybmkadlrv.supabase.co/storage/v1/object/public/email-assets";
 
-export const ASSET_VERSION = "20260728sst-darkforce";
+export const ASSET_VERSION = "20260731footer-wordmark";
 
 /** App BrandMark — same asset as Flutter `assets/slst-app-icon.png`. */
 const SLST_MARK_URL =
   "https://raw.githubusercontent.com/StagingLogShippingTracker/staging-tracker/cursor/sst-industrial-email-redesign/assets/slst-app-icon.png";
+
+/**
+ * Faded SLST wordmark for BrandFooter — baked #9CA3AF @ 0.35 opacity to mirror
+ * Flutter BrandFooter (muted modulate + dark Opacity 0.35).
+ */
+const SLST_WORDMARK_FOOTER_URL =
+  "https://raw.githubusercontent.com/StagingLogShippingTracker/staging-tracker/cursor/sst-industrial-email-redesign/assets/email/slst-wordmark-footer.png";
+
+function slstFooterWordmarkUrl(): string {
+  return `${SLST_WORDMARK_FOOTER_URL}?v=${ASSET_VERSION}`;
+}
 
 /** Match GoogleFonts.inter / JetBrains Mono from the Flutter app. */
 const FONT =
@@ -581,17 +592,17 @@ export function renderBrandedEmail(opts: BrandedEmailOptions): string {
                 ${grid}
                 ${attachmentsSection(attachmentUrls)}
 
-                <!-- BrandFooter (widgets.dart) -->
+                <!-- BrandFooter (lib/features/shared/widgets.dart) -->
                 <tr>
                   <td align="center" class="og-footer" style="padding: 20px 16px 22px 16px; font-family: ${FONT};">
-                    <div style="padding-bottom: 8px;">
-                      <img src="${SLST_MARK_URL}?v=${ASSET_VERSION}" width="36" height="36" alt="SLST"
-                        style="display: inline-block; width: 36px; height: 36px; border-radius: 6px; border: 1px solid ${BORDER};">
+                    <div style="padding-bottom: 6px;">
+                      <img src="${slstFooterWordmarkUrl()}" width="120" height="35" alt="SLST"
+                        style="display: inline-block; width: 120px; height: auto; border: 0; outline: none;">
                     </div>
                     <div style="font-size: 12px; color: ${MUTED}; padding-bottom: 14px;">
                       Designed &amp; developed by Brice Johnson
                     </div>
-                    <div class="og-disclaimer" style="font-size: 10px; line-height: 1.45; color: ${MUTED}; max-width: 520px;">
+                    <div class="og-disclaimer" style="font-size: 10px; line-height: 1.45; color: ${MUTED}; max-width: 520px; margin: 0 auto;">
                       SLST is an internal operations tool for Swift Nisku warehouse staff. It records what is staged, ready to ship, and departed—and notifies sales when orders leave. It is not a carrier tracking system, proof-of-delivery tool, or comprehensive order-tracking platform.
                     </div>
                     <div class="og-disclaimer" style="margin-top: 8px; font-size: 10px; line-height: 1.45; color: ${MUTED};">

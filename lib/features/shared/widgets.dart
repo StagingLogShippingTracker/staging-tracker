@@ -897,9 +897,21 @@ class EntryCard extends StatelessWidget {
   }
 }
 
-/// Footer credit carried over from the legacy web app.
+/// Footer credit + product scope jargon — matches notify-pm email BrandFooter.
 class BrandFooter extends StatelessWidget {
   const BrandFooter({super.key});
+
+  static const String creditLine = 'Designed & developed by Brice Johnson';
+
+  static const String scopeJargon =
+      'SLST is an internal operations tool for Swift Nisku warehouse staff. '
+      'It records what is staged, ready to ship, and departed—and notifies '
+      'sales when orders leave. It is not a carrier tracking system, '
+      'proof-of-delivery tool, or comprehensive order-tracking platform.';
+
+  static String pilotJargon([int? year]) =>
+      'SLST is a pilot project and is not an official Swift corporate product. '
+      '© ${year ?? DateTime.now().year}';
 
   @override
   Widget build(BuildContext context) {
@@ -908,8 +920,13 @@ class BrandFooter extends StatelessWidget {
     final dark = Theme.of(context).brightness == Brightness.dark;
     // Match legacy SiteFooter washout (dark 0.35 / light 0.75) on top of
     // muted modulate so the wordmark reads softer than the credit line.
+    final jargonStyle = TextStyle(
+      fontSize: 10,
+      height: 1.45,
+      color: muted,
+    );
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 20),
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
       child: Column(
         children: [
           Opacity(
@@ -921,9 +938,24 @@ class BrandFooter extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            'Designed & developed by Brice Johnson',
+            creditLine,
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 12, color: muted),
+          ),
+          const SizedBox(height: 14),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: Text(
+              scopeJargon,
+              textAlign: TextAlign.center,
+              style: jargonStyle,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            pilotJargon(),
+            textAlign: TextAlign.center,
+            style: jargonStyle,
           ),
         ],
       ),

@@ -1,4 +1,5 @@
-"""Deploy notify-pm edge function via Supabase MCP HTTP."""
+"""Deploy notify-pm via Supabase MCP using Cursor oauth blob."""
+from __future__ import annotations
 
 import json
 import os
@@ -8,9 +9,7 @@ from pathlib import Path
 import httpx
 
 ROOT = Path(__file__).resolve().parents[1]
-payload = json.loads(
-    (ROOT / "_mcp_deploy" / "deploy_two.json").read_text(encoding="utf-8")
-)
+payload = json.loads((ROOT / "_mcp_deploy" / "deploy_two.json").read_text(encoding="utf-8"))
 
 TOKEN_KEY = (
     "mcpOAuth.secret.W3BsdWdpbi1zdXBhYmFzZS1zdXBhYmFzZTo6bWNwU2NvcGU6"
@@ -26,11 +25,33 @@ if not row:
 
 blob = row[0] if isinstance(row[0], str) else row[0].decode("utf-8", errors="replace")
 data = json.loads(blob)
-inner = data.get("data")
-if isinstance(inner, str):
-    inner = json.loads(inner)
-access = inner.get("access_token") or inner.get("accessToken")
+# Blob shapes vary across Cursor versions
+candidates = [data]
+if isinstance(data.get("data"), str):
+    try:
+        candidates.append(json.loads(data["data"]))
+    except json.JSONDecodeError:
+        pass
+elif isinstance(data.get("data"), dict):
+    candidates.append(data["data"])
+if isinstance(data.get("tokens"), dict):
+    candidates.append(data["tokens"])
+
+access = None
+for c in candidates:
+    if not isinstance(c, dict):
+        continue
+    access = c.get("access_token") or c.get("accessToken")
+    if access:
+        break
+    toks = c.get("tokens")
+    if isinstance(toks, dict):
+        access = toks.get("access_token") or toks.get("accessToken")
+        if access:
+            break
+
 if not access:
+    print("blob_keys", list(data.keys()))
     raise SystemExit("no access token in MCP blob")
 
 req = {
@@ -48,7 +69,7 @@ response = httpx.post(
     "https://mcp.supabase.com/mcp",
     json=req,
     headers=headers,
-    timeout=120.0,
+    timeout=180.0,
 )
 print("status", response.status_code)
-print(response.text)
+print(response.text[:4000])

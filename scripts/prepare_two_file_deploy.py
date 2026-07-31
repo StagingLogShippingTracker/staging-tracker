@@ -49,7 +49,9 @@ for good in [
     "renderShipConfirmationEmail",
     "renderNotificationEmail",
     "renderBrandedEmail",
-    "20260728sst",
+    "20260731footer-wordmark",
+    "slst-wordmark-footer",
+    "SLST_WORDMARK_FOOTER_URL",
     "darkModeCss",
     "surfaceBg",
     "swift-supply-logo-email",
@@ -62,6 +64,7 @@ for good in [
 
 for retired in [
     "slst-logo-email",
+    "20260728sst-darkforce",
     "Open Swift Supply",
     "Open on Swift",
     "OPEN SWIFT SUPPLY",

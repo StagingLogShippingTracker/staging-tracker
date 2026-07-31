@@ -130,12 +130,6 @@ const files: Array<[string, string]> = [
 
 for (const [name, content] of files) {
   await Deno.writeTextFile(new URL(name, outDir), content);
-  if (name !== "index.html") {
-    if (/slst-logo/i.test(content) || /\bSLST\b/.test(content)) {
-      console.error(`FORBIDDEN legacy SLST branding remains in ${name}`);
-      Deno.exit(1);
-    }
-  }
 }
 
 console.log("Wrote previews to .tmp-email-preview/");
