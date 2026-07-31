@@ -283,11 +283,19 @@ def sharpen_swirl_tip(im: Image.Image) -> Image.Image:
     return im
 
 
+# Launcher icon fill fraction (mark bbox vs canvas). Was 0.72 — too much edge padding.
+ICON_MARK_FILL = 0.88
+# Transparent margin kept around mark content when compositing the icon only.
+ICON_MARK_CROP_PAD = 4
+
+
 def make_app_icon(mark: Image.Image, size: int = 1024) -> Image.Image:
-    """Place transparent S-mark on solid #0A1017, padded nicely."""
+    """Place transparent S-mark on solid #0A1017 with a tight inset."""
     canvas = Image.new("RGBA", (size, size), ICON_BG)
-    # Fit mark into ~72% of canvas.
-    target = int(size * 0.72)
+    # Re-crop for icon only so mark-asset padding does not shrink the graphic.
+    # Does not rewrite assets/slst-mark-s.png or UI wordmarks.
+    mark = tight_crop(mark, pad=ICON_MARK_CROP_PAD)
+    target = int(size * ICON_MARK_FILL)
     mw, mh = mark.size
     scale = min(target / mw, target / mh)
     nw, nh = max(1, int(mw * scale)), max(1, int(mh * scale))
