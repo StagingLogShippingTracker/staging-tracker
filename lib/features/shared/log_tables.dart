@@ -16,6 +16,7 @@ import '../staging/staging_form_sheet.dart';
 import 'industrial_widgets.dart';
 import 'order_history_dialog.dart';
 import 'so_advisories.dart';
+import 'so_history_link.dart';
 import 'widgets.dart';
 
 /// Android: industrial wide-grid + horizontal chrome collapses to zero height
@@ -221,30 +222,10 @@ Widget _soHistoryLink(
   double maxWidth = 120,
   bool large = false,
 }) {
-  return Tooltip(
-    message: 'Open Order History for SO $so',
-    child: TextButton(
-      style: TextButton.styleFrom(
-        padding: EdgeInsets.zero,
-        minimumSize: const Size(0, 32),
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        foregroundColor: IndustrialTheme.skyBlue,
-      ),
-      onPressed: () => showOrderHistoryDialog(context, ref, so: so),
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: maxWidth),
-        child: Text(
-          so.isEmpty ? '—' : so,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: IndustrialTheme.mono(
-            fontSize: large ? 15 : 13,
-            fontWeight: FontWeight.w700,
-            color: IndustrialTheme.skyBlue,
-          ),
-        ),
-      ),
-    ),
+  return SoHistoryLink(
+    so,
+    maxWidth: maxWidth,
+    fontSize: large ? 15 : 13,
   );
 }
 

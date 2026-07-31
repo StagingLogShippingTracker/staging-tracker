@@ -8,7 +8,7 @@ import '../../data/app_state.dart';
 import '../../domain/location_intelligence.dart';
 import '../../domain/models.dart';
 import '../../domain/status.dart';
-import '../shared/order_history_dialog.dart';
+import '../shared/so_history_link.dart';
 
 /// Persisted collapse state for the dashboard Warehouse Floor Map section.
 final floorMapCollapsedProvider =
@@ -675,46 +675,34 @@ class _FloorEntryCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () => showOrderHistoryDialog(context, ref, so: entry.so),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                entry.so,
-                style: IndustrialTheme.mono(
-                  fontWeight: FontWeight.w700,
-                  color: IndustrialTheme.skyBlue,
-                ).copyWith(
-                  decoration: TextDecoration.underline,
-                  decorationColor: IndustrialTheme.skyBlue,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                showLocation
-                    ? '${entry.customer} · ${entry.location} · ${entry.type}'
-                    : '${entry.customer} · ${entry.type} · ${entry.stagedBy}',
-                style: const TextStyle(
-                  color: IndustrialTheme.textMuted,
-                  fontSize: 12,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                StatusRules.formatUi(entry.status),
-                style: IndustrialTheme.mono(
-                  fontSize: 10,
-                  color: IndustrialTheme.skyBlue,
-                ),
-              ),
-            ],
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Align(
+            alignment: Alignment.centerLeft,
+            child: SoHistoryLink(entry.so, fontSize: 13),
           ),
-        ),
+          const SizedBox(height: 2),
+          Text(
+            showLocation
+                ? '${entry.customer} · ${entry.location} · ${entry.type}'
+                : '${entry.customer} · ${entry.type} · ${entry.stagedBy}',
+            style: const TextStyle(
+              color: IndustrialTheme.textMuted,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            StatusRules.formatUi(entry.status),
+            style: IndustrialTheme.mono(
+              fontSize: 10,
+              color: IndustrialTheme.skyBlue,
+            ),
+          ),
+        ],
       ),
     );
   }

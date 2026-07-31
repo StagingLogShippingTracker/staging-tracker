@@ -4,7 +4,9 @@ Outputs:
   assets/slst-logo-source.png       — archived full source
   assets/slst-wordmark-white.png    — full wordmark, transparent, high-res UI
   assets/slst-mark-s.png            — S + swish only, transparent, high-res UI
-  assets/slst-app-icon.png          — S + swish on #0A1017 square (launcher source)
+  assets/slst-app-icon.png          — S + swish on #0A1017 rounded square
+  assets/slst-splash-wordmark.png   — full wordmark on #091019 (Android/Wear splash)
+  assets/slst-splash-banner.png     — wide splash banner helper
 
 UI wordmark/mark stay at least UI_WORDMARK_MIN_HEIGHT / UI_MARK_MIN_HEIGHT tall
 so large monitors can downsample crisply. Launcher icon composition still
@@ -16,7 +18,7 @@ from __future__ import annotations
 from collections import deque
 from pathlib import Path
 
-from PIL import Image
+from PIL import Image, ImageDraw
 
 ROOT = Path(__file__).resolve().parents[1]
 ASSETS = ROOT / "assets"
@@ -35,6 +37,12 @@ SRC_CANDIDATES = [
 ICON_BG = (0x0A, 0x10, 0x17, 255)
 # Near-bg navy of the source plate (~#080F17).
 BG_REF = (8, 15, 23)
+# Soft rounded-square mask for launcher icons (~14% of edge).
+ICON_CORNER_RADIUS_FRAC = 0.14
+# Android / Wear splash plate (matches LaunchTheme).
+SPLASH_BG = (0x09, 0x10, 0x19, 255)
+SPLASH_WORDMARK_MAX_W_FRAC = 0.78
+SPLASH_WORDMARK_MAX_H_FRAC = 0.34
 
 
 def pick_src() -> Path:
@@ -335,7 +343,7 @@ def purify_white_logo(im: Image.Image) -> Image.Image:
 
 
 def make_app_icon(mark: Image.Image, size: int = 1024) -> Image.Image:
-    """Place transparent S-mark on solid #0A1017 with a tight inset."""
+    """Place transparent S-mark on solid #0A1017 with soft rounded corners."""
     canvas = Image.new("RGBA", (size, size), ICON_BG)
     # Re-crop for icon only so mark-asset padding does not shrink the graphic.
     # Does not rewrite assets/slst-mark-s.png or UI wordmarks.
@@ -347,6 +355,60 @@ def make_app_icon(mark: Image.Image, size: int = 1024) -> Image.Image:
     resized = mark.resize((nw, nh), Image.Resampling.LANCZOS)
     x = (size - nw) // 2
     y = (size - nh) // 2
+    canvas.alpha_composite(resized, (x, y))
+    return apply_rounded_square_mask(canvas, ICON_CORNER_RADIUS_FRAC)
+
+
+def apply_rounded_square_mask(im: Image.Image, radius_frac: float) -> Image.Image:
+    """Keep opaque rounded square; corners become fully transparent."""
+    im = im.convert("RGBA")
+    size = im.width
+    radius = max(1, int(round(size * radius_frac)))
+    mask = Image.new("L", (size, size), 0)
+    draw = ImageDraw.Draw(mask)
+    draw.rounded_rectangle((0, 0, size - 1, size - 1), radius=radius, fill=255)
+    out = im.copy()
+    out.putalpha(mask)
+    return out
+
+
+def make_splash_wordmark(
+    wordmark: Image.Image,
+    size: int = 1024,
+    bg: tuple[int, int, int, int] = SPLASH_BG,
+) -> Image.Image:
+    """Centered full SLST wordmark on splash background (Android 12+ icon plate)."""
+    canvas = Image.new("RGBA", (size, size), bg)
+    wm = tight_crop(wordmark.convert("RGBA"), pad=4)
+    max_w = int(size * SPLASH_WORDMARK_MAX_W_FRAC)
+    max_h = int(size * SPLASH_WORDMARK_MAX_H_FRAC)
+    scale = min(max_w / wm.width, max_h / wm.height)
+    nw = max(1, int(wm.width * scale))
+    nh = max(1, int(wm.height * scale))
+    resized = wm.resize((nw, nh), Image.Resampling.LANCZOS)
+    x = (size - nw) // 2
+    y = (size - nh) // 2
+    canvas.alpha_composite(resized, (x, y))
+    return canvas
+
+
+def make_splash_banner(
+    wordmark: Image.Image,
+    width: int = 960,
+    height: int = 320,
+    bg: tuple[int, int, int, int] = SPLASH_BG,
+) -> Image.Image:
+    """Wide splash bitmap for pre-Android-12 windowBackground layer-list."""
+    canvas = Image.new("RGBA", (width, height), bg)
+    wm = tight_crop(wordmark.convert("RGBA"), pad=4)
+    max_w = int(width * 0.86)
+    max_h = int(height * 0.72)
+    scale = min(max_w / wm.width, max_h / wm.height)
+    nw = max(1, int(wm.width * scale))
+    nh = max(1, int(wm.height * scale))
+    resized = wm.resize((nw, nh), Image.Resampling.LANCZOS)
+    x = (width - nw) // 2
+    y = (height - nh) // 2
     canvas.alpha_composite(resized, (x, y))
     return canvas
 
@@ -395,6 +457,16 @@ def main() -> None:
     icon_path = ASSETS / "slst-app-icon.png"
     icon.save(icon_path, optimize=True)
     print("icon", icon_path, icon.size)
+
+    splash_square = make_splash_wordmark(wordmark_hd, 1024)
+    splash_square_path = ASSETS / "slst-splash-wordmark.png"
+    splash_square.save(splash_square_path, optimize=True)
+    print("splash_square", splash_square_path, splash_square.size)
+
+    splash_banner = make_splash_banner(wordmark_hd)
+    splash_banner_path = ASSETS / "slst-splash-banner.png"
+    splash_banner.save(splash_banner_path, optimize=True)
+    print("splash_banner", splash_banner_path, splash_banner.size)
 
     # Preview on transparent checker isn't needed; save debug previews.
     preview = ASSETS / "_preview_s_mark.png"

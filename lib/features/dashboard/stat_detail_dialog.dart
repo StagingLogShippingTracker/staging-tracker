@@ -6,7 +6,7 @@ import '../../core/theme.dart';
 import '../../data/app_state.dart';
 import '../../domain/models.dart';
 import '../../domain/status.dart';
-import '../shared/order_history_dialog.dart';
+import '../shared/so_history_link.dart';
 import '../shared/widgets.dart';
 
 /// Detail windows attached to the dashboard KPI stat cards, restored from the
@@ -182,25 +182,7 @@ class _StatDetailDialogState extends ConsumerState<_StatDetailDialog> {
         e.customer.toLowerCase().contains(_q);
   }
 
-  Widget _historyLink(String so) {
-    return Tooltip(
-      message: 'Open Order History for SO $so',
-      child: TextButton(
-        style: TextButton.styleFrom(
-          padding: const EdgeInsets.symmetric(horizontal: 2),
-          minimumSize: const Size(0, 32),
-          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          foregroundColor: SlstColors.brand,
-          textStyle: TextStyle(
-            fontWeight: FontWeight.w700,
-            decoration: TextDecoration.underline,
-          ),
-        ),
-        onPressed: () => showOrderHistoryDialog(context, ref, so: so),
-        child: Text(so),
-      ),
-    );
-  }
+  Widget _historyLink(String so) => SoHistoryLink(so, fontSize: 13);
 
   @override
   Widget build(BuildContext context) {
