@@ -7,7 +7,7 @@
 export const DEFAULT_EMAIL_ASSET_BASE =
   "https://gdrpdiwykmnybmkadlrv.supabase.co/storage/v1/object/public/email-assets";
 
-export const ASSET_VERSION = "20260731footer-wordmark";
+export const ASSET_VERSION = "20260801footer-fade";
 
 /** App BrandMark — same asset as Flutter `assets/slst-app-icon.png`. */
 const SLST_MARK_URL =
@@ -19,6 +19,12 @@ const SLST_MARK_URL =
  */
 const SLST_WORDMARK_FOOTER_URL =
   "https://raw.githubusercontent.com/StagingLogShippingTracker/staging-tracker/cursor/sst-industrial-email-redesign/assets/email/slst-wordmark-footer.png";
+
+/**
+ * Footer credit/jargon — match wordmark washout.
+ * Baked #9CA3AF @ 0.35 over PAGE #090D16 (solid for email-client reliability).
+ */
+const FOOTER_FADE = "#3C424C";
 
 function slstFooterWordmarkUrl(): string {
   return `${SLST_WORDMARK_FOOTER_URL}?v=${ASSET_VERSION}`;
@@ -508,7 +514,8 @@ export function renderBrandedEmail(opts: BrandedEmailOptions): string {
     }
     .og-card { background-color: ${SHELL} !important; border-color: ${BORDER} !important; }
     .og-headline, .og-value { color: ${TEXT} !important; }
-    .og-subtitle, .og-label, .og-disclaimer, .og-footer { color: ${MUTED} !important; }
+    .og-subtitle, .og-label { color: ${MUTED} !important; }
+    .og-disclaimer, .og-footer { color: ${FOOTER_FADE} !important; }
     /* Keep industrial dark even when the device/client is in light mode. */
     @media (prefers-color-scheme: light) {
       body, .og-page, .email-container, .og-shell {
@@ -517,7 +524,8 @@ export function renderBrandedEmail(opts: BrandedEmailOptions): string {
       }
       .og-card { background-color: ${SHELL} !important; border-color: ${BORDER} !important; }
       .og-headline, .og-value { color: ${TEXT} !important; }
-      .og-subtitle, .og-label, .og-disclaimer, .og-footer { color: ${MUTED} !important; }
+      .og-subtitle, .og-label { color: ${MUTED} !important; }
+      .og-disclaimer, .og-footer { color: ${FOOTER_FADE} !important; }
     }
     @media (prefers-color-scheme: dark) {
       body, .og-page, .email-container, .og-shell {
@@ -599,13 +607,13 @@ export function renderBrandedEmail(opts: BrandedEmailOptions): string {
                       <img src="${slstFooterWordmarkUrl()}" width="120" height="35" alt="SLST"
                         style="display: inline-block; width: 120px; height: auto; border: 0; outline: none;">
                     </div>
-                    <div style="font-size: 12px; color: ${MUTED}; padding-bottom: 14px;">
+                    <div style="font-size: 12px; color: ${FOOTER_FADE}; padding-bottom: 14px;">
                       Designed &amp; developed by Brice Johnson
                     </div>
-                    <div class="og-disclaimer" style="font-size: 10px; line-height: 1.45; color: ${MUTED}; max-width: 520px; margin: 0 auto;">
+                    <div class="og-disclaimer" style="font-size: 10px; line-height: 1.45; color: ${FOOTER_FADE}; max-width: 520px; margin: 0 auto;">
                       SLST is an internal operations tool for Swift Nisku warehouse staff. It records what is staged, ready to ship, and departed—and notifies sales when orders leave. It is not a carrier tracking system, proof-of-delivery tool, or comprehensive order-tracking platform.
                     </div>
-                    <div class="og-disclaimer" style="margin-top: 8px; font-size: 10px; line-height: 1.45; color: ${MUTED};">
+                    <div class="og-disclaimer" style="margin-top: 8px; font-size: 10px; line-height: 1.45; color: ${FOOTER_FADE};">
                       SLST is a pilot project and is not an official Swift corporate product. © ${year}
                     </div>
                   </td>

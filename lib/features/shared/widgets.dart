@@ -918,8 +918,9 @@ class BrandFooter extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final muted = scheme.onSurfaceVariant;
     final dark = Theme.of(context).brightness == Brightness.dark;
-    // Match legacy SiteFooter washout (dark 0.35 / light 0.75) on top of
-    // muted modulate so the wordmark reads softer than the credit line.
+    // Same washout as the wordmark (dark 0.35 / light 0.55) so credit +
+    // jargon match the logo's visual weight — faded, still legible.
+    final fade = dark ? 0.35 : 0.55;
     final jargonStyle = TextStyle(
       fontSize: 10,
       height: 1.45,
@@ -930,32 +931,39 @@ class BrandFooter extends StatelessWidget {
       child: Column(
         children: [
           Opacity(
-            opacity: dark ? 0.35 : 0.55,
+            opacity: fade,
             child: BrandWordmark(
               height: 28,
               colorFilter: ColorFilter.mode(muted, BlendMode.modulate),
             ),
           ),
           const SizedBox(height: 6),
-          Text(
-            creditLine,
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 12, color: muted),
-          ),
-          const SizedBox(height: 14),
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 520),
-            child: Text(
-              scopeJargon,
-              textAlign: TextAlign.center,
-              style: jargonStyle,
+          Opacity(
+            opacity: fade,
+            child: Column(
+              children: [
+                Text(
+                  creditLine,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 12, color: muted),
+                ),
+                const SizedBox(height: 14),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 520),
+                  child: Text(
+                    scopeJargon,
+                    textAlign: TextAlign.center,
+                    style: jargonStyle,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  pilotJargon(),
+                  textAlign: TextAlign.center,
+                  style: jargonStyle,
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            pilotJargon(),
-            textAlign: TextAlign.center,
-            style: jargonStyle,
           ),
         ],
       ),

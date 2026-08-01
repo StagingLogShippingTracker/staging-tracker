@@ -1,5 +1,5 @@
 /**
- * Local preview renderer for SST notify-pm email templates.
+ * Local preview renderer for SLST notify-pm email templates.
  * Product theme is always industrial dark (light and dark device modes).
  * Run: deno run --allow-write --allow-read scripts/preview-email-templates.ts
  */
@@ -13,6 +13,7 @@ import { renderShipConfirmationEmail } from "../supabase/functions/notify-pm/ema
 import { ASSET_VERSION } from "../supabase/functions/notify-pm/email-templates/email-shared.ts";
 
 const outDir = new URL("../.tmp-email-preview/", import.meta.url);
+const distDir = new URL("../dist/email-previews/", import.meta.url);
 
 const poBody = {
   po: "1223344",
@@ -55,6 +56,7 @@ const bulkHtml = renderBulkPoNotificationEmail({
 });
 
 await Deno.mkdir(outDir, { recursive: true });
+await Deno.mkdir(distDir, { recursive: true });
 
 const files: Array<[string, string]> = [
   ["ship-dark.html", shipHtml],
@@ -76,7 +78,7 @@ const files: Array<[string, string]> = [
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="color-scheme" content="dark only" />
-  <title>SST email previews · ${ASSET_VERSION}</title>
+  <title>SLST email previews · ${ASSET_VERSION}</title>
   <style>
     body {
       margin: 0;
@@ -113,7 +115,7 @@ const files: Array<[string, string]> = [
 </head>
 <body>
   <header>
-    <h1>SST PM email previews</h1>
+    <h1>SLST PM email previews</h1>
     <p>Always industrial dark · Inter + JetBrains Mono · asset ${ASSET_VERSION}</p>
   </header>
   <div class="grid">
@@ -130,7 +132,8 @@ const files: Array<[string, string]> = [
 
 for (const [name, content] of files) {
   await Deno.writeTextFile(new URL(name, outDir), content);
+  await Deno.writeTextFile(new URL(name, distDir), content);
 }
 
-console.log("Wrote previews to .tmp-email-preview/");
+console.log("Wrote previews to .tmp-email-preview/ and dist/email-previews/");
 console.log("ASSET_VERSION", ASSET_VERSION);

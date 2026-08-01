@@ -1,4 +1,4 @@
-# SST — SLST (Flutter)
+# SLST (Flutter)
 
 Native Flutter clients for Swift Supply staging and shipping operations.
 Targets **Windows** (portable ZIP + per-user installer), **Android** (sideload APK), and **Wear OS** (`apps/slst_wear`).
