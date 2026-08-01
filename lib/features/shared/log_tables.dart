@@ -137,6 +137,34 @@ Widget _mutedStamp(DateTime? d) {
   );
 }
 
+/// Dense mobile row chrome: left accent + content height from children.
+///
+/// Do **not** wrap these rows in [IntrinsicHeight]. Speculative intrinsic
+/// passes undersize rows that contain a [Wrap] (timestamps / zone pills), so
+/// content overflows into the next row on first paint; a later rebuild (e.g.
+/// tab switch) then looks correct. A left [BorderSide] tracks content height
+/// without an intrinsic pass.
+Widget _denseAccentRow({
+  required Color accent,
+  required Color background,
+  required VoidCallback onTap,
+  required Widget child,
+}) {
+  return Material(
+    color: background,
+    clipBehavior: Clip.hardEdge,
+    child: InkWell(
+      onTap: onTap,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          border: Border(left: BorderSide(color: accent, width: 3)),
+        ),
+        child: child,
+      ),
+    ),
+  );
+}
+
 Widget _pmNotificationCell(ShippedEntry entry, {double maxWidth = 120}) {
   final email = entry.pmdEmail?.trim() ?? '';
   if (email.isEmpty) {
@@ -1027,130 +1055,119 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
       final statusLabel = _stagingStatusLabel(e.status);
       final selected = widget.selectedId == e.id;
       final accent = industrialStatusAccent(statusLabel);
-      return Material(
-        color: _zebraRowColor(index, selected: selected),
-        child: InkWell(
-          onTap: () => _inspect(e),
-          child: IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Container(width: 3, color: accent),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 12, 8, 12),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (_batch)
-                          Padding(
-                            padding: const EdgeInsets.only(right: 8, top: 2),
-                            child: Checkbox(
-                              value: _selected.contains(e.id),
-                              onChanged: (v) => setState(() {
-                                if (v == true) {
-                                  _selected.add(e.id);
-                                } else {
-                                  _selected.remove(e.id);
-                                }
-                              }),
-                            ),
-                          ),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      e.so,
-                                      style: IndustrialTheme.mono(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w700,
-                                        color: IndustrialTheme.textPrimary,
-                                      ),
-                                    ),
-                                  ),
-                                  IndustrialStatusBadge(status: statusLabel),
-                                ],
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                e.customer.isEmpty ? '—' : e.customer,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w500,
-                                  fontSize: 13,
-                                  color: IndustrialTheme.textMuted,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Wrap(
-                                spacing: 6,
-                                runSpacing: 6,
-                                crossAxisAlignment: WrapCrossAlignment.center,
-                                children: [
-                                  IndustrialZonePill(e.location),
-                                  _containerCell(e.type, e.qty),
-                                  if ((e.weight ?? '').trim().isNotEmpty)
-                                    IndustrialWeightPill(e.weight),
-                                  _mutedStamp(e.entryDate),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        if (canWrite)
-                          PopupMenuButton<String>(
-                            tooltip: 'Actions',
-                            icon: const Icon(
-                              Icons.more_vert,
-                              size: 20,
-                              color: IndustrialTheme.textMuted,
-                            ),
-                            onSelected: (v) {
-                              switch (v) {
-                                case 'edit':
-                                  showStagingFormSheet(
-                                    context,
-                                    ref,
-                                    existing: e,
-                                  );
-                                case 'ship':
-                                  showShipDialog(context, ref, entry: e);
-                                case 'split':
-                                  showSplitDialog(context, ref, entry: e);
-                                case 'return':
-                                  showReturnDialog(context, ref, entry: e);
-                                case 'delete':
-                                  _deleteOne(e);
-                              }
-                            },
-                            itemBuilder: (context) => const [
-                              PopupMenuItem(value: 'edit', child: Text('Edit')),
-                              PopupMenuItem(value: 'ship', child: Text('Ship')),
-                              PopupMenuItem(
-                                value: 'split',
-                                child: Text('Split Entry'),
-                              ),
-                              PopupMenuItem(
-                                value: 'return',
-                                child: Text('Return to Stock'),
-                              ),
-                              PopupMenuItem(
-                                value: 'delete',
-                                child: Text('Delete'),
-                              ),
-                            ],
-                          ),
-                      ],
-                    ),
+      return _denseAccentRow(
+        accent: accent,
+        background: _zebraRowColor(index, selected: selected),
+        onTap: () => _inspect(e),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 12, 8, 12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (_batch)
+                Padding(
+                  padding: const EdgeInsets.only(right: 8, top: 2),
+                  child: Checkbox(
+                    value: _selected.contains(e.id),
+                    onChanged: (v) => setState(() {
+                      if (v == true) {
+                        _selected.add(e.id);
+                      } else {
+                        _selected.remove(e.id);
+                      }
+                    }),
                   ),
                 ),
-              ],
-            ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            e.so,
+                            style: IndustrialTheme.mono(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: IndustrialTheme.textPrimary,
+                            ),
+                          ),
+                        ),
+                        IndustrialStatusBadge(status: statusLabel),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      e.customer.isEmpty ? '—' : e.customer,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w500,
+                        fontSize: 13,
+                        color: IndustrialTheme.textMuted,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        IndustrialZonePill(e.location),
+                        _containerCell(e.type, e.qty),
+                        if ((e.weight ?? '').trim().isNotEmpty)
+                          IndustrialWeightPill(e.weight),
+                        _mutedStamp(e.entryDate),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              if (canWrite)
+                PopupMenuButton<String>(
+                  tooltip: 'Actions',
+                  icon: const Icon(
+                    Icons.more_vert,
+                    size: 20,
+                    color: IndustrialTheme.textMuted,
+                  ),
+                  onSelected: (v) {
+                    switch (v) {
+                      case 'edit':
+                        showStagingFormSheet(
+                          context,
+                          ref,
+                          existing: e,
+                        );
+                      case 'ship':
+                        showShipDialog(context, ref, entry: e);
+                      case 'split':
+                        showSplitDialog(context, ref, entry: e);
+                      case 'return':
+                        showReturnDialog(context, ref, entry: e);
+                      case 'delete':
+                        _deleteOne(e);
+                    }
+                  },
+                  itemBuilder: (context) => const [
+                    PopupMenuItem(value: 'edit', child: Text('Edit')),
+                    PopupMenuItem(value: 'ship', child: Text('Ship')),
+                    PopupMenuItem(
+                      value: 'split',
+                      child: Text('Split Entry'),
+                    ),
+                    PopupMenuItem(
+                      value: 'return',
+                      child: Text('Return to Stock'),
+                    ),
+                    PopupMenuItem(
+                      value: 'delete',
+                      child: Text('Delete'),
+                    ),
+                  ],
+                ),
+            ],
           ),
         ),
       );
@@ -1972,138 +1989,127 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
       final statusLabel = returned ? 'Returned' : 'Shipped';
       final selected = widget.selectedId == e.id;
       final accent = industrialStatusAccent(statusLabel);
-      return Material(
-        color: returned
+      return _denseAccentRow(
+        accent: accent,
+        background: returned
             ? SlstColors.statusPartial
             : _zebraRowColor(index, selected: selected),
-        child: InkWell(
-          onTap: () => _inspect(e),
-          child: IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Container(width: 3, color: accent),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 12, 8, 12),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (_batch)
-                          Padding(
-                            padding: const EdgeInsets.only(right: 8, top: 2),
-                            child: Checkbox(
-                              value: _selected.contains(e.id),
-                              onChanged: (v) => setState(() {
-                                if (v == true) {
-                                  _selected.add(e.id);
-                                } else {
-                                  _selected.remove(e.id);
-                                }
-                              }),
-                            ),
-                          ),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      e.so,
-                                      style: IndustrialTheme.mono(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w700,
-                                        color: IndustrialTheme.textPrimary,
-                                      ),
-                                    ),
-                                  ),
-                                  IndustrialStatusBadge(status: statusLabel),
-                                ],
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                e.customer.isEmpty ? '—' : e.customer,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w500,
-                                  fontSize: 13,
-                                  color: IndustrialTheme.textMuted,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Wrap(
-                                spacing: 6,
-                                runSpacing: 6,
-                                crossAxisAlignment: WrapCrossAlignment.center,
-                                children: [
-                                  IndustrialZonePill(e.location),
-                                  _containerCell(e.type, e.qty),
-                                  if (e.carrier.trim().isNotEmpty)
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 3,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: IndustrialTheme.darkHeader,
-                                        borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(
-                                          color: IndustrialTheme.borderStroke,
-                                        ),
-                                      ),
-                                      child: Text(
-                                        e.carrier,
-                                        style: const TextStyle(
-                                          fontSize: 11.5,
-                                          color: IndustrialTheme.textMuted,
-                                        ),
-                                      ),
-                                    ),
-                                  if ((e.weight ?? '').trim().isNotEmpty)
-                                    IndustrialWeightPill(e.weight),
-                                  _mutedStamp(e.shippedAt),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        if (canWrite)
-                          PopupMenuButton<String>(
-                            tooltip: 'Actions',
-                            icon: const Icon(
-                              Icons.more_vert,
-                              size: 20,
-                              color: IndustrialTheme.textMuted,
-                            ),
-                            onSelected: (v) {
-                              switch (v) {
-                                case 'undo':
-                                  _undo(e);
-                                case 'delete':
-                                  _deleteOne(e);
-                              }
-                            },
-                            itemBuilder: (context) => [
-                              if (!returned)
-                                const PopupMenuItem(
-                                  value: 'undo',
-                                  child: Text('Undo Shipment'),
-                                ),
-                              const PopupMenuItem(
-                                value: 'delete',
-                                child: Text('Delete'),
-                              ),
-                            ],
-                          ),
-                      ],
-                    ),
+        onTap: () => _inspect(e),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 12, 8, 12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (_batch)
+                Padding(
+                  padding: const EdgeInsets.only(right: 8, top: 2),
+                  child: Checkbox(
+                    value: _selected.contains(e.id),
+                    onChanged: (v) => setState(() {
+                      if (v == true) {
+                        _selected.add(e.id);
+                      } else {
+                        _selected.remove(e.id);
+                      }
+                    }),
                   ),
                 ),
-              ],
-            ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            e.so,
+                            style: IndustrialTheme.mono(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: IndustrialTheme.textPrimary,
+                            ),
+                          ),
+                        ),
+                        IndustrialStatusBadge(status: statusLabel),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      e.customer.isEmpty ? '—' : e.customer,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w500,
+                        fontSize: 13,
+                        color: IndustrialTheme.textMuted,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        IndustrialZonePill(e.location),
+                        _containerCell(e.type, e.qty),
+                        if (e.carrier.trim().isNotEmpty)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: IndustrialTheme.darkHeader,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: IndustrialTheme.borderStroke,
+                              ),
+                            ),
+                            child: Text(
+                              e.carrier,
+                              style: const TextStyle(
+                                fontSize: 11.5,
+                                color: IndustrialTheme.textMuted,
+                              ),
+                            ),
+                          ),
+                        if ((e.weight ?? '').trim().isNotEmpty)
+                          IndustrialWeightPill(e.weight),
+                        _mutedStamp(e.shippedAt),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              if (canWrite)
+                PopupMenuButton<String>(
+                  tooltip: 'Actions',
+                  icon: const Icon(
+                    Icons.more_vert,
+                    size: 20,
+                    color: IndustrialTheme.textMuted,
+                  ),
+                  onSelected: (v) {
+                    switch (v) {
+                      case 'undo':
+                        _undo(e);
+                      case 'delete':
+                        _deleteOne(e);
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    if (!returned)
+                      const PopupMenuItem(
+                        value: 'undo',
+                        child: Text('Undo Shipment'),
+                      ),
+                    const PopupMenuItem(
+                      value: 'delete',
+                      child: Text('Delete'),
+                    ),
+                  ],
+                ),
+            ],
           ),
         ),
       );
