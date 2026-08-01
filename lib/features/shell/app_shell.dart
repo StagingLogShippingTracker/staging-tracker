@@ -11,6 +11,10 @@ import 'command_dock.dart';
 /// Width below which phone layout uses NavigationBar (no drawer) instead of rail.
 const double kCompactShellBreakpoint = 700;
 
+/// Phone action strip height (padding 6×2 + 48px buttons) — kept in AppBar.bottom
+/// so list content cannot paint underneath.
+const double kCompactActionStripHeight = 60;
+
 /// When true, the left nav rail shrinks to icons-only (~64px).
 final railCollapsedProvider = StateProvider<bool>((ref) => false);
 
@@ -300,6 +304,8 @@ class _CompactShell extends ConsumerWidget {
         backgroundColor: IndustrialTheme.darkHeader,
         foregroundColor: IndustrialTheme.textPrimary,
         elevation: 0,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
         automaticallyImplyLeading: false,
         title: Text(
           title,
@@ -345,18 +351,21 @@ class _CompactShell extends ConsumerWidget {
           const _AccountMenu(),
           const SizedBox(width: 4),
         ],
+        // Pin floor actions in the app bar so Scaffold reserves height and the
+        // opaque header background covers gaps — body list cannot paint under.
+        bottom: compactActions.isEmpty
+            ? null
+            : PreferredSize(
+                preferredSize: const Size.fromHeight(kCompactActionStripHeight),
+                child: _CompactActionStrip(actions: compactActions),
+              ),
       ),
       body: SafeArea(
-        // Keep bottom free for NavigationBar's own SafeArea; pad sides/top so
-        // landscape content does not bleed under system gesture/nav bars.
+        // AppBar already owns the top inset + action strip; keep bottom free
+        // for NavigationBar's own SafeArea. Side insets cover landscape bars.
+        top: false,
         bottom: false,
-        child: Column(
-          children: [
-            if (compactActions.isNotEmpty)
-              _CompactActionStrip(actions: compactActions),
-            Expanded(child: child),
-          ],
-        ),
+        child: ClipRect(child: child),
       ),
       bottomNavigationBar: SafeArea(
         top: false,
@@ -419,53 +428,63 @@ class _CompactActionStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
+    // Explicit opaque fill: gaps between tonal buttons must never show list
+    // content scrolling underneath (seen on Android portrait when the strip
+    // lived in the body Column without a clipped viewport).
+    return ColoredBox(
       color: IndustrialTheme.darkHeader,
-      child: Container(
+      child: SizedBox(
+        height: kCompactActionStripHeight,
         width: double.infinity,
-        decoration: const BoxDecoration(
-          border: Border(
-            bottom: BorderSide(color: IndustrialTheme.borderStroke),
-          ),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              for (var i = 0; i < actions.length; i++) ...[
-                if (i > 0) const SizedBox(width: 6),
-                FilledButton.tonal(
-                  onPressed: actions[i].onPressed,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: IndustrialTheme.darkSurface,
-                    foregroundColor: actions[i].onPressed == null
-                        ? IndustrialTheme.textMuted
-                        : IndustrialTheme.textPrimary,
-                    disabledForegroundColor: IndustrialTheme.textMuted,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    minimumSize: const Size(0, 48),
-                    tapTargetSize: MaterialTapTargetSize.padded,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(6),
-                      side: const BorderSide(
-                        color: IndustrialTheme.borderStroke,
+        child: Material(
+          color: IndustrialTheme.darkHeader,
+          child: Container(
+            alignment: Alignment.centerLeft,
+            decoration: const BoxDecoration(
+              border: Border(
+                bottom: BorderSide(color: IndustrialTheme.borderStroke),
+              ),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  for (var i = 0; i < actions.length; i++) ...[
+                    if (i > 0) const SizedBox(width: 6),
+                    FilledButton.tonal(
+                      onPressed: actions[i].onPressed,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: IndustrialTheme.darkSurface,
+                        foregroundColor: actions[i].onPressed == null
+                            ? IndustrialTheme.textMuted
+                            : IndustrialTheme.textPrimary,
+                        disabledForegroundColor: IndustrialTheme.textMuted,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        minimumSize: const Size(0, 48),
+                        tapTargetSize: MaterialTapTargetSize.padded,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(6),
+                          side: const BorderSide(
+                            color: IndustrialTheme.borderStroke,
+                          ),
+                        ),
+                      ),
+                      child: Text(
+                        actions[i].label,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
-                  ),
-                  child: Text(
-                    actions[i].label,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ],
+                  ],
+                ],
+              ),
+            ),
           ),
         ),
       ),
