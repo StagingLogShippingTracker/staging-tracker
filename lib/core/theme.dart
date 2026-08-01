@@ -21,6 +21,7 @@ class IndustrialTheme {
   static const Color mintGreen = Color(0xFF10B981); // Today / ready / live sync
   static const Color skyBlue = Color(0xFF3B82F6); // Tomorrow / transit / accent
   static const Color amber = Color(0xFFF59E0B); // Partial / awaiting
+  static const Color hotRed = Color(0xFFEF4444); // Rush / Hotshot
   static const Color purple = Color(0xFF8B5CF6); // Future / special action
   static const Color slateMuted = Color(0xFF4B5563); // Delivered / completed
 
@@ -294,6 +295,7 @@ class SlstColors {
   static const statusFuture = Color(0x338B5CF6);
   static const statusCorpPick = Color(0x3310B981);
   static const statusCustomerPick = Color(0x338B5CF6);
+  static const statusRushHotshot = Color(0x33EF4444);
 
   @Deprecated('Use statusPartial.')
   static const statusPartialDark = statusPartial;
@@ -316,6 +318,7 @@ class SlstColors {
   static const ready = Color(0x3310B981);
   static const pickup = Color(0x338B5CF6);
   static const hold = Color(0x334B5563);
+  static const rushHotshot = Color(0x33EF4444);
 }
 
 /// Shared layout scale for desktop and Android industrial surfaces.
@@ -424,6 +427,14 @@ StatusStyle statusStyleFor({
       const Color(0x33EF4444),
       const Color(0xFFEF4444),
       Icons.warning_amber_rounded,
+    );
+  }
+  if (lower.contains('rush') || lower.contains('hotshot')) {
+    return build(
+      'Rush/Hotshot',
+      SlstColors.rushHotshot,
+      IndustrialTheme.hotRed,
+      Icons.local_fire_department,
     );
   }
   if (lower == 'ship today') {

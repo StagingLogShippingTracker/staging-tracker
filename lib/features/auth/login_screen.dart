@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:url_launcher/url_launcher.dart';
 
-import '../../core/app_config.dart';
 import '../../core/theme.dart';
 import '../../data/app_state.dart';
 import '../shared/widgets.dart';
@@ -198,22 +196,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               onPressed: _busy ? null : _signIn,
                               child:
                                   Text(_busy ? 'Signing in…' : 'Sign In'),
-                            ),
-                            TextButton(
-                              onPressed: () async {
-                                final uri = Uri(
-                                  scheme: 'mailto',
-                                  path: AppConfig.accessRequestEmail,
-                                  queryParameters: {
-                                    'subject':
-                                        'Access Request: SLST',
-                                    'body':
-                                        'Hello,\n\nI am requesting user access to create and edit entries on SLST.\n',
-                                  },
-                                );
-                                await launchUrl(uri);
-                              },
-                              child: const Text('Request Access'),
                             ),
                           ],
                         ),

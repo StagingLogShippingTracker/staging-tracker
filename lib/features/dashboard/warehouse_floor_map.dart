@@ -1208,6 +1208,7 @@ class _StatusLegend extends StatelessWidget {
   Widget build(BuildContext context) {
     const items = <(String, Color)>[
       ('Empty', Color(0xFF111827)),
+      ('Rush / Hotshot', IndustrialTheme.hotRed),
       ('Today / Ready', IndustrialTheme.mintGreen),
       ('Tomorrow / Transit', IndustrialTheme.skyBlue),
       ('Partial / Awaiting', IndustrialTheme.amber),
@@ -1516,6 +1517,11 @@ Color _borderForEntries(List<StagingEntry> entries) {
 
 Color _colorForStatus(String dbStatus) {
   final ui = StatusRules.formatUi(dbStatus).toLowerCase();
+  if (StatusRules.isRushHotshot(dbStatus) ||
+      ui.contains('rush') ||
+      ui.contains('hotshot')) {
+    return IndustrialTheme.hotRed;
+  }
   if (ui.contains('today') ||
       StatusRules.isOverdue(dbStatus) ||
       ui.contains('ready')) {

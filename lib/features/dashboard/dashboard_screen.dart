@@ -13,6 +13,7 @@ import 'stat_detail_dialog.dart';
 import 'warehouse_floor_map.dart';
 
 enum _StagingBoardColumn {
+  rushHotshot,
   shipToday,
   shipTomorrow,
   partial,
@@ -180,6 +181,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   _StagingBoardColumn _columnFor(StagingEntry e) {
     final ui = StatusRules.formatUi(e.status);
+    if (StatusRules.isRushHotshot(e.status) || ui == StatusRules.rushHotshot) {
+      return _StagingBoardColumn.rushHotshot;
+    }
     if (ui == 'Ship Today' || StatusRules.isOverdue(e.status)) {
       return _StagingBoardColumn.shipToday;
     }
@@ -312,6 +316,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       (key: 'shipped', label: 'Shipped', subtext: 'Done', detail: null),
     ];
 
+    final rushHotshot = _bucket(
+      filteredStaging,
+      _StagingBoardColumn.rushHotshot,
+    );
     final shipToday = _bucket(filteredStaging, _StagingBoardColumn.shipToday);
     final shipTomorrow = _bucket(
       filteredStaging,
@@ -460,6 +468,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       const SizedBox(height: 12),
                       // Section C — Active Staging (same content bounds)
                       _ActiveStagingBoard(
+                        rushHotshot: rushHotshot,
                         shipToday: shipToday,
                         shipTomorrow: shipTomorrow,
                         partial: partial,
@@ -507,6 +516,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
 class _ActiveStagingBoard extends StatelessWidget {
   const _ActiveStagingBoard({
+    required this.rushHotshot,
     required this.shipToday,
     required this.shipTomorrow,
     required this.partial,
@@ -521,6 +531,7 @@ class _ActiveStagingBoard extends StatelessWidget {
     this.filterActive = false,
   });
 
+  final List<StagingEntry> rushHotshot;
   final List<StagingEntry> shipToday;
   final List<StagingEntry> shipTomorrow;
   final List<StagingEntry> partial;
@@ -537,6 +548,7 @@ class _ActiveStagingBoard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final totalVisible =
+        rushHotshot.length +
         shipToday.length +
         shipTomorrow.length +
         partial.length +
@@ -581,6 +593,11 @@ class _ActiveStagingBoard extends StatelessWidget {
               final phone = MediaQuery.sizeOf(context).width < stackBreakpoint;
               final columns =
                   <({String title, Color accent, List<StagingEntry> entries})>[
+                    (
+                      title: 'RUSH/HOTSHOT',
+                      accent: IndustrialTheme.hotRed,
+                      entries: rushHotshot,
+                    ),
                     (
                       title: 'SHIP TODAY',
                       accent: IndustrialTheme.mintGreen,

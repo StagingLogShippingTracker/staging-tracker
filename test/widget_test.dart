@@ -80,6 +80,14 @@ void main() {
     expect(StatusRules.formatUi(tomorrow), 'Ship Tomorrow');
   });
 
+  test('StatusRules maps Rush/Hotshot canonically', () {
+    expect(StatusRules.toDb('Rush/Hotshot'), StatusRules.rushHotshot);
+    expect(StatusRules.toDb('Rush / Hotshot'), StatusRules.rushHotshot);
+    expect(StatusRules.formatUi('Rush / Hotshot'), StatusRules.rushHotshot);
+    expect(StatusRules.isRushHotshot('rush-hotshot'), isTrue);
+    expect(StatusRules.urgencyWeight('Rush/Hotshot'), greaterThan(50));
+  });
+
   test('ContainerCounts builds type labels', () {
     const c = ContainerCounts(skids: 2, boxes: 1);
     expect(c.total, 3);
@@ -191,9 +199,10 @@ void main() {
     expect(find.text('12'), findsOneWidget);
   });
 
-  testWidgets('Status legend lists all seven statuses', (tester) async {
+  testWidgets('Status legend lists all eight statuses', (tester) async {
     await tester.pumpWidget(_wrap(const StagingStatusLegend(), prefs));
     for (final label in [
+      'Rush/Hotshot',
       'Partial',
       'Ship Today',
       'Ship Tomorrow',

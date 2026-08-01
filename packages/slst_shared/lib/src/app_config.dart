@@ -13,8 +13,6 @@ class AppConfig {
 
   static const freightPhotosBucket = 'freight-photos';
   static const warehouseCc = 'warehouse1@swiftsupply.ca';
-  static const warehouse2Email = 'warehouse2@swiftsupply.ca';
-  static const accessRequestEmail = warehouse2Email;
   static const publicWebsiteUrl = 'https://www.swiftsupply.ca';
 
   /// Public GitHub Releases feed for in-app Update downloads (Win/Android/Wear).

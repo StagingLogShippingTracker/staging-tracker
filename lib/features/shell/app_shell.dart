@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:url_launcher/url_launcher.dart';
 
-import '../../core/app_config.dart';
 import '../../core/theme.dart';
 import '../../data/app_state.dart';
 import '../shared/widgets.dart';
@@ -110,17 +108,6 @@ class AppShell extends ConsumerWidget {
     return _destinations.first;
   }
 
-  Future<void> _requestAccess() async {
-    final uri = Uri(
-      scheme: 'mailto',
-      path: AppConfig.accessRequestEmail,
-      queryParameters: {
-        'subject': 'Access Request: SLST',
-      },
-    );
-    await launchUrl(uri);
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final location = GoRouterState.of(context).uri.toString();
@@ -138,7 +125,6 @@ class AppShell extends ConsumerWidget {
                 selectedPath: current.path,
                 location: location,
                 title: current.sectionTitle,
-                onRequestAccess: _requestAccess,
                 child: child,
               )
             : Scaffold(
@@ -160,7 +146,6 @@ class AppShell extends ConsumerWidget {
                           children: [
                             _TopHeader(
                               title: current.sectionTitle,
-                              onRequestAccess: _requestAccess,
                             ),
                             Expanded(child: child),
                           ],
@@ -184,14 +169,12 @@ class _CompactShell extends ConsumerWidget {
     required this.selectedPath,
     required this.location,
     required this.title,
-    required this.onRequestAccess,
     required this.child,
   });
 
   final String selectedPath;
   final String location;
   final String title;
-  final Future<void> Function() onRequestAccess;
   final Widget child;
 
   int _barIndexFor(String path) {
@@ -359,7 +342,7 @@ class _CompactShell extends ConsumerWidget {
             onPressed: () => context.go('/notifications'),
             icon: const Icon(Icons.notifications_outlined, size: 20),
           ),
-          _AccountMenu(onRequestAccess: onRequestAccess),
+          const _AccountMenu(),
           const SizedBox(width: 4),
         ],
       ),
@@ -491,9 +474,7 @@ class _CompactActionStrip extends StatelessWidget {
 }
 
 class _AccountMenu extends ConsumerWidget {
-  const _AccountMenu({required this.onRequestAccess});
-
-  final Future<void> Function() onRequestAccess;
+  const _AccountMenu();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -509,8 +490,6 @@ class _AccountMenu extends ConsumerWidget {
             await ref.read(supabaseClientProvider).auth.signOut();
           case 'settings':
             context.go('/settings');
-          case 'access':
-            await onRequestAccess();
         }
       },
       itemBuilder: (_) => [
@@ -549,15 +528,6 @@ class _AccountMenu extends ConsumerWidget {
             contentPadding: EdgeInsets.zero,
             leading: Icon(Icons.settings_outlined),
             title: Text('Settings'),
-          ),
-        ),
-        const PopupMenuItem(
-          value: 'access',
-          child: ListTile(
-            dense: true,
-            contentPadding: EdgeInsets.zero,
-            leading: Icon(Icons.mail_outline),
-            title: Text('Request access'),
           ),
         ),
       ],
@@ -775,10 +745,9 @@ class _RailNavTile extends StatelessWidget {
 }
 
 class _TopHeader extends ConsumerWidget {
-  const _TopHeader({required this.title, required this.onRequestAccess});
+  const _TopHeader({required this.title});
 
   final String title;
-  final Future<void> Function() onRequestAccess;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -854,7 +823,7 @@ class _TopHeader extends ConsumerWidget {
               color: IndustrialTheme.textMuted,
             ),
           ),
-          _AccountMenu(onRequestAccess: onRequestAccess),
+          const _AccountMenu(),
         ],
       ),
     );

@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:url_launcher/url_launcher.dart';
 
-import '../../core/app_config.dart';
 import '../../core/theme.dart';
 import '../../data/app_state.dart';
 import '../shared/industrial_widgets.dart';
@@ -13,17 +11,6 @@ import 'app_update_card.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
-
-  Future<void> _requestAccess() async {
-    final uri = Uri(
-      scheme: 'mailto',
-      path: AppConfig.accessRequestEmail,
-      queryParameters: {
-        'subject': 'Access Request: SLST',
-      },
-    );
-    await launchUrl(uri);
-  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -118,11 +105,6 @@ class SettingsScreen extends ConsumerWidget {
                         icon: const Icon(Icons.logout, size: 18),
                         label: const Text('Sign out'),
                       ),
-                    TextButton.icon(
-                      onPressed: _requestAccess,
-                      icon: const Icon(Icons.mail_outline, size: 18),
-                      label: const Text('Request access'),
-                    ),
                   ],
                 ),
               ],

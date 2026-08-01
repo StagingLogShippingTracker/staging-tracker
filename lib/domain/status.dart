@@ -3,8 +3,12 @@ import 'package:intl/intl.dart';
 class StatusRules {
   static final _ymd = DateFormat('yyyy-MM-dd');
 
+  /// Canonical UI label for rush / hotshot freight.
+  static const rushHotshot = 'Rush/Hotshot';
+
   /// UI dropdown options matching the legacy tracker.
   static const uiStatuses = <String>[
+    rushHotshot,
     'Partial',
     'Ship Today',
     'Ship Tomorrow',
@@ -31,6 +35,7 @@ class StatusRules {
     }
     // Normalize legacy "Awaiting Shipping Instructions" to the UI label.
     if (isAwaitingInstructions(dbStatus)) return 'Awaiting Instructions';
+    if (isRushHotshot(dbStatus)) return rushHotshot;
     return dbStatus;
   }
 
@@ -42,6 +47,14 @@ class StatusRules {
         (lower.contains('awaiting') && lower.contains('instruction'));
   }
 
+  /// True for Rush/Hotshot and common spacing variants.
+  static bool isRushHotshot(String dbStatus) {
+    final compact = dbStatus.trim().toLowerCase().replaceAll(RegExp(r'[\s_]'), '');
+    return compact == 'rush/hotshot' ||
+        compact == 'rushhotshot' ||
+        compact == 'rush-hotshot';
+  }
+
   static String toDb(String uiStatus, {String? futureDateYmd}) {
     if (uiStatus == 'Ship Today') return todayYmd();
     if (uiStatus == 'Ship Tomorrow') return tomorrowYmd();
@@ -50,6 +63,7 @@ class StatusRules {
           ? 'TBD'
           : futureDateYmd;
     }
+    if (isRushHotshot(uiStatus)) return rushHotshot;
     return uiStatus;
   }
 
@@ -60,6 +74,7 @@ class StatusRules {
 
   static int urgencyWeight(String dbStatus) {
     final ui = formatUi(dbStatus).toLowerCase();
+    if (isRushHotshot(dbStatus)) return 60;
     if (ui == 'ship today' || isOverdue(dbStatus)) return 50;
     if (ui == 'ship tomorrow') return 40;
     if (ui == 'partial') return 30;

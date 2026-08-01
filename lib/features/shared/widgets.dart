@@ -330,11 +330,12 @@ class SectionCard extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Status legend (Partial / Ship Today / Ship Tomorrow / Future / Corp Pick /
-// Customer Pick-Up / Awaiting Instructions)
+// Status legend (Rush/Hotshot / Partial / Ship Today / Ship Tomorrow /
+// Future / Corp Pick / Customer Pick-Up / Awaiting Instructions)
 // ---------------------------------------------------------------------------
 
 const List<({String label, Color accent})> _legend = [
+  (label: 'Rush/Hotshot', accent: IndustrialTheme.hotRed),
   (label: 'Partial', accent: IndustrialTheme.amber),
   (label: 'Ship Today', accent: IndustrialTheme.mintGreen),
   (label: 'Ship Tomorrow', accent: IndustrialTheme.skyBlue),
@@ -388,6 +389,9 @@ class StagingStatusLegend extends StatelessWidget {
 /// Soft row wash for a staging status (industrial dark only).
 Color? statusRowColor(BuildContext context, String dbStatus) {
   final ui = StatusRules.formatUi(dbStatus).toLowerCase();
+  if (StatusRules.isRushHotshot(dbStatus)) {
+    return SlstColors.statusRushHotshot;
+  }
   if (ui == 'ship today' || StatusRules.isOverdue(dbStatus)) {
     return SlstColors.statusToday;
   }
