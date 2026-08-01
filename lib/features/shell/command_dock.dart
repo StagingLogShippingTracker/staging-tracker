@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../core/desktop_mode.dart';
 import '../../core/theme.dart';
 import '../../data/app_state.dart';
 import '../../domain/models.dart';
@@ -11,7 +12,6 @@ import '../shared/industrial_widgets.dart';
 import '../shared/log_tables.dart';
 import '../shipping/quick_ship_sheet.dart';
 import '../staging/staging_form_sheet.dart';
-
 typedef DockAction = ({String key, String label, VoidCallback? onPressed});
 
 /// Shell-level command dock: contextual F1–F5 labels + floor tallies.
@@ -265,6 +265,9 @@ class ShellCommandDock extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final staging = ref.watch(appDataProvider).staging;
     final actions = actionsFor(context, ref, location);
+    final showKeys = DesktopModeNotifier.showHotkeyLabels(
+      ref.watch(desktopModeProvider),
+    );
 
     return CommandDock(
       floorTotalsText: floorTotalsText(staging),
@@ -274,6 +277,7 @@ class ShellCommandDock extends ConsumerWidget {
           _HotkeyChip(
             hotkey: actions[i].key,
             label: actions[i].label,
+            showHotkey: showKeys,
             onPressed: actions[i].onPressed,
           ),
         ],
@@ -286,11 +290,13 @@ class _HotkeyChip extends StatelessWidget {
   const _HotkeyChip({
     required this.hotkey,
     required this.label,
+    required this.showHotkey,
     required this.onPressed,
   });
 
   final String hotkey;
   final String label;
+  final bool showHotkey;
   final VoidCallback? onPressed;
 
   @override
@@ -309,23 +315,25 @@ class _HotkeyChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(
-              color: IndustrialTheme.darkSurface,
-              borderRadius: BorderRadius.circular(4),
-              border: Border.all(color: IndustrialTheme.borderStroke),
-            ),
-            child: Text(
-              hotkey,
-              style: IndustrialTheme.mono(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: IndustrialTheme.mintGreen,
+          if (showHotkey) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: IndustrialTheme.darkSurface,
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: IndustrialTheme.borderStroke),
+              ),
+              child: Text(
+                hotkey,
+                style: IndustrialTheme.mono(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: IndustrialTheme.mintGreen,
+                ),
               ),
             ),
-          ),
-          const SizedBox(width: 6),
+            const SizedBox(width: 6),
+          ],
           Text(
             label,
             style: GoogleFonts.inter(

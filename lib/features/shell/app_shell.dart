@@ -10,7 +10,7 @@ import '../../data/app_state.dart';
 import '../shared/widgets.dart';
 import 'command_dock.dart';
 
-/// Width below which phone layout uses NavigationBar + Drawer instead of rail.
+/// Width below which phone layout uses NavigationBar (no drawer) instead of rail.
 const double kCompactShellBreakpoint = 700;
 
 /// When true, the left nav rail shrinks to icons-only (~64px).
@@ -197,8 +197,92 @@ class _CompactShell extends ConsumerWidget {
   int _barIndexFor(String path) {
     final i = _compactBarPaths.indexOf(path);
     if (i >= 0) return i;
-    // Secondary routes (notifications / contacts) highlight Settings.
+    // Secondary routes (notifications / contacts) highlight More.
     return _compactBarPaths.indexOf('/settings');
+  }
+
+  void _openMoreSheet(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: IndustrialTheme.darkHeader,
+      showDragHandle: true,
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+                child: Text(
+                  'More',
+                  style: GoogleFonts.inter(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: IndustrialTheme.textPrimary,
+                  ),
+                ),
+              ),
+              ListTile(
+                leading: const Icon(
+                  Icons.notifications_outlined,
+                  color: IndustrialTheme.textMuted,
+                ),
+                title: Text(
+                  'Notifications',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: IndustrialTheme.textPrimary,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  context.go('/notifications');
+                },
+              ),
+              ListTile(
+                leading: const Icon(
+                  Icons.contacts_outlined,
+                  color: IndustrialTheme.textMuted,
+                ),
+                title: Text(
+                  'Contacts',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: IndustrialTheme.textPrimary,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  context.go('/contacts');
+                },
+              ),
+              ListTile(
+                leading: const Icon(
+                  Icons.settings_outlined,
+                  color: IndustrialTheme.textMuted,
+                ),
+                title: Text(
+                  'Settings',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: IndustrialTheme.textPrimary,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  context.go('/settings');
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -227,10 +311,13 @@ class _CompactShell extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: IndustrialTheme.darkBase,
+      // Bottom nav covers primary destinations; More sheet covers the rest —
+      // no redundant hamburger/drawer on compact Android phones.
       appBar: AppBar(
         backgroundColor: IndustrialTheme.darkHeader,
         foregroundColor: IndustrialTheme.textPrimary,
         elevation: 0,
+        automaticallyImplyLeading: false,
         title: Text(
           title,
           style: GoogleFonts.inter(
@@ -276,61 +363,6 @@ class _CompactShell extends ConsumerWidget {
           const SizedBox(width: 4),
         ],
       ),
-      drawer: Drawer(
-        backgroundColor: IndustrialTheme.darkHeader,
-        child: SafeArea(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Padding(
-                padding: EdgeInsets.fromLTRB(20, 20, 20, 12),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  // Prior ~76px effective drawer mark / 1.5 → ~51px.
-                  child: _RailBrandWordmark(targetHeight: 51),
-                ),
-              ),
-              const Divider(height: 1, color: IndustrialTheme.borderStroke),
-              Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  children: [
-                    for (final d in _destinations)
-                      ListTile(
-                        selected: d.path == selectedPath,
-                        selectedTileColor: IndustrialTheme.skyBlue.withValues(
-                          alpha: 0.14,
-                        ),
-                        leading: Icon(
-                          d.path == selectedPath ? d.selectedIcon : d.icon,
-                          color: d.path == selectedPath
-                              ? IndustrialTheme.skyBlue
-                              : IndustrialTheme.textMuted,
-                        ),
-                        title: Text(
-                          d.label,
-                          style: GoogleFonts.inter(
-                            fontSize: 13,
-                            fontWeight: d.path == selectedPath
-                                ? FontWeight.w700
-                                : FontWeight.w500,
-                            color: d.path == selectedPath
-                                ? IndustrialTheme.textPrimary
-                                : IndustrialTheme.textMuted,
-                          ),
-                        ),
-                        onTap: () {
-                          Navigator.of(context).pop();
-                          context.go(d.path);
-                        },
-                      ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
       body: SafeArea(
         // Keep bottom free for NavigationBar's own SafeArea; pad sides/top so
         // landscape content does not bleed under system gesture/nav bars.
@@ -351,13 +383,23 @@ class _CompactShell extends ConsumerWidget {
           indicatorColor: IndustrialTheme.skyBlue.withValues(alpha: 0.22),
           selectedIndex: barIndex,
           labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-          onDestinationSelected: (i) => context.go(barDestinations[i].path),
+          onDestinationSelected: (i) {
+            final dest = barDestinations[i];
+            if (dest.path == '/settings') {
+              _openMoreSheet(context);
+              return;
+            }
+            context.go(dest.path);
+          },
           destinations: [
             for (final d in barDestinations)
               NavigationDestination(
-                icon: Icon(d.icon, color: IndustrialTheme.textMuted),
+                icon: Icon(
+                  d.path == '/settings' ? Icons.more_horiz : d.icon,
+                  color: IndustrialTheme.textMuted,
+                ),
                 selectedIcon: Icon(
-                  d.selectedIcon,
+                  d.path == '/settings' ? Icons.more_horiz : d.selectedIcon,
                   color: IndustrialTheme.skyBlue,
                 ),
                 label: _compactNavLabel(d.path),
@@ -379,7 +421,7 @@ class _CompactShell extends ConsumerWidget {
       case '/reports':
         return 'Reports';
       case '/settings':
-        return 'Settings';
+        return 'More';
       default:
         return 'App';
     }
