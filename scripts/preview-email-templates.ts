@@ -36,22 +36,29 @@ function withScheme(html: string, scheme: "light" | "dark"): string {
   const forceCss =
     scheme === "dark"
       ? `
-    html[data-preview="dark"] { color-scheme: dark !important; }
+    html[data-preview="dark"] { color-scheme: dark only !important; }
     html[data-preview="dark"] body,
     html[data-preview="dark"] .og-page,
     html[data-preview="dark"] .email-container,
     html[data-preview="dark"] .og-shell,
     html[data-preview="dark"] .og-canvas {
       background-color: #090D16 !important;
+      background-image: linear-gradient(#090D16, #090D16) !important;
       color: #F9FAFB !important;
     }
     html[data-preview="dark"] .og-header {
       background-color: #111827 !important;
-      border-color: #374151 !important;
+      background-image: linear-gradient(#111827, #111827) !important;
+      border-top-color: #374151 !important;
+      border-right-color: #374151 !important;
+      border-bottom-color: #374151 !important;
     }
     html[data-preview="dark"] .og-card {
       background-color: #1F2937 !important;
-      border-color: #374151 !important;
+      background-image: linear-gradient(#1F2937, #1F2937) !important;
+      border-top-color: #374151 !important;
+      border-right-color: #374151 !important;
+      border-bottom-color: #374151 !important;
     }
     html[data-preview="dark"] .og-headline,
     html[data-preview="dark"] .og-value { color: #F9FAFB !important; }
@@ -63,22 +70,29 @@ function withScheme(html: string, scheme: "light" | "dark"): string {
     html[data-preview="dark"] .email-container.og-shell { border-color: #374151 !important; }
 `
       : `
-    html[data-preview="light"] { color-scheme: light !important; }
+    html[data-preview="light"] { color-scheme: light only !important; }
     html[data-preview="light"] body,
     html[data-preview="light"] .og-page,
     html[data-preview="light"] .email-container,
     html[data-preview="light"] .og-shell,
     html[data-preview="light"] .og-canvas {
       background-color: #E8EAF1 !important;
+      background-image: linear-gradient(#E8EAF1, #E8EAF1) !important;
       color: #111827 !important;
     }
     html[data-preview="light"] .og-header {
       background-color: #FFFFFF !important;
-      border-color: #C5CDD8 !important;
+      background-image: linear-gradient(#FFFFFF, #FFFFFF) !important;
+      border-top-color: #C5CDD8 !important;
+      border-right-color: #C5CDD8 !important;
+      border-bottom-color: #C5CDD8 !important;
     }
     html[data-preview="light"] .og-card {
       background-color: #FFFFFF !important;
-      border-color: #C5CDD8 !important;
+      background-image: linear-gradient(#FFFFFF, #FFFFFF) !important;
+      border-top-color: #C5CDD8 !important;
+      border-right-color: #C5CDD8 !important;
+      border-bottom-color: #C5CDD8 !important;
     }
     html[data-preview="light"] .og-headline,
     html[data-preview="light"] .og-value { color: #111827 !important; }

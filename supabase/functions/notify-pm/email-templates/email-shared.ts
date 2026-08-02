@@ -1,13 +1,25 @@
 /**
  * SLST industrial email layout — dual theme.
- * Default/fallback: cool light (photo 2). Dark via prefers-color-scheme +
+ * Default/fallback: cool light (photo 2). Dark ONLY via prefers-color-scheme +
  * Outlook [data-ogsb]/[data-ogsc] (photo 3). Never dark-only / hybrid mud.
+ *
+ * Gmail/Outlook auto-inversion is blocked with background-image linear-gradient
+ * locks on every critical surface (inline + media-query overrides).
  */
 
 export const DEFAULT_EMAIL_ASSET_BASE =
   "https://gdrpdiwykmnybmkadlrv.supabase.co/storage/v1/object/public/email-assets";
 
-export const ASSET_VERSION = "20260802dual-theme";
+export const ASSET_VERSION = "20260802dual-theme-v2";
+
+/** Inline bg lock: bgcolor + CSS color + gradient (stops Gmail muddy invert). */
+function bgStyle(color: string): string {
+  return `background-color: ${color}; background-image: linear-gradient(${color}, ${color});`;
+}
+
+function bgCss(color: string): string {
+  return `background-color: ${color} !important; background-image: linear-gradient(${color}, ${color}) !important;`;
+}
 
 /** App BrandMark — same asset as Flutter `assets/slst-app-icon.png`. */
 const SLST_MARK_URL =
@@ -199,7 +211,7 @@ function shellChrome(opts: {
   return `
           <!-- Brand strip -->
           <tr>
-            <td class="og-header" bgcolor="${L_HEADER}" style="background-color: ${L_HEADER}; border-bottom: 1px solid ${L_BORDER}; padding: 12px 16px;">
+            <td class="og-header" bgcolor="${L_HEADER}" style="${bgStyle(L_HEADER)} border-bottom: 1px solid ${L_BORDER}; padding: 12px 16px;">
               <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
                 <tr>
                   <td align="left" valign="middle">
@@ -213,7 +225,7 @@ function shellChrome(opts: {
 
           <!-- Section header -->
           <tr>
-            <td class="og-header" bgcolor="${L_HEADER}" style="background-color: ${L_HEADER}; border-bottom: 1px solid ${L_BORDER}; padding: 14px 16px;">
+            <td class="og-header" bgcolor="${L_HEADER}" style="${bgStyle(L_HEADER)} border-bottom: 1px solid ${L_BORDER}; padding: 14px 16px;">
               <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
                 <tr>
                   <td align="left" valign="middle" class="og-headline" style="font-family: ${FONT}; font-size: 15px; font-weight: 700; color: ${L_TEXT};">
@@ -262,11 +274,11 @@ export function heroSummary(opts: {
 
   return `
           <tr>
-            <td style="padding: 16px 16px 0 16px;" class="og-canvas" bgcolor="${L_PAGE}">
+            <td style="padding: 16px 16px 0 16px; ${bgStyle(L_PAGE)}" class="og-canvas" bgcolor="${L_PAGE}">
               <table role="presentation" class="og-card" border="0" cellpadding="0" cellspacing="0" width="100%"
-                bgcolor="${L_CARD}" style="background-color: ${L_CARD}; border-radius: 6px; border: 1px solid ${L_BORDER};">
+                bgcolor="${L_CARD}" style="${bgStyle(L_CARD)} border-radius: 6px; border: 1px solid ${L_BORDER};">
                 <tr>
-                  <td class="og-card" bgcolor="${L_CARD}" style="padding: 14px 16px; background-color: ${L_CARD};">
+                  <td class="og-card" bgcolor="${L_CARD}" style="padding: 14px 16px; ${bgStyle(L_CARD)}">
                     <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
                       <tr>
                         <td class="og-label" style="font-family: ${FONT}; font-size: 10px; font-weight: 700; letter-spacing: 0.85px; text-transform: uppercase; color: ${L_MUTED}; padding-bottom: 8px;">
@@ -306,7 +318,7 @@ export function infoCard(opts: {
 }): string {
   const accent = resolveAccent(opts.accent, "sky");
   return `
-                  <td class="col-stack og-card" valign="top" width="49%" bgcolor="${L_CARD}" style="width: 49%; background-color: ${L_CARD}; border-radius: 6px; border: 1px solid ${L_BORDER}; border-left: 3px solid ${accent}; padding: 14px 14px 12px 14px; word-break: normal; overflow-wrap: break-word;">
+                  <td class="col-stack og-card" valign="top" width="49%" bgcolor="${L_CARD}" style="width: 49%; ${bgStyle(L_CARD)} border-radius: 6px; border: 1px solid ${L_BORDER}; border-left: 3px solid ${accent}; padding: 14px 14px 12px 14px; word-break: normal; overflow-wrap: break-word;">
                     <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
                       <tr>
                         <td class="og-title" style="font-family: ${FONT}; font-size: 10px; font-weight: 700; color: ${accent}; text-transform: uppercase; letter-spacing: 0.85px; padding-bottom: 12px; word-break: normal; overflow-wrap: break-word;">
@@ -350,7 +362,7 @@ function cardsGridHtml(
       `<td class="col-stack" valign="top" width="49%" style="width: 49%; padding: 0;">&nbsp;</td>`;
     rowHtml.push(`
           <tr>
-            <td class="og-canvas" bgcolor="${L_PAGE}" style="padding: 10px 16px ${bottomPad} 16px; background-color: ${L_PAGE};">
+            <td class="og-canvas" bgcolor="${L_PAGE}" style="padding: 10px 16px ${bottomPad} 16px; ${bgStyle(L_PAGE)}">
               <table role="presentation" class="cards-row" border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%; table-layout: fixed;">
                 <tr>
                   ${left}
@@ -377,9 +389,9 @@ function attachmentsSection(attachmentUrls: string[]): string {
                 </tr>`).join("");
   return `
           <tr>
-            <td class="og-canvas" bgcolor="${L_PAGE}" style="padding: 10px 16px 0 16px; background-color: ${L_PAGE};">
+            <td class="og-canvas" bgcolor="${L_PAGE}" style="padding: 10px 16px 0 16px; ${bgStyle(L_PAGE)}">
               <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" class="og-card"
-                bgcolor="${L_CARD}" style="background-color: ${L_CARD}; border-radius: 6px; border: 1px solid ${L_BORDER}; border-left: 3px solid ${AMBER}; padding: 14px;">
+                bgcolor="${L_CARD}" style="${bgStyle(L_CARD)} border-radius: 6px; border: 1px solid ${L_BORDER}; border-left: 3px solid ${AMBER}; padding: 14px;">
                 <tr>
                   <td class="og-title" style="font-family: ${FONT}; font-size: 10px; font-weight: 700; color: ${AMBER}; text-transform: uppercase; letter-spacing: 0.85px; padding-bottom: 10px;">
                     ATTACHMENTS
@@ -401,22 +413,26 @@ function attachmentsSection(attachmentUrls: string[]): string {
           </tr>`;
 }
 
-/** Dual-theme CSS: light defaults inline; dark via media + Outlook attrs. */
+/** Dual-theme CSS: light defaults inline; dark ONLY in dark media / Outlook hooks. */
 function themeCss(forceScheme?: "light" | "dark"): string {
   const darkBlock = `
       body, .og-page, .email-container, .og-shell, .og-canvas {
-        background-color: ${D_PAGE} !important;
+        ${bgCss(D_PAGE)}
         color: ${D_TEXT} !important;
       }
       .og-header {
-        background-color: ${D_HEADER} !important;
-        border-color: ${D_BORDER} !important;
+        ${bgCss(D_HEADER)}
+        border-top-color: ${D_BORDER} !important;
+        border-right-color: ${D_BORDER} !important;
+        border-bottom-color: ${D_BORDER} !important;
       }
       .og-card {
-        background-color: ${D_SHELL} !important;
-        border-color: ${D_BORDER} !important;
+        ${bgCss(D_CARD)}
+        border-top-color: ${D_BORDER} !important;
+        border-right-color: ${D_BORDER} !important;
+        border-bottom-color: ${D_BORDER} !important;
       }
-      .og-headline, .og-value { color: ${D_TEXT} !important; }
+      .og-headline, .og-value, h1.og-headline { color: ${D_TEXT} !important; }
       .og-subtitle, .og-label { color: ${D_MUTED} !important; }
       .og-disclaimer, .og-footer { color: ${D_FOOTER_FADE} !important; }
       .og-divider { border-color: ${D_BORDER} !important; }
@@ -426,18 +442,22 @@ function themeCss(forceScheme?: "light" | "dark"): string {
 
   const lightLock = `
       body, .og-page, .email-container, .og-shell, .og-canvas {
-        background-color: ${L_PAGE} !important;
+        ${bgCss(L_PAGE)}
         color: ${L_TEXT} !important;
       }
       .og-header {
-        background-color: ${L_HEADER} !important;
-        border-color: ${L_BORDER} !important;
+        ${bgCss(L_HEADER)}
+        border-top-color: ${L_BORDER} !important;
+        border-right-color: ${L_BORDER} !important;
+        border-bottom-color: ${L_BORDER} !important;
       }
       .og-card {
-        background-color: ${L_CARD} !important;
-        border-color: ${L_BORDER} !important;
+        ${bgCss(L_CARD)}
+        border-top-color: ${L_BORDER} !important;
+        border-right-color: ${L_BORDER} !important;
+        border-bottom-color: ${L_BORDER} !important;
       }
-      .og-headline, .og-value { color: ${L_TEXT} !important; }
+      .og-headline, .og-value, h1.og-headline { color: ${L_TEXT} !important; }
       .og-subtitle, .og-label { color: ${L_MUTED} !important; }
       .og-disclaimer, .og-footer { color: ${L_FOOTER_FADE} !important; }
       .og-divider { border-color: ${L_BORDER} !important; }
@@ -447,9 +467,9 @@ function themeCss(forceScheme?: "light" | "dark"): string {
 
   const force =
     forceScheme === "dark"
-      ? `html[data-preview="dark"] { color-scheme: dark; }\n    html[data-preview="dark"] {${darkBlock}\n    }`
+      ? `html[data-preview="dark"] { color-scheme: dark only; }\n    html[data-preview="dark"] {${darkBlock}\n    }`
       : forceScheme === "light"
-      ? `html[data-preview="light"] { color-scheme: light; }\n    html[data-preview="light"] {${lightLock}\n    }`
+      ? `html[data-preview="light"] { color-scheme: light only; }\n    html[data-preview="light"] {${lightLock}\n    }`
       : "";
 
   return `
@@ -461,35 +481,48 @@ function themeCss(forceScheme?: "light" | "dark"): string {
     body {
       height: 100% !important; margin: 0 !important; padding: 0 !important; width: 100% !important;
       font-family: ${FONT};
-      background-color: ${L_PAGE};
+      ${bgStyle(L_PAGE)}
       color: ${L_TEXT};
       color-scheme: light dark;
     }
-    /* Client dark mode — true industrial tokens (not muddy hybrid grays). */
+    /* Re-assert cool light when client is light (fights partial invert). */
+    @media (prefers-color-scheme: light) {${lightLock}
+    }
+    /* True industrial dark — full surfaces + text (no mid-gray hybrid). */
     @media (prefers-color-scheme: dark) {${darkBlock}
     }
-    /* Outlook.com / Outlook dark inversion hooks */
+    /* Outlook.com / New Outlook dark inversion hooks — full token set */
     [data-ogsb] body, [data-ogsb] .og-page, [data-ogsb] .email-container,
     [data-ogsb] .og-shell, [data-ogsb] .og-canvas,
     [data-ogab] body, [data-ogab] .og-page, [data-ogab] .email-container,
     [data-ogab] .og-shell, [data-ogab] .og-canvas {
-      background-color: ${D_PAGE} !important;
+      ${bgCss(D_PAGE)}
       color: ${D_TEXT} !important;
     }
     [data-ogsb] .og-header, [data-ogab] .og-header {
-      background-color: ${D_HEADER} !important;
-      border-color: ${D_BORDER} !important;
+      ${bgCss(D_HEADER)}
+      border-top-color: ${D_BORDER} !important;
+      border-right-color: ${D_BORDER} !important;
+      border-bottom-color: ${D_BORDER} !important;
     }
     [data-ogsb] .og-card, [data-ogab] .og-card {
-      background-color: ${D_SHELL} !important;
-      border-color: ${D_BORDER} !important;
+      ${bgCss(D_CARD)}
+      border-top-color: ${D_BORDER} !important;
+      border-right-color: ${D_BORDER} !important;
+      border-bottom-color: ${D_BORDER} !important;
     }
-    [data-ogsc] .og-headline, [data-ogsc] .og-value,
-    [data-ogac] .og-headline, [data-ogac] .og-value { color: ${D_TEXT} !important; }
+    [data-ogsc] .og-headline, [data-ogsc] .og-value, [data-ogsc] h1.og-headline,
+    [data-ogac] .og-headline, [data-ogac] .og-value, [data-ogac] h1.og-headline {
+      color: ${D_TEXT} !important;
+    }
     [data-ogsc] .og-subtitle, [data-ogsc] .og-label,
     [data-ogac] .og-subtitle, [data-ogac] .og-label { color: ${D_MUTED} !important; }
     [data-ogsc] .og-disclaimer, [data-ogsc] .og-footer,
     [data-ogac] .og-disclaimer, [data-ogac] .og-footer { color: ${D_FOOTER_FADE} !important; }
+    [data-ogsb] .og-divider, [data-ogab] .og-divider { border-color: ${D_BORDER} !important; }
+    [data-ogsb] .email-container.og-shell, [data-ogab] .email-container.og-shell {
+      border-color: ${D_BORDER} !important;
+    }
     ${force}
     @media screen and (max-width: 600px) {
       .email-container { width: 100% !important; max-width: 100% !important; }
@@ -610,28 +643,30 @@ export function renderBrandedEmail(opts: BrandedEmailOptions): string {
     ${themeCss(opts.previewScheme)}
   </style>
 </head>
-<body class="og-page" bgcolor="${L_PAGE}" style="margin: 0; padding: 24px 0; background-color: ${L_PAGE}; font-family: ${FONT}; color: ${L_TEXT};">
+<body class="og-page" bgcolor="${L_PAGE}" style="margin: 0; padding: 24px 0; ${bgStyle(L_PAGE)} font-family: ${FONT}; color: ${L_TEXT};">
+  <!--[if !mso]><!-->
   <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;line-height:1px;color:${L_PAGE};">
     ${preview}
   </div>
+  <!--<![endif]-->
 
-  <table role="presentation" class="og-page" border="0" cellpadding="0" cellspacing="0" width="100%" bgcolor="${L_PAGE}" style="background-color: ${L_PAGE};">
+  <table role="presentation" class="og-page" border="0" cellpadding="0" cellspacing="0" width="100%" bgcolor="${L_PAGE}" style="${bgStyle(L_PAGE)}">
     <tr>
-      <td align="center" class="og-page" bgcolor="${L_PAGE}" style="padding: 0 12px; background-color: ${L_PAGE};">
+      <td align="center" class="og-page" bgcolor="${L_PAGE}" style="padding: 0 12px; ${bgStyle(L_PAGE)}">
 
         <table role="presentation" class="email-container og-shell" border="0" cellpadding="0" cellspacing="0" width="600"
-          bgcolor="${L_PAGE}" style="background-color: ${L_PAGE}; border-radius: 8px; border: 1px solid ${L_BORDER}; overflow: hidden;">
+          bgcolor="${L_PAGE}" style="${bgStyle(L_PAGE)} border-radius: 8px; border: 1px solid ${L_BORDER}; overflow: hidden;">
 
           ${shellChrome({ sectionTitle, swiftLogoUrl })}
 
           <!-- CONTENT CANVAS -->
           <tr>
-            <td class="og-canvas" bgcolor="${L_PAGE}" style="background-color: ${L_PAGE}; padding: 0;">
+            <td class="og-canvas" bgcolor="${L_PAGE}" style="${bgStyle(L_PAGE)} padding: 0;">
               <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
 
                 <!-- Title block -->
                 <tr>
-                  <td class="og-canvas" bgcolor="${L_PAGE}" style="padding: 18px 16px 0 16px; background-color: ${L_PAGE};">
+                  <td class="og-canvas" bgcolor="${L_PAGE}" style="padding: 18px 16px 0 16px; ${bgStyle(L_PAGE)}">
                     ${badge}
                     <h1 class="og-headline" style="margin: 0 0 6px 0; font-family: ${FONT}; font-size: 20px; font-weight: 700; color: ${L_TEXT}; letter-spacing: -0.2px; line-height: 1.25;">
                       ${title}
@@ -648,7 +683,7 @@ export function renderBrandedEmail(opts: BrandedEmailOptions): string {
 
                 <!-- BrandFooter (lib/features/shared/widgets.dart) -->
                 <tr>
-                  <td align="center" class="og-footer og-canvas" bgcolor="${L_PAGE}" style="padding: 20px 16px 22px 16px; font-family: ${FONT}; background-color: ${L_PAGE};">
+                  <td align="center" class="og-footer og-canvas" bgcolor="${L_PAGE}" style="padding: 20px 16px 22px 16px; font-family: ${FONT}; ${bgStyle(L_PAGE)}">
                     <div style="padding-bottom: 6px;">
                       <img src="${slstFooterWordmarkUrl()}" width="120" height="35" alt="SLST"
                         style="display: inline-block; width: 120px; height: auto; border: 0; outline: none;">

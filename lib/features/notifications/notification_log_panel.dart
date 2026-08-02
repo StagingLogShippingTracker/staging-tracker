@@ -69,9 +69,7 @@ class _NotificationLogPanelState extends ConsumerState<NotificationLogPanel> {
   @override
   void initState() {
     super.initState();
-    final now = DateTime.now();
-    _year = now.year;
-    _month = now.month;
+    // Default: no date filter so recent deliveries always appear.
     _reload();
   }
 
@@ -408,8 +406,10 @@ $rowsHtml
     }.toList()
       ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
 
-    return ListView(
-      padding: EdgeInsets.zero,
+    // Parent Notifications screen already scrolls — do not nest another ListView
+    // (unbounded height collapses this panel to empty in release builds).
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
           'Every notify-pm delivery is logged with type, PM, channels, and payload fields. '
@@ -555,6 +555,10 @@ $rowsHtml
                         value: 'partial',
                         child: Text('Partial'),
                       ),
+                      DropdownMenuItem(
+                        value: 'rejected',
+                        child: Text('Rejected'),
+                      ),
                     ],
                     onChanged: (v) {
                       setState(() => _status = v);
@@ -647,9 +651,8 @@ $rowsHtml
                       setState(() {
                         _from = null;
                         _to = null;
-                        final now = DateTime.now();
-                        _year = now.year;
-                        _month = now.month;
+                        _year = null;
+                        _month = null;
                       });
                       _reload();
                     },

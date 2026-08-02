@@ -7,11 +7,23 @@ import {
 } from "./email-templates/ship-confirmation.ts";
 import { renderNotificationEmail } from "./email-templates/notification-email.ts";
 
+/** Bumped on each intentional notify-pm deploy (theme / logging fixes). */
+const NOTIFY_PM_VERSION = 80;
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
 };
+
+function serviceAdmin() {
+  const url = Deno.env.get("SUPABASE_URL") ?? "";
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  if (!url || !serviceKey) return null;
+  return createClient(url, serviceKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
 
 /** Server-side only — never ship this map in desktop/APK clients. */
 const PM_SMS_ROSTER: Record<string, string> = {
@@ -53,11 +65,8 @@ async function resolveWebhookUrl(): Promise<string | null> {
   const fromEnv = Deno.env.get("MAKE_EMAIL_WEBHOOK_URL");
   if (fromEnv && fromEnv.trim()) return fromEnv.trim();
 
-  const url = Deno.env.get("SUPABASE_URL") ?? "";
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-  if (!url || !serviceKey) return null;
-
-  const admin = createClient(url, serviceKey);
+  const admin = serviceAdmin();
+  if (!admin) return null;
   const { data, error } = await admin.rpc("get_app_secret", {
     p_key: "MAKE_EMAIL_WEBHOOK_URL",
   });
@@ -159,38 +168,54 @@ async function appendNotificationLog(row: {
   sent_by: string | null;
   error_detail: string | null;
   payload: Record<string, unknown>;
-}): Promise<void> {
-  const url = Deno.env.get("SUPABASE_URL") ?? "";
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-  if (!url || !serviceKey) {
+}): Promise<string | null> {
+  const admin = serviceAdmin();
+  if (!admin) {
     console.error("notification_log skipped: missing service credentials");
-    return;
+    return null;
   }
-  try {
-    const admin = createClient(url, serviceKey);
-    const { error } = await admin.from("notification_log").insert({
-      notification_type: row.notification_type,
-      status: row.status,
-      channel: row.channel,
-      pm_name: row.pm_name,
-      pm_email: row.pm_email,
-      pm_phone_gateway: row.pm_phone_gateway,
-      so: row.so,
-      po: row.po,
-      customer: row.customer,
-      vendor: row.vendor,
-      carrier: row.carrier,
-      subject: row.subject,
-      sent_by: row.sent_by,
-      error_detail: row.error_detail,
-      payload: row.payload,
-    });
-    if (error) {
-      console.error("notification_log insert failed:", error.message);
+  const record = {
+    notification_type: row.notification_type || "unknown",
+    status: row.status || "failed",
+    channel: row.channel || "email",
+    pm_name: row.pm_name,
+    pm_email: row.pm_email,
+    pm_phone_gateway: row.pm_phone_gateway,
+    so: row.so,
+    po: row.po,
+    customer: row.customer,
+    vendor: row.vendor,
+    carrier: row.carrier,
+    subject: row.subject,
+    sent_by: row.sent_by,
+    error_detail: row.error_detail,
+    payload: row.payload ?? {},
+  };
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const { data, error } = await admin
+        .from("notification_log")
+        .insert(record)
+        .select("id")
+        .single();
+      if (error) {
+        console.error(
+          `notification_log insert failed (attempt ${attempt}):`,
+          error.message,
+          error.code,
+          error.details,
+        );
+        if (attempt < 2) continue;
+        return null;
+      }
+      return data?.id ?? null;
+    } catch (e) {
+      console.error(`notification_log insert error (attempt ${attempt}):`, e);
+      if (attempt < 2) continue;
+      return null;
     }
-  } catch (e) {
-    console.error("notification_log insert error:", e);
   }
+  return null;
 }
 
 /**
@@ -229,6 +254,8 @@ Deno.serve(async (req: Request) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
+  let pendingLog: Parameters<typeof appendNotificationLog>[0] | null = null;
+
   try {
     const webhook = await resolveWebhookUrl();
     if (!webhook) {
@@ -236,6 +263,7 @@ Deno.serve(async (req: Request) => {
         JSON.stringify({
           error:
             "MAKE_EMAIL_WEBHOOK_URL is not configured (edge secret or private.app_secrets)",
+          notify_pm_version: NOTIFY_PM_VERSION,
         }),
         {
           status: 500,
@@ -246,10 +274,16 @@ Deno.serve(async (req: Request) => {
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Missing Authorization" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({
+          error: "Missing Authorization",
+          notify_pm_version: NOTIFY_PM_VERSION,
+        }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     const supabase = createClient(
@@ -260,17 +294,68 @@ Deno.serve(async (req: Request) => {
 
     const { data: userData, error: userError } = await supabase.auth.getUser();
     if (userError || !userData.user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({
+          error: "Unauthorized",
+          notify_pm_version: NOTIFY_PM_VERSION,
+        }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     const body = await req.json();
     const to = String(body.to ?? "").trim();
+    const notificationType = String(body.notification_type ?? "").trim();
+    const sentBy = userData.user.email ?? userData.user.id;
+    const pmName = resolvePmName(body);
+    const vendor = String(body.vendor ?? "").trim() || null;
+    const customer = String(body.customer ?? "").trim() || vendor;
+
+    const logBase = {
+      notification_type: notificationType || "unknown",
+      pm_name: pmName,
+      pm_email: to || null,
+      so: String(body.so ?? "").trim() || null,
+      po: extractPoSummary(body),
+      customer,
+      vendor,
+      carrier: String(body.carrier ?? "").trim() || null,
+      subject: String(body.subject ?? "").trim() || null,
+      sent_by: sentBy,
+      payload: sanitizePayloadForLog({
+        ...body,
+        to,
+        pm_name: pmName,
+        sent_by: sentBy,
+        notify_pm_version: NOTIFY_PM_VERSION,
+      }),
+    };
+    pendingLog = {
+      ...logBase,
+      status: "failed",
+      channel: "email",
+      pm_phone_gateway: null,
+      error_detail: "notify-pm aborted before delivery",
+    };
+
     if (!to || !to.includes("@")) {
+      const logId = await appendNotificationLog({
+        ...logBase,
+        status: "rejected",
+        channel: "email",
+        pm_phone_gateway: null,
+        error_detail: "Missing or invalid to email",
+      });
+      pendingLog = null;
       return new Response(
-        JSON.stringify({ error: "Missing or invalid to email" }),
+        JSON.stringify({
+          error: "Missing or invalid to email",
+          notify_pm_version: NOTIFY_PM_VERSION,
+          log_id: logId,
+        }),
         {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -278,7 +363,6 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const notificationType = String(body.notification_type ?? "").trim();
     const missing: string[] = [];
     if (
       notificationType === "ship_confirm" ||
@@ -300,9 +384,20 @@ Deno.serve(async (req: Request) => {
       if (!String(body.customer ?? "").trim()) missing.push("customer");
     }
     if (missing.length > 0) {
+      const detail = `Missing required fields: ${missing.join(", ")}`;
+      const logId = await appendNotificationLog({
+        ...logBase,
+        status: "rejected",
+        channel: "email",
+        pm_phone_gateway: null,
+        error_detail: detail,
+      });
+      pendingLog = null;
       return new Response(
         JSON.stringify({
-          error: `Missing required fields: ${missing.join(", ")}`,
+          error: detail,
+          notify_pm_version: NOTIFY_PM_VERSION,
+          log_id: logId,
         }),
         {
           status: 400,
@@ -312,56 +407,82 @@ Deno.serve(async (req: Request) => {
     }
 
     const attachments = normalizeAttachments(body.attachments);
-    const enriched = enrichEmailBody({ ...body, to, attachments }, attachments);
-    const sentBy = userData.user.email ?? userData.user.id;
-    const pmName = resolvePmName(body);
-    const vendor = String(body.vendor ?? "").trim() || null;
-    const customer =
-      String(body.customer ?? "").trim() || vendor;
-    const logBase = {
-      notification_type: notificationType || "unknown",
+    logBase.payload = sanitizePayloadForLog({
+      ...body,
+      to,
       pm_name: pmName,
-      pm_email: to,
-      so: String(body.so ?? "").trim() || null,
-      po: extractPoSummary(body),
-      customer,
-      vendor,
-      carrier: String(body.carrier ?? "").trim() || null,
-      subject: String(body.subject ?? "").trim() || null,
       sent_by: sentBy,
-      payload: sanitizePayloadForLog({
-        ...body,
-        to,
-        pm_name: pmName,
-        sent_by: sentBy,
-        attachment_count: attachments.length,
-      }),
+      attachment_count: attachments.length,
+      notify_pm_version: NOTIFY_PM_VERSION,
+    });
+    pendingLog = {
+      ...logBase,
+      status: "failed",
+      channel: "email",
+      pm_phone_gateway: null,
+      error_detail: "notify-pm aborted before delivery",
     };
 
+    const enriched = enrichEmailBody({ ...body, to, attachments }, attachments);
     const payload = {
       ...enriched,
       to,
       pm_name: pmName ?? enriched.pm_name,
       sent_by: sentBy,
+      notify_pm_version: NOTIFY_PM_VERSION,
     };
 
-    const makeRes = await fetch(webhook, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+    let makeRes: Response;
+    try {
+      makeRes = await fetch(webhook, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+    } catch (fetchErr) {
+      const detail = `Make webhook fetch error: ${String(fetchErr)}`.slice(
+        0,
+        2000,
+      );
+      const logId = await appendNotificationLog({
+        ...logBase,
+        status: "failed",
+        channel: "email",
+        pm_phone_gateway: null,
+        error_detail: detail,
+      });
+      pendingLog = null;
+      return new Response(
+        JSON.stringify({
+          error: "Make webhook failed",
+          detail,
+          notify_pm_version: NOTIFY_PM_VERSION,
+          log_id: logId,
+        }),
+        {
+          status: 502,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
 
     if (!makeRes.ok) {
       const text = await makeRes.text();
-      await appendNotificationLog({
+      const logId = await appendNotificationLog({
         ...logBase,
         status: "failed",
         channel: "email",
         pm_phone_gateway: null,
         error_detail: text.slice(0, 2000) || "Make webhook failed",
       });
+      pendingLog = null;
       return new Response(
-        JSON.stringify({ error: "Make webhook failed", detail: text }),
+        JSON.stringify({
+          error: "Make webhook failed",
+          detail: text,
+          notify_pm_version: NOTIFY_PM_VERSION,
+          log_id: logId,
+        }),
         {
           status: 502,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -375,45 +496,90 @@ Deno.serve(async (req: Request) => {
     let smsSent = false;
     let smsError: string | null = null;
     if (smsTarget && body.sms_plain) {
-      const smsRes = await fetch(webhook, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          to: smsTarget,
-          subject: "",
-          body: String(body.sms_plain),
-          text: String(body.sms_plain),
-          is_sms: true,
-          plain_text: true,
-          notification_type: body.notification_type ?? "pm_sms",
-          attachments: [],
-          has_attachments: false,
-          sent_by: sentBy,
-        }),
-      });
-      if (smsRes.ok) {
-        smsSent = true;
-      } else {
-        smsError = (await smsRes.text()).slice(0, 1000);
+      try {
+        const smsRes = await fetch(webhook, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            to: smsTarget,
+            subject: "",
+            body: String(body.sms_plain),
+            text: String(body.sms_plain),
+            is_sms: true,
+            plain_text: true,
+            notification_type: body.notification_type ?? "pm_sms",
+            attachments: [],
+            has_attachments: false,
+            sent_by: sentBy,
+          }),
+        });
+        if (smsRes.ok) {
+          smsSent = true;
+        } else {
+          smsError = (await smsRes.text()).slice(0, 1000);
+        }
+      } catch (smsErr) {
+        smsError = `SMS fetch error: ${String(smsErr)}`.slice(0, 1000);
       }
     }
 
     const channel = smsSent ? "email+sms" : "email";
-    await appendNotificationLog({
+    const logId = await appendNotificationLog({
       ...logBase,
       status: smsError ? "partial" : "sent",
       channel,
       pm_phone_gateway: smsTarget,
       error_detail: smsError,
     });
+    pendingLog = null;
 
-    return new Response(JSON.stringify({ ok: true, channel, sms_sent: smsSent }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({
+        ok: true,
+        channel,
+        sms_sent: smsSent,
+        notify_pm_version: NOTIFY_PM_VERSION,
+        log_id: logId,
+      }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   } catch (e) {
-    return new Response(JSON.stringify({ error: String(e) }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    if (pendingLog) {
+      await appendNotificationLog({
+        ...pendingLog,
+        status: "failed",
+        error_detail: String(e).slice(0, 2000),
+      });
+    } else {
+      await appendNotificationLog({
+        notification_type: "unknown",
+        status: "failed",
+        channel: "email",
+        pm_name: null,
+        pm_email: null,
+        pm_phone_gateway: null,
+        so: null,
+        po: null,
+        customer: null,
+        vendor: null,
+        carrier: null,
+        subject: null,
+        sent_by: null,
+        error_detail: String(e).slice(0, 2000),
+        payload: { notify_pm_version: NOTIFY_PM_VERSION },
+      });
+    }
+    return new Response(
+      JSON.stringify({
+        error: String(e),
+        notify_pm_version: NOTIFY_PM_VERSION,
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   }
 });

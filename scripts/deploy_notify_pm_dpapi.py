@@ -106,6 +106,11 @@ def load_payload() -> dict:
     for needle in [
         "renderBrandedEmail",
         "090D16",
+        "E8EAF1",
+        "linear-gradient",
+        "prefers-color-scheme: dark",
+        "NOTIFY_PM_VERSION = 80",
+        "appendNotificationLog",
         "SLST",
         "swift-supply-logo-email",
         "Missing required fields",
@@ -119,6 +124,8 @@ def load_payload() -> dict:
         "og-cta",
         "Swift Staging Tracker",
         "Staging & Shipping Tracker",
+        "Live sync",
+        "PLACEHOLDER",
     ]:
         if banned in combined:
             raise SystemExit(f"refusing banned content: {banned}")
