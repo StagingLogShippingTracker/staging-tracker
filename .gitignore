@@ -30,6 +30,7 @@ dist/
 .tmp-*
 _mcp_deploy/
 _mcp_*.json
+_deploy_args.json
 _ops_backup*
 _wear_home*
 _notify_pm*

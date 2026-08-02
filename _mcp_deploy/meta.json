@@ -1,1 +1,0 @@
-{"project_id": "gdrpdiwykmnybmkadlrv", "name": "notify-pm", "entrypoint_path": "index.ts", "verify_jwt": true, "file_names": ["index.ts", "email-templates/email-shared.ts", "email-templates/ship-confirmation.ts", "email-templates/notification-email.ts"]}
