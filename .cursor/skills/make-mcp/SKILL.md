@@ -3,7 +3,7 @@ name: make-mcp
 description: >-
   Manage Make.com scenarios, webhooks, and automations for SLST via the official
   Make MCP server. Use when the user asks to change Make.com scenarios, email
-  webhooks, PM notifications, SMS routing, or Make integrations.
+  webhooks, PM notifications, or Make integrations.
 ---
 
 # Make.com MCP (SLST)
@@ -33,9 +33,8 @@ Token alternative (no OAuth): copy `.cursor/mcp.json.example`, set `MAKE_MCP_TOK
 | Make zone | `us2` (webhook host: `hook.us2.make.com`) |
 | Webhook storage | Edge secret `MAKE_EMAIL_WEBHOOK_URL` **or** `private.app_secrets` |
 | Authenticated caller | Flutter app → `NotifyRepository` → Edge Function `notify-pm` |
-| PM SMS roster | Server-only inside `supabase/functions/notify-pm` |
 
-The Flutter client never embeds the Make webhook URL. The Edge Function validates the user JWT, then POSTs JSON to Make.
+The Flutter client never embeds the Make webhook URL. The Edge Function validates the user JWT, then POSTs JSON to Make. Email only — no SMS / email-to-SMS.
 
 ## Agent workflow
 
@@ -47,7 +46,7 @@ The Flutter client never embeds the Make webhook URL. The Edge Function validate
 
 ## Payload contract
 
-`notify-pm` forwards JSON from authenticated clients. Common fields: `to`, `cc`, `subject`, `body`, `attachments` (public photo URLs), `notification_type`, optional `sms_to` / `sms_plain` / `pm_name`.
+`notify-pm` forwards JSON from authenticated clients. Common fields: `to`, `cc`, `subject`, `body`, `attachments` (public photo URLs), `notification_type`, optional `pm_name`.
 
 ## Docs
 

@@ -1,4 +1,4 @@
--- Immutable audit log of PM notifications (email/SMS) written by notify-pm.
+-- Immutable audit log of PM email notifications written by notify-pm.
 create table if not exists public.notification_log (
   id uuid primary key default gen_random_uuid(),
   created_at timestamptz not null default now(),
@@ -7,7 +7,6 @@ create table if not exists public.notification_log (
   channel text not null default 'email',
   pm_name text,
   pm_email text,
-  pm_phone_gateway text,
   so text,
   po text,
   customer text,

@@ -37,7 +37,7 @@ This is a **complete staging desk client**, not a prototype. Gaps vs a full WMS 
 
 `packages/slst_shared` correctly owns config, models, repos, ship ops, watch pairing — the right seam for Win/Android/Wear. Main app still carries substantial UI-adjacent domain (`lib/domain`, `lib/data/app_state`) which is fine at current team size; further growth should keep pushing pure data/rules into shared and keep platform adapters thin.
 
-Platform packaging scripts (Windows ZIP/Inno, Android APK, Wear APK) exist; monorepo layout is clear. Scalability risk is **ops/process** (live Supabase, Make SMS) more than Dart architecture.
+Platform packaging scripts (Windows ZIP/Inno, Android APK, Wear APK) exist; monorepo layout is clear. Scalability risk is **ops/process** (live Supabase, Make email) more than Dart architecture.
 
 ---
 

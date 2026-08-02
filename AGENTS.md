@@ -2,7 +2,7 @@
 
 ## What this is
 
-SLST — Flutter clients for **Windows**, **Android**, and **Wear OS**, backed by a **hosted Supabase** project. Make.com PM email/SMS is invoked only through the authenticated Edge Function `notify-pm`.
+SLST — Flutter clients for **Windows**, **Android**, and **Wear OS**, backed by a **hosted Supabase** project. Make.com PM email is invoked only through the authenticated Edge Function `notify-pm`.
 
 There is **no** web/PWA client and **no** Prophet21 / Epicor integration.
 
@@ -39,7 +39,7 @@ Then publish GitHub `releases/latest` with `SLST-*` assets so clients can self-u
 ## Live production backend — be careful
 
 - `lib/core/app_config.dart` (and `packages/slst_shared`) points at the **live** Supabase project.
-- Authenticated create/edit/ship/delete/notify writes affect real data and can trigger real PM email/SMS via Make.
+- Authenticated create/edit/ship/delete/notify writes affect real data and can trigger real PM email via Make.
 - Prefer read-only exploration unless you have explicit approval and a confirmed test account.
 - Authenticated clients read/write staging/shipped data; RLS blocks anonymous
   SELECT and all writes. Sign in is required to see operational inventory.
@@ -62,15 +62,16 @@ Then publish GitHub `releases/latest` with `SLST-*` assets so clients can self-u
 - `apps/slst_wear/` — Wear OS Flutter client (pair, list, ship, lean SVR)
 - `android/` — Android host for the main phone/tablet client
 - `windows/` — Windows desktop host
-- `supabase/functions/notify-pm` — authenticated Make webhook proxy + PM SMS roster
+- `supabase/functions/notify-pm` — authenticated Make webhook proxy for PM email
 - `supabase/functions/watch-pair` — Wear pairing create/redeem
 - `supabase/migrations/` — RLS + private secrets support
 - `scripts/packaging/` — Windows ZIP / Inno, Android APK, Wear APK helpers
 
 ## Notifications
 
-Never put `MAKE_EMAIL_WEBHOOK_URL` or PM phone gateways in the Flutter client.
+Never put `MAKE_EMAIL_WEBHOOK_URL` in the Flutter client.
 Rotate the Make webhook via Edge secret or `private.app_secrets`.
+PM notifications are **email only** (no SMS / email-to-SMS gateways).
 
 ## Packaging
 

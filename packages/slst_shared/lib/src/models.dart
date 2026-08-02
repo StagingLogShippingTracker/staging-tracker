@@ -156,7 +156,6 @@ class NotificationLogEntry {
     required this.channel,
     this.pmName,
     this.pmEmail,
-    this.pmPhoneGateway,
     this.so,
     this.po,
     this.customer,
@@ -175,7 +174,6 @@ class NotificationLogEntry {
   final String channel;
   final String? pmName;
   final String? pmEmail;
-  final String? pmPhoneGateway;
   final String? so;
   final String? po;
   final String? customer;
@@ -201,8 +199,6 @@ class NotificationLogEntry {
         return 'Bulk PO';
       case 'return_notification':
         return 'Return';
-      case 'pm_sms':
-        return 'SMS';
       default:
         return notificationType.isEmpty ? 'Unknown' : notificationType;
     }
@@ -217,7 +213,6 @@ class NotificationLogEntry {
       channel: (m['channel'] ?? 'email').toString(),
       pmName: m['pm_name']?.toString(),
       pmEmail: m['pm_email']?.toString(),
-      pmPhoneGateway: m['pm_phone_gateway']?.toString(),
       so: m['so']?.toString(),
       po: m['po']?.toString(),
       customer: m['customer']?.toString(),

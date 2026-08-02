@@ -8,7 +8,7 @@ import {
 import { renderNotificationEmail } from "./email-templates/notification-email.ts";
 
 /** Bumped on each intentional notify-pm deploy (theme / logging fixes). */
-const NOTIFY_PM_VERSION = 80;
+const NOTIFY_PM_VERSION = 81;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -23,35 +23,6 @@ function serviceAdmin() {
   return createClient(url, serviceKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
-}
-
-/** Server-side only — never ship this map in desktop/APK clients. */
-const PM_SMS_ROSTER: Record<string, string> = {
-  "Amanda Sievers": "7807204487@msg.telus.com",
-  "Amber Shuya": "7809141677@msg.telus.com",
-  "Ben Karpiak": "7802320414@txt.bell.ca",
-  "Brandon Kaminski": "7809755556@msg.telus.com",
-  "Brice Johnson": "7809350628@msg.telus.com",
-  "Carmen Martin": "7802385255@pcs.rogers.com",
-  "Chris Acorn": "7807253416@msg.telus.com",
-  "Dustin Strachan": "7809759387@msg.telus.com",
-  "Kim Mulder": "7809530959@msg.telus.com",
-  "Meedo Attia": "5875013894@txt.freedommobile.ca",
-  "Miranda McBrayne": "7809356267@fido.ca",
-  "Renee Jean": "7808196520@msg.telus.com",
-  "Sean Fitzpatrick": "7802660362@msg.telus.com",
-  "Steele Hult": "3069037728@sms.sasktel.com",
-};
-
-function resolveSmsGateway(input: string | undefined | null): string | null {
-  if (!input) return null;
-  const val = input.trim();
-  if (!val) return null;
-  if (val.includes("@")) return val;
-  if (PM_SMS_ROSTER[val]) return PM_SMS_ROSTER[val];
-  const lower = val.toLowerCase();
-  const match = Object.keys(PM_SMS_ROSTER).find((n) => n.toLowerCase() === lower);
-  return match ? PM_SMS_ROSTER[match] : null;
 }
 
 function publicPhotoUrl(path: string): string {
@@ -105,6 +76,11 @@ const LOG_OMIT_KEYS = new Set([
   "attachments",
   "attachment_urls",
   "photo_urls",
+  "sms_to",
+  "sms_plain",
+  "is_sms",
+  "plain_text",
+  "text",
 ]);
 
 /** Compact JSON for notification_log — drop large HTML / photo arrays. */
@@ -125,15 +101,7 @@ function sanitizePayloadForLog(
 
 function resolvePmName(body: Record<string, unknown>): string | null {
   const explicit = String(body.pm_name ?? "").trim();
-  if (explicit) return explicit;
-  const smsKey = String(body.sms_to ?? "").trim();
-  if (smsKey && PM_SMS_ROSTER[smsKey]) return smsKey;
-  const lower = smsKey.toLowerCase();
-  const rosterMatch = Object.keys(PM_SMS_ROSTER).find(
-    (n) => n.toLowerCase() === lower,
-  );
-  if (rosterMatch) return rosterMatch;
-  return null;
+  return explicit || null;
 }
 
 function extractPoSummary(body: Record<string, unknown>): string | null {
@@ -158,7 +126,6 @@ async function appendNotificationLog(row: {
   channel: string;
   pm_name: string | null;
   pm_email: string | null;
-  pm_phone_gateway: string | null;
   so: string | null;
   po: string | null;
   customer: string | null;
@@ -180,7 +147,6 @@ async function appendNotificationLog(row: {
     channel: row.channel || "email",
     pm_name: row.pm_name,
     pm_email: row.pm_email,
-    pm_phone_gateway: row.pm_phone_gateway,
     so: row.so,
     po: row.po,
     customer: row.customer,
@@ -337,7 +303,6 @@ Deno.serve(async (req: Request) => {
       ...logBase,
       status: "failed",
       channel: "email",
-      pm_phone_gateway: null,
       error_detail: "notify-pm aborted before delivery",
     };
 
@@ -346,7 +311,6 @@ Deno.serve(async (req: Request) => {
         ...logBase,
         status: "rejected",
         channel: "email",
-        pm_phone_gateway: null,
         error_detail: "Missing or invalid to email",
       });
       pendingLog = null;
@@ -389,7 +353,6 @@ Deno.serve(async (req: Request) => {
         ...logBase,
         status: "rejected",
         channel: "email",
-        pm_phone_gateway: null,
         error_detail: detail,
       });
       pendingLog = null;
@@ -419,7 +382,6 @@ Deno.serve(async (req: Request) => {
       ...logBase,
       status: "failed",
       channel: "email",
-      pm_phone_gateway: null,
       error_detail: "notify-pm aborted before delivery",
     };
 
@@ -448,7 +410,6 @@ Deno.serve(async (req: Request) => {
         ...logBase,
         status: "failed",
         channel: "email",
-        pm_phone_gateway: null,
         error_detail: detail,
       });
       pendingLog = null;
@@ -472,7 +433,6 @@ Deno.serve(async (req: Request) => {
         ...logBase,
         status: "failed",
         channel: "email",
-        pm_phone_gateway: null,
         error_detail: text.slice(0, 2000) || "Make webhook failed",
       });
       pendingLog = null;
@@ -490,54 +450,18 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const smsTarget = resolveSmsGateway(
-      String(body.sms_to ?? body.pm_name ?? pmName ?? ""),
-    );
-    let smsSent = false;
-    let smsError: string | null = null;
-    if (smsTarget && body.sms_plain) {
-      try {
-        const smsRes = await fetch(webhook, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            to: smsTarget,
-            subject: "",
-            body: String(body.sms_plain),
-            text: String(body.sms_plain),
-            is_sms: true,
-            plain_text: true,
-            notification_type: body.notification_type ?? "pm_sms",
-            attachments: [],
-            has_attachments: false,
-            sent_by: sentBy,
-          }),
-        });
-        if (smsRes.ok) {
-          smsSent = true;
-        } else {
-          smsError = (await smsRes.text()).slice(0, 1000);
-        }
-      } catch (smsErr) {
-        smsError = `SMS fetch error: ${String(smsErr)}`.slice(0, 1000);
-      }
-    }
-
-    const channel = smsSent ? "email+sms" : "email";
     const logId = await appendNotificationLog({
       ...logBase,
-      status: smsError ? "partial" : "sent",
-      channel,
-      pm_phone_gateway: smsTarget,
-      error_detail: smsError,
+      status: "sent",
+      channel: "email",
+      error_detail: null,
     });
     pendingLog = null;
 
     return new Response(
       JSON.stringify({
         ok: true,
-        channel,
-        sms_sent: smsSent,
+        channel: "email",
         notify_pm_version: NOTIFY_PM_VERSION,
         log_id: logId,
       }),
@@ -559,7 +483,6 @@ Deno.serve(async (req: Request) => {
         channel: "email",
         pm_name: null,
         pm_email: null,
-        pm_phone_gateway: null,
         so: null,
         po: null,
         customer: null,

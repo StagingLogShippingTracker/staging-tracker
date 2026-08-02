@@ -222,7 +222,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
             'Notifications',
             subtitle: _pageMode == _PageMode.log
                 ? 'Delivery history — filter, sort, and export'
-                : 'PM email / SMS via authenticated notify-pm',
+                : 'PM email via authenticated notify-pm',
           ),
           _pageModeToggle(narrow),
           const SizedBox(height: 16),

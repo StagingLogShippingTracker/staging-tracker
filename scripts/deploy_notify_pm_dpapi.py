@@ -109,7 +109,7 @@ def load_payload() -> dict:
         "E8EAF1",
         "linear-gradient",
         "prefers-color-scheme: dark",
-        "NOTIFY_PM_VERSION = 80",
+        "NOTIFY_PM_VERSION = 81",
         "appendNotificationLog",
         "SLST",
         "swift-supply-logo-email",

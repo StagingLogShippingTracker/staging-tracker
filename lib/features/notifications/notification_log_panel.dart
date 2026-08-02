@@ -1,4 +1,4 @@
-import 'dart:convert';
+import 'dart:convert' show utf8;
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -38,6 +38,145 @@ String _typeLabel(String type) {
     default:
       return type;
   }
+}
+
+String? _payloadStr(Map<String, dynamic> m, List<String> keys) {
+  for (final k in keys) {
+    final v = m[k];
+    if (v == null) continue;
+    final s = v.toString().trim();
+    if (s.isNotEmpty) return s;
+  }
+  return null;
+}
+
+/// Labeled message-body rows from structured notify-pm payload (not raw JSON).
+List<({String label, String value})> _messageBodyRows(
+  shared.NotificationLogEntry entry,
+) {
+  final p = entry.payload;
+  final rows = <({String label, String value})>[];
+  void add(String label, String? value) {
+    final v = value?.trim();
+    if (v == null || v.isEmpty) return;
+    rows.add((label: label, value: v));
+  }
+
+  switch (entry.notificationType) {
+    case 'bulk_po_notification':
+      final pos = p['pos'];
+      if (pos is List && pos.isNotEmpty) {
+        for (var i = 0; i < pos.length; i++) {
+          final raw = pos[i];
+          final item = raw is Map
+              ? Map<String, dynamic>.from(raw)
+              : <String, dynamic>{};
+          final n = i + 1;
+          add('PO ($n)', _payloadStr(item, const ['po', 'po_number']));
+          add(
+            'Quantity ($n)',
+            _payloadStr(item, const ['qty', 'quantity', 'amount']),
+          );
+          add('Vendor ($n)', _payloadStr(item, const ['vendor', 'customer']));
+          add(
+            'Details ($n)',
+            _payloadStr(item, const ['details', 'notes', 'comments']),
+          );
+          add(
+            'Container ($n)',
+            _payloadStr(item, const ['containers', 'container', 'type']),
+          );
+        }
+      } else {
+        add('PO', entry.po ?? _payloadStr(p, const ['po']));
+        add('Vendor', entry.vendor ?? _payloadStr(p, const ['vendor']));
+      }
+      break;
+    case 'po_notification':
+      add('PO', entry.po ?? _payloadStr(p, const ['po', 'po_number']));
+      add(
+        'Quantity',
+        _payloadStr(p, const ['qty', 'quantity', 'amount']),
+      );
+      add(
+        'Vendor',
+        entry.vendor ?? _payloadStr(p, const ['vendor', 'customer']),
+      );
+      add(
+        'Details',
+        _payloadStr(p, const ['details', 'notes', 'comments']),
+      );
+      add(
+        'Container',
+        _payloadStr(p, const ['containers', 'container', 'type']),
+      );
+      add('Linked SO', _payloadStr(p, const ['so', 'linked_so', 'linkedSo']));
+      break;
+    case 'ship_confirm':
+    case 'quick_ship':
+      add('SO', entry.so ?? _payloadStr(p, const ['so', 'so_number']));
+      add(
+        'Customer',
+        entry.customer ?? _payloadStr(p, const ['customer']),
+      );
+      add('Carrier', entry.carrier ?? _payloadStr(p, const ['carrier']));
+      add(
+        'Container',
+        _payloadStr(p, const ['containers', 'container', 'type']),
+      );
+      add('Weight', _payloadStr(p, const ['weight']));
+      add(
+        'Details',
+        _payloadStr(p, const ['comments', 'details', 'notes']),
+      );
+      add(
+        'Shipped by',
+        _payloadStr(p, const ['shipped_by', 'shippedBy']),
+      );
+      add(
+        'Shipped at',
+        _payloadStr(p, const ['shipped_at', 'shippedAt']),
+      );
+      break;
+    case 'return_to_stock':
+      add('SO', entry.so ?? _payloadStr(p, const ['so', 'so_number']));
+      add(
+        'Customer',
+        entry.customer ?? _payloadStr(p, const ['customer']),
+      );
+      add('Reason', _payloadStr(p, const ['reason']));
+      add('Picked by', _payloadStr(p, const ['picked_by', 'pickedBy']));
+      add(
+        'Returned by',
+        _payloadStr(p, const ['returned_by', 'returnedBy']),
+      );
+      break;
+    case 'return_notification':
+      add('SO', entry.so ?? _payloadStr(p, const ['so', 'so_number']));
+      add(
+        'Customer',
+        entry.customer ?? _payloadStr(p, const ['customer']),
+      );
+      add(
+        'Details',
+        _payloadStr(p, const ['details', 'notes', 'comments']),
+      );
+      break;
+    default:
+      add('SO', entry.so ?? _payloadStr(p, const ['so']));
+      add('PO', entry.po ?? _payloadStr(p, const ['po']));
+      add(
+        'Customer',
+        entry.customer ?? _payloadStr(p, const ['customer']),
+      );
+      add('Vendor', entry.vendor ?? _payloadStr(p, const ['vendor']));
+      add('Carrier', entry.carrier ?? _payloadStr(p, const ['carrier']));
+      add(
+        'Details',
+        _payloadStr(p, const ['details', 'comments', 'notes', 'reason']),
+      );
+  }
+  return rows;
 }
 
 class NotificationLogPanel extends ConsumerStatefulWidget {
@@ -162,9 +301,12 @@ class _NotificationLogPanelState extends ConsumerState<NotificationLogPanel> {
     }
     final buf = StringBuffer(
       'Date/Time,Type,Status,Channel,PM Name,PM Email,SO,PO,Customer,Vendor,'
-      'Carrier,Subject,Sent By,SMS Gateway,Error,Payload JSON\n',
+      'Carrier,Subject,Sent By,Error,Message Body\n',
     );
     for (final r in _rows) {
+      final bodyText = _messageBodyRows(r)
+          .map((e) => '${e.label}: ${e.value}')
+          .join(' | ');
       buf.writeln(
         [
           _escCsv(
@@ -182,9 +324,8 @@ class _NotificationLogPanelState extends ConsumerState<NotificationLogPanel> {
           _escCsv(r.carrier),
           _escCsv(r.subject),
           _escCsv(r.sentBy),
-          _escCsv(r.pmPhoneGateway),
           _escCsv(r.errorDetail),
-          _escCsv(jsonEncode(r.payload)),
+          _escCsv(bodyText),
         ].join(','),
       );
     }
@@ -347,6 +488,8 @@ $rowsHtml
           );
         }
 
+        final messageRows = _messageBodyRows(entry);
+
         return AlertDialog(
           title: Text(entry.typeLabel),
           content: SizedBox(
@@ -360,7 +503,6 @@ $rowsHtml
                   row('Channel', entry.channel),
                   row('PM', entry.pmName),
                   row('Email', entry.pmEmail),
-                  row('SMS gateway', entry.pmPhoneGateway),
                   row('SO', entry.so),
                   row('PO', entry.po),
                   row('Customer', entry.customer),
@@ -371,14 +513,14 @@ $rowsHtml
                   row('Error', entry.errorDetail),
                   const SizedBox(height: 8),
                   const Text(
-                    'Payload',
+                    'Message',
                     style: TextStyle(fontWeight: FontWeight.w600),
                   ),
-                  const SizedBox(height: 4),
-                  SelectableText(
-                    const JsonEncoder.withIndent('  ').convert(entry.payload),
-                    style: const TextStyle(fontFamily: 'Consolas', fontSize: 12),
-                  ),
+                  const SizedBox(height: 8),
+                  if (messageRows.isEmpty)
+                    const Text('No message details recorded.')
+                  else
+                    ...messageRows.map((r) => row(r.label, r.value)),
                 ],
               ),
             ),
@@ -412,7 +554,7 @@ $rowsHtml
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          'Every notify-pm delivery is logged with type, PM, channels, and payload fields. '
+          'Every notify-pm email delivery is logged with type, PM, and message fields. '
           'Export uses the current filters.',
           style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
         ),
@@ -578,10 +720,6 @@ $rowsHtml
                     items: const [
                       DropdownMenuItem(value: null, child: Text('Any')),
                       DropdownMenuItem(value: 'email', child: Text('Email')),
-                      DropdownMenuItem(
-                        value: 'email+sms',
-                        child: Text('Email + SMS'),
-                      ),
                     ],
                     onChanged: (v) {
                       setState(() => _channel = v);
@@ -829,7 +967,7 @@ $rowsHtml
           ),
         const SizedBox(height: 8),
         Text(
-          'Tap a row for full payload details.',
+          'Tap a row for message details.',
           style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
         ),
       ],

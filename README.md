@@ -82,7 +82,7 @@ Server-only Make webhook:
 - Preferred: Edge Function secret `MAKE_EMAIL_WEBHOOK_URL`
 - Fallback: `private.app_secrets` row `MAKE_EMAIL_WEBHOOK_URL` (read by `public.get_app_secret` as `service_role` only)
 
-PM SMS routing lives **only** inside `supabase/functions/notify-pm`.
+PM notifications are email-only via `supabase/functions/notify-pm` (no SMS).
 
 ## Tests
 
