@@ -390,19 +390,33 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             final visible = _showAllCompactKpis
                                 ? kpis
                                 : kpis.take(4).toList();
+                            // Content-sized 2-column grid — avoid GridView
+                            // childAspectRatio, which stretches cards tall on
+                            // narrow Windows/Android widths.
                             return Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                                GridView.count(
-                                  crossAxisCount: 2,
-                                  childAspectRatio: 1.55,
-                                  mainAxisSpacing: _kpiGap,
-                                  crossAxisSpacing: _kpiGap,
-                                  shrinkWrap: true,
-                                  physics: const NeverScrollableScrollPhysics(),
-                                  children: [
-                                    for (var i = 0; i < visible.length; i++)
-                                      cardAt(kpis.indexOf(visible[i])),
-                                  ],
+                                LayoutBuilder(
+                                  builder: (context, gridConstraints) {
+                                    final cellW =
+                                        (gridConstraints.maxWidth - _kpiGap) /
+                                        2;
+                                    return Wrap(
+                                      spacing: _kpiGap,
+                                      runSpacing: _kpiGap,
+                                      children: [
+                                        for (var i = 0;
+                                            i < visible.length;
+                                            i++)
+                                          SizedBox(
+                                            width: cellW,
+                                            child: cardAt(
+                                              kpis.indexOf(visible[i]),
+                                            ),
+                                          ),
+                                      ],
+                                    );
+                                  },
                                 ),
                                 TextButton.icon(
                                   onPressed: () => setState(
@@ -433,7 +447,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                         (kpis.length - 1) * _kpiGap) /
                                     kpis.length;
                           return SizedBox(
-                            height: 86,
+                            height: 92,
                             child: ListView.separated(
                               scrollDirection: Axis.horizontal,
                               itemCount: kpis.length,

@@ -722,10 +722,12 @@ class IndustrialKpiCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final card = Card(
       clipBehavior: Clip.antiAlias,
+      // Intrinsic height: label + value + subtitle only — never stretch to
+      // fill a tall grid cell on narrow layouts.
       child: Padding(
         padding: EdgeInsets.symmetric(
-          horizontal: compact ? 8 : 16,
-          vertical: compact ? 8 : 16,
+          horizontal: compact ? 12 : 16,
+          vertical: compact ? 12 : 16,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -768,6 +770,7 @@ class IndustrialKpiCard extends StatelessWidget {
         ),
       ),
     );
+    // Width fills the strip/grid cell; height stays content-sized.
     final sized = compact
         ? SizedBox(width: double.infinity, child: card)
         : card;
