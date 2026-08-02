@@ -1,5 +1,6 @@
 export 'src/app_config.dart';
 export 'src/app_update.dart';
+export 'src/update_prompt_schedule.dart';
 export 'src/email_subjects.dart';
 export 'src/models.dart';
 export 'src/audit_order.dart';

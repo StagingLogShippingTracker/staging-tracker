@@ -9,6 +9,7 @@ import 'core/router.dart';
 import 'core/theme.dart';
 import 'data/app_state.dart';
 import 'data/log_view_mode.dart';
+import 'features/settings/scheduled_update_host.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -56,16 +57,18 @@ class SlstApp extends ConsumerWidget {
       routerConfig: router,
       debugShowCheckedModeBanner: false,
       builder: (context, child) {
-        return AnnotatedRegion<SystemUiOverlayStyle>(
-          value: const SystemUiOverlayStyle(
-            statusBarColor: Colors.transparent,
-            statusBarIconBrightness: Brightness.light,
-            statusBarBrightness: Brightness.dark,
-            systemNavigationBarColor: Color(0xFF090D16),
-            systemNavigationBarIconBrightness: Brightness.light,
-            systemNavigationBarContrastEnforced: false,
+        return ScheduledUpdateHost(
+          child: AnnotatedRegion<SystemUiOverlayStyle>(
+            value: const SystemUiOverlayStyle(
+              statusBarColor: Colors.transparent,
+              statusBarIconBrightness: Brightness.light,
+              statusBarBrightness: Brightness.dark,
+              systemNavigationBarColor: Color(0xFF090D16),
+              systemNavigationBarIconBrightness: Brightness.light,
+              systemNavigationBarContrastEnforced: false,
+            ),
+            child: child ?? const SizedBox.shrink(),
           ),
-          child: child ?? const SizedBox.shrink(),
         );
       },
     );
