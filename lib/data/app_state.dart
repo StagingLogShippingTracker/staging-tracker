@@ -22,6 +22,7 @@ class BulkPoItem {
     required this.pmEmail,
     required this.containers,
     this.details = '',
+    this.photos = const [],
   });
 
   final String po;
@@ -29,6 +30,7 @@ class BulkPoItem {
   final String pmEmail;
   final ContainerCounts containers;
   final String details;
+  final List<PhotoBytes> photos;
 }
 
 final supabaseClientProvider = Provider<SupabaseClient>(
@@ -61,6 +63,9 @@ final photoStorageProvider = Provider(
 );
 final notifyRepoProvider = Provider(
   (ref) => NotifyRepository(ref.watch(supabaseClientProvider)),
+);
+final notificationLogRepoProvider = Provider(
+  (ref) => NotificationLogRepository(ref.watch(supabaseClientProvider)),
 );
 
 final contactsProvider = FutureProvider<List<ContactPerson>>((ref) async {
@@ -585,7 +590,7 @@ class OperationsService {
       notifyPm: notifyPm,
       pmEmail: pmEmail,
       shippedId: shipped.id,
-      payload: {
+      payload: _withPmName({
         'to': pmEmail,
         'cc': shared.AppConfig.warehouseCc,
         'subject': 'SHIPPED: SO ${entry.so} - ${entry.customer}',
@@ -601,7 +606,7 @@ class OperationsService {
         'comments': entry.comments?.trim() ?? '',
         'attachments': paths,
         'notification_type': 'ship_confirm',
-      },
+      }, pmEmail),
     );
     await _ref.read(appDataProvider.notifier).refresh();
     return notifyWarning;
@@ -665,7 +670,7 @@ class OperationsService {
       notifyPm: notifyPm,
       pmEmail: pmEmail,
       shippedId: inserted.id,
-      payload: {
+      payload: _withPmName({
         'to': pmEmail,
         'cc': shared.AppConfig.warehouseCc,
         'subject': 'SHIPPED: SO ${so.trim()} - ${customer.trim()}',
@@ -681,7 +686,7 @@ class OperationsService {
         'comments': comments?.trim() ?? '',
         'attachments': paths,
         'notification_type': 'quick_ship',
-      },
+      }, pmEmail),
     );
     await _ref.read(appDataProvider.notifier).refresh();
     return notifyWarning;
@@ -727,7 +732,7 @@ class OperationsService {
       notifyPm: notifyPm,
       pmEmail: pmEmail,
       shippedId: shipped.id,
-      payload: {
+      payload: _withPmName({
         'to': pmEmail,
         'cc': shared.AppConfig.warehouseCc,
         'subject': 'RETURN TO STOCK: SO ${entry.so} - ${entry.customer}',
@@ -740,7 +745,7 @@ class OperationsService {
         'returned_by': returnedBy.trim(),
         'attachments': paths,
         'notification_type': 'return_to_stock',
-      },
+      }, pmEmail),
     );
     await _ref.read(appDataProvider.notifier).refresh();
     return notifyWarning;
@@ -952,7 +957,7 @@ class OperationsService {
     for (final p in photos) {
       paths.add(await _photos.uploadBytes(bytes: p.bytes, fileName: p.name));
     }
-    await _notify.sendPmNotification({
+    await _notify.sendPmNotification(_withPmName({
       'to': pmEmail,
       'cc': shared.AppConfig.warehouseCc,
       'subject':
@@ -966,7 +971,7 @@ class OperationsService {
       'details': details?.trim() ?? '',
       'attachments': paths,
       'notification_type': 'po_notification',
-    });
+    }, pmEmail));
     await _log.log(
       'staging',
       'Sent Automated PO Notification for PO: $po${linkedSo == null ? '' : ' (SO $linkedSo)'} (PM: $pmEmail)',
@@ -974,10 +979,19 @@ class OperationsService {
   }
 
   Future<void> sendBulkPoNotification({required List<BulkPoItem> items}) async {
+    _requireAuth();
     if (items.isEmpty) {
       throw Exception('Add at least one PO.');
     }
-    // Group by PM so each recipient gets one digest.
+    // Upload photos per PO, then group digests by PM.
+    final uploaded = <BulkPoItem, List<String>>{};
+    for (final item in items) {
+      final paths = <String>[];
+      for (final p in item.photos) {
+        paths.add(await _photos.uploadBytes(bytes: p.bytes, fileName: p.name));
+      }
+      uploaded[item] = paths;
+    }
     final byPm = <String, List<BulkPoItem>>{};
     for (final item in items) {
       byPm.putIfAbsent(item.pmEmail.trim().toLowerCase(), () => []).add(item);
@@ -986,6 +1000,9 @@ class OperationsService {
       final list = entry.value;
       final to = list.first.pmEmail.trim();
       final poList = list.map((e) => e.po).join(', ');
+      final paths = <String>[
+        for (final item in list) ...?uploaded[item],
+      ];
       final lines = list
           .map((e) {
             return '<b>PO#</b> | ${e.po}<br>'
@@ -994,7 +1011,7 @@ class OperationsService {
                 '${e.details.trim().isEmpty ? '' : '<b>Notes</b> | ${e.details.trim()}<br>'}';
           })
           .join('<br>');
-      await _notify.sendPmNotification({
+      await _notify.sendPmNotification(_withPmName({
         'to': to,
         'cc': 'warehouse1@swiftsupply.ca',
         'subject': 'Bulk PO Notification: $poList',
@@ -1007,14 +1024,17 @@ class OperationsService {
                 'containers': e.containers.typeLabel,
                 'qty': e.containers.total,
                 'details': e.details,
+                'attachments': uploaded[e] ?? const <String>[],
               },
             )
             .toList(),
+        'attachments': paths,
         'notification_type': 'bulk_po_notification',
-      });
+      }, to));
       await _log.log(
         'staging',
-        'Sent Bulk PO Notification (${list.length} POs) to $to',
+        'Sent Bulk PO Notification (${list.length} POs) to $to'
+        '${paths.isEmpty ? '' : ' with ${paths.length} photo(s)'}',
       );
     }
   }
@@ -1036,7 +1056,7 @@ class OperationsService {
     for (final p in photos) {
       paths.add(await _photos.uploadBytes(bytes: p.bytes, fileName: p.name));
     }
-    await _notify.sendPmNotification({
+    await _notify.sendPmNotification(_withPmName({
       'to': pmEmail,
       'cc': shared.AppConfig.warehouseCc,
       'subject': 'Return Notification: SO $so - $customer',
@@ -1047,7 +1067,7 @@ class OperationsService {
       'details': details?.trim() ?? '',
       'attachments': paths,
       'notification_type': 'return_notification',
-    });
+    }, pmEmail));
     await _rememberEntryValues(customer: customer);
     await _log.log('staging', 'Sent Automated Return Notification for SO: $so');
   }
@@ -1097,6 +1117,27 @@ class OperationsService {
     final local = email.split('@').first.split('.').first;
     if (local.isEmpty) return email;
     return local[0].toUpperCase() + local.substring(1);
+  }
+
+  /// Full contact name when known; falls back to [_pmDisplay].
+  String? _pmNameForEmail(String? email) {
+    if (email == null || email.trim().isEmpty) return null;
+    if (!email.contains('@')) return email.trim();
+    final lower = email.trim().toLowerCase();
+    final contacts = _ref.read(contactsProvider).valueOrNull ?? const [];
+    for (final c in contacts) {
+      if (c.email.trim().toLowerCase() == lower) return c.name;
+    }
+    return _pmDisplay(email);
+  }
+
+  Map<String, dynamic> _withPmName(
+    Map<String, dynamic> payload,
+    String? pmEmail,
+  ) {
+    final name = _pmNameForEmail(pmEmail);
+    if (name == null || name.isEmpty) return payload;
+    return {...payload, 'pm_name': name};
   }
 
   Future<void> _rememberCarrier(String raw) async {

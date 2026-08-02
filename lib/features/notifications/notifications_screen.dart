@@ -8,8 +8,11 @@ import '../../platform/photo_picker.dart';
 import '../shared/entry_suggestion_fields.dart';
 import '../shared/industrial_widgets.dart';
 import '../shared/widgets.dart';
+import 'notification_log_panel.dart';
 
 enum _NotifyKind { po, bulkPo, returnNotify }
+
+enum _PageMode { send, log }
 
 class _BulkPoRow {
   _BulkPoRow()
@@ -32,6 +35,7 @@ class _BulkPoRow {
   final TextEditingController crates;
   final TextEditingController pipe;
   final TextEditingController other;
+  final photos = <PhotoBytes>[];
 
   void dispose() {
     po.dispose();
@@ -63,6 +67,7 @@ class NotificationsScreen extends ConsumerStatefulWidget {
 }
 
 class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
+  _PageMode _pageMode = _PageMode.send;
   _NotifyKind _kind = _NotifyKind.po;
   final _po = TextEditingController();
   final _so = TextEditingController();
@@ -136,6 +141,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                 pmEmail: email,
                 containers: counts,
                 details: row.details.text.trim(),
+                photos: List<PhotoBytes>.from(row.photos),
               ),
             );
           }
@@ -149,6 +155,9 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
         setState(() {
           _photos.clear();
           _details.clear();
+          for (final row in _bulkRows) {
+            row.photos.clear();
+          }
         });
       }
     } catch (e) {
@@ -156,6 +165,46 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  Widget _pageModeToggle(bool narrow) {
+    if (narrow) {
+      return DropdownButtonFormField<_PageMode>(
+        initialValue: _pageMode,
+        isExpanded: true,
+        decoration: const InputDecoration(
+          labelText: 'Page',
+          isDense: true,
+        ),
+        items: const [
+          DropdownMenuItem(value: _PageMode.send, child: Text('Send')),
+          DropdownMenuItem(
+            value: _PageMode.log,
+            child: Text('Notification log'),
+          ),
+        ],
+        onChanged: (v) {
+          if (v != null) setState(() => _pageMode = v);
+        },
+      );
+    }
+    return SegmentedButton<_PageMode>(
+      segments: const [
+        ButtonSegment(
+          value: _PageMode.send,
+          icon: Icon(Icons.send_outlined),
+          label: Text('Send'),
+        ),
+        ButtonSegment(
+          value: _PageMode.log,
+          icon: Icon(Icons.history),
+          label: Text('Notification log'),
+        ),
+      ],
+      selected: {_pageMode},
+      showSelectedIcon: false,
+      onSelectionChanged: (s) => setState(() => _pageMode = s.first),
+    );
   }
 
   @override
@@ -169,116 +218,126 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
       child: ListView(
         padding: slstPagePadding(context, includeCompactChrome: true),
         children: [
-          const IndustrialPageTitle(
+          IndustrialPageTitle(
             'Notifications',
-            subtitle: 'PM email / SMS via authenticated notify-pm',
+            subtitle: _pageMode == _PageMode.log
+                ? 'Delivery history — filter, sort, and export'
+                : 'PM email / SMS via authenticated notify-pm',
           ),
-          Card(
-            margin: EdgeInsets.zero,
-            color: IndustrialTheme.skyBlue.withValues(alpha: 0.10),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(6),
-              side: BorderSide(
-                color: IndustrialTheme.skyBlue.withValues(alpha: 0.35),
-              ),
-            ),
-            child: const ListTile(
-              leading: Icon(
-                Icons.shield_outlined,
-                color: IndustrialTheme.skyBlue,
-              ),
-              title: Text(
-                'Secure delivery',
-                style: TextStyle(fontWeight: FontWeight.w700),
-              ),
-              subtitle: Text(
-                'Notifications are sent through an authenticated server function. '
-                'Webhook credentials never ship inside the app binary.',
-              ),
-            ),
-          ),
+          _pageModeToggle(narrow),
           const SizedBox(height: 16),
-          if (narrow)
-            DropdownButtonFormField<_NotifyKind>(
-              initialValue: _kind,
-              isExpanded: true,
-              decoration: const InputDecoration(
-                labelText: 'Notification type',
-                isDense: true,
+          if (_pageMode == _PageMode.log) ...[
+            const NotificationLogPanel(),
+            const BrandFooter(),
+          ] else ...[
+            Card(
+              margin: EdgeInsets.zero,
+              color: IndustrialTheme.skyBlue.withValues(alpha: 0.10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(6),
+                side: BorderSide(
+                  color: IndustrialTheme.skyBlue.withValues(alpha: 0.35),
+                ),
               ),
-              items: const [
-                DropdownMenuItem(
-                  value: _NotifyKind.po,
-                  child: Text('PO Notify'),
+              child: const ListTile(
+                leading: Icon(
+                  Icons.shield_outlined,
+                  color: IndustrialTheme.skyBlue,
                 ),
-                DropdownMenuItem(
-                  value: _NotifyKind.bulkPo,
-                  child: Text('Bulk PO Notify'),
+                title: Text(
+                  'Secure delivery',
+                  style: TextStyle(fontWeight: FontWeight.w700),
                 ),
-                DropdownMenuItem(
-                  value: _NotifyKind.returnNotify,
-                  child: Text('Return Notify'),
+                subtitle: Text(
+                  'Notifications are sent through an authenticated server function. '
+                  'Webhook credentials never ship inside the app binary. '
+                  'Deliveries are recorded in Notification log.',
                 ),
-              ],
-              onChanged: (v) {
-                if (v != null) setState(() => _kind = v);
-              },
-            )
-          else
-            SegmentedButton<_NotifyKind>(
-              segments: const [
-                ButtonSegment(
-                  value: _NotifyKind.po,
-                  icon: Icon(Icons.receipt_long),
-                  label: Text('PO Notify'),
-                ),
-                ButtonSegment(
-                  value: _NotifyKind.bulkPo,
-                  icon: Icon(Icons.playlist_add_check),
-                  label: Text('Bulk PO Notify'),
-                ),
-                ButtonSegment(
-                  value: _NotifyKind.returnNotify,
-                  icon: Icon(Icons.keyboard_return),
-                  label: Text('Return Notify'),
-                ),
-              ],
-              selected: {_kind},
-              showSelectedIcon: false,
-              onSelectionChanged: (s) => setState(() => _kind = s.first),
+              ),
             ),
-          const SizedBox(height: 16),
-          if (_kind == _NotifyKind.bulkPo)
-            _buildBulkForm(scheme)
-          else
-            _buildSingleForm(),
-          const SizedBox(height: 16),
-          FilledButton.icon(
-            style: FilledButton.styleFrom(
-              backgroundColor: SlstColors.blue,
-              foregroundColor: Colors.white,
-              disabledBackgroundColor: scheme.surfaceContainerHighest,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              minimumSize: const Size.fromHeight(48),
+            const SizedBox(height: 16),
+            if (narrow)
+              DropdownButtonFormField<_NotifyKind>(
+                initialValue: _kind,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: 'Notification type',
+                  isDense: true,
+                ),
+                items: const [
+                  DropdownMenuItem(
+                    value: _NotifyKind.po,
+                    child: Text('PO Notify'),
+                  ),
+                  DropdownMenuItem(
+                    value: _NotifyKind.bulkPo,
+                    child: Text('Bulk PO Notify'),
+                  ),
+                  DropdownMenuItem(
+                    value: _NotifyKind.returnNotify,
+                    child: Text('Return Notify'),
+                  ),
+                ],
+                onChanged: (v) {
+                  if (v != null) setState(() => _kind = v);
+                },
+              )
+            else
+              SegmentedButton<_NotifyKind>(
+                segments: const [
+                  ButtonSegment(
+                    value: _NotifyKind.po,
+                    icon: Icon(Icons.receipt_long),
+                    label: Text('PO Notify'),
+                  ),
+                  ButtonSegment(
+                    value: _NotifyKind.bulkPo,
+                    icon: Icon(Icons.playlist_add_check),
+                    label: Text('Bulk PO Notify'),
+                  ),
+                  ButtonSegment(
+                    value: _NotifyKind.returnNotify,
+                    icon: Icon(Icons.keyboard_return),
+                    label: Text('Return Notify'),
+                  ),
+                ],
+                selected: {_kind},
+                showSelectedIcon: false,
+                onSelectionChanged: (s) => setState(() => _kind = s.first),
+              ),
+            const SizedBox(height: 16),
+            if (_kind == _NotifyKind.bulkPo)
+              _buildBulkForm(scheme)
+            else
+              _buildSingleForm(),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: SlstColors.blue,
+                foregroundColor: Colors.white,
+                disabledBackgroundColor: scheme.surfaceContainerHighest,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                minimumSize: const Size.fromHeight(48),
+              ),
+              onPressed: (_busy || user == null) ? null : _send,
+              icon: _busy
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.send),
+              label: Text(
+                user == null
+                    ? 'Sign in to send'
+                    : (_busy ? 'Sending…' : 'Send notification'),
+              ),
             ),
-            onPressed: (_busy || user == null) ? null : _send,
-            icon: _busy
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  )
-                : const Icon(Icons.send),
-            label: Text(
-              user == null
-                  ? 'Sign in to send'
-                  : (_busy ? 'Sending…' : 'Send notification'),
-            ),
-          ),
-          const BrandFooter(),
+            const BrandFooter(),
+          ],
         ],
       ),
     );
@@ -348,8 +407,9 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          'Enter each morning PO with containers, vendor, PM email, and notes. '
-          'No photos or scans — one digest email is sent per PM.',
+          'Enter each morning PO with containers, vendor, PM email, notes, '
+          'and optional photos/scans. One digest email is sent per PM '
+          '(attachments from that PM\'s POs are included).',
           style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
         ),
         const SizedBox(height: 12),
@@ -423,6 +483,20 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
               controller: row.details,
               decoration: const InputDecoration(labelText: 'Comment (Details)'),
               maxLines: 3,
+            ),
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: PhotoAttachButtons(
+                picker: _picker,
+                photos: row.photos,
+                attachLabel: 'Attach photos',
+                onChanged: (next) => setState(() {
+                  row.photos
+                    ..clear()
+                    ..addAll(next);
+                }),
+              ),
             ),
           ],
         ),

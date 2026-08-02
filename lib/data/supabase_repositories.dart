@@ -5,6 +5,7 @@
 export 'package:slst_shared/slst_shared.dart'
     show
         ChangelogRepository,
+        NotificationLogRepository,
         NotifyRepository,
         PhotoStorage,
         RosterRepository,

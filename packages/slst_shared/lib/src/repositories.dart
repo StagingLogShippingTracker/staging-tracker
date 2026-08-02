@@ -235,6 +235,106 @@ class NotifyRepository {
   }
 }
 
+class NotificationLogRepository {
+  NotificationLogRepository(this._client);
+  final SupabaseClient _client;
+
+  static const knownTypes = <String>[
+    'ship_confirm',
+    'quick_ship',
+    'return_to_stock',
+    'po_notification',
+    'bulk_po_notification',
+    'return_notification',
+  ];
+
+  Future<List<NotificationLogEntry>> list([
+    NotificationLogQuery query = const NotificationLogQuery(),
+  ]) async {
+    var from = query.from;
+    var to = query.to;
+    if (query.year != null) {
+      final y = query.year!;
+      final m = query.month;
+      if (m != null) {
+        from ??= DateTime(y, m, 1);
+        to ??= DateTime(y, m + 1, 1);
+      } else {
+        from ??= DateTime(y, 1, 1);
+        to ??= DateTime(y + 1, 1, 1);
+      }
+    }
+
+    final sortCol = switch (query.sortBy) {
+      NotificationLogSort.createdAt => 'created_at',
+      NotificationLogSort.pmName => 'pm_name',
+      NotificationLogSort.notificationType => 'notification_type',
+      NotificationLogSort.status => 'status',
+    };
+
+    var q = _client.from('notification_log').select();
+    if (from != null) {
+      q = q.gte('created_at', from.toUtc().toIso8601String());
+    }
+    if (to != null) {
+      q = q.lt('created_at', to.toUtc().toIso8601String());
+    }
+    final pm = query.pmName?.trim();
+    if (pm != null && pm.isNotEmpty) {
+      q = q.eq('pm_name', pm);
+    }
+    final type = query.notificationType?.trim();
+    if (type != null && type.isNotEmpty) {
+      q = q.eq('notification_type', type);
+    }
+    final status = query.status?.trim();
+    if (status != null && status.isNotEmpty) {
+      q = q.eq('status', status);
+    }
+    final channel = query.channel?.trim();
+    if (channel != null && channel.isNotEmpty) {
+      q = q.eq('channel', channel);
+    }
+    final rows = await q.order(sortCol, ascending: query.ascending).limit(
+          query.limit,
+        );
+    var entries = (rows as List)
+        .map(
+          (e) =>
+              NotificationLogEntry.fromMap(Map<String, dynamic>.from(e as Map)),
+        )
+        .toList();
+
+    final search = query.search?.trim().toLowerCase();
+    if (search != null && search.isNotEmpty) {
+      entries = entries.where((e) {
+        final hay =
+            '${e.so ?? ''} ${e.po ?? ''} ${e.customer ?? ''} ${e.vendor ?? ''} '
+            '${e.subject ?? ''} ${e.pmEmail ?? ''} ${e.pmName ?? ''}';
+        return hay.toLowerCase().contains(search);
+      }).toList();
+    }
+    return entries;
+  }
+
+  /// Distinct PM names present in the log (for filter dropdowns).
+  Future<List<String>> distinctPmNames() async {
+    final rows = await _client
+        .from('notification_log')
+        .select('pm_name')
+        .not('pm_name', 'is', null)
+        .order('pm_name')
+        .limit(500);
+    final names = <String>{};
+    for (final row in rows as List) {
+      final name = (row as Map)['pm_name']?.toString().trim() ?? '';
+      if (name.isNotEmpty) names.add(name);
+    }
+    final list = names.toList()..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    return list;
+  }
+}
+
 Future<List<ContactPerson>> loadBundledContacts() async {
   final raw = await rootBundle.loadString(
     'packages/slst_shared/assets/contacts.json',

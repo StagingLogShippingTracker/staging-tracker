@@ -147,6 +147,126 @@ class ChangelogEntry {
   }
 }
 
+/// Append-only row from [notification_log] (written by notify-pm).
+class NotificationLogEntry {
+  NotificationLogEntry({
+    required this.id,
+    required this.notificationType,
+    required this.status,
+    required this.channel,
+    this.pmName,
+    this.pmEmail,
+    this.pmPhoneGateway,
+    this.so,
+    this.po,
+    this.customer,
+    this.vendor,
+    this.carrier,
+    this.subject,
+    this.sentBy,
+    this.errorDetail,
+    this.payload = const {},
+    this.createdAt,
+  });
+
+  final String id;
+  final String notificationType;
+  final String status;
+  final String channel;
+  final String? pmName;
+  final String? pmEmail;
+  final String? pmPhoneGateway;
+  final String? so;
+  final String? po;
+  final String? customer;
+  final String? vendor;
+  final String? carrier;
+  final String? subject;
+  final String? sentBy;
+  final String? errorDetail;
+  final Map<String, dynamic> payload;
+  final DateTime? createdAt;
+
+  String get typeLabel {
+    switch (notificationType) {
+      case 'ship_confirm':
+        return 'Ship confirm';
+      case 'quick_ship':
+        return 'Quick ship';
+      case 'return_to_stock':
+        return 'Return to stock';
+      case 'po_notification':
+        return 'PO';
+      case 'bulk_po_notification':
+        return 'Bulk PO';
+      case 'return_notification':
+        return 'Return';
+      case 'pm_sms':
+        return 'SMS';
+      default:
+        return notificationType.isEmpty ? 'Unknown' : notificationType;
+    }
+  }
+
+  factory NotificationLogEntry.fromMap(Map<String, dynamic> m) {
+    final rawPayload = m['payload'];
+    return NotificationLogEntry(
+      id: '${m['id']}',
+      notificationType: (m['notification_type'] ?? '').toString(),
+      status: (m['status'] ?? '').toString(),
+      channel: (m['channel'] ?? 'email').toString(),
+      pmName: m['pm_name']?.toString(),
+      pmEmail: m['pm_email']?.toString(),
+      pmPhoneGateway: m['pm_phone_gateway']?.toString(),
+      so: m['so']?.toString(),
+      po: m['po']?.toString(),
+      customer: m['customer']?.toString(),
+      vendor: m['vendor']?.toString(),
+      carrier: m['carrier']?.toString(),
+      subject: m['subject']?.toString(),
+      sentBy: m['sent_by']?.toString(),
+      errorDetail: m['error_detail']?.toString(),
+      payload: rawPayload is Map
+          ? Map<String, dynamic>.from(rawPayload)
+          : const {},
+      createdAt: _asDate(m['created_at']),
+    );
+  }
+}
+
+/// Query options for [NotificationLogRepository.list].
+class NotificationLogQuery {
+  const NotificationLogQuery({
+    this.from,
+    this.to,
+    this.year,
+    this.month,
+    this.pmName,
+    this.notificationType,
+    this.status,
+    this.channel,
+    this.search,
+    this.sortBy = NotificationLogSort.createdAt,
+    this.ascending = false,
+    this.limit = 500,
+  });
+
+  final DateTime? from;
+  final DateTime? to;
+  final int? year;
+  final int? month;
+  final String? pmName;
+  final String? notificationType;
+  final String? status;
+  final String? channel;
+  final String? search;
+  final NotificationLogSort sortBy;
+  final bool ascending;
+  final int limit;
+}
+
+enum NotificationLogSort { createdAt, pmName, notificationType, status }
+
 class ContactPerson {
   ContactPerson({
     required this.name,

@@ -89,6 +89,110 @@ function withAttachmentFields(
   };
 }
 
+const LOG_OMIT_KEYS = new Set([
+  "body",
+  "html",
+  "html_body",
+  "attachments",
+  "attachment_urls",
+  "photo_urls",
+]);
+
+/** Compact JSON for notification_log — drop large HTML / photo arrays. */
+function sanitizePayloadForLog(
+  body: Record<string, unknown>,
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(body)) {
+    if (LOG_OMIT_KEYS.has(k)) continue;
+    if (typeof v === "string" && v.length > 4000) {
+      out[k] = `${v.slice(0, 4000)}…`;
+      continue;
+    }
+    out[k] = v;
+  }
+  return out;
+}
+
+function resolvePmName(body: Record<string, unknown>): string | null {
+  const explicit = String(body.pm_name ?? "").trim();
+  if (explicit) return explicit;
+  const smsKey = String(body.sms_to ?? "").trim();
+  if (smsKey && PM_SMS_ROSTER[smsKey]) return smsKey;
+  const lower = smsKey.toLowerCase();
+  const rosterMatch = Object.keys(PM_SMS_ROSTER).find(
+    (n) => n.toLowerCase() === lower,
+  );
+  if (rosterMatch) return rosterMatch;
+  return null;
+}
+
+function extractPoSummary(body: Record<string, unknown>): string | null {
+  const single = String(body.po ?? "").trim();
+  if (single) return single;
+  const pos = body.pos;
+  if (!Array.isArray(pos) || pos.length === 0) return null;
+  return pos
+    .map((p) => {
+      if (p && typeof p === "object" && "po" in p) {
+        return String((p as { po?: unknown }).po ?? "").trim();
+      }
+      return String(p ?? "").trim();
+    })
+    .filter((s) => s.length > 0)
+    .join(", ");
+}
+
+async function appendNotificationLog(row: {
+  notification_type: string;
+  status: string;
+  channel: string;
+  pm_name: string | null;
+  pm_email: string | null;
+  pm_phone_gateway: string | null;
+  so: string | null;
+  po: string | null;
+  customer: string | null;
+  vendor: string | null;
+  carrier: string | null;
+  subject: string | null;
+  sent_by: string | null;
+  error_detail: string | null;
+  payload: Record<string, unknown>;
+}): Promise<void> {
+  const url = Deno.env.get("SUPABASE_URL") ?? "";
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  if (!url || !serviceKey) {
+    console.error("notification_log skipped: missing service credentials");
+    return;
+  }
+  try {
+    const admin = createClient(url, serviceKey);
+    const { error } = await admin.from("notification_log").insert({
+      notification_type: row.notification_type,
+      status: row.status,
+      channel: row.channel,
+      pm_name: row.pm_name,
+      pm_email: row.pm_email,
+      pm_phone_gateway: row.pm_phone_gateway,
+      so: row.so,
+      po: row.po,
+      customer: row.customer,
+      vendor: row.vendor,
+      carrier: row.carrier,
+      subject: row.subject,
+      sent_by: row.sent_by,
+      error_detail: row.error_detail,
+      payload: row.payload,
+    });
+    if (error) {
+      console.error("notification_log insert failed:", error.message);
+    }
+  } catch (e) {
+    console.error("notification_log insert error:", e);
+  }
+}
+
 /**
  * Replace client HTML snippets with branded templates for all PM email types.
  * Make continues to send `body` as the email HTML.
@@ -209,11 +313,36 @@ Deno.serve(async (req: Request) => {
 
     const attachments = normalizeAttachments(body.attachments);
     const enriched = enrichEmailBody({ ...body, to, attachments }, attachments);
+    const sentBy = userData.user.email ?? userData.user.id;
+    const pmName = resolvePmName(body);
+    const vendor = String(body.vendor ?? "").trim() || null;
+    const customer =
+      String(body.customer ?? "").trim() || vendor;
+    const logBase = {
+      notification_type: notificationType || "unknown",
+      pm_name: pmName,
+      pm_email: to,
+      so: String(body.so ?? "").trim() || null,
+      po: extractPoSummary(body),
+      customer,
+      vendor,
+      carrier: String(body.carrier ?? "").trim() || null,
+      subject: String(body.subject ?? "").trim() || null,
+      sent_by: sentBy,
+      payload: sanitizePayloadForLog({
+        ...body,
+        to,
+        pm_name: pmName,
+        sent_by: sentBy,
+        attachment_count: attachments.length,
+      }),
+    };
 
     const payload = {
       ...enriched,
       to,
-      sent_by: userData.user.email ?? userData.user.id,
+      pm_name: pmName ?? enriched.pm_name,
+      sent_by: sentBy,
     };
 
     const makeRes = await fetch(webhook, {
@@ -224,6 +353,13 @@ Deno.serve(async (req: Request) => {
 
     if (!makeRes.ok) {
       const text = await makeRes.text();
+      await appendNotificationLog({
+        ...logBase,
+        status: "failed",
+        channel: "email",
+        pm_phone_gateway: null,
+        error_detail: text.slice(0, 2000) || "Make webhook failed",
+      });
       return new Response(
         JSON.stringify({ error: "Make webhook failed", detail: text }),
         {
@@ -233,9 +369,13 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const smsTarget = resolveSmsGateway(body.sms_to ?? body.pm_name ?? null);
+    const smsTarget = resolveSmsGateway(
+      String(body.sms_to ?? body.pm_name ?? pmName ?? ""),
+    );
+    let smsSent = false;
+    let smsError: string | null = null;
     if (smsTarget && body.sms_plain) {
-      await fetch(webhook, {
+      const smsRes = await fetch(webhook, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -248,12 +388,26 @@ Deno.serve(async (req: Request) => {
           notification_type: body.notification_type ?? "pm_sms",
           attachments: [],
           has_attachments: false,
-          sent_by: userData.user.email ?? userData.user.id,
+          sent_by: sentBy,
         }),
       });
+      if (smsRes.ok) {
+        smsSent = true;
+      } else {
+        smsError = (await smsRes.text()).slice(0, 1000);
+      }
     }
 
-    return new Response(JSON.stringify({ ok: true }), {
+    const channel = smsSent ? "email+sms" : "email";
+    await appendNotificationLog({
+      ...logBase,
+      status: smsError ? "partial" : "sent",
+      channel,
+      pm_phone_gateway: smsTarget,
+      error_detail: smsError,
+    });
+
+    return new Response(JSON.stringify({ ok: true, channel, sms_sent: smsSent }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {

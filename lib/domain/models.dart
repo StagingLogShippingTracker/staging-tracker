@@ -7,5 +7,8 @@ export 'package:slst_shared/slst_shared.dart'
         ChangelogEntry,
         ContactPerson,
         ContainerCounts,
+        NotificationLogEntry,
+        NotificationLogQuery,
+        NotificationLogSort,
         ShippedEntry,
         StagingEntry;

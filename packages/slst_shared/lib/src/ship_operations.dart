@@ -91,6 +91,7 @@ class ShipOperations {
         'comments': entry.comments?.trim() ?? '',
         'attachments': paths,
         'notification_type': 'ship_confirm',
+        if (pmName != null && pmName.isNotEmpty) 'pm_name': pmName,
       },
     );
   }
