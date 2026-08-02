@@ -49,9 +49,15 @@ for good in [
     "renderShipConfirmationEmail",
     "renderNotificationEmail",
     "renderBrandedEmail",
-    "20260801footer-fade",
-    "FOOTER_FADE",
+    "20260802dual-theme",
+    "D_FOOTER_FADE",
+    "L_FOOTER_FADE",
     "3C424C",
+    "E8EAF1",
+    "090D16",
+    "prefers-color-scheme: dark",
+    "data-ogsb",
+    "data-ogsc",
     "slst-wordmark-footer",
     "SLST_WORDMARK_FOOTER_URL",
     "darkModeCss",
@@ -61,19 +67,27 @@ for good in [
     "publicPhotoUrl",
     "public_photo_url",
     "SLST",
+    "light dark",
 ]:
     assert good in combined, good
 
 for retired in [
     "slst-logo-email",
     "20260728sst-darkforce",
+    "20260801footer-fade",
     "Open Swift Supply",
     "Open on Swift",
     "OPEN SWIFT SUPPLY",
     "og-cta",
     "Swift Staging Tracker",
     "Staging & Shipping Tracker",
+    "liveSyncPill",
+    "dark only",
 ]:
     assert retired not in combined, retired
+
+# Sync pill copy must not ship to recipients (allow source comments only if absent from HTML strings).
+assert "Live sync" not in combined, "Live sync"
+assert ">Live<" not in combined.replace(" ", ""), "Live pill"
 
 print("ok", out, out.stat().st_size)

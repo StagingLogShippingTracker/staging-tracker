@@ -23,19 +23,45 @@ con.close()
 if not row:
     raise SystemExit("no token row")
 
-blob = row[0] if isinstance(row[0], str) else row[0].decode("utf-8", errors="replace")
-data = json.loads(blob)
-# Blob shapes vary across Cursor versions
-candidates = [data]
-if isinstance(data.get("data"), str):
-    try:
-        candidates.append(json.loads(data["data"]))
-    except json.JSONDecodeError:
-        pass
-elif isinstance(data.get("data"), dict):
-    candidates.append(data["data"])
-if isinstance(data.get("tokens"), dict):
-    candidates.append(data["tokens"])
+raw = row[0]
+# Cursor may store JSON text, or {type:Buffer,data:[bytes...]}
+if isinstance(raw, (bytes, bytearray, memoryview)):
+    blob = bytes(raw).decode("utf-8", errors="replace")
+    data = json.loads(blob)
+elif isinstance(raw, str):
+    data = json.loads(raw)
+else:
+    raise SystemExit(f"unexpected token row type {type(raw)}")
+
+def decode_payload(obj):
+    if isinstance(obj, dict) and obj.get("type") == "Buffer" and isinstance(obj.get("data"), list):
+        return json.loads(bytes(obj["data"]).decode("utf-8", errors="replace"))
+    if isinstance(obj, dict) and isinstance(obj.get("data"), str):
+        try:
+            return json.loads(obj["data"])
+        except json.JSONDecodeError:
+            return obj
+    if isinstance(obj, str):
+        try:
+            return json.loads(obj)
+        except json.JSONDecodeError:
+            return {"_raw": obj}
+    return obj if isinstance(obj, dict) else {}
+
+payload = decode_payload(data)
+if not isinstance(payload, dict) or ("access_token" not in payload and "tokens" not in payload and "accessToken" not in payload):
+    # Sometimes outer wrapper still has nested data
+    if isinstance(data, dict):
+        payload = decode_payload(data.get("data", data))
+
+candidates = []
+for c in (payload, data):
+    if isinstance(c, dict):
+        candidates.append(c)
+        if isinstance(c.get("tokens"), dict):
+            candidates.append(c["tokens"])
+        if isinstance(c.get("data"), dict):
+            candidates.append(c["data"])
 
 access = None
 for c in candidates:
@@ -51,7 +77,8 @@ for c in candidates:
             break
 
 if not access:
-    print("blob_keys", list(data.keys()))
+    print("blob_keys", list(data.keys()) if isinstance(data, dict) else type(data))
+    print("payload_keys", list(payload.keys()) if isinstance(payload, dict) else type(payload))
     raise SystemExit("no access token in MCP blob")
 
 req = {
