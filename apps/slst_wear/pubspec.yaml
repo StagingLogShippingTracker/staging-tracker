@@ -1,7 +1,7 @@
 name: slst_wear
 description: SLST Wear OS client — pair, staging list, ship confirm, lean SVR.
 publish_to: 'none'
-version: 1.1.32+34
+version: 1.1.33+35
 
 environment:
   sdk: ^3.12.2

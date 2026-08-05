@@ -213,6 +213,61 @@ export function renderBulkPoNotificationEmail(
   });
 }
 
+export function renderFeedbackEmail(
+  body: Record<string, unknown>,
+  attachmentUrls: string[] = [],
+): string {
+  const category = displayOrNone(pick(body, "category"));
+  const name = displayOrNone(pick(body, "name", "sender_name", "from_name"));
+  const contact = displayOrNone(
+    pick(body, "contact", "reply_to", "from_email", "sender_email"),
+  );
+  const summary = displayOrNone(pick(body, "summary", "subject_summary"));
+  const details = displayOrNone(
+    pick(body, "details", "message", "comments", "notes"),
+  );
+  const version = displayOrNone(pick(body, "app_version", "version"));
+  const platform = displayOrNone(pick(body, "platform"));
+  return renderBrandedEmail({
+    ...baseFromBody(body, attachmentUrls),
+    statusLabel: "Feedback",
+    statusTone: "sky",
+    title: "App feedback",
+    preview: `SLST feedback: ${pick(body, "summary", "category") || "message"}`,
+    subtitle: "In-app feedback from Settings",
+    hero: {
+      eyebrow: "Feedback",
+      value: pick(body, "category") || "General",
+      unit: "Category",
+      stats: [
+        { label: "Version", value: pick(body, "app_version", "version") || "None", accent: "sky" },
+        { label: "Platform", value: pick(body, "platform") || "None", accent: "mint" },
+      ],
+    },
+    cards: [
+      {
+        title: "Sender",
+        accent: "sky",
+        rows: [
+          { label: "Name", value: name },
+          { label: "Contact", value: contact },
+          { label: "Category", value: category },
+        ],
+      },
+      {
+        title: "Message",
+        accent: "amber",
+        rows: [
+          { label: "Summary", value: summary },
+          { label: "Details", value: details },
+          { label: "Version", value: version },
+          { label: "Platform", value: platform },
+        ],
+      },
+    ],
+  });
+}
+
 export function renderNotificationEmail(
   notificationType: string,
   body: Record<string, unknown>,
@@ -228,6 +283,8 @@ export function renderNotificationEmail(
       return renderPoNotificationEmail(body, attachmentUrls);
     case "bulk_po_notification":
       return renderBulkPoNotificationEmail(body, attachmentUrls);
+    case "feedback":
+      return renderFeedbackEmail(body, attachmentUrls);
     default:
       return null;
   }

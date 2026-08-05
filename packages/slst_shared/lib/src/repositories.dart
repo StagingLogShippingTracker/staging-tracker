@@ -246,6 +246,7 @@ class NotificationLogRepository {
     'po_notification',
     'bulk_po_notification',
     'return_notification',
+    'feedback',
   ];
 
   Future<List<NotificationLogEntry>> list([

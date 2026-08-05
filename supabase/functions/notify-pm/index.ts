@@ -8,7 +8,7 @@ import {
 import { renderNotificationEmail } from "./email-templates/notification-email.ts";
 
 /** Bumped on each intentional notify-pm deploy (theme / logging fixes). */
-const NOTIFY_PM_VERSION = 81;
+const NOTIFY_PM_VERSION = 82;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -346,6 +346,10 @@ Deno.serve(async (req: Request) => {
     } else if (notificationType === "return_notification") {
       if (!String(body.so ?? "").trim()) missing.push("so");
       if (!String(body.customer ?? "").trim()) missing.push("customer");
+    } else if (notificationType === "feedback") {
+      if (!String(body.details ?? body.message ?? "").trim()) {
+        missing.push("details");
+      }
     }
     if (missing.length > 0) {
       const detail = `Missing required fields: ${missing.join(", ")}`;
