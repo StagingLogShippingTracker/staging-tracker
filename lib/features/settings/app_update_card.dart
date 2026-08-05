@@ -209,9 +209,12 @@ class _AppUpdateCardState extends State<AppUpdateCard> {
         : '${_info!.version} (${_info!.buildNumber})';
     final assetLabel = _latest?.assetLabelFor(_hostPlatform);
     final publishedAt = _latest?.publishedAt;
+    // Use yMMMd + jm (not a single pattern with `y · h`) — intl can mis-parse
+    // year when `y` sits next to a middle-dot literal (QA saw "2024" for 2026).
     final published = publishedAt == null
         ? null
-        : DateFormat('MMM d, y · h:mm a').format(publishedAt);
+        : '${DateFormat.yMMMd().format(publishedAt.toLocal())}'
+            ' · ${DateFormat.jm().format(publishedAt.toLocal())}';
     final busy = _checking || _installing;
 
     return Card(

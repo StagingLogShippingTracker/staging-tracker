@@ -37,6 +37,17 @@ void main() {
     expect(classifyLocation('Ambiguous new place'), LocationCategory.floor);
   });
 
+  test('normalizes South Wall spelling variants onto SW N', () {
+    expect(normalizeLocationLabel('SW3'), 'SW 3');
+    expect(normalizeLocationLabel('sw-3'), 'SW 3');
+    expect(normalizeLocationLabel('SW 3'), 'SW 3');
+    expect(normalizeLocationLabel('South Wall / SW 3'), 'SW 3');
+    expect(locationKey('SW3'), locationKey('SW 3'));
+    expect(locationsShareFloorSpace('SW3', 'SW 3'), isTrue);
+    expect(locationsShareFloorSpace('SW3', 'SW 4'), isFalse);
+    expect(normalizeLocationLabel('a-01-b-1'), 'A-01-B-1');
+  });
+
   test('parses aisle bins including combined suffix and B-02-Partial', () {
     final standard = parseAisleLocation('a-01-b-1');
     expect(standard?.normalized, 'A-01-B-1');

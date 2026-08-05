@@ -208,10 +208,11 @@ class _StagingFormSheetState extends ConsumerState<StagingFormSheet> {
       if (counts.total <= 0) {
         throw Exception('At least one container is required.');
       }
+      final location = normalizeLocationLabel(_location.text);
       final locationDecision = await confirmLocationAdvisory(
         context,
         ref,
-        location: _location.text,
+        location: location,
         so: _so.text,
         ignoreEntryId: widget.existing?.id,
         containers: counts,
@@ -220,10 +221,25 @@ class _StagingFormSheetState extends ConsumerState<StagingFormSheet> {
       if (!mounted) return;
       String? keepId = widget.existing?.id;
       if (widget.existing == null) {
+        final siblings = siblingStagingEntries(
+          so: _so.text,
+          active: ref.read(appDataProvider).staging,
+        );
+        var allowExistingSo = widget.allowExistingSo;
+        if (siblings.isNotEmpty) {
+          final proceed = await confirmSoMultiEntryAdvisory(
+            context,
+            so: _so.text.trim(),
+            siblings: siblings,
+          );
+          if (!proceed) return;
+          if (!mounted) return;
+          allowExistingSo = true;
+        }
         final created = await ops.createStaging(
           so: _so.text,
           customer: _customer.text,
-          location: _location.text,
+          location: location,
           statusUi: statusUi,
           containers: counts,
           weight: _weight.text,
@@ -231,13 +247,8 @@ class _StagingFormSheetState extends ConsumerState<StagingFormSheet> {
           stagedBy: _stagedBy.text,
           futureDateYmd: _ymd(_futureDate),
           photos: _photos,
-          allowExistingSo:
-              widget.allowExistingSo ||
-              ref
-                  .read(appDataProvider)
-                  .staging
-                  .any((entry) => orderKey(entry.so) == orderKey(_so.text)),
-          locationCategory: _locationCategory,
+          allowExistingSo: allowExistingSo,
+          locationCategory: _locationCategory ?? classifyLocation(location),
         );
         keepId = created.id;
       } else {
@@ -263,7 +274,7 @@ class _StagingFormSheetState extends ConsumerState<StagingFormSheet> {
           {
             'so': _so.text.trim(),
             'customer': _customer.text.trim(),
-            'location': _location.text.trim(),
+            'location': location,
             'status': StatusRules.toDb(
               statusUi,
               futureDateYmd: _ymd(_futureDate),
@@ -275,7 +286,7 @@ class _StagingFormSheetState extends ConsumerState<StagingFormSheet> {
             'staged_by': _stagedBy.text.trim(),
           },
           _photos,
-          locationCategory: _locationCategory,
+          locationCategory: _locationCategory ?? classifyLocation(location),
         );
       }
       if (locationDecision == LocationAdvisoryDecision.consolidate) {
@@ -310,178 +321,213 @@ class _StagingFormSheetState extends ConsumerState<StagingFormSheet> {
     final lockIdentity = widget.lockIdentity;
     ref.watch(consolidationUndoProvider);
     final undo = _activeUndo;
+    // Pin Save Entry (and undo) below the scroll viewport so ~1440px-tall
+    // Windows dialogs never leave actions below the clip edge.
     return Padding(
       padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottom),
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  widget.existing == null
-                      ? Icons.add_box_outlined
-                      : Icons.edit_outlined,
-                  color: IndustrialTheme.skyBlue,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  widget.existing == null
-                      ? 'New Staging Entry'
-                      : 'Edit Staging Entry',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: IndustrialTheme.textPrimary,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          const actionReserve = 120.0;
+          final maxScroll = constraints.maxHeight.isFinite
+              ? (constraints.maxHeight - actionReserve).clamp(120.0, 10000.0)
+              : 640.0;
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ConstrainedBox(
+                constraints: BoxConstraints(maxHeight: maxScroll),
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            widget.existing == null
+                                ? Icons.add_box_outlined
+                                : Icons.edit_outlined,
+                            color: IndustrialTheme.skyBlue,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              widget.existing == null
+                                  ? 'New Staging Entry'
+                                  : 'Edit Staging Entry',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleLarge
+                                  ?.copyWith(
+                                    color: IndustrialTheme.textPrimary,
+                                  ),
+                            ),
+                          ),
+                          IconButton(
+                            tooltip: 'Close',
+                            onPressed: () => Navigator.pop(context),
+                            icon: const Icon(
+                              Icons.close,
+                              color: IndustrialTheme.textMuted,
+                            ),
+                          ),
+                        ],
                       ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _so,
+                        readOnly: lockIdentity,
+                        decoration: InputDecoration(
+                          labelText: 'SO #',
+                          helperText: lockIdentity
+                              ? 'Locked to this sales order from Order History'
+                              : null,
+                        ),
+                        textCapitalization: TextCapitalization.characters,
+                        onChanged: (_) => _maybeAutofillCustomer(),
+                      ),
+                      const SizedBox(height: 8),
+                      if (lockIdentity)
+                        TextField(
+                          controller: _customer,
+                          readOnly: true,
+                          decoration: const InputDecoration(
+                            labelText: 'Customer',
+                            helperText:
+                                'Locked to this sales order from Order History',
+                          ),
+                        )
+                      else
+                        CustomerSuggestionField(controller: _customer),
+                      const SizedBox(height: 8),
+                      LocationSelectorField(
+                        controller: _location,
+                        soController: _so,
+                        ignoreEntryId: widget.existing?.id,
+                        label:
+                            'Location (e.g. A-01-A-1, D-02-B-1+2, B-02-Partial)',
+                        onCategoryChanged: (value) =>
+                            _locationCategory = value,
+                      ),
+                      const SizedBox(height: 8),
+                      InputDecorator(
+                        decoration: InputDecoration(
+                          labelText: 'Status',
+                          errorText: _statusUi == null && _busy
+                              ? 'Select a status'
+                              : null,
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            isExpanded: true,
+                            hint: const Text('Select status'),
+                            value: _statusUi,
+                            items: [
+                              for (final s in StatusRules.uiStatuses)
+                                DropdownMenuItem(value: s, child: Text(s)),
+                            ],
+                            onChanged: (v) => setState(() => _statusUi = v),
+                          ),
+                        ),
+                      ),
+                      if (_statusUi == 'Ship On Future Date') ...[
+                        const SizedBox(height: 8),
+                        OutlinedButton.icon(
+                          onPressed: () async {
+                            final d = await showDatePicker(
+                              context: context,
+                              firstDate: DateTime.now(),
+                              lastDate: DateTime.now().add(
+                                const Duration(days: 365 * 2),
+                              ),
+                              initialDate: _futureDate ?? DateTime.now(),
+                            );
+                            if (d != null) setState(() => _futureDate = d);
+                          },
+                          icon: const Icon(Icons.calendar_today),
+                          label: Text(
+                            _futureDate == null
+                                ? 'Pick future ship date'
+                                : 'Ship date: ${_futureDate!.toIso8601String().substring(0, 10)}',
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 8),
+                      ContainerInputs(
+                        skids: _skids,
+                        boxes: _boxes,
+                        crates: _crates,
+                        pipe: _pipe,
+                        other: _other,
+                        onChanged: () => setState(() {}),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: _weight,
+                        decoration: const InputDecoration(
+                          labelText: 'Weight (optional)',
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      PersonSuggestionField(
+                        controller: _stagedBy,
+                        label: 'Staged by',
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: _comments,
+                        decoration: const InputDecoration(
+                          labelText: 'Comments',
+                        ),
+                        maxLines: 3,
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          PhotoAttachButtons(
+                            picker: _picker,
+                            photos: _photos,
+                            onChanged: (next) => setState(() {
+                              _photos
+                                ..clear()
+                                ..addAll(next);
+                            }),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-                const Spacer(),
-                IconButton(
-                  tooltip: 'Close',
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(
-                    Icons.close,
-                    color: IndustrialTheme.textMuted,
+              ),
+              if (undo != null) ...[
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: SlstColors.purple,
+                    side: const BorderSide(color: SlstColors.purple),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  onPressed: _busy ? null : _reverseConsolidation,
+                  icon: const Icon(Icons.undo),
+                  label: Text(
+                    'Reverse consolidation '
+                    '(${undo.remaining.inSeconds}s left)',
                   ),
                 ),
               ],
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _so,
-              readOnly: lockIdentity,
-              decoration: InputDecoration(
-                labelText: 'SO #',
-                helperText: lockIdentity
-                    ? 'Locked to this sales order from Order History'
-                    : null,
-              ),
-              textCapitalization: TextCapitalization.characters,
-              onChanged: (_) => _maybeAutofillCustomer(),
-            ),
-            const SizedBox(height: 8),
-            if (lockIdentity)
-              TextField(
-                controller: _customer,
-                readOnly: true,
-                decoration: const InputDecoration(
-                  labelText: 'Customer',
-                  helperText: 'Locked to this sales order from Order History',
+              const SizedBox(height: 16),
+              FilledButton(
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
-              )
-            else
-              CustomerSuggestionField(controller: _customer),
-            const SizedBox(height: 8),
-            LocationSelectorField(
-              controller: _location,
-              soController: _so,
-              ignoreEntryId: widget.existing?.id,
-              label: 'Location (e.g. A-01-A-1, D-02-B-1+2, B-02-Partial)',
-              onCategoryChanged: (value) => _locationCategory = value,
-            ),
-            const SizedBox(height: 8),
-            InputDecorator(
-              decoration: InputDecoration(
-                labelText: 'Status',
-                errorText: _statusUi == null && _busy
-                    ? 'Select a status'
-                    : null,
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  isExpanded: true,
-                  hint: const Text('Select status'),
-                  value: _statusUi,
-                  items: [
-                    for (final s in StatusRules.uiStatuses)
-                      DropdownMenuItem(value: s, child: Text(s)),
-                  ],
-                  onChanged: (v) => setState(() => _statusUi = v),
-                ),
-              ),
-            ),
-            if (_statusUi == 'Ship On Future Date') ...[
-              const SizedBox(height: 8),
-              OutlinedButton.icon(
-                onPressed: () async {
-                  final d = await showDatePicker(
-                    context: context,
-                    firstDate: DateTime.now(),
-                    lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
-                    initialDate: _futureDate ?? DateTime.now(),
-                  );
-                  if (d != null) setState(() => _futureDate = d);
-                },
-                icon: const Icon(Icons.calendar_today),
-                label: Text(
-                  _futureDate == null
-                      ? 'Pick future ship date'
-                      : 'Ship date: ${_futureDate!.toIso8601String().substring(0, 10)}',
-                ),
+                onPressed: _busy ? null : _save,
+                child: Text(_busy ? 'Saving…' : 'Save Entry'),
               ),
             ],
-            const SizedBox(height: 8),
-            ContainerInputs(
-              skids: _skids,
-              boxes: _boxes,
-              crates: _crates,
-              pipe: _pipe,
-              other: _other,
-              onChanged: () => setState(() {}),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _weight,
-              decoration: const InputDecoration(labelText: 'Weight (optional)'),
-            ),
-            const SizedBox(height: 8),
-            PersonSuggestionField(controller: _stagedBy, label: 'Staged by'),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _comments,
-              decoration: const InputDecoration(labelText: 'Comments'),
-              maxLines: 3,
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                PhotoAttachButtons(
-                  picker: _picker,
-                  photos: _photos,
-                  onChanged: (next) => setState(() {
-                    _photos
-                      ..clear()
-                      ..addAll(next);
-                  }),
-                ),
-              ],
-            ),
-            if (undo != null) ...[
-              const SizedBox(height: 12),
-              OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: SlstColors.purple,
-                  side: const BorderSide(color: SlstColors.purple),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-                onPressed: _busy ? null : _reverseConsolidation,
-                icon: const Icon(Icons.undo),
-                label: Text(
-                  'Reverse consolidation '
-                  '(${undo.remaining.inSeconds}s left)',
-                ),
-              ),
-            ],
-            const SizedBox(height: 16),
-            FilledButton(
-              style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 14),
-              ),
-              onPressed: _busy ? null : _save,
-              child: Text(_busy ? 'Saving…' : 'Save Entry'),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }

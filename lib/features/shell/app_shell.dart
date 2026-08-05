@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -95,10 +96,15 @@ const List<String> _compactBarPaths = [
   '/settings',
 ];
 
-class AppShell extends ConsumerWidget {
+class AppShell extends ConsumerStatefulWidget {
   const AppShell({super.key, required this.child});
   final Widget child;
 
+  @override
+  ConsumerState<AppShell> createState() => _AppShellState();
+}
+
+class _AppShellState extends ConsumerState<AppShell> {
   String _normalizePath(String location) {
     final uri = Uri.tryParse(location);
     final path = uri?.path ?? location;
@@ -113,7 +119,39 @@ class AppShell extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  void initState() {
+    super.initState();
+    // CallbackShortcuts only fire when the shell Focus has primary focus.
+    // Text fields / dialogs steal focus on Windows and let OS Help take F1.
+    // A global handler keeps F1–F5 mapped to the dock while the app is focused.
+    HardwareKeyboard.instance.addHandler(_handleDockHotkey);
+  }
+
+  @override
+  void dispose() {
+    HardwareKeyboard.instance.removeHandler(_handleDockHotkey);
+    super.dispose();
+  }
+
+  bool _handleDockHotkey(KeyEvent event) {
+    if (event is! KeyDownEvent) return false;
+    if (!mounted) return false;
+    final location = GoRouterState.of(context).uri.toString();
+    final actions = ShellCommandDock.actionsFor(context, ref, location);
+    for (final action in actions) {
+      final key = ShellCommandDock.logicalKeyFor(action.key);
+      final onPressed = action.onPressed;
+      if (key == null || onPressed == null) continue;
+      if (event.logicalKey == key) {
+        onPressed();
+        return true;
+      }
+    }
+    return false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final location = GoRouterState.of(context).uri.toString();
     final path = _normalizePath(location);
     final current = _destinationFor(path);
@@ -129,7 +167,7 @@ class AppShell extends ConsumerWidget {
                 selectedPath: current.path,
                 location: location,
                 title: current.sectionTitle,
-                child: child,
+                child: widget.child,
               )
             : Scaffold(
                 backgroundColor: IndustrialTheme.darkBase,
@@ -151,7 +189,7 @@ class AppShell extends ConsumerWidget {
                             _TopHeader(
                               title: current.sectionTitle,
                             ),
-                            Expanded(child: child),
+                            Expanded(child: widget.child),
                           ],
                         ),
                       ),
@@ -279,8 +317,17 @@ class _CompactShell extends ConsumerWidget {
       for (final p in _compactBarPaths)
         _destinations.firstWhere((d) => d.path == p),
     ];
-    final loading = ref.watch(appDataProvider).loading;
-    final syncing = ref.watch(appDataProvider).syncing;
+    final data = ref.watch(appDataProvider);
+    final loading = data.loading;
+    final syncing = data.syncing;
+    final hasError = data.error != null && !(loading || syncing);
+    final liveAccent =
+        hasError ? IndustrialTheme.amber : IndustrialTheme.mintGreen;
+    final liveLabel = (loading || syncing)
+        ? 'Syncing…'
+        : hasError
+            ? 'Error'
+            : 'Live';
     final dockActions = ShellCommandDock.actionsFor(context, ref, location);
     // Primary floor actions only — skip pure navigation chips already in the bar.
     final compactActions = dockActions
@@ -319,24 +366,28 @@ class _CompactShell extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.only(right: 4),
             child: Center(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: IndustrialTheme.mintGreen.withValues(alpha: 0.16),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: IndustrialTheme.mintGreen.withValues(alpha: 0.45),
+              child: Tooltip(
+                message: hasError ? data.error! : 'Realtime inventory sync',
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: liveAccent.withValues(alpha: 0.16),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: liveAccent.withValues(alpha: 0.45),
+                    ),
                   ),
-                ),
-                child: SizedBox(
-                  width: 56,
-                  child: Text(
-                    (loading || syncing) ? 'Syncing…' : 'Live',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      color: IndustrialTheme.mintGreen,
+                  child: SizedBox(
+                    width: 56,
+                    child: Text(
+                      liveLabel,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: liveAccent,
+                      ),
                     ),
                   ),
                 ),
@@ -772,6 +823,15 @@ class _TopHeader extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final data = ref.watch(appDataProvider);
     final syncing = data.syncing || data.loading;
+    final hasError = data.error != null && !syncing;
+    final accent = hasError
+        ? IndustrialTheme.amber
+        : IndustrialTheme.mintGreen;
+    final label = syncing
+        ? 'Syncing…'
+        : hasError
+            ? 'Sync error'
+            : 'Live sync';
 
     return Container(
       height: 52,
@@ -796,40 +856,43 @@ class _TopHeader extends ConsumerWidget {
               ),
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: IndustrialTheme.mintGreen.withValues(alpha: 0.16),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: IndustrialTheme.mintGreen.withValues(alpha: 0.45),
-              ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 7,
-                  height: 7,
-                  decoration: const BoxDecoration(
-                    color: IndustrialTheme.mintGreen,
-                    shape: BoxShape.circle,
-                  ),
+          Tooltip(
+            message: hasError ? data.error! : 'Realtime inventory sync',
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: accent.withValues(alpha: 0.16),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: accent.withValues(alpha: 0.45),
                 ),
-                const SizedBox(width: 6),
-                SizedBox(
-                  width: 72,
-                  child: Text(
-                    syncing ? 'Syncing…' : 'Live sync',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: IndustrialTheme.mintGreen,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 7,
+                    height: 7,
+                    decoration: BoxDecoration(
+                      color: accent,
+                      shape: BoxShape.circle,
                     ),
                   ),
-                ),
-              ],
+                  const SizedBox(width: 6),
+                  SizedBox(
+                    width: 72,
+                    child: Text(
+                      label,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: accent,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(width: 8),

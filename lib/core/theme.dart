@@ -488,8 +488,8 @@ StatusStyle statusStyleFor({
   if (lower.contains('awaiting')) {
     return build(
       'Awaiting Instructions',
-      const Color(0x338B5CF6),
-      IndustrialTheme.purple,
+      IndustrialTheme.slateMuted.withValues(alpha: 0.28),
+      IndustrialTheme.slateMuted,
       Icons.hourglass_empty,
     );
   }

@@ -199,7 +199,11 @@ class AppUpdateService {
     DateTime? published;
     final publishedRaw = body['published_at'] ?? body['created_at'];
     if (publishedRaw is String && publishedRaw.isNotEmpty) {
-      published = DateTime.tryParse(publishedRaw)?.toLocal();
+      // Prefer UTC→local so release cards show the calendar year from GitHub.
+      final parsed = DateTime.tryParse(publishedRaw);
+      if (parsed != null) {
+        published = parsed.isUtc ? parsed.toLocal() : parsed.toLocal();
+      }
     }
 
     return AppReleaseInfo(

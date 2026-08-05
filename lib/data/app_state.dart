@@ -218,10 +218,51 @@ class AppDataNotifier extends StateNotifier<AppData> {
         _ref.read(shippedRepoProvider).fetchAll(),
       ]).timeout(_fetchTimeout);
       if (_disposed) return;
-      state = AppData(
-        staging: results[0] as List<StagingEntry>,
-        shipped: results[1] as List<ShippedEntry>,
-      );
+      final nextStaging = results[0] as List<StagingEntry>;
+      final nextShipped = results[1] as List<ShippedEntry>;
+      final signedIn =
+          _ref.read(supabaseClientProvider).auth.currentUser != null;
+
+      // Session lost mid-poll: RLS returns [] while chip would flip to green
+      // "Live sync" over empty KPIs. Keep cache and surface auth error.
+      if (!signedIn && state.staging.isNotEmpty && nextStaging.isEmpty) {
+        state = state.copyWith(
+          loading: false,
+          syncing: false,
+          error: 'Sign in required. Your session may have expired.',
+        );
+        return;
+      }
+
+      // Signed-in wipe of a non-empty floor is suspicious (transient auth/RLS
+      // glitch). Re-fetch staging once before accepting empty inventory.
+      if (signedIn && state.staging.isNotEmpty && nextStaging.isEmpty) {
+        try {
+          final verified = await _ref
+              .read(stagingRepoProvider)
+              .fetchAll()
+              .timeout(_fetchTimeout);
+          if (_disposed) return;
+          if (verified.isEmpty) {
+            state = AppData(staging: nextStaging, shipped: nextShipped);
+          } else {
+            state = AppData(
+              staging: verified,
+              shipped: nextShipped.isNotEmpty ? nextShipped : state.shipped,
+            );
+          }
+        } catch (e) {
+          if (_disposed) return;
+          state = state.copyWith(
+            loading: false,
+            syncing: false,
+            error: e.toString(),
+          );
+        }
+        return;
+      }
+
+      state = AppData(staging: nextStaging, shipped: nextShipped);
     } catch (e) {
       if (_disposed) return;
       state = state.copyWith(
@@ -514,10 +555,11 @@ class OperationsService {
       paths.add(await _photos.uploadBytes(bytes: p.bytes, fileName: p.name));
     }
     final status = StatusRules.toDb(statusUi, futureDateYmd: futureDateYmd);
+    final normalizedLocation = normalizeLocationLabel(location);
     final created = await _staging.insert({
       'so': so.trim(),
       'customer': customer.trim(),
-      'location': location.trim(),
+      'location': normalizedLocation,
       'status': status,
       'type': containers.typeLabel,
       'qty': containers.total,
@@ -529,8 +571,8 @@ class OperationsService {
     await _rememberEntryValues(
       customer: customer,
       person: stagedBy,
-      location: location,
-      locationCategory: locationCategory,
+      location: normalizedLocation,
+      locationCategory: locationCategory ?? classifyLocation(normalizedLocation),
     );
     await _log.log('staging', 'Added new entry for SO: ${so.trim()}');
     await _ref.read(appDataProvider.notifier).refresh();
@@ -789,12 +831,22 @@ class OperationsService {
         break;
       }
     }
+    final rawLocation = payload['location']?.toString();
+    if (rawLocation != null) {
+      payload = {
+        ...payload,
+        'location': normalizeLocationLabel(rawLocation),
+      };
+    }
     await _staging.update(id, payload);
     await _rememberEntryValues(
       customer: payload['customer']?.toString(),
       person: payload['staged_by']?.toString(),
       location: payload['location']?.toString(),
-      locationCategory: locationCategory,
+      locationCategory: locationCategory ??
+          (payload['location'] != null
+              ? classifyLocation(payload['location'].toString())
+              : null),
     );
     await _log.log('staging', 'Edited SO ${payload['so'] ?? id}');
     final nextLocation = payload['location']?.toString().trim();

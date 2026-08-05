@@ -216,6 +216,11 @@ Win32Window::MessageHandler(HWND hwnd,
     case WM_DWMCOLORIZATIONCOLORCHANGED:
       UpdateTheme(hwnd);
       return 0;
+
+    // F1 is bound to in-app New Entry / dock actions. Swallow WM_HELP so
+    // DefWindowProc does not open the Windows Help overlay instead.
+    case WM_HELP:
+      return 0;
   }
 
   return DefWindowProc(window_handle_, message, wparam, lparam);

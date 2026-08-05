@@ -65,6 +65,10 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
     case WM_FONTCHANGE:
       flutter_controller_->engine()->ReloadSystemFonts();
       break;
+    // Keep F1 for Flutter Shortcuts / HardwareKeyboard — do not let the
+    // default window proc open OS Help when the engine does not consume it.
+    case WM_HELP:
+      return 0;
   }
 
   return Win32Window::MessageHandler(hwnd, message, wparam, lparam);

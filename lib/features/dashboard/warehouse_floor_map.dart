@@ -1211,7 +1211,8 @@ class _StatusLegend extends StatelessWidget {
       ('Rush / Hotshot', IndustrialTheme.hotRed),
       ('Today / Ready', IndustrialTheme.mintGreen),
       ('Tomorrow / Transit', IndustrialTheme.skyBlue),
-      ('Partial / Awaiting', IndustrialTheme.amber),
+      ('Partial', IndustrialTheme.amber),
+      ('Awaiting', IndustrialTheme.slateMuted),
       ('Future / Corp', IndustrialTheme.purple),
       ('Occupied', IndustrialTheme.slateMuted),
     ];
@@ -1530,8 +1531,11 @@ Color _colorForStatus(String dbStatus) {
   if (ui.contains('tomorrow') || ui.contains('transit')) {
     return IndustrialTheme.skyBlue;
   }
-  if (ui.contains('partial') || ui.contains('awaiting')) {
+  if (ui.contains('partial')) {
     return IndustrialTheme.amber;
+  }
+  if (ui.contains('awaiting')) {
+    return IndustrialTheme.slateMuted;
   }
   if (ui.contains('future') ||
       ui.contains('corp pick') ||

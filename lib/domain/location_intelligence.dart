@@ -101,6 +101,35 @@ int? parseSouthWallSection(String raw) {
   return int.parse(match.group(1)!);
 }
 
+/// Canonical South Wall section label, e.g. `SW 3`.
+String southWallSectionLabel(int section) => 'SW $section';
+
+final _bareSouthWallLabelPattern = RegExp(
+  r'^(?:SOUTH\s*WALL\s*[\/\-]?\s*)?SW[\s\-]*[1-8]$',
+  caseSensitive: false,
+);
+
+/// True when [raw] is only a South Wall section token (`SW3`, `SW 3`, …).
+bool isBareSouthWallSectionLabel(String raw) {
+  return _bareSouthWallLabelPattern.hasMatch(raw.trim());
+}
+
+/// Canonicalize aisle bins and bare South Wall sections for save / compare.
+///
+/// `SW3`, `SW-3`, and `SW 3` all become `SW 3` so occupancy and SO conflict
+/// treat them as one floor space.
+String normalizeLocationLabel(String raw) {
+  final trimmed = raw.trim();
+  if (trimmed.isEmpty) return trimmed;
+  final aisle = parseAisleLocation(trimmed);
+  if (aisle != null) return aisle.normalized;
+  final sw = parseSouthWallSection(trimmed);
+  if (sw != null && isBareSouthWallSectionLabel(trimmed)) {
+    return southWallSectionLabel(sw);
+  }
+  return trimmed;
+}
+
 /// Standard bin: `A-01-A-1` / dual-skid `A-01-A-1+2`.
 /// Special bay: `B-02-Partial` (partial boxes for aisle B bay 02).
 final aisleLocationPattern = RegExp(
@@ -183,7 +212,13 @@ AisleLocation? parseAisleLocation(String raw) {
 
 /// Uppercase keys that count as the same physical floor space.
 Set<String> locationOccupancyKeys(String location) {
-  final key = locationKey(location);
+  final normalized = normalizeLocationLabel(location);
+  final key = locationKey(normalized);
+  final sw = parseSouthWallSection(location);
+  if (sw != null && isBareSouthWallSectionLabel(location.trim())) {
+    // Collapse SW3 / SW 3 / SW-3 spelling variants onto one occupancy key.
+    return {locationKey(southWallSectionLabel(sw)), 'SW$sw'};
+  }
   final parsed = parseAisleLocation(location);
   if (parsed == null) return {key};
 
@@ -217,7 +252,11 @@ LocationCategory classifyLocation(String raw) {
   return LocationCategory.floor;
 }
 
-String locationKey(String value) => value.trim().toUpperCase();
+String locationKey(String value) {
+  final normalized = normalizeLocationLabel(value);
+  return normalized.trim().toUpperCase();
+}
+
 String orderKey(String value) => value.trim().toUpperCase();
 
 /// Drop superseded B-02 A/B slots and removed drive-line bays; ensure Partial.

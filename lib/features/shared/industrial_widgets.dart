@@ -388,8 +388,8 @@ class IndustrialStatusBadge extends StatelessWidget {
     }
     if (s.contains('awaiting') || s.contains('pending')) {
       return (
-        fill: IndustrialTheme.purple.withValues(alpha: 0.18),
-        accent: IndustrialTheme.purple,
+        fill: IndustrialTheme.slateMuted.withValues(alpha: 0.28),
+        accent: IndustrialTheme.slateMuted,
       );
     }
     if (s.contains('delivered') || s.contains('completed')) {
