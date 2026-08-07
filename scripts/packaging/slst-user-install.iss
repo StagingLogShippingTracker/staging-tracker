@@ -1,6 +1,6 @@
 ; Non-admin per-user installer for SLST
 #define MyAppName "SLST"
-#define MyAppVersion "1.0.0"
+#define MyAppVersion "1.1.34"
 #define MyAppPublisher "Swift Supply"
 #define MyAppExeName "slst.exe"
 

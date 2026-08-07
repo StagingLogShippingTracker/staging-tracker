@@ -79,5 +79,32 @@ void main() {
       expect(wearOnly.hasAssetFor(AppUpdatePlatform.android), isFalse);
       expect(wearOnly.isNewerThanInstalled('1.0.0', '1'), isTrue);
     });
+
+    test('windows in-app update requires Setup.exe, not portable zip', () {
+      const portableOnly = AppReleaseInfo(
+        tagName: 'slst-9.9.9',
+        name: 'Portable only',
+        htmlUrl: 'https://example.com',
+        windowsPortableUrl: 'https://example.com/SLST-Windows-Portable.zip',
+      );
+      expect(portableOnly.hasAssetFor(AppUpdatePlatform.windows), isFalse);
+
+      const withSetup = AppReleaseInfo(
+        tagName: 'slst-9.9.9',
+        name: 'With setup',
+        htmlUrl: 'https://example.com',
+        windowsInstallerUrl: 'https://example.com/SLST-Setup-User.exe',
+        windowsPortableUrl: 'https://example.com/SLST-Windows-Portable.zip',
+      );
+      expect(withSetup.hasAssetFor(AppUpdatePlatform.windows), isTrue);
+      expect(
+        withSetup.assetUrlFor(AppUpdatePlatform.windows),
+        endsWith('SLST-Setup-User.exe'),
+      );
+      expect(
+        withSetup.assetLabelFor(AppUpdatePlatform.windows),
+        'SLST-Setup-User.exe',
+      );
+    });
   });
 }

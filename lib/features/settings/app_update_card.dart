@@ -175,7 +175,7 @@ class _AppUpdateCardState extends State<AppUpdateCard> {
       if (!mounted) return;
       setState(() {
         _status = Platform.isWindows
-            ? 'Installer launched. Follow the setup prompts.'
+            ? 'Installer launched — follow the Setup prompts, then restart the app.'
             : 'Opening package installer…';
       });
     } catch (e) {
@@ -247,8 +247,10 @@ class _AppUpdateCardState extends State<AppUpdateCard> {
             ),
             const SizedBox(height: 6),
             Text(
-              'Check GitHub Releases for a newer $_platformLabel build. '
-              'If an update is available you can download and install it here.',
+              Platform.isWindows
+                  ? 'Checks GitHub Releases for a newer SLST-Setup-User.exe and launches the installer from the app.'
+                  : 'Check GitHub Releases for a newer $_platformLabel build. '
+                      'If an update is available you can download and install it here.',
               softWrap: true,
               overflow: TextOverflow.fade,
               style: Theme.of(context).textTheme.bodySmall,

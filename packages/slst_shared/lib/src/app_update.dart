@@ -87,10 +87,14 @@ class AppReleaseInfo {
     return remote.isNewerThan(local);
   }
 
+  /// Preferred Windows asset for in-app Update — Setup.exe only (not portable zip).
+  String? get windowsInstallUrl => windowsInstallerUrl;
+
   String? assetUrlFor(AppUpdatePlatform platform) {
     switch (platform) {
       case AppUpdatePlatform.windows:
-        return windowsInstallerUrl ?? windowsPortableUrl;
+        // Match swift_document_generator: in-app Update launches Setup.exe only.
+        return windowsInstallUrl;
       case AppUpdatePlatform.android:
         return androidApkUrl;
       case AppUpdatePlatform.wear:
@@ -101,9 +105,7 @@ class AppReleaseInfo {
   String? assetLabelFor(AppUpdatePlatform platform) {
     switch (platform) {
       case AppUpdatePlatform.windows:
-        if (windowsInstallerUrl != null) return 'SLST-Setup-User.exe';
-        if (windowsPortableUrl != null) return 'SLST-Windows-Portable.zip';
-        return null;
+        return windowsInstallerUrl == null ? null : 'SLST-Setup-User.exe';
       case AppUpdatePlatform.android:
         return androidApkUrl == null ? null : 'SLST-Android.apk';
       case AppUpdatePlatform.wear:
@@ -221,9 +223,10 @@ class AppUpdateService {
   /// Fetches latest release and compares against [installedVersion] / [installedBuild].
   ///
   /// [platform] gates the installable package: Android phone/tablet only sees
-  /// `SLST-Android.apk`; Wear only sees `SLST-Wear.apk`; Windows only sees the
-  /// Setup/portable assets. A newer tag with only another platform's APK does
-  /// **not** count as an update for this device.
+  /// `SLST-Android.apk`; Wear only sees `SLST-Wear.apk`; Windows only sees
+  /// `SLST-Setup-User.exe` (portable zip is not used for in-app Update).
+  /// A newer tag with only another platform's package does **not** count as
+  /// an update for this device.
   Future<AppUpdateCheckResult> checkForUpdate({
     required String installedVersion,
     String? installedBuild,
@@ -243,8 +246,8 @@ class AppUpdateService {
     );
   }
 
-  /// Downloads the platform asset to a temp file, then launches the installer
-  /// (Windows exe) or package installer (Android/Wear APK).
+  /// Downloads the platform asset, then launches the installer
+  /// (Windows Setup.exe in-process) or package installer (Android/Wear APK).
   Future<File> downloadAndInstall({
     required AppUpdatePlatform platform,
     required AppReleaseInfo release,
@@ -253,15 +256,29 @@ class AppUpdateService {
     final url = release.assetUrlFor(platform);
     final fileName = release.assetFileNameFor(platform);
     if (url == null || url.isEmpty || fileName == null) {
+      if (platform == AppUpdatePlatform.windows) {
+        throw Exception(
+          'No Windows Setup.exe asset on this release. '
+          'In-app Update requires SLST-Setup-User.exe.',
+        );
+      }
       throw Exception('No package asset available for this platform.');
     }
     _assertAssetMatchesPlatform(platform: platform, url: url, fileName: fileName);
 
-    final file = await downloadToTemp(
-      url: url,
-      fileName: fileName,
-      onProgress: onProgress,
-    );
+    // Windows: durable app-support path (same as swift_document_generator).
+    // Android/Wear: temp is fine for OpenFilex handoff.
+    final file = platform == AppUpdatePlatform.windows
+        ? await downloadToAppStorage(
+            url: url,
+            fileName: fileName,
+            onProgress: onProgress,
+          )
+        : await downloadToTemp(
+            url: url,
+            fileName: fileName,
+            onProgress: onProgress,
+          );
     await installDownloadedFile(platform: platform, file: file);
     return file;
   }
@@ -275,9 +292,10 @@ class AppUpdateService {
     final urlLower = url.toLowerCase();
     switch (platform) {
       case AppUpdatePlatform.windows:
-        if (kind != ReleaseAssetKind.windowsSetup &&
-            kind != ReleaseAssetKind.windowsPortable) {
-          throw Exception('Refusing Windows install of non-Windows asset ($fileName).');
+        if (kind != ReleaseAssetKind.windowsSetup) {
+          throw Exception(
+            'Refusing Windows in-app install of non-Setup asset ($fileName).',
+          );
         }
       case AppUpdatePlatform.android:
         if (kind != ReleaseAssetKind.androidApk ||
@@ -295,13 +313,43 @@ class AppUpdateService {
     }
   }
 
+  Future<File> downloadToAppStorage({
+    required String url,
+    required String fileName,
+    void Function(double progress)? onProgress,
+  }) async {
+    final support = await getApplicationSupportDirectory();
+    final dir = Directory(
+      '${support.path}${Platform.pathSeparator}updates',
+    );
+    if (!await dir.exists()) {
+      await dir.create(recursive: true);
+    }
+    return _downloadToFile(
+      url: url,
+      target: File('${dir.path}${Platform.pathSeparator}$fileName'),
+      onProgress: onProgress,
+    );
+  }
+
   Future<File> downloadToTemp({
     required String url,
     required String fileName,
     void Function(double progress)? onProgress,
   }) async {
     final dir = await getTemporaryDirectory();
-    final target = File('${dir.path}${Platform.pathSeparator}$fileName');
+    return _downloadToFile(
+      url: url,
+      target: File('${dir.path}${Platform.pathSeparator}$fileName'),
+      onProgress: onProgress,
+    );
+  }
+
+  Future<File> _downloadToFile({
+    required String url,
+    required File target,
+    void Function(double progress)? onProgress,
+  }) async {
     if (await target.exists()) {
       await target.delete();
     }
@@ -345,11 +393,12 @@ class AppUpdateService {
   }) async {
     switch (platform) {
       case AppUpdatePlatform.windows:
+        // Direct detached spawn (no runInShell) — same as swift_document_generator.
+        // Avoids cmd.exe / shell association opening a separate install window.
         await Process.start(
           file.path,
           const <String>[],
           mode: ProcessStartMode.detached,
-          runInShell: true,
         );
       case AppUpdatePlatform.android:
       case AppUpdatePlatform.wear:
