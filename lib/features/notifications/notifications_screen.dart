@@ -306,7 +306,8 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
             const SizedBox(height: 16),
             FilledButton.icon(
               style: FilledButton.styleFrom(
-                backgroundColor: SlstColors.blue,
+                // Match Settings → Send feedback (theme primary / brand accent).
+                backgroundColor: SlstColors.brand,
                 foregroundColor: Colors.white,
                 disabledBackgroundColor: scheme.surfaceContainerHighest,
                 padding: const EdgeInsets.symmetric(vertical: 14),

@@ -1,0 +1,10 @@
+---
+description: Do not push, tag, or publish GitHub releases until the user explicitly asks
+alwaysApply: true
+---
+
+# GitHub publish is opt-in
+
+Do **not** push to `origin`, create or push tags, upload/clobber GitHub Release assets, or run `gh release create` / `gh release upload` unless the user clearly asks to publish, push, or ship a release in that message.
+
+Commit locally only when the user asks to commit. Rebuild local Windows/Android/Wear artifacts as usual; keep them in `dist/` until a publish is requested.

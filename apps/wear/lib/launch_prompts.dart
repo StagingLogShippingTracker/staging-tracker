@@ -18,8 +18,9 @@ Future<void> maybeShowWearChangelog(BuildContext context) async {
     prefsPrefix: 'wear_whats_new',
     title: "What's new",
     body:
-        'Rounded launcher icon. Pairing never shows an email. Staging list, '
-        'ship confirm, verify, and in-app Update are the watch tools.',
+        'Staging Log rounded launcher (not Document Generator art). Pairing '
+        'never shows an email. Staging list, ship confirm, verify, and '
+        'in-app Update are the watch tools.',
   );
 }
 

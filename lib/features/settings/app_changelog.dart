@@ -19,9 +19,16 @@ class AppChangelog {
   /// Ordered newest-first, same campaign-wave pattern as Document Generator.
   static const sections = <ChangelogSection>[
     ChangelogSection(
+      version: 'v1.1.39',
+      bullets: [
+        'Launcher keeps Staging Log STAGE & SHIP artwork in a rounded-square tile (not Document Generator art)',
+        'Send notification uses the same brand-red accent as Send feedback',
+      ],
+    ),
+    ChangelogSection(
       version: 'v1.1.38',
       bullets: [
-        'Launcher icon is a rounded square like Document Generator',
+        'Staging Log launcher art uses a rounded-square tile (same shape as Document Generator, our own graphic)',
         'Windows installer and shortcuts show Swift Staging & Shipping Log (not &&)',
         'Larger Swift logo above the expanded sidebar',
         'Wear no longer shows a signed-in email or mock credential on the icon',

@@ -3,7 +3,7 @@
 ; single & (they are not caption fields — && would appear as two ampersands).
 #define MyAppName "Swift Staging && Shipping Log"
 #define MyAppShortcutName "Swift Staging & Shipping Log"
-#define MyAppVersion "1.1.38"
+#define MyAppVersion "1.1.39"
 #define MyAppPublisher "Swift Supply"
 #define MyAppExeName "SwiftStagingLog.exe"
 

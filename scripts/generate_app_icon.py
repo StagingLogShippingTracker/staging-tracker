@@ -1,8 +1,9 @@
-"""Generate platform launcher icons + Android/Wear splash from a painted mark.
+"""Generate platform launcher icons + Android/Wear splash from Staging Log art.
 
-The mark matches Swift Document Generator: charcoal rounded-square, white
-label plate, orange arrow, barcode. Outer corners are transparent so Windows
-and launchers show a rounded square instead of a sharp tile.
+Uses assets/swift-staging-log-app-icon.png (STAGE & SHIP / S-mark artwork) —
+never paints Document Generator's document+arrow. Outer corners become
+transparent so Windows and launchers show a rounded square like Doc Gen's
+tile shape, while the graphic stays Staging Log's own.
 """
 
 from __future__ import annotations
@@ -39,7 +40,7 @@ ICO_SIZES = [256, 128, 64, 48, 32, 24, 16]
 
 ICON_BG = (0x12, 0x14, 0x17, 255)
 SPLASH_BG = (0x12, 0x14, 0x17, 255)
-ACCENT = (0xCE, 0x4E, 0x30, 255)
+# Match Document Generator's outer tile roundness (~22% of edge).
 CORNER_RADIUS_FRAC = 0.22
 
 
@@ -47,57 +48,37 @@ def resize(src: Image.Image, size: int) -> Image.Image:
     return src.resize((size, size), Image.Resampling.LANCZOS)
 
 
-def paint_rounded_launcher(size: int = 1024) -> Image.Image:
-    """Doc Gen–shaped rounded square: charcoal plate, white label, orange arrow."""
-    im = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    d = ImageDraw.Draw(im)
-    outer_r = max(8, int(round(size * CORNER_RADIUS_FRAC)))
-    d.rounded_rectangle((0, 0, size - 1, size - 1), radius=outer_r, fill=ICON_BG)
+def ensure_icon_bg(im: Image.Image) -> Image.Image:
+    """Composite onto charcoal so translucent pixels never show checkerboard."""
+    im = im.convert("RGBA")
+    if im.width != im.height:
+        side = max(im.width, im.height)
+        square = Image.new("RGBA", (side, side), ICON_BG)
+        square.alpha_composite(
+            im, ((side - im.width) // 2, (side - im.height) // 2)
+        )
+        im = square
+    canvas = Image.new("RGBA", im.size, ICON_BG)
+    canvas.alpha_composite(im)
+    return canvas
 
-    lx0 = int(size * 0.22)
-    ly0 = int(size * 0.14)
-    lx1 = int(size * 0.78)
-    ly1 = int(size * 0.86)
-    label_r = max(6, int(size * 0.07))
-    d.rounded_rectangle((lx0, ly0, lx1, ly1), radius=label_r, fill=(255, 255, 255, 255))
 
-    line_x0 = lx0 + int(size * 0.08)
-    line_x1 = lx1 - int(size * 0.08)
-    y1 = ly0 + int(size * 0.10)
-    y2 = y1 + int(size * 0.045)
-    d.rectangle((line_x0, y1, line_x0 + int(size * 0.18), y1 + max(2, size // 80)), fill=(0x1A, 0x1A, 0x1A, 255))
-    d.rectangle((line_x0, y2, line_x1, y2 + max(2, size // 110)), fill=(0xC8, 0xC8, 0xC8, 255))
-
-    # Up arrow (stem + head).
-    cx = (lx0 + lx1) // 2
-    stem_w = max(8, int(size * 0.10))
-    stem_top = ly0 + int(size * 0.34)
-    stem_bot = ly0 + int(size * 0.58)
-    d.rectangle((cx - stem_w // 2, stem_top, cx + stem_w // 2, stem_bot), fill=ACCENT)
-    head_w = int(size * 0.22)
-    head_h = int(size * 0.14)
-    d.polygon(
-        [
-            (cx, stem_top - head_h + int(size * 0.02)),
-            (cx - head_w, stem_top + int(size * 0.04)),
-            (cx + head_w, stem_top + int(size * 0.04)),
-        ],
-        fill=ACCENT,
+def apply_rounded_square_mask(
+    im: Image.Image, radius_frac: float = CORNER_RADIUS_FRAC
+) -> Image.Image:
+    """Keep opaque rounded square; corners become fully transparent."""
+    im = im.convert("RGBA")
+    w, h = im.size
+    assert w == h, "launcher icons must be square"
+    radius = max(1, int(round(w * radius_frac)))
+    mask = Image.new("L", (w, h), 0)
+    ImageDraw.Draw(mask).rounded_rectangle(
+        (0, 0, w - 1, h - 1), radius=radius, fill=255
     )
-
-    # Barcode.
-    bar_top = ly1 - int(size * 0.16)
-    bar_bot = ly1 - int(size * 0.07)
-    x = line_x0
-    widths = [3, 2, 4, 2, 3, 5, 2, 3, 2, 4, 3, 2, 5, 2, 3, 4, 2, 3]
-    scale = max(1, size // 220)
-    for i, w in enumerate(widths):
-        bw = w * scale
-        if i % 2 == 0:
-            d.rectangle((x, bar_top, x + bw, bar_bot), fill=(0x12, 0x14, 0x17, 255))
-        x += bw + scale
-
-    return im
+    out = im.copy()
+    existing = out.split()[3]
+    out.putalpha(Image.composite(existing, Image.new("L", (w, h), 0), mask))
+    return out
 
 
 def make_splash_from_wordmark(size: int) -> Image.Image:
@@ -105,7 +86,9 @@ def make_splash_from_wordmark(size: int) -> Image.Image:
         return resize(Image.open(SPLASH_SQUARE_SRC).convert("RGBA"), size)
     canvas = Image.new("RGBA", (size, size), SPLASH_BG)
     if not WORDMARK.exists():
-        mark = paint_rounded_launcher(size)
+        if not SRC.exists():
+            raise SystemExit(f"Missing splash wordmark and icon: {WORDMARK}")
+        mark = resize(Image.open(SRC).convert("RGBA"), size)
         canvas.alpha_composite(mark)
         return canvas
     wm = Image.open(WORDMARK).convert("RGBA")
@@ -130,10 +113,15 @@ def android_res_roots() -> list[Path]:
 
 
 def main() -> None:
-    src = paint_rounded_launcher(1024)
-    SRC.parent.mkdir(parents=True, exist_ok=True)
+    if not SRC.exists():
+        raise SystemExit(f"Missing Staging Log launcher art: {SRC}")
+
+    raw = Image.open(SRC).convert("RGBA")
+    src = apply_rounded_square_mask(ensure_icon_bg(resize(raw, 1024)))
+    print("source", SRC, raw.size, "rounded", src.size)
+
+    # Keep the canonical asset as the rounded Staging Log tile (not Doc Gen art).
     src.save(SRC, optimize=True)
-    print("source", SRC, src.size)
 
     BRAND_DIR.mkdir(parents=True, exist_ok=True)
     for s in BRAND_SIZES:
