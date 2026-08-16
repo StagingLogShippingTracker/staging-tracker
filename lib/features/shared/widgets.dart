@@ -121,7 +121,7 @@ class BrandWordmark extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = Theme.of(context).colorScheme.onSurface;
-    final logoH = (height * 0.55).clamp(18.0, 28.0);
+    final logoH = (height * 0.78).clamp(24.0, 46.0);
     Widget text = Text(
       compact ? kProductCompactName : kProductName,
       maxLines: compact ? 1 : 3,

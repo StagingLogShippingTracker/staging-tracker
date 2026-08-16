@@ -7,9 +7,6 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:swift_staging_shared/swift_staging_shared.dart';
 
-import 'app_changelog.dart';
-import 'how_to_use.dart';
-
 /// Runs the daily 15:00 America/Denver update check while the app is open,
 /// matching Swift Document Generator (live GitHub latest, Later = 3 days).
 ///
@@ -64,12 +61,6 @@ class _ScheduledUpdateHostState extends State<ScheduledUpdateHost>
 
   Future<void> _onFirstFrame() async {
     await Future<void>.delayed(const Duration(milliseconds: 450));
-    if (!mounted) return;
-    try {
-      await maybeShowHowToUsePrompt(context);
-      if (!mounted) return;
-      await maybeShowChangelogPrompt(context);
-    } catch (_) {}
     if (mounted) await _evaluate();
   }
 

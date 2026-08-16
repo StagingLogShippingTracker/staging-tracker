@@ -24,7 +24,7 @@ class SlstWearApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return MaterialApp(
-      title: 'Swift Staging and Shipping Log',
+      title: 'Swift Staging & Shipping Log',
       theme: WearTheme.dark,
       darkTheme: WearTheme.dark,
       themeMode: ThemeMode.dark,

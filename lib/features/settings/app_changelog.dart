@@ -4,20 +4,29 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/theme.dart';
 
-/// In-app "What's new" prompt for the first [maxShows] launches of a campaign.
-///
-/// Matches Swift Document Generator: a campaign id, three shows, then silence
-/// until [campaignId] is bumped for the next wave.
+/// In-app "What's new" prompt for the first [maxShows] launches of each
+/// installed version on this device.
 class AppChangelog {
   AppChangelog._();
 
-  /// Bump this when starting a new What's New wave.
-  static const campaignId = 'whats_new_1_1_37';
+  /// Per-version campaign: each app version shows What's New up to [maxShows] times.
   static const maxShows = 3;
-  static const title = "What's new (v1.1.35 – v1.1.37)";
+
+  static String campaignIdFor(String version) => 'whats_new_$version';
+
+  static String titleFor(String version) => "What's new (v$version)";
 
   /// Ordered newest-first, same campaign-wave pattern as Document Generator.
   static const sections = <ChangelogSection>[
+    ChangelogSection(
+      version: 'v1.1.38',
+      bullets: [
+        'Launcher icon is a rounded square like Document Generator',
+        'Windows installer and shortcuts show Swift Staging & Shipping Log (not &&)',
+        'Larger Swift logo above the expanded sidebar',
+        'Wear no longer shows a signed-in email or mock credential on the icon',
+      ],
+    ),
     ChangelogSection(
       version: 'v1.1.37',
       bullets: [
@@ -86,9 +95,15 @@ Future<void> maybeShowChangelogPrompt(BuildContext context) async {
   if (!context.mounted) return;
 
   var state = await loadChangelogPromptState();
-  if (state.campaignId != AppChangelog.campaignId) {
-    state = const ChangelogPromptState(
-      campaignId: AppChangelog.campaignId,
+  String version = 'unknown';
+  try {
+    final info = await PackageInfo.fromPlatform();
+    version = info.version.trim();
+  } catch (_) {}
+  final campaignId = AppChangelog.campaignIdFor(version);
+  if (state.campaignId != campaignId) {
+    state = ChangelogPromptState(
+      campaignId: campaignId,
       timesShown: 0,
     );
   }
@@ -102,26 +117,22 @@ Future<void> maybeShowChangelogPrompt(BuildContext context) async {
 
   if (!context.mounted) return;
 
-  final next = ChangelogPromptState(
-    campaignId: AppChangelog.campaignId,
-    timesShown: state.timesShown + 1,
-  );
-  await saveChangelogPromptState(next);
-
-  final remaining = AppChangelog.maxShows - next.timesShown;
-  final footer = remaining <= 0
+  final remainingBefore = AppChangelog.maxShows - state.timesShown;
+  final remainingAfter = remainingBefore - 1;
+  final footer = remainingAfter <= 0
       ? 'This is the last time this summary will appear on this device.'
-      : remaining == 1
+      : remainingAfter == 1
           ? 'This summary will appear 1 more time on this device.'
-          : 'This summary will appear $remaining more times on this device.';
+          : 'This summary will appear $remainingAfter more times on this device.';
 
   await showDialog<void>(
     context: context,
     barrierDismissible: true,
+    useRootNavigator: true,
     builder: (ctx) {
       final chrome = IndustrialTheme.chromeOf(ctx);
       return AlertDialog(
-        title: const Text(AppChangelog.title),
+        title: Text(AppChangelog.titleFor(version)),
         content: SizedBox(
           width: 480,
           child: SingleChildScrollView(
@@ -196,5 +207,12 @@ Future<void> maybeShowChangelogPrompt(BuildContext context) async {
         ],
       );
     },
+  );
+
+  await saveChangelogPromptState(
+    ChangelogPromptState(
+      campaignId: campaignId,
+      timesShown: state.timesShown + 1,
+    ),
   );
 }

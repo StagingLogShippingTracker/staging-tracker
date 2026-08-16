@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:swift_staging_shared/swift_staging_shared.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../launch_prompts.dart';
 import '../theme.dart';
 import '../wear_layout.dart';
 import 'ship_confirm_screen.dart';
@@ -32,6 +33,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     _refresh();
     _bindRealtime();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(maybeShowWearLaunchPrompts(context));
+    });
   }
 
   @override
@@ -107,7 +112,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = '$e';
+        _error = wearSafeError(e);
         _loading = false;
       });
     }
@@ -121,7 +126,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     final insets = WearLayout.contentInsets(context);
-    final email = Supabase.instance.client.auth.currentUser?.email ?? '';
 
     return Scaffold(
       body: Column(
@@ -179,16 +183,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.labelSmall,
                 ),
-                if (email.isNotEmpty)
-                  Text(
-                    email,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          fontSize: 9,
-                        ),
-                  ),
               ],
             ),
           ),

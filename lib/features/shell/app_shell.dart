@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +10,8 @@ import '../../core/branding.dart';
 import '../../core/theme.dart';
 import '../../data/app_state.dart';
 import '../../data/theme_preference.dart';
+import '../settings/app_changelog.dart';
+import '../settings/how_to_use.dart';
 import '../shared/widgets.dart';
 import 'command_dock.dart';
 import 'operations_apps_rail.dart';
@@ -128,6 +132,21 @@ class _AppShellState extends ConsumerState<AppShell> {
     // Text fields / dialogs steal focus on Windows and let OS Help take F1.
     // A global handler keeps F1–F5 mapped to the dock while the app is focused.
     HardwareKeyboard.instance.addHandler(_handleDockHotkey);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_showLaunchPrompts());
+    });
+  }
+
+  Future<void> _showLaunchPrompts() async {
+    await Future<void>.delayed(const Duration(milliseconds: 450));
+    if (!mounted) return;
+    try {
+      await maybeShowHowToUsePrompt(context);
+      if (!mounted) return;
+      await maybeShowChangelogPrompt(context);
+    } catch (_) {
+      // Prompts are optional — never block the shell.
+    }
   }
 
   @override
@@ -607,13 +626,13 @@ class _IndustrialRail extends ConsumerWidget {
                 ? const Center(
                     child: Tooltip(
                       message: kProductName,
-                      child: BrandMark(size: 24),
+                      child: BrandMark(size: 32),
                     ),
                   )
                 : const Padding(
                     padding: EdgeInsets.only(left: 2),
                     // ~54px effective / 1.5 → ~36px (was 3× prior 34px target).
-                    child: _RailBrandWordmark(targetHeight: 52),
+                    child: _RailBrandWordmark(targetHeight: 72),
                   ),
           ),
           Divider(height: 1, color: IndustrialTheme.chromeOf(context).border),

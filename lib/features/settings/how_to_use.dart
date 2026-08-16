@@ -4,17 +4,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/theme.dart';
 
-/// One-time How To Use prompt for **v1.1.37 only**.
-///
-/// Same show-count logic as Document Generator / What's New: [maxShows]
-/// launches per device, then silence. Later app versions never show this.
+/// How To Use prompt: first [maxShows] launches of each app version, until
+/// product asks to stop this campaign style.
 class HowToUsePrompt {
   HowToUsePrompt._();
 
-  static const campaignId = 'how_to_use_1_1_37';
-  static const targetVersion = '1.1.37';
   static const maxShows = 3;
   static const title = 'How to use';
+
+  static String campaignIdFor(String version) => 'how_to_use_$version';
 
   static const intro =
       'Swift Staging & Shipping Log is the warehouse floor book for Swift '
@@ -116,47 +114,40 @@ Future<void> saveHowToUsePromptState(HowToUsePromptState state) async {
   await prefs.setInt(HowToUsePromptPrefs.timesShown, state.timesShown);
 }
 
-/// Shows How To Use on v1.1.37 only, for the first [HowToUsePrompt.maxShows]
-/// launches on this device.
+/// Shows How To Use for the first [HowToUsePrompt.maxShows] launches of
+/// each installed version on this device.
 Future<void> maybeShowHowToUsePrompt(BuildContext context) async {
   if (!context.mounted) return;
 
-  String version = '';
+  String version = 'unknown';
   try {
     final info = await PackageInfo.fromPlatform();
     version = info.version.trim();
-  } catch (_) {
-    return;
-  }
-  if (version != HowToUsePrompt.targetVersion) return;
+  } catch (_) {}
+  if (version.isEmpty) return;
 
+  final campaignId = HowToUsePrompt.campaignIdFor(version);
   var state = await loadHowToUsePromptState();
-  if (state.campaignId != HowToUsePrompt.campaignId) {
-    state = const HowToUsePromptState(
-      campaignId: HowToUsePrompt.campaignId,
+  if (state.campaignId != campaignId) {
+    state = HowToUsePromptState(
+      campaignId: campaignId,
       timesShown: 0,
     );
   }
   if (state.timesShown >= HowToUsePrompt.maxShows) return;
   if (!context.mounted) return;
 
-  final next = HowToUsePromptState(
-    campaignId: HowToUsePrompt.campaignId,
-    timesShown: state.timesShown + 1,
-  );
-  await saveHowToUsePromptState(next);
-
-  final remaining = HowToUsePrompt.maxShows - next.timesShown;
-  final footer = remaining <= 0
+  final remainingAfter = HowToUsePrompt.maxShows - state.timesShown - 1;
+  final footer = remainingAfter <= 0
       ? 'This is the last time this guide will appear on this device.'
-      : remaining == 1
+      : remainingAfter == 1
           ? 'This guide will appear 1 more time on this device.'
-          : 'This guide will appear $remaining more times on this device.';
+          : 'This guide will appear $remainingAfter more times on this device.';
 
-  if (!context.mounted) return;
   await showDialog<void>(
     context: context,
     barrierDismissible: true,
+    useRootNavigator: true,
     builder: (ctx) {
       final chrome = IndustrialTheme.chromeOf(ctx);
       return AlertDialog(
@@ -218,5 +209,12 @@ Future<void> maybeShowHowToUsePrompt(BuildContext context) async {
         ],
       );
     },
+  );
+
+  await saveHowToUsePromptState(
+    HowToUsePromptState(
+      campaignId: campaignId,
+      timesShown: state.timesShown + 1,
+    ),
   );
 }

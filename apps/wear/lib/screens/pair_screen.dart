@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:swift_staging_shared/swift_staging_shared.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../launch_prompts.dart';
 import '../theme.dart';
 import '../wear_layout.dart';
 
@@ -40,7 +41,7 @@ class _PairScreenState extends State<PairScreen> {
       await client.redeemCode(code);
     } catch (e) {
       if (!mounted) return;
-      setState(() => _error = '$e');
+      setState(() => _error = wearSafeError(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }

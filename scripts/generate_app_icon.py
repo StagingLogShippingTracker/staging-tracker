@@ -1,8 +1,8 @@
-"""Generate platform SLST launcher icons + Android/Wear splash from assets.
+"""Generate platform launcher icons + Android/Wear splash from a painted mark.
 
-Launcher source: assets/swift-staging-log-app-icon.png (stage/ship mock card on navy).
-Corners are softened to a rounded square when writing platform icons.
-Splash: launcher icon on navy (Android + Wear).
+The mark matches Swift Document Generator: charcoal rounded-square, white
+label plate, orange arrow, barcode. Outer corners are transparent so Windows
+and launchers show a rounded square instead of a sharp tile.
 """
 
 from __future__ import annotations
@@ -26,7 +26,6 @@ ANDROID_MAP = {
     "mipmap-xxxhdpi": 192,
 }
 
-# Splash wordmark bitmaps (pre-12 windowBackground + Android 12 animated icon).
 SPLASH_LAUNCH_MAP = {
     "mipmap-mdpi": 288,
     "mipmap-hdpi": 432,
@@ -40,41 +39,75 @@ ICO_SIZES = [256, 128, 64, 48, 32, 24, 16]
 
 ICON_BG = (0x12, 0x14, 0x17, 255)
 SPLASH_BG = (0x12, 0x14, 0x17, 255)
-CORNER_RADIUS_FRAC = 0.14
+ACCENT = (0xCE, 0x4E, 0x30, 255)
+CORNER_RADIUS_FRAC = 0.22
 
 
 def resize(src: Image.Image, size: int) -> Image.Image:
     return src.resize((size, size), Image.Resampling.LANCZOS)
 
 
-def apply_rounded_square_mask(im: Image.Image, radius_frac: float = CORNER_RADIUS_FRAC) -> Image.Image:
-    im = im.convert("RGBA")
-    w, h = im.size
-    assert w == h, "launcher icons must be square"
-    radius = max(1, int(round(w * radius_frac)))
-    mask = Image.new("L", (w, h), 0)
-    ImageDraw.Draw(mask).rounded_rectangle((0, 0, w - 1, h - 1), radius=radius, fill=255)
-    out = im.copy()
-    # Preserve existing alpha (e.g. already-rounded source) under the mask.
-    existing = out.split()[3]
-    out.putalpha(Image.composite(existing, Image.new("L", (w, h), 0), mask))
-    return out
+def paint_rounded_launcher(size: int = 1024) -> Image.Image:
+    """Doc Gen–shaped rounded square: charcoal plate, white label, orange arrow."""
+    im = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    d = ImageDraw.Draw(im)
+    outer_r = max(8, int(round(size * CORNER_RADIUS_FRAC)))
+    d.rounded_rectangle((0, 0, size - 1, size - 1), radius=outer_r, fill=ICON_BG)
 
+    lx0 = int(size * 0.22)
+    ly0 = int(size * 0.14)
+    lx1 = int(size * 0.78)
+    ly1 = int(size * 0.86)
+    label_r = max(6, int(size * 0.07))
+    d.rounded_rectangle((lx0, ly0, lx1, ly1), radius=label_r, fill=(255, 255, 255, 255))
 
-def ensure_icon_bg(im: Image.Image) -> Image.Image:
-    """Composite onto #0A1017 so translucent corners never show checkerboard."""
-    im = im.convert("RGBA")
-    canvas = Image.new("RGBA", im.size, ICON_BG)
-    canvas.alpha_composite(im)
-    return canvas
+    line_x0 = lx0 + int(size * 0.08)
+    line_x1 = lx1 - int(size * 0.08)
+    y1 = ly0 + int(size * 0.10)
+    y2 = y1 + int(size * 0.045)
+    d.rectangle((line_x0, y1, line_x0 + int(size * 0.18), y1 + max(2, size // 80)), fill=(0x1A, 0x1A, 0x1A, 255))
+    d.rectangle((line_x0, y2, line_x1, y2 + max(2, size // 110)), fill=(0xC8, 0xC8, 0xC8, 255))
+
+    # Up arrow (stem + head).
+    cx = (lx0 + lx1) // 2
+    stem_w = max(8, int(size * 0.10))
+    stem_top = ly0 + int(size * 0.34)
+    stem_bot = ly0 + int(size * 0.58)
+    d.rectangle((cx - stem_w // 2, stem_top, cx + stem_w // 2, stem_bot), fill=ACCENT)
+    head_w = int(size * 0.22)
+    head_h = int(size * 0.14)
+    d.polygon(
+        [
+            (cx, stem_top - head_h + int(size * 0.02)),
+            (cx - head_w, stem_top + int(size * 0.04)),
+            (cx + head_w, stem_top + int(size * 0.04)),
+        ],
+        fill=ACCENT,
+    )
+
+    # Barcode.
+    bar_top = ly1 - int(size * 0.16)
+    bar_bot = ly1 - int(size * 0.07)
+    x = line_x0
+    widths = [3, 2, 4, 2, 3, 5, 2, 3, 2, 4, 3, 2, 5, 2, 3, 4, 2, 3]
+    scale = max(1, size // 220)
+    for i, w in enumerate(widths):
+        bw = w * scale
+        if i % 2 == 0:
+            d.rectangle((x, bar_top, x + bw, bar_bot), fill=(0x12, 0x14, 0x17, 255))
+        x += bw + scale
+
+    return im
 
 
 def make_splash_from_wordmark(size: int) -> Image.Image:
     if SPLASH_SQUARE_SRC.exists():
         return resize(Image.open(SPLASH_SQUARE_SRC).convert("RGBA"), size)
-    if not WORDMARK.exists():
-        raise SystemExit(f"Missing splash wordmark: {WORDMARK}")
     canvas = Image.new("RGBA", (size, size), SPLASH_BG)
+    if not WORDMARK.exists():
+        mark = paint_rounded_launcher(size)
+        canvas.alpha_composite(mark)
+        return canvas
     wm = Image.open(WORDMARK).convert("RGBA")
     bbox = wm.getbbox()
     if bbox:
@@ -92,31 +125,31 @@ def make_splash_from_wordmark(size: int) -> Image.Image:
 def android_res_roots() -> list[Path]:
     return [
         ROOT / "android" / "app" / "src" / "main" / "res",
-        ROOT / "apps" / "slst_wear" / "android" / "app" / "src" / "main" / "res",
+        ROOT / "apps" / "wear" / "android" / "app" / "src" / "main" / "res",
     ]
 
 
 def main() -> None:
-    if not SRC.exists():
-        raise SystemExit(f"Missing SLST logo: {SRC}")
-    raw = Image.open(SRC).convert("RGBA")
-    src = ensure_icon_bg(raw)
-    print("source", SRC, raw.size)
+    src = paint_rounded_launcher(1024)
+    SRC.parent.mkdir(parents=True, exist_ok=True)
+    src.save(SRC, optimize=True)
+    print("source", SRC, src.size)
 
     BRAND_DIR.mkdir(parents=True, exist_ok=True)
     for s in BRAND_SIZES:
         path = BRAND_DIR / f"app-icon-{s}.png"
         resize(src, s).save(path, optimize=True)
-        print("brand", path.name, path.stat().st_size)
+        print("brand", path.name)
 
     images = [resize(src, s) for s in ICO_SIZES]
+    ICO_PATH.parent.mkdir(parents=True, exist_ok=True)
     images[0].save(
         ICO_PATH,
         format="ICO",
         sizes=[(im.width, im.height) for im in images],
         append_images=images[1:],
     )
-    print("ico", ICO_PATH, ICO_PATH.stat().st_size)
+    print("ico", ICO_PATH)
 
     for folder, s in ANDROID_MAP.items():
         im = resize(src, s)
@@ -124,31 +157,23 @@ def main() -> None:
             dest = res_root / folder / "ic_launcher.png"
             dest.parent.mkdir(parents=True, exist_ok=True)
             im.save(dest, optimize=True)
-            print(dest.relative_to(ROOT), dest.stat().st_size)
+            print(dest.relative_to(ROOT))
 
-    # Splash plates: centered wordmark on #091019.
     splash_master = make_splash_from_wordmark(1152)
     splash_asset = ROOT / "assets" / "swift-staging-log-splash-wordmark.png"
     resize(splash_master, 1024).save(splash_asset, optimize=True)
-    print("splash_asset", splash_asset)
 
     for folder, s in SPLASH_LAUNCH_MAP.items():
-        im = resize(splash_master, s) if s != splash_master.width else splash_master
-        if s != splash_master.width:
-            im = make_splash_from_wordmark(s)
+        im = make_splash_from_wordmark(s)
         for res_root in android_res_roots():
             dest = res_root / folder / "launch_image.png"
             dest.parent.mkdir(parents=True, exist_ok=True)
             im.save(dest, optimize=True)
-            print(dest.relative_to(ROOT), dest.stat().st_size)
 
-    # nodpi drawable copies for styles / layer-lists.
     for res_root in android_res_roots():
         drawable = res_root / "drawable"
         drawable.mkdir(parents=True, exist_ok=True)
-        splash_dest = drawable / "splash_logo.png"
-        resize(splash_master, 576).save(splash_dest, optimize=True)
-        print(splash_dest.relative_to(ROOT), splash_dest.stat().st_size)
+        resize(splash_master, 576).save(drawable / "splash_logo.png", optimize=True)
 
 
 if __name__ == "__main__":
