@@ -1,7 +1,7 @@
 # Builds the Wear OS APK from apps/wear into dist/SwiftStagingLog-Wear.apk.
 $ErrorActionPreference = 'Stop'
 $root = Resolve-Path (Join-Path $PSScriptRoot '..\..')
-$wear = Join-Path $root 'apps\slst_wear'
+$wear = Join-Path $root 'apps\wear'
 Set-Location $wear
 . (Join-Path $PSScriptRoot '_common.ps1')
 
