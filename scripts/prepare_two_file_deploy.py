@@ -71,7 +71,7 @@ for good in [
     assert good in combined, good
 
 for retired in [
-    "slst-logo-email",
+    "swift-staging-log-logo-email",
     "20260728sst-darkforce",
     "20260801footer-fade",
     "Open Swift Supply",

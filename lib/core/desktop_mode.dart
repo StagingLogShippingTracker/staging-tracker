@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-const _desktopModeChannel = MethodChannel('slst/desktop_mode');
+const _desktopModeChannel = MethodChannel('swift_staging_log/desktop_mode');
 
 /// True on Windows/macOS/Linux. On Android, true only in desktop/DeX mode
 /// (UI_MODE_TYPE_DESK or Samsung SEM desktop flags) — not plain tablet.

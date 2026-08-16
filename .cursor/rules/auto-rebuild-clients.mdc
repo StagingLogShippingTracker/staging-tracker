@@ -7,7 +7,7 @@ alwaysApply: true
 
 Development and packaging builds run on the **local Windows checkout** (this machine), not Cursor Cloud Agents.
 
-When a request changes a Flutter client (`lib/`, `windows/`, `android/`, `apps/slst_wear/`, `pubspec.yaml`, assets, etc.):
+When a request changes a Flutter client (`lib/`, `windows/`, `android/`, `apps/wear/`, `pubspec.yaml`, assets, etc.):
 
 1. Do **not** tell the user to rebuild themselves.
 2. Prefer the local checkout and local Flutter (`.tools/flutter` bootstrap or system Flutter on PATH).

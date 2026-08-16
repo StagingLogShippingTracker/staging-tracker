@@ -35,7 +35,7 @@ This is a **complete staging desk client**, not a prototype. Gaps vs a full WMS 
 
 ## 3. Scalability
 
-`packages/slst_shared` correctly owns config, models, repos, ship ops, watch pairing — the right seam for Win/Android/Wear. Main app still carries substantial UI-adjacent domain (`lib/domain`, `lib/data/app_state`) which is fine at current team size; further growth should keep pushing pure data/rules into shared and keep platform adapters thin.
+`packages/swift_staging_shared` correctly owns config, models, repos, ship ops, watch pairing — the right seam for Win/Android/Wear. Main app still carries substantial UI-adjacent domain (`lib/domain`, `lib/data/app_state`) which is fine at current team size; further growth should keep pushing pure data/rules into shared and keep platform adapters thin.
 
 Platform packaging scripts (Windows ZIP/Inno, Android APK, Wear APK) exist; monorepo layout is clear. Scalability risk is **ops/process** (live Supabase, Make email) more than Dart architecture.
 
@@ -47,7 +47,7 @@ Platform packaging scripts (Windows ZIP/Inno, Android APK, Wear APK) exist; mono
 |--------|-----------|
 | **Windows** | Primary; production packaging path; F-keys + dense board are first-class. |
 | **Android** | Host restored; adaptive shell supports phone/tablet. Needs device QA (camera/scanner, auth, dense tables). Sideload APK scripts ready — not store-polished. |
-| **Wear** | Recreated `apps/slst_wear`: pair → list → ship confirm → lean SVR. Useful floor companion, **not** desktop parity. |
+| **Wear** | Recreated `apps/wear`: pair → list → ship confirm → lean SVR. Useful floor companion, **not** desktop parity. |
 
 Docs (`AGENTS.md`, README) now match Win+Android+Wear. No PWA — correct for this stack.
 

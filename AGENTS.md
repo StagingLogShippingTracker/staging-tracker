@@ -20,7 +20,7 @@ Preferred local folder: this Windows checkout (`Downloads/Swift-Staging-and-Ship
 flutter pub get
 flutter run -d windows
 flutter run -d android
-flutter -C apps/slst_wear run -d <wear-device>
+flutter -C apps/wear run -d <wear-device>
 flutter test
 flutter analyze
 ```
@@ -35,10 +35,10 @@ When agents change a Flutter client, they must rebuild the affected platform(s) 
 - Android: `scripts/packaging/build-android-apk.ps1`
 - Wear: `scripts/packaging/build-wear-apk.ps1`
 
-Then publish GitHub `releases/latest` with `SLST-*` assets so clients can self-update.
+Then publish GitHub `releases/latest` with `SwiftStagingLog-*` assets so clients can self-update.
 ## Live production backend — be careful
 
-- `lib/core/app_config.dart` (and `packages/slst_shared`) points at the **live** Supabase project.
+- `lib/core/app_config.dart` (and `packages/swift_staging_shared`) points at the **live** Supabase project.
 - Authenticated create/edit/ship/delete/notify writes affect real data and can trigger real PM email via Make.
 - Prefer read-only exploration unless you have explicit approval and a confirmed test account.
 - Authenticated clients read/write staging/shipped data; RLS blocks anonymous
@@ -58,8 +58,8 @@ Then publish GitHub `releases/latest` with `SLST-*` assets so clients can self-u
 - `lib/data/` — repositories, Riverpod app state, operations service
 - `lib/platform/` — camera/file picker adapters
 - `lib/core/` — config, theme, router
-- `packages/slst_shared/` — shared domain/data used by Windows, Android, and Wear
-- `apps/slst_wear/` — Wear OS Flutter client (pair, list, ship, lean SVR)
+- `packages/swift_staging_shared/` — shared domain/data used by Windows, Android, and Wear
+- `apps/wear/` — Wear OS Flutter client (pair, list, ship, lean SVR)
 - `android/` — Android host for the main phone/tablet client
 - `windows/` — Windows desktop host
 - `supabase/functions/notify-pm` — authenticated Make webhook proxy for PM email

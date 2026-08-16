@@ -9,7 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:slst_shared/slst_shared.dart' as shared;
+import 'package:swift_staging_shared/swift_staging_shared.dart' as shared;
 
 import '../../core/format_weight.dart';
 import '../../core/theme.dart';

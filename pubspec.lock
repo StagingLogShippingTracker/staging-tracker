@@ -828,13 +828,6 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
-  slst_shared:
-    dependency: "direct main"
-    description:
-      path: "packages/slst_shared"
-      relative: true
-    source: path
-    version: "1.0.0"
   source_span:
     dependency: transitive
     description:
@@ -899,6 +892,13 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.16.0"
+  swift_staging_shared:
+    dependency: "direct main"
+    description:
+      path: "packages/swift_staging_shared"
+      relative: true
+    source: path
+    version: "1.0.0"
   synchronized:
     dependency: transitive
     description:

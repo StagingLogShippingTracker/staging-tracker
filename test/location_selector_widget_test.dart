@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:slst/core/theme.dart';
-import 'package:slst/data/app_state.dart';
-import 'package:slst/domain/location_intelligence.dart';
-import 'package:slst/features/shared/location_selector.dart';
-import 'package:slst/features/shared/widgets.dart';
+import 'package:swift_staging_log/core/theme.dart';
+import 'package:swift_staging_log/data/app_state.dart';
+import 'package:swift_staging_log/domain/location_intelligence.dart';
+import 'package:swift_staging_log/features/shared/location_selector.dart';
+import 'package:swift_staging_log/features/shared/widgets.dart';
 
 class SelectorHarness extends ConsumerStatefulWidget {
   const SelectorHarness({super.key});

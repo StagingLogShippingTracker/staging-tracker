@@ -58,7 +58,7 @@ def card(icon: str, title: str, rows: list[tuple[str, str]]) -> str:
 
 def main() -> None:
     wm = asset("watermark-gears")
-    logo = asset("slst-logo-email")
+    logo = asset("swift-staging-log-logo-email")
     html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>

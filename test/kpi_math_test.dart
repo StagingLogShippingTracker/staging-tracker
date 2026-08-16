@@ -1,7 +1,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:slst/data/app_state.dart';
-import 'package:slst/domain/models.dart';
+import 'package:swift_staging_log/data/app_state.dart';
+import 'package:swift_staging_log/domain/models.dart';
 
 void main() {
   test('orderCount is staging-only unique SOs', () {

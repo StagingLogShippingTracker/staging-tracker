@@ -4,12 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as im;
 
-import 'package:slst/core/theme.dart';
-import 'package:slst/data/app_state.dart';
-import 'package:slst/features/scanner/models/scan_models.dart';
-import 'package:slst/features/scanner/scanner_controller.dart';
-import 'package:slst/features/scanner/scanner_screen.dart';
-import 'package:slst/features/scanner/services/document_processing_service.dart';
+import 'package:swift_staging_log/core/theme.dart';
+import 'package:swift_staging_log/data/app_state.dart';
+import 'package:swift_staging_log/features/scanner/models/scan_models.dart';
+import 'package:swift_staging_log/features/scanner/scanner_controller.dart';
+import 'package:swift_staging_log/features/scanner/scanner_screen.dart';
+import 'package:swift_staging_log/features/scanner/services/document_processing_service.dart';
 
 Uint8List _fixture({int width = 480, int height = 640}) {
   final image = im.Image(width: width, height: height);

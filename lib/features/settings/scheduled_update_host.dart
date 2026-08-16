@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:slst_shared/slst_shared.dart';
+import 'package:swift_staging_shared/swift_staging_shared.dart';
 
 import 'app_changelog.dart';
 

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:slst/core/email_subjects.dart';
+import 'package:swift_staging_log/core/email_subjects.dart';
 
 void main() {
   test('capitalizeEmailSubject uppercases the entire subject', () {

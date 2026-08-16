@@ -13,6 +13,8 @@ import { LOGO_B } from "./logo-b.ts";
 
 const assets: Record<string, string> = {
   ...ICONS,
+  "swift-staging-log-logo-email": LOGO_A + LOGO_B,
+  // Historical query name still used by already-sent HTML emails.
   "slst-logo-email": LOGO_A + LOGO_B,
 };
 const ALLOWED = new Set(Object.keys(assets));

@@ -8,8 +8,8 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
-    private val desktopModeChannel = "slst/desktop_mode"
-    private val siblingAppsChannel = "slst/sibling_apps"
+    private val desktopModeChannel = "swift_staging_log/desktop_mode"
+    private val siblingAppsChannel = "swift_staging_log/sibling_apps"
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)

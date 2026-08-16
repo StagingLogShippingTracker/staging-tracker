@@ -100,7 +100,7 @@ def make_logo() -> Path:
         ratio = target_w / im.width
         im = im.resize((target_w, max(1, int(im.height * ratio))), Image.Resampling.LANCZOS)
 
-    out = OUT / "slst-logo-email.png"
+    out = OUT / "swift-staging-log-logo-email.png"
     im.save(out, "PNG", optimize=True)
     print("saved", out, im.size, out.stat().st_size)
     return out

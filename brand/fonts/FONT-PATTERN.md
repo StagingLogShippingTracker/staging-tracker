@@ -1,4 +1,4 @@
-# SLST Brand Font
+# Swift Staging Brand Font
 
 Custom geometric extended sans-serif derived from the SLST logo wordmark (`brand/source/1783831063527.png`).
 
@@ -32,15 +32,15 @@ All remaining glyphs follow the same rules:
 
 | File | Purpose |
 |------|---------|
-| `SLSTBrand-Regular.woff2` | Web font (primary) |
-| `SLSTBrand-Regular.ttf` | Desktop / fallback |
-| `slst-brand.css` | `@font-face` declaration |
-| `build_slst_font.py` | Rebuild script (requires Python 3.12+, fonttools, pillow, scikit-image, brotli) |
+| `SwiftStagingBrand-Regular.woff2` | Web font (primary) |
+| `SwiftStagingBrand-Regular.ttf` | Desktop / fallback |
+| `swift-staging-brand.css` | `@font-face` declaration |
+| `build_brand_font.py` | Rebuild script (requires Python 3.12+, fonttools, pillow, scikit-image, brotli) |
 | `font-metrics.json` | Measured logo letter boxes and stroke width |
 | `debug/S1.png`, `L.png`, `T.png` | Cropped logo letter references |
 
 ## Rebuild
 
 ```powershell
-python brand\fonts\build_slst_font.py
+python brand\fonts\build_brand_font.py
 ```

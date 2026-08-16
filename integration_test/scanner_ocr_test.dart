@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as im;
 import 'package:integration_test/integration_test.dart';
 
-import 'package:slst/features/scanner/services/offline_ocr_service.dart';
+import 'package:swift_staging_log/features/scanner/services/offline_ocr_service.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();

@@ -1,5 +1,5 @@
 // Re-export shared update service for the Windows/Android client.
-export 'package:slst_shared/slst_shared.dart'
+export 'package:swift_staging_shared/swift_staging_shared.dart'
     show
         AppReleaseInfo,
         AppUpdateCheckResult,

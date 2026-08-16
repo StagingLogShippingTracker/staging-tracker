@@ -1,7 +1,7 @@
 # Swift Staging & Shipping Log (Flutter)
 
 Native Flutter clients for Swift Supply staging and shipping operations.
-Targets **Windows** (portable ZIP + per-user installer), **Android** (sideload APK), and **Wear OS** (`apps/slst_wear`).
+Targets **Windows** (portable ZIP + per-user installer), **Android** (sideload APK), and **Wear OS** (`apps/wear`).
 Uses the existing hosted Supabase project for Auth, Postgres, Storage, and the `notify-pm` Edge Function (Make.com notifications). Wear pairs via the `watch-pair` Edge Function.
 
 > The previous GitHub Pages HTML/PWA app has been removed. There is no PWA and no Prophet21 / Epicor integration.
@@ -66,7 +66,7 @@ Android Maven coordinate above, while Windows supplies its signed system model.
 .\.tools\flutter\bin\flutter.bat run -d windows
 # or
 .\.tools\flutter\bin\flutter.bat run -d android
-# Wear OS (see apps/slst_wear/README.md):
+# Wear OS (see apps/wear/README.md):
 .\.tools\flutter\bin\flutter.bat -C apps\slst_wear run -d <wear-device>
 ```
 
@@ -99,7 +99,7 @@ PM notifications are email-only via `supabase/functions/notify-pm` (no SMS).
 .\scripts\packaging\build-windows-portable.ps1
 ```
 
-Output: `dist/SLST-Windows-Portable.zip`
+Output: `dist/SwiftStagingLog-Windows-Portable.zip`
 
 ### Windows per-user installer (no admin)
 
@@ -109,7 +109,7 @@ Requires [Inno Setup 6](https://jrsoftware.org/isinfo.php):
 .\scripts\packaging\build-windows-installer.ps1
 ```
 
-Output: `dist/SLST-Setup-User.exe` (installs under `%LOCALAPPDATA%\Programs\SLST`)
+Output: `dist/SwiftStagingLog-Setup-User.exe` (installs under `%LOCALAPPDATA%\Programs\Swift Staging Shipping Log`)
 
 ### Android APK
 
@@ -117,7 +117,7 @@ Output: `dist/SLST-Setup-User.exe` (installs under `%LOCALAPPDATA%\Programs\SLST
 .\scripts\packaging\build-android-apk.ps1
 ```
 
-Output: `dist/SLST-Android.apk`. For production signing, create
+Output: `dist/SwiftStagingLog-Android.apk`. For production signing, create
 `android/key.properties` (gitignored) pointing at a keystore. Without it, the
 release build is debug-key signed for internal sideload testing.
 
@@ -127,18 +127,18 @@ release build is debug-key signed for internal sideload testing.
 .\scripts\packaging\build-wear-apk.ps1
 ```
 
-Output: `dist/SLST-Wear.apk`. Details: [`apps/slst_wear/README.md`](apps/slst_wear/README.md).
+Output: `dist/SwiftStagingLog-Wear.apk`. Details: [`apps/wear/README.md`](apps/wear/README.md).
 
 Each produced artifact has a lowercase SHA-256 sidecar, such as
-`dist/SLST-Android.apk.sha256`.
+`dist/SwiftStagingLog-Android.apk.sha256`.
 
 ### In-app Update (Settings)
 
 Windows and Android **Settings → Update** load the latest GitHub Release
 (`releases/latest`) and download the host-platform package:
 
-- Windows: `SLST-Setup-User.exe` (preferred) or `SLST-Windows-Portable.zip`
-- Android: `SLST-Android.apk`
+- Windows: `SwiftStagingLog-Setup-User.exe` (preferred) or `SwiftStagingLog-Windows-Portable.zip`
+- Android: `SwiftStagingLog-Android.apk`
 
 After packaging builds intended for distribution, commit/push and publish or
 refresh that release so assets match local `dist/` (see
@@ -187,8 +187,8 @@ must still resolve concurrent conflicts when warned.
 
 ## Brand assets
 
-- `assets/slst-mark.png` — forklift-in-tire brand mark (transparent background)
-- `assets/slst-wordmark.png` — legacy "SLST / SLST" wordmark (historical)
+- `assets/swift-staging-log-mark.png` — forklift-in-tire brand mark (transparent background)
+- `assets/swift-staging-log-wordmark.png` — legacy "SLST / SLST" wordmark (historical)
 - `assets/staging-shipping-logo.png` — legacy horizontal logo (kept for reference, not bundled)
 - `assets/contacts.json` (employee directory)
 - Regenerate app icons / splash logos with `python scripts/generate-app-icons.py`

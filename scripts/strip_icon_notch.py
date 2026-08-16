@@ -8,7 +8,7 @@ from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "assets" / "app-icon-source.png"
-OUT = ROOT / "assets" / "slst-app-icon.png"
+OUT = ROOT / "assets" / "swift-staging-log-app-icon.png"
 
 
 def is_orange(r: int, g: int, b: int, a: int) -> bool:

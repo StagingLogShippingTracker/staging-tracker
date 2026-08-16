@@ -4,7 +4,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
-import 'package:slst_shared/slst_shared.dart';
+import 'package:swift_staging_shared/swift_staging_shared.dart';
 
 /// Sibling Swift Operations apps advertised from the expanded sidebar.
 class SiblingApp {
@@ -73,7 +73,7 @@ class SiblingAppsService {
   SiblingAppsService({AppUpdateService? updates})
       : _updates = updates ?? const AppUpdateService();
 
-  static const _androidChannel = MethodChannel('slst/sibling_apps');
+  static const _androidChannel = MethodChannel('swift_staging_log/sibling_apps');
   final AppUpdateService _updates;
 
   Future<bool> isInstalled(SiblingApp app) async {

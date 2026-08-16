@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:slst/core/theme.dart';
-import 'package:slst/data/app_state.dart';
-import 'package:slst/data/remembered_contacts.dart';
-import 'package:slst/domain/models.dart';
-import 'package:slst/features/shared/entry_suggestion_fields.dart';
+import 'package:swift_staging_log/core/theme.dart';
+import 'package:swift_staging_log/data/app_state.dart';
+import 'package:swift_staging_log/data/remembered_contacts.dart';
+import 'package:swift_staging_log/domain/models.dart';
+import 'package:swift_staging_log/features/shared/entry_suggestion_fields.dart';
 
 void main() {
   test('person name typeahead matches Document Generator filter', () {

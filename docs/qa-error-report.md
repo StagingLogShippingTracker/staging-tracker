@@ -30,7 +30,7 @@ Status section refreshed 2026-07-25 against current `lib/` (see `docs/senior-ass
 | ID | Issue | Status |
 |----|-------|--------|
 | PL-1 | `android/` missing on branch | **Done** — restored; adaptive shell |
-| PL-2 | Wear client missing | **Done** — `apps/slst_wear` + Settings Pair Watch |
+| PL-2 | Wear client missing | **Done** — `apps/wear` + Settings Pair Watch |
 | PL-3 | AGENTS.md Windows-only contradiction | **Done** — Win+Android+Wear docs |
 
 ## Packaging note (this cloud environment)

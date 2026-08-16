@@ -13,7 +13,7 @@ from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "assets" / "app-icon-source.png"
-OUT = ROOT / "assets" / "slst-app-icon.png"
+OUT = ROOT / "assets" / "swift-staging-log-app-icon.png"
 
 SWIFT_NAVY = (0x12, 0x14, 0x17)
 SWIFT_PANEL = (0x16, 0x19, 0x1E)

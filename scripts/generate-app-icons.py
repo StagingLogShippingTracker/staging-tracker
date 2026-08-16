@@ -1,4 +1,4 @@
-"""DEPRECATED — use scripts/generate_slst_icon.py."""
+"""DEPRECATED — use scripts/generate_app_icon.py."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import sys
 
 
 def main() -> None:
-    sys.stderr.write("REFUSED: use python scripts/generate_slst_icon.py\n")
+    sys.stderr.write("REFUSED: use python scripts/generate_app_icon.py\n")
     raise SystemExit(2)
 
 

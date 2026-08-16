@@ -12,16 +12,16 @@ class AppChangelog {
   AppChangelog._();
 
   /// Bump this when starting a new What's New wave.
-  static const campaignId = 'whats_new_1_1_36';
+  static const campaignId = 'whats_new_1_1_37';
   static const maxShows = 3;
-  static const title = "What's new (v1.1.36)";
+  static const title = "What's new (v1.1.37)";
 
   static const sections = <ChangelogSection>[
     ChangelogSection(
-      version: 'v1.1.36',
+      version: 'v1.1.37',
       bullets: [
-        'Expanded sidebar includes a More Apps tile for Swift Document Generator',
-        'If Document Generator is installed, the tile opens it; otherwise it downloads Setup/APK and starts install',
+        'Product files and packages use Swift Staging & Shipping Log names (SwiftStagingLog-*), not SLST',
+        'Expanded sidebar More Apps tile opens or installs Swift Document Generator',
       ],
     ),
   ];

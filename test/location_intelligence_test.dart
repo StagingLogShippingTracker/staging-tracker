@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:slst/domain/location_intelligence.dart';
-import 'package:slst/domain/models.dart';
+import 'package:swift_staging_log/domain/location_intelligence.dart';
+import 'package:swift_staging_log/domain/models.dart';
 
 StagingEntry staging({
   required String id,

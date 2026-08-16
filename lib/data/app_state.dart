@@ -4,7 +4,7 @@ import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:slst_shared/slst_shared.dart' as shared;
+import 'package:swift_staging_shared/swift_staging_shared.dart' as shared;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../core/success_chime.dart';
@@ -288,7 +288,7 @@ class AppDataNotifier extends StateNotifier<AppData> {
     unawaited(previous?.unsubscribe());
     _rebindingRealtime = false;
 
-    final channel = client.channel('slst-live-$epoch');
+    final channel = client.channel('swift-staging-live-$epoch');
     _channel = channel
         .onPostgresChanges(
           event: PostgresChangeEvent.all,

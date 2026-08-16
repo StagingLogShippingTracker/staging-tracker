@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:slst_shared/slst_shared.dart';
+import 'package:swift_staging_shared/swift_staging_shared.dart';
 
 import '../../core/theme.dart';
 import '../../data/app_state.dart';

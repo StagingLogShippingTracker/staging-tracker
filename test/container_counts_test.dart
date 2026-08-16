@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:slst/domain/models.dart';
+import 'package:swift_staging_log/domain/models.dart';
 
 void main() {
   test('split parts must conserve original typed counts', () {

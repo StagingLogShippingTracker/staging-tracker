@@ -3,15 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:slst/core/theme.dart';
-import 'package:slst/data/app_state.dart';
-import 'package:slst/data/log_view_mode.dart';
-import 'package:slst/domain/models.dart';
-import 'package:slst/domain/status.dart';
-import 'package:slst/features/reports/verification_audit.dart';
-import 'package:slst/features/shared/log_tables.dart';
-import 'package:slst/features/shared/order_history_dialog.dart';
-import 'package:slst/features/shared/widgets.dart';
+import 'package:swift_staging_log/core/theme.dart';
+import 'package:swift_staging_log/data/app_state.dart';
+import 'package:swift_staging_log/data/log_view_mode.dart';
+import 'package:swift_staging_log/domain/models.dart';
+import 'package:swift_staging_log/domain/status.dart';
+import 'package:swift_staging_log/features/reports/verification_audit.dart';
+import 'package:swift_staging_log/features/shared/log_tables.dart';
+import 'package:swift_staging_log/features/shared/order_history_dialog.dart';
+import 'package:swift_staging_log/features/shared/widgets.dart';
 
 StagingEntry _staging({
   String id = '1',

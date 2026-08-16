@@ -1,24 +1,24 @@
 Set-StrictMode -Version Latest
 
-$script:SlstRepoRoot = Resolve-Path (Join-Path $PSScriptRoot '..\..')
-$script:SlstFlutter = Join-Path $script:SlstRepoRoot '.tools\flutter\bin\flutter.bat'
-if (-not (Test-Path $script:SlstFlutter)) {
-  $script:SlstFlutter = 'flutter'
+$script:RepoRoot = Resolve-Path (Join-Path $PSScriptRoot '..\..')
+$script:RepoFlutter = Join-Path $script:RepoRoot '.tools\flutter\bin\flutter.bat'
+if (-not (Test-Path $script:RepoFlutter)) {
+  $script:RepoFlutter = 'flutter'
 }
 
-function Invoke-SlstFlutter {
+function Invoke-RepoFlutter {
   param(
     [Parameter(Mandatory = $true)]
     [string[]]$Arguments
   )
 
-  & $script:SlstFlutter @Arguments
+  & $script:RepoFlutter @Arguments
   if ($LASTEXITCODE -ne 0) {
     throw "flutter $($Arguments -join ' ') failed (exit $LASTEXITCODE)."
   }
 }
 
-function Write-SlstSha256 {
+function Write-RepoSha256 {
   param(
     [Parameter(Mandatory = $true)]
     [string]$Path

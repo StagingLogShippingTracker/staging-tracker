@@ -16,7 +16,7 @@ if (-not $iscc) {
   throw 'Inno Setup 6 (ISCC.exe) not found. Install from https://jrsoftware.org/isinfo.php'
 }
 
-$iss = Join-Path $PSScriptRoot 'slst-user-install.iss'
+$iss = Join-Path $PSScriptRoot 'swift-staging-log-user-install.iss'
 & $iscc $iss
 if ($LASTEXITCODE -ne 0) {
   throw "Inno Setup compilation failed (exit $LASTEXITCODE)."
@@ -26,5 +26,5 @@ $installer = Join-Path $root 'dist\SwiftStagingLog-Setup-User.exe'
 if (-not (Test-Path $installer)) {
   throw "Installer missing after compilation: $installer"
 }
-Write-SlstSha256 -Path $installer
+Write-RepoSha256 -Path $installer
 Write-Host "Installer written under dist\SwiftStagingLog-Setup-User.exe"
