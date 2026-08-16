@@ -124,7 +124,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                   'Active staging ${data.staging.length} · Shipped ${data.shipped.length}',
                   style: IndustrialTheme.mono(
                     fontSize: 13,
-                    color: IndustrialTheme.textMuted,
+                    color: IndustrialTheme.chromeOf(context).muted,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -152,7 +152,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                 style: TextStyle(
                   fontSize: 12.5,
                   height: 1.5,
-                  color: IndustrialTheme.textMuted,
+                  color: IndustrialTheme.chromeOf(context).muted,
                 ),
               ),
               const SizedBox(height: 12),
@@ -236,7 +236,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                 )
               : SegmentedButton<String>(
                   style: SegmentedButton.styleFrom(
-                    textStyle: const TextStyle(
+                    textStyle: TextStyle(
                       fontSize: 12.5,
                       fontWeight: FontWeight.w600,
                     ),
@@ -284,7 +284,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                                   Expanded(
                                     child: Text(
                                       'SO ${e.so}',
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontWeight: FontWeight.w700,
                                       ),
                                     ),
@@ -309,12 +309,11 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
             },
           ),
         ),
-        const BrandFooter(),
       ],
     );
 
     return ColoredBox(
-      color: IndustrialTheme.darkBase,
+      color: IndustrialTheme.chromeOf(context).base,
       child: AsyncPanel(
         loading: data.loading,
         syncing: data.syncing,

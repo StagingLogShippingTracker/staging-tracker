@@ -105,13 +105,14 @@ def load_payload() -> dict:
     combined = "".join(f["content"] for f in files)
     for needle in [
         "renderBrandedEmail",
-        "090D16",
-        "E8EAF1",
+        "121417",
+        "F4F2EF",
         "linear-gradient",
         "prefers-color-scheme: dark",
-        "NOTIFY_PM_VERSION = 81",
+        "NOTIFY_PM_VERSION = 85",
         "appendNotificationLog",
-        "SLST",
+        "This service is experimental",
+        "This service is an internal operations tool",
         "swift-supply-logo-email",
         "Missing required fields",
     ]:
@@ -124,7 +125,8 @@ def load_payload() -> dict:
         "og-cta",
         "Swift Staging Tracker",
         "Staging & Shipping Tracker",
-        "Live sync",
+        "Designed &amp; developed by Brice Johnson",
+        "Designed & developed by Brice Johnson",
         "PLACEHOLDER",
     ]:
         if banned in combined:

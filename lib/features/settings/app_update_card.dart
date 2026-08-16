@@ -228,7 +228,7 @@ class _AppUpdateCardState extends State<AppUpdateCard> {
                 const Icon(
                   Icons.system_update_alt,
                   size: 20,
-                  color: IndustrialTheme.skyBlue,
+                  color: IndustrialTheme.chromeAccent,
                 ),
                 const SizedBox(width: 10),
                 Text(
@@ -248,9 +248,8 @@ class _AppUpdateCardState extends State<AppUpdateCard> {
             const SizedBox(height: 6),
             Text(
               Platform.isWindows
-                  ? 'Checks GitHub Releases for a newer SLST-Setup-User.exe and launches the installer from the app.'
-                  : 'Check GitHub Releases for a newer $_platformLabel build. '
-                      'If an update is available you can download and install it here.',
+                  ? 'Automatic check every day at 3:00 PM Mountain Time while the app is open. Later snoozes that prompt for 3 days (until 3:00 PM). You can also check GitHub Releases here and launch the Windows installer.'
+                  : 'Automatic check every day at 3:00 PM Mountain Time while the app is open. Later snoozes that prompt for 3 days (until 3:00 PM). Check GitHub Releases here to download and install a newer $_platformLabel build.',
               softWrap: true,
               overflow: TextOverflow.fade,
               style: Theme.of(context).textTheme.bodySmall,

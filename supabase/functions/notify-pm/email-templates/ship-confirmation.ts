@@ -1,5 +1,5 @@
 /**
- * SLST ship-confirmation HTML email — Industrial Command Center shell.
+ * Ship-confirmation HTML email — Industrial Command Center shell.
  */
 import {
   DEFAULT_EMAIL_ASSET_BASE,
@@ -43,12 +43,12 @@ export function renderShipConfirmationEmail(
   return renderBrandedEmail({
     assetBaseUrl: assetBase,
     logoUrl: data.logoUrl,
-    sectionTitle: "Shipped Staging Entries Log",
+    sectionTitle: "Shipment",
     statusLabel: "Shipped",
     statusTone: "mint",
     title: "Your order has now been shipped",
     preview: `SO# ${so} for ${customer} has shipped via ${carrier}.`,
-    subtitle: "Shipment recorded in SLST — industrial staging & shipping ops",
+    subtitle: "Shipment recorded by the Swift Nisku warehouse",
     hero: {
       eyebrow: "Shipment",
       value: so || "—",
@@ -100,7 +100,6 @@ export function renderShipConfirmationEmail(
 
 export function renderShipConfirmationPlain(data: ShipConfirmationData): string {
   return [
-    "SLST — SLST",
     "Your order has now been shipped",
     "",
     "Shipment details:",

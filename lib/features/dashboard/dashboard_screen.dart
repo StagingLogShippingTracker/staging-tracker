@@ -99,13 +99,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           context: context,
           barrierDismissible: false,
           builder: (dialogContext) => AlertDialog(
-            backgroundColor: IndustrialTheme.darkSurface,
+            backgroundColor: IndustrialTheme.chromeOf(context).surface,
             title: Text(
               'Overdue staging entry',
               style: IndustrialTheme.mono(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: IndustrialTheme.textPrimary,
+                color: IndustrialTheme.chromeOf(context).ink,
               ),
             ),
             content: Column(
@@ -117,18 +117,18 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   style: IndustrialTheme.mono(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
-                    color: IndustrialTheme.textPrimary,
+                    color: IndustrialTheme.chromeOf(context).ink,
                   ),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   entry.customer,
-                  style: const TextStyle(color: IndustrialTheme.textPrimary),
+                  style: TextStyle(color: IndustrialTheme.chromeOf(context).ink),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   'Location: ${entry.location.isEmpty ? '—' : entry.location}',
-                  style: const TextStyle(color: IndustrialTheme.textMuted),
+                  style: TextStyle(color: IndustrialTheme.chromeOf(context).muted),
                 ),
                 const SizedBox(height: 6),
                 Text(
@@ -139,11 +139,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   ),
                 ),
                 const SizedBox(height: 10),
-                const Text(
+                Text(
                   'This entry is past its ship window.',
                   style: TextStyle(
                     fontSize: 12,
-                    color: IndustrialTheme.textMuted,
+                    color: IndustrialTheme.chromeOf(context).muted,
                   ),
                 ),
               ],
@@ -152,15 +152,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               TextButton(
                 onPressed: () => Navigator.pop(dialogContext, false),
                 style: TextButton.styleFrom(
-                  foregroundColor: IndustrialTheme.textMuted,
+                  foregroundColor: IndustrialTheme.chromeOf(context).muted,
                 ),
                 child: const Text('Dismiss'),
               ),
               FilledButton(
                 onPressed: () => Navigator.pop(dialogContext, true),
                 style: FilledButton.styleFrom(
-                  backgroundColor: IndustrialTheme.skyBlue,
-                  foregroundColor: IndustrialTheme.textPrimary,
+                  backgroundColor: IndustrialTheme.chromeAccent,
+                  foregroundColor: IndustrialTheme.chromeOf(context).ink,
                 ),
                 child: const Text('Open'),
               ),
@@ -500,8 +500,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   );
             },
           ),
-          const BrandFooter(),
-        ],
+          ],
       ),
     );
 
@@ -509,11 +508,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     // Desktop / landscape keep a persistent 400px side panel beside the board.
     final popup = useInspectorPopup(context);
     if (_inspect == null || popup) {
-      return ColoredBox(color: IndustrialTheme.darkBase, child: scrollBody);
+      return ColoredBox(color: IndustrialTheme.chromeOf(context).base, child: scrollBody);
     }
 
     return ColoredBox(
-      color: IndustrialTheme.darkBase,
+      color: IndustrialTheme.chromeOf(context).base,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -586,7 +585,7 @@ class _ActiveStagingBoard extends StatelessWidget {
               Text(
                 '$totalVisible match${totalVisible == 1 ? '' : 'es'}',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: IndustrialTheme.textMuted,
+                  color: IndustrialTheme.chromeOf(context).muted,
                 ),
               ),
           ],
@@ -644,7 +643,7 @@ class _ActiveStagingBoard extends StatelessWidget {
                     ),
                     (
                       title: 'AWAITING INSTRUCTIONS',
-                      accent: IndustrialTheme.slateMuted,
+                      accent: IndustrialTheme.awaitingOf(context),
                       entries: awaiting,
                     ),
                   ];
@@ -728,9 +727,9 @@ class _BoardColumn extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: IndustrialTheme.darkHeader,
+        color: IndustrialTheme.chromeOf(context).header,
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: IndustrialTheme.borderStroke),
+        border: Border.all(color: IndustrialTheme.chromeOf(context).border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -778,14 +777,14 @@ class _BoardColumn extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           if (entries.isEmpty)
-            const Padding(
+            Padding(
               padding: EdgeInsets.symmetric(vertical: 18),
               child: Text(
                 'No orders',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 12,
-                  color: IndustrialTheme.textMuted,
+                  color: IndustrialTheme.chromeOf(context).muted,
                 ),
               ),
             )
@@ -832,14 +831,14 @@ class _StagingSoCard extends StatelessWidget {
         : (StatusRules.isYmd(entry.status) && ui == entry.status
               ? 'Future: ${entry.status}'
               : ui);
-    final accent = industrialStatusAccent(statusLabel);
+    final accent = industrialStatusAccent(context, statusLabel);
     final weight = (entry.weight ?? '').trim();
     final stager = (entry.stagedBy ?? '').trim();
 
     return Material(
       color: selected
-          ? IndustrialTheme.skyBlue.withValues(alpha: 0.12)
-          : IndustrialTheme.darkSurface,
+          ? IndustrialTheme.chromeAccent.withValues(alpha: 0.12)
+          : IndustrialTheme.chromeOf(context).surface,
       borderRadius: BorderRadius.circular(6),
       child: InkWell(
         onTap: onTap,
@@ -866,8 +865,8 @@ class _StagingSoCard extends StatelessWidget {
                     ),
                     border: Border.all(
                       color: selected
-                          ? IndustrialTheme.skyBlue.withValues(alpha: 0.55)
-                          : IndustrialTheme.borderStroke,
+                          ? IndustrialTheme.chromeAccent.withValues(alpha: 0.55)
+                          : IndustrialTheme.chromeOf(context).border,
                     ),
                   ),
                   child: Column(
@@ -883,7 +882,7 @@ class _StagingSoCard extends StatelessWidget {
                               style: IndustrialTheme.mono(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w700,
-                                color: IndustrialTheme.textPrimary,
+                                color: IndustrialTheme.chromeOf(context).ink,
                               ),
                             ),
                           ),
@@ -896,10 +895,10 @@ class _StagingSoCard extends StatelessWidget {
                         entry.customer.isEmpty ? '—' : entry.customer,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
-                          color: IndustrialTheme.textMuted,
+                          color: IndustrialTheme.chromeOf(context).muted,
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -922,7 +921,7 @@ class _StagingSoCard extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: IndustrialTheme.mono(
                           fontSize: 10,
-                          color: IndustrialTheme.textMuted,
+                          color: IndustrialTheme.chromeOf(context).muted,
                         ),
                       ),
                     ],

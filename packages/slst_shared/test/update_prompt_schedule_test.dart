@@ -84,12 +84,16 @@ void main() {
       );
     });
 
-    test('snoozeUntilFrom is +3 days', () {
+    test('snoozeUntilFrom is 3 calendar days later at 15:00 Denver', () {
+      // 2026-08-01 15:00 MDT = 21:00 UTC → snooze until 2026-08-04 15:00 MDT.
       final now = DateTime.utc(2026, 8, 1, 21, 0);
-      expect(
-        schedule.snoozeUntilFrom(now),
-        now.add(const Duration(days: 3)),
-      );
+      final until = schedule.snoozeUntilFrom(now);
+      final denver = DenverTime.toDenver(until);
+      expect(denver.year, 2026);
+      expect(denver.month, 8);
+      expect(denver.day, 4);
+      expect(denver.hour, 15);
+      expect(denver.minute, 0);
     });
   });
 }

@@ -136,7 +136,18 @@ class UpdatePromptSchedule {
     return true;
   }
 
-  DateTime snoozeUntilFrom(DateTime now) => now.add(snoozeDuration);
+  DateTime snoozeUntilFrom(DateTime now) {
+    final denver = DenverTime.toDenver(now);
+    final plusThree = DateTime.utc(denver.year, denver.month, denver.day)
+        .add(snoozeDuration);
+    return DenverTime.denverWallToUtc(
+      plusThree.year,
+      plusThree.month,
+      plusThree.day,
+      DenverTime.checkHour,
+      DenverTime.checkMinute,
+    );
+  }
 
   /// When to wake the in-app timer next (UTC).
   DateTime nextWakeUtc({

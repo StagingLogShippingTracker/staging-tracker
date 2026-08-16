@@ -4,10 +4,18 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:slst/core/theme.dart';
 import 'package:slst/data/app_state.dart';
+import 'package:slst/data/remembered_contacts.dart';
 import 'package:slst/domain/models.dart';
 import 'package:slst/features/shared/entry_suggestion_fields.dart';
 
 void main() {
+  test('person name typeahead matches Document Generator filter', () {
+    final names = ['Alice', 'Bob', 'Alina', 'Charlie'];
+    expect(filterPersonNames(names, '').toList(), names);
+    expect(filterPersonNames(names, 'al').toList(), ['Alice', 'Alina']);
+    expect(filterPersonNames(names, 'ob').toList(), ['Bob']);
+  });
+
   test('carrier suggestions exclude hidden and legacy sentinel values', () {
     final result = filterCarrierSuggestions(
       [

@@ -1,4 +1,4 @@
-# Builds the Wear OS APK from apps/slst_wear into dist/SLST-Wear.apk.
+# Builds the Wear OS APK from apps/slst_wear into dist/SwiftStagingLog-Wear.apk.
 $ErrorActionPreference = 'Stop'
 $root = Resolve-Path (Join-Path $PSScriptRoot '..\..')
 $wear = Join-Path $root 'apps\slst_wear'
@@ -19,7 +19,7 @@ if (-not (Test-Path $apk)) {
 if (-not (Test-Path $apk)) {
     throw "Wear APK not found after build. Expected under apps/slst_wear/build/app/outputs/flutter-apk/"
 }
-$output = Join-Path $dist 'SLST-Wear.apk'
+$output = Join-Path $dist 'SwiftStagingLog-Wear.apk'
 Copy-Item -Force $apk $output
 Write-SlstSha256 -Path $output
-Write-Host "Wrote dist\SLST-Wear.apk"
+Write-Host "Wrote dist\SwiftStagingLog-Wear.apk"

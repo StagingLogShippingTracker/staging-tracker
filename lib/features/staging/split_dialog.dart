@@ -89,7 +89,7 @@ class _SplitDialogState extends ConsumerState<SplitDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      backgroundColor: IndustrialTheme.darkSurface,
+      backgroundColor: IndustrialTheme.chromeOf(context).surface,
       title: Text(
         'Split SO ${widget.entry.so}',
         style: IndustrialTheme.mono(fontSize: 16, fontWeight: FontWeight.w700),

@@ -7,7 +7,10 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:slst_shared/slst_shared.dart';
 
-/// Runs the daily 15:00 America/Denver update check while the app is open.
+import 'app_changelog.dart';
+
+/// Runs the daily 15:00 America/Denver update check while the app is open,
+/// matching Swift Document Generator (live GitHub latest, Later = 3 days).
 ///
 /// Quiet when already up to date (no dialog). Only shows Update/Later when
 /// GitHub `releases/latest` has a newer package for this platform. Each prompt
@@ -28,6 +31,7 @@ class _ScheduledUpdateHostState extends State<ScheduledUpdateHost>
   static const _schedule = UpdatePromptSchedule();
 
   Timer? _wakeTimer;
+  Timer? _pollTimer;
   bool _busy = false;
   bool _dialogOpen = false;
 
@@ -49,23 +53,33 @@ class _ScheduledUpdateHostState extends State<ScheduledUpdateHost>
   @override
   void initState() {
     super.initState();
-    if (!_supported) return;
     WidgetsBinding.instance.addObserver(this);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _evaluate());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _onFirstFrame());
+    _pollTimer = Timer.periodic(
+      const Duration(minutes: 1),
+      (_) => _evaluate(),
+    );
+  }
+
+  Future<void> _onFirstFrame() async {
+    await Future<void>.delayed(const Duration(milliseconds: 450));
+    if (!mounted) return;
+    try {
+      await maybeShowChangelogPrompt(context);
+    } catch (_) {}
+    if (mounted) await _evaluate();
   }
 
   @override
   void dispose() {
-    if (_supported) {
-      WidgetsBinding.instance.removeObserver(this);
-    }
+    WidgetsBinding.instance.removeObserver(this);
     _wakeTimer?.cancel();
+    _pollTimer?.cancel();
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (!_supported) return;
     if (state == AppLifecycleState.resumed) {
       _evaluate();
     }

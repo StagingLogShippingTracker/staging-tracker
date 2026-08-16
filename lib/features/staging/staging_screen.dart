@@ -123,7 +123,7 @@ class _StagingScreenState extends ConsumerState<StagingScreen> {
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
             fontSize: 22,
             fontWeight: FontWeight.w800,
-            color: IndustrialTheme.textPrimary,
+            color: IndustrialTheme.chromeOf(context).ink,
           ),
         ),
         SizedBox(height: gap),
@@ -150,7 +150,7 @@ class _StagingScreenState extends ConsumerState<StagingScreen> {
               (
                 label: 'Awaiting',
                 value: '$awaiting',
-                accent: IndustrialTheme.purple,
+                accent: IndustrialTheme.awaitingOf(context),
               ),
             ],
           );
@@ -229,8 +229,7 @@ class _StagingScreenState extends ConsumerState<StagingScreen> {
               children: [
                 ...summaryAndSearch,
                 logCard,
-                const BrandFooter(),
-              ],
+                  ],
             )
           : Padding(
               padding: slstPagePadding(context, top: shortHeight ? 12 : 20),
@@ -239,8 +238,7 @@ class _StagingScreenState extends ConsumerState<StagingScreen> {
                 children: [
                   ...summaryAndSearch,
                   Expanded(child: logCard),
-                  const BrandFooter(),
-                ],
+                      ],
               ),
             ),
     );
@@ -252,9 +250,7 @@ class _StagingScreenState extends ConsumerState<StagingScreen> {
       error: data.error,
       onRetry: () => ref.read(appDataProvider.notifier).refresh(),
       emptyTitle: 'No active staging entries',
-      emptyMessage: ref.watch(currentUserProvider) == null
-          ? 'Sign in to view live staging inventory.'
-          : 'New staging work will appear here when it is created.',
+      emptyMessage: 'New staging work will appear here when it is created.',
       child: scrollBody,
     );
 
@@ -265,7 +261,7 @@ class _StagingScreenState extends ConsumerState<StagingScreen> {
 
     // Portrait mobile uses a dialog popup; keep side panel / overlay otherwise.
     if (_inspect == null || popup) {
-      return ColoredBox(color: IndustrialTheme.darkBase, child: content);
+      return ColoredBox(color: IndustrialTheme.chromeOf(context).base, child: content);
     }
 
     final inspector = SlideOverInspector(
@@ -280,7 +276,7 @@ class _StagingScreenState extends ConsumerState<StagingScreen> {
     // Host at screen level (bounded height) — never inside the ListView card.
     if (compact) {
       return ColoredBox(
-        color: IndustrialTheme.darkBase,
+        color: IndustrialTheme.chromeOf(context).base,
         child: Stack(
           children: [
             content,
@@ -299,7 +295,7 @@ class _StagingScreenState extends ConsumerState<StagingScreen> {
     }
 
     return ColoredBox(
-      color: IndustrialTheme.darkBase,
+      color: IndustrialTheme.chromeOf(context).base,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

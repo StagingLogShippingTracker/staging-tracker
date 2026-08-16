@@ -2,7 +2,6 @@ import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../core/theme.dart';
@@ -30,14 +29,14 @@ class FeedbackCard extends ConsumerWidget {
                 const Icon(
                   Icons.feedback_outlined,
                   size: 20,
-                  color: IndustrialTheme.skyBlue,
+                  color: IndustrialTheme.chromeAccent,
                 ),
                 const SizedBox(width: 8),
                 Text(
                   'Feedback',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w800,
-                        color: IndustrialTheme.textPrimary,
+                        color: IndustrialTheme.chromeOf(context).ink,
                       ),
                 ),
               ],
@@ -56,18 +55,9 @@ class FeedbackCard extends ConsumerWidget {
             const SizedBox(height: 16),
             FilledButton.icon(
               onPressed: () {
-                if (user == null) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Sign in to send feedback.'),
-                    ),
-                  );
-                  context.push('/login');
-                  return;
-                }
                 openFeedbackForm(
                   context,
-                  prefillContact: user.email,
+                  prefillContact: user?.email,
                 );
               },
               icon: const Icon(Icons.send_outlined, size: 18),
@@ -177,7 +167,7 @@ class _FeedbackFormDialogState extends ConsumerState<_FeedbackFormDialog> {
     try {
       await ref.read(notifyRepoProvider).sendPmNotification({
         'to': kWarehouseFeedbackEmail,
-        'subject': 'SLST feedback: $subjectSummary',
+        'subject': 'Swift Staging & Shipping Log feedback: $subjectSummary',
         'notification_type': 'feedback',
         'category': _category,
         'name': name,
@@ -189,7 +179,7 @@ class _FeedbackFormDialogState extends ConsumerState<_FeedbackFormDialog> {
         'platform': platform,
         'pm_name': 'Warehouse',
         'body':
-            'SLST feedback<br><br>'
+            'Swift Staging & Shipping Log feedback<br><br>'
             '<b>Category</b> | $_category<br>'
             '<b>Name</b> | ${name.isEmpty ? '(not provided)' : name}<br>'
             '<b>Contact</b> | ${contact.isEmpty ? '(not provided)' : contact}<br>'
@@ -226,8 +216,8 @@ class _FeedbackFormDialogState extends ConsumerState<_FeedbackFormDialog> {
               Text(
                 'Your message is emailed to $kWarehouseFeedbackEmail '
                 'via the authenticated notify-pm service.',
-                style: const TextStyle(
-                  color: IndustrialTheme.textMuted,
+                style: TextStyle(
+                  color: IndustrialTheme.chromeOf(context).muted,
                   fontSize: 13,
                 ),
               ),

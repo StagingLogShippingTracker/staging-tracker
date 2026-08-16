@@ -120,7 +120,7 @@ class _ShippedScreenState extends ConsumerState<ShippedScreen> {
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
             fontSize: 22,
             fontWeight: FontWeight.w800,
-            color: IndustrialTheme.textPrimary,
+            color: IndustrialTheme.chromeOf(context).ink,
           ),
         ),
         SizedBox(height: gap),
@@ -147,7 +147,7 @@ class _ShippedScreenState extends ConsumerState<ShippedScreen> {
               (
                 label: 'All Records',
                 value: '${data.shipped.length}',
-                accent: IndustrialTheme.skyBlue,
+                accent: IndustrialTheme.chromeAccent,
               ),
             ],
           );
@@ -212,8 +212,7 @@ class _ShippedScreenState extends ConsumerState<ShippedScreen> {
               children: [
                 ...summaryAndSearch,
                 logCard,
-                const BrandFooter(),
-              ],
+                  ],
             )
           : Padding(
               padding: slstPagePadding(context, top: shortHeight ? 12 : 20),
@@ -222,8 +221,7 @@ class _ShippedScreenState extends ConsumerState<ShippedScreen> {
                 children: [
                   ...summaryAndSearch,
                   Expanded(child: logCard),
-                  const BrandFooter(),
-                ],
+                      ],
               ),
             ),
     );
@@ -235,9 +233,7 @@ class _ShippedScreenState extends ConsumerState<ShippedScreen> {
       error: data.error,
       onRetry: () => ref.read(appDataProvider.notifier).refresh(),
       emptyTitle: 'No shipped entries',
-      emptyMessage: ref.watch(currentUserProvider) == null
-          ? 'Sign in to view shipped staging history.'
-          : 'Completed shipments will appear here.',
+      emptyMessage: 'Completed shipments will appear here.',
       child: scrollBody,
     );
 
@@ -247,7 +243,7 @@ class _ShippedScreenState extends ConsumerState<ShippedScreen> {
         IndustrialTheme.tokens.inspectorBreakpoint;
 
     if (_inspect == null || popup) {
-      return ColoredBox(color: IndustrialTheme.darkBase, child: content);
+      return ColoredBox(color: IndustrialTheme.chromeOf(context).base, child: content);
     }
 
     final inspector = SlideOverInspector(
@@ -261,7 +257,7 @@ class _ShippedScreenState extends ConsumerState<ShippedScreen> {
 
     if (compact) {
       return ColoredBox(
-        color: IndustrialTheme.darkBase,
+        color: IndustrialTheme.chromeOf(context).base,
         child: Stack(
           children: [
             content,
@@ -280,7 +276,7 @@ class _ShippedScreenState extends ConsumerState<ShippedScreen> {
     }
 
     return ColoredBox(
-      color: IndustrialTheme.darkBase,
+      color: IndustrialTheme.chromeOf(context).base,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

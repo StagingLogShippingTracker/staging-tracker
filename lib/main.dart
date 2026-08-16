@@ -5,35 +5,43 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/app_config.dart';
+import 'core/branding.dart';
 import 'core/router.dart';
 import 'core/theme.dart';
-import 'data/app_state.dart';
 import 'data/log_view_mode.dart';
+import 'data/contact_memory_host.dart';
+import 'data/theme_preference.dart';
 import 'features/settings/scheduled_update_host.dart';
+
+SystemUiOverlayStyle _overlayFor({required bool dark}) {
+  return SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,
+    statusBarIconBrightness: dark ? Brightness.light : Brightness.dark,
+    statusBarBrightness: dark ? Brightness.dark : Brightness.light,
+    systemNavigationBarColor:
+        dark ? SwiftBrandColors.bgDark : SwiftBrandColors.bgLight,
+    systemNavigationBarIconBrightness:
+        dark ? Brightness.light : Brightness.dark,
+    systemNavigationBarContrastEnforced: false,
+  );
+}
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
-      statusBarBrightness: Brightness.dark,
-      systemNavigationBarColor: Color(0xFF090D16),
-      systemNavigationBarIconBrightness: Brightness.light,
-      systemNavigationBarContrastEnforced: false,
-    ),
-  );
+  final prefs = await SharedPreferences.getInstance();
+  final dark = loadDarkMode(prefs);
+  SystemChrome.setSystemUIOverlayStyle(_overlayFor(dark: dark));
   await Supabase.initialize(
     url: AppConfig.supabaseUrl,
     publishableKey: AppConfig.supabaseAnonKey,
   );
-  final prefs = await SharedPreferences.getInstance();
   final logView = await loadLogViewMode(prefs);
   runApp(
     ProviderScope(
       overrides: [
-        // Industrial Command Center is dark-operations only.
-        darkModeProvider.overrideWith((ref) => true),
+        darkModeProvider.overrideWith(
+          (ref) => DarkModeNotifier(prefs, dark),
+        ),
         logViewModeProvider.overrideWith(
           (ref) => LogViewModeNotifier(prefs, logView),
         ),
@@ -49,25 +57,21 @@ class SlstApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
+    final dark = ref.watch(darkModeProvider);
     return MaterialApp.router(
-      title: 'SLST',
-      theme: IndustrialTheme.darkTheme,
+      title: kProductName,
+      theme: IndustrialTheme.lightTheme,
       darkTheme: IndustrialTheme.darkTheme,
-      themeMode: ThemeMode.dark,
+      themeMode: dark ? ThemeMode.dark : ThemeMode.light,
       routerConfig: router,
       debugShowCheckedModeBanner: false,
       builder: (context, child) {
         return ScheduledUpdateHost(
-          child: AnnotatedRegion<SystemUiOverlayStyle>(
-            value: const SystemUiOverlayStyle(
-              statusBarColor: Colors.transparent,
-              statusBarIconBrightness: Brightness.light,
-              statusBarBrightness: Brightness.dark,
-              systemNavigationBarColor: Color(0xFF090D16),
-              systemNavigationBarIconBrightness: Brightness.light,
-              systemNavigationBarContrastEnforced: false,
+          child: ContactMemoryHost(
+            child: AnnotatedRegion<SystemUiOverlayStyle>(
+              value: _overlayFor(dark: dark),
+              child: child ?? const SizedBox.shrink(),
             ),
-            child: child ?? const SizedBox.shrink(),
           ),
         );
       },

@@ -1,21 +1,22 @@
-; Non-admin per-user installer for SLST
-#define MyAppName "SLST"
-#define MyAppVersion "1.1.34"
+; Non-admin per-user installer for Swift Staging & Shipping Log
+; Inno uses && to display a single &
+#define MyAppName "Swift Staging && Shipping Log"
+#define MyAppVersion "1.1.35"
 #define MyAppPublisher "Swift Supply"
-#define MyAppExeName "slst.exe"
+#define MyAppExeName "SwiftStagingLog.exe"
 
 [Setup]
 AppId={{A7C3E9B2-4F11-4D88-9C2A-51A7B6E41D20}}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
-DefaultDirName={localappdata}\Programs\SLST
+DefaultDirName={localappdata}\Programs\Swift Staging Shipping Log
 DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
 OutputDir=..\..\dist
-OutputBaseFilename=SLST-Setup-User
+OutputBaseFilename=SwiftStagingLog-Setup-User
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
@@ -36,4 +37,4 @@ Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{userdesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\{#MyAppExeName}"; Description: "Launch SLST"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\{#MyAppExeName}"; Description: "Launch Swift Staging && Shipping Log"; Flags: nowait postinstall skipifsilent

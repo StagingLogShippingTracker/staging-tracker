@@ -7,10 +7,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:slst_shared/slst_shared.dart' as shared;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../core/success_chime.dart';
 import '../domain/models.dart';
 import '../domain/location_intelligence.dart';
 import '../domain/status.dart';
 import 'consolidation_undo.dart';
+import 'person_name_memory.dart';
 import 'supabase_repositories.dart';
 
 typedef PhotoBytes = ({Uint8List bytes, String name});
@@ -220,23 +222,9 @@ class AppDataNotifier extends StateNotifier<AppData> {
       if (_disposed) return;
       final nextStaging = results[0] as List<StagingEntry>;
       final nextShipped = results[1] as List<ShippedEntry>;
-      final signedIn =
-          _ref.read(supabaseClientProvider).auth.currentUser != null;
 
-      // Session lost mid-poll: RLS returns [] while chip would flip to green
-      // "Live sync" over empty KPIs. Keep cache and surface auth error.
-      if (!signedIn && state.staging.isNotEmpty && nextStaging.isEmpty) {
-        state = state.copyWith(
-          loading: false,
-          syncing: false,
-          error: 'Sign in required. Your session may have expired.',
-        );
-        return;
-      }
-
-      // Signed-in wipe of a non-empty floor is suspicious (transient auth/RLS
-      // glitch). Re-fetch staging once before accepting empty inventory.
-      if (signedIn && state.staging.isNotEmpty && nextStaging.isEmpty) {
+      // Transient empty fetch of a non-empty floor: re-fetch staging once.
+      if (state.staging.isNotEmpty && nextStaging.isEmpty) {
         try {
           final verified = await _ref
               .read(stagingRepoProvider)
@@ -436,12 +424,8 @@ final carrierSuggestionsProvider = FutureProvider<List<String>>((ref) async {
   return filterCarrierSuggestions(values, hidden: prefs.hiddenMemory);
 });
 
-final personSuggestionsProvider = FutureProvider<List<String>>((ref) async {
-  final values = await ref
-      .watch(rosterRepoProvider)
-      .valuesFor(personRosterType);
-  final prefs = await ref.watch(prefsProvider.future);
-  return filterRememberedValues(values, hidden: prefs.hiddenMemory);
+final personSuggestionsProvider = Provider<List<String>>((ref) {
+  return ref.watch(personNameMemoryProvider).names;
 });
 
 final customerSuggestionsProvider = FutureProvider<List<String>>((ref) async {
@@ -496,7 +480,6 @@ final recentBinMovementsProvider = FutureProvider<List<ChangelogEntry>>((
       .toList();
 });
 
-final darkModeProvider = StateProvider<bool>((ref) => false);
 
 class OperationsService {
   OperationsService(this._ref);
@@ -511,11 +494,7 @@ class OperationsService {
   shared.InventoryRpc get _rpc =>
       shared.InventoryRpc(_ref.read(supabaseClientProvider));
 
-  void _requireAuth() {
-    if (_ref.read(supabaseClientProvider).auth.currentUser == null) {
-      throw Exception('Sign in required. Your session may have expired.');
-    }
-  }
+  void _requireAuth() {}
 
   Future<bool> soConflict(String so, {String? ignoreId}) async {
     final data = _ref.read(appDataProvider);
@@ -627,6 +606,8 @@ class OperationsService {
     );
     await _rememberCarrier(carrier);
 
+    unawaited(playSuccessChime());
+
     final shippedAt = shared.formatShipNotificationTimestamp();
     final notifyWarning = await _notifyPmIfRequested(
       notifyPm: notifyPm,
@@ -707,6 +688,7 @@ class OperationsService {
       locationCategory: locationCategory,
     );
     await _log.log('shipped', 'Added via Quick Ship: SO: ${so.trim()}');
+    unawaited(playSuccessChime());
     final shippedAt = shared.formatShipNotificationTimestamp();
     final notifyWarning = await _notifyPmIfRequested(
       notifyPm: notifyPm,
@@ -789,6 +771,9 @@ class OperationsService {
         'notification_type': 'return_to_stock',
       }, pmEmail),
     );
+    if (notifyPm && notifyWarning == null) {
+      unawaited(playSuccessChime());
+    }
     await _ref.read(appDataProvider.notifier).refresh();
     return notifyWarning;
   }
@@ -1028,6 +1013,7 @@ class OperationsService {
       'staging',
       'Sent Automated PO Notification for PO: $po${linkedSo == null ? '' : ' (SO $linkedSo)'} (PM: $pmEmail)',
     );
+    unawaited(playSuccessChime());
   }
 
   Future<void> sendBulkPoNotification({required List<BulkPoItem> items}) async {
@@ -1089,6 +1075,7 @@ class OperationsService {
         '${paths.isEmpty ? '' : ' with ${paths.length} photo(s)'}',
       );
     }
+    unawaited(playSuccessChime());
   }
 
   Future<void> sendReturnNotification({
@@ -1122,6 +1109,7 @@ class OperationsService {
     }, pmEmail));
     await _rememberEntryValues(customer: customer);
     await _log.log('staging', 'Sent Automated Return Notification for SO: $so');
+    unawaited(playSuccessChime());
   }
 
   /// Sends PM notify when requested; never throws after inventory already moved.
@@ -1221,9 +1209,12 @@ class OperationsService {
     }
 
     await remember(customerRosterType, customer);
-    await remember(personRosterType, person);
+    final memory = _ref.read(personNameMemoryProvider.notifier);
+    if (person != null) {
+      await memory.remember(person);
+    }
     for (final value in people) {
-      await remember(personRosterType, value);
+      await memory.remember(value);
     }
     if (location != null && location.trim().isNotEmpty) {
       final category = locationCategory ?? classifyLocation(location);

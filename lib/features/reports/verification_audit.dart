@@ -530,7 +530,7 @@ class _AuditDialogState extends ConsumerState<_AuditDialog> {
               Text(
                 '$verified verified · $issues discrepanc${issues == 1 ? 'y' : 'ies'}',
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 13, color: SlstColors.muted),
+                style: TextStyle(fontSize: 13, color: SlstColors.muted),
               ),
               const SizedBox(height: 18),
               if (_results.isNotEmpty)
@@ -563,7 +563,7 @@ class _AuditDialogState extends ConsumerState<_AuditDialog> {
 
   Widget _buildItem(BuildContext context, StagingEntry item) {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final muted = IndustrialTheme.textMuted;
+    final muted = IndustrialTheme.chromeOf(context).muted;
 
     Widget infoRow(String label, String value, {Color? color, FontWeight? w}) {
       return Padding(
@@ -639,7 +639,7 @@ class _AuditDialogState extends ConsumerState<_AuditDialog> {
                 Text(
                   item.location.isEmpty ? 'No Location' : item.location,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 38,
                     fontWeight: FontWeight.w900,
                     color: SlstColors.brand,
@@ -651,11 +651,11 @@ class _AuditDialogState extends ConsumerState<_AuditDialog> {
                   padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
                   decoration: BoxDecoration(
                     color: dark
-                        ? IndustrialTheme.darkHeader
-                        : IndustrialTheme.darkHeader,
+                        ? IndustrialTheme.chromeOf(context).header
+                        : IndustrialTheme.chromeOf(context).header,
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
-                      color: IndustrialTheme.borderStroke,
+                      color: IndustrialTheme.chromeOf(context).border,
                     ),
                   ),
                   child: Column(
@@ -685,7 +685,7 @@ class _AuditDialogState extends ConsumerState<_AuditDialog> {
                         style: FilledButton.styleFrom(
                           backgroundColor: SlstColors.success,
                           padding: const EdgeInsets.symmetric(vertical: 15),
-                          textStyle: const TextStyle(
+                          textStyle: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
                           ),
@@ -700,7 +700,7 @@ class _AuditDialogState extends ConsumerState<_AuditDialog> {
                         style: FilledButton.styleFrom(
                           backgroundColor: SlstColors.danger,
                           padding: const EdgeInsets.symmetric(vertical: 15),
-                          textStyle: const TextStyle(
+                          textStyle: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
                           ),
@@ -787,7 +787,7 @@ class _AuditActionMenu extends StatelessWidget {
                 'Resolve SO $so',
                 textAlign: TextAlign.center,
                 style:
-                    const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                    TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 4),
               const Text(

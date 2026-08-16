@@ -154,16 +154,16 @@ class _QuickShipSheetState extends ConsumerState<QuickShipSheet> {
                 Text(
                   'Quick Ship',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: IndustrialTheme.textPrimary,
+                        color: IndustrialTheme.chromeOf(context).ink,
                       ),
                 ),
                 const Spacer(),
                 IconButton(
                   tooltip: 'Close',
                   onPressed: () => Navigator.pop(context),
-                  icon: const Icon(
+                  icon: Icon(
                     Icons.close,
-                    color: IndustrialTheme.textMuted,
+                    color: IndustrialTheme.chromeOf(context).muted,
                   ),
                 ),
               ],

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/format_weight.dart';
 import '../../core/theme.dart';
 import '../../data/app_state.dart';
 import '../../data/log_view_mode.dart';
@@ -14,6 +15,7 @@ import '../staging/ship_dialog.dart';
 import '../staging/split_dialog.dart';
 import '../staging/staging_form_sheet.dart';
 import 'industrial_widgets.dart';
+import 'entry_suggestion_fields.dart';
 import 'order_history_dialog.dart';
 import 'so_advisories.dart';
 import 'so_history_link.dart';
@@ -43,10 +45,10 @@ String _stagingStatusLabel(String status) {
   return StatusRules.formatUi(status);
 }
 
-Color _zebraRowColor(int index, {bool selected = false}) {
-  if (selected) return IndustrialTheme.skyBlue.withValues(alpha: 0.12);
+Color _zebraRowColor(BuildContext context, int index, {bool selected = false}) {
+  if (selected) return IndustrialTheme.chromeAccent.withValues(alpha: 0.12);
   return index.isOdd
-      ? IndustrialTheme.darkHeader.withValues(alpha: 0.55)
+      ? IndustrialTheme.chromeOf(context).header.withValues(alpha: 0.55)
       : Colors.transparent;
 }
 
@@ -103,6 +105,7 @@ Widget _industrialGridWithPinnedHorizontalChrome({
 }
 
 Widget _clipText(
+  BuildContext context,
   String text, {
   double maxWidth = 220,
   FontWeight? weight,
@@ -122,18 +125,18 @@ Widget _clipText(
           fontWeight: weight ?? FontWeight.w500,
           fontSize: 13,
           color: muted
-              ? IndustrialTheme.textMuted
-              : IndustrialTheme.textPrimary,
+              ? IndustrialTheme.chromeOf(context).muted
+              : IndustrialTheme.chromeOf(context).ink,
         ),
       ),
     ),
   );
 }
 
-Widget _mutedStamp(DateTime? d) {
+Widget _mutedStamp(BuildContext context, DateTime? d) {
   return Text(
     _fmtStamp(d),
-    style: IndustrialTheme.mono(fontSize: 11, color: IndustrialTheme.textMuted),
+    style: IndustrialTheme.mono(fontSize: 11, color: IndustrialTheme.chromeOf(context).muted),
   );
 }
 
@@ -165,14 +168,18 @@ Widget _denseAccentRow({
   );
 }
 
-Widget _pmNotificationCell(ShippedEntry entry, {double maxWidth = 120}) {
+Widget _pmNotificationCell(
+  BuildContext context,
+  ShippedEntry entry, {
+  double maxWidth = 120,
+}) {
   final email = entry.pmdEmail?.trim() ?? '';
   if (email.isEmpty) {
     return Text(
       '—',
       style: IndustrialTheme.mono(
         fontSize: 12,
-        color: IndustrialTheme.textMuted,
+        color: IndustrialTheme.chromeOf(context).muted,
       ),
     );
   }
@@ -182,7 +189,7 @@ Widget _pmNotificationCell(ShippedEntry entry, {double maxWidth = 120}) {
     'sent' => (Icons.check_circle, IndustrialTheme.mintGreen, 'Sent'),
     'failed' => (Icons.error, SlstColors.danger, 'Failed'),
     'pending' => (Icons.schedule, Colors.amber, 'Pending'),
-    _ => (Icons.mail_outline, IndustrialTheme.textMuted, 'Not requested'),
+    _ => (Icons.mail_outline, IndustrialTheme.chromeOf(context).muted, 'Not requested'),
   };
   final message = entry.notificationError?.trim();
   return Tooltip(
@@ -194,13 +201,13 @@ Widget _pmNotificationCell(ShippedEntry entry, {double maxWidth = 120}) {
       children: [
         Icon(icon, size: 15, color: color),
         const SizedBox(width: 4),
-        _clipText(email, maxWidth: maxWidth - 28),
+        _clipText(context, email, maxWidth: maxWidth - 28),
       ],
     ),
   );
 }
 
-Widget _containerCell(String type, int qty) {
+Widget _containerCell(BuildContext context, String type, int qty) {
   final label = type.trim().isEmpty ? '$qty' : type.trim();
   return Tooltip(
     message: label,
@@ -213,7 +220,7 @@ Widget _containerCell(String type, int qty) {
         overflow: TextOverflow.ellipsis,
         style: IndustrialTheme.mono(
           fontSize: 12,
-          color: IndustrialTheme.textPrimary,
+          color: IndustrialTheme.chromeOf(context).ink,
         ),
       ),
     ),
@@ -226,7 +233,7 @@ Widget _photosButton(BuildContext context, String so, List<String> paths) {
       '—',
       style: IndustrialTheme.mono(
         fontSize: 12,
-        color: IndustrialTheme.textMuted,
+        color: IndustrialTheme.chromeOf(context).muted,
       ),
     );
   }
@@ -234,7 +241,7 @@ Widget _photosButton(BuildContext context, String so, List<String> paths) {
     style: TextButton.styleFrom(
       padding: const EdgeInsets.symmetric(horizontal: 8),
       minimumSize: const Size(0, 32),
-      foregroundColor: IndustrialTheme.skyBlue,
+      foregroundColor: IndustrialTheme.chromeAccent,
     ),
     onPressed: () =>
         showPhotosDialog(context, title: 'Photos — SO $so', paths: paths),
@@ -258,7 +265,7 @@ Widget _soHistoryLink(
 }
 
 /// Industrial list ↔ cards toggle (sky accent when cards active).
-Widget _logViewModeToggle(WidgetRef ref) {
+Widget _logViewModeToggle(BuildContext context, WidgetRef ref) {
   final mode = ref.watch(logViewModeProvider);
   final isCards = mode == LogViewMode.card;
 
@@ -278,10 +285,10 @@ Widget _logViewModeToggle(WidgetRef ref) {
           padding: const EdgeInsets.all(2),
           decoration: BoxDecoration(
             color: isCards
-                ? IndustrialTheme.skyBlue
-                : IndustrialTheme.darkHeader,
+                ? IndustrialTheme.chromeAccent
+                : IndustrialTheme.chromeOf(context).header,
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: IndustrialTheme.borderStroke),
+            border: Border.all(color: IndustrialTheme.chromeOf(context).border),
           ),
           child: AnimatedAlign(
             duration: const Duration(milliseconds: 180),
@@ -290,8 +297,8 @@ Widget _logViewModeToggle(WidgetRef ref) {
             child: Container(
               width: 18,
               height: 18,
-              decoration: const BoxDecoration(
-                color: IndustrialTheme.textPrimary,
+              decoration: BoxDecoration(
+                color: IndustrialTheme.chromeOf(context).ink,
                 shape: BoxShape.circle,
               ),
             ),
@@ -331,7 +338,7 @@ Future<void> showChangelogDialog(
                         table == null
                             ? 'Changelog'
                             : '${table == 'staging' ? 'Staging' : 'Shipped'} Changelog',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
                         ),
@@ -374,7 +381,7 @@ Future<void> showChangelogDialog(
                       return ListView.separated(
                         shrinkWrap: true,
                         itemCount: rows.length,
-                        separatorBuilder: (_, _) => const Divider(),
+                        separatorBuilder: (_, _) => Divider(),
                         itemBuilder: (context, i) {
                           final r = rows[i];
                           return Padding(
@@ -415,16 +422,16 @@ Future<void> showChangelogDialog(
                                     children: [
                                       Text(
                                         r.action,
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontWeight: FontWeight.w500,
                                         ),
                                       ),
                                       const SizedBox(height: 2),
                                       Text(
                                         '${r.userEmail.isEmpty ? 'system' : r.userEmail} · ${_fmtDate(r.createdAt)}',
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontSize: 11.5,
-                                          color: IndustrialTheme.textMuted,
+                                          color: IndustrialTheme.chromeOf(context).muted,
                                         ),
                                       ),
                                     ],
@@ -508,7 +515,7 @@ Future<void> showQuickConsolidateDialog(BuildContext context, WidgetRef ref) {
                   child: ListView.separated(
                     shrinkWrap: true,
                     itemCount: dupes.length,
-                    separatorBuilder: (_, _) => const Divider(),
+                    separatorBuilder: (_, _) => Divider(),
                     itemBuilder: (context, i) {
                       final group = dupes[i];
                       final first = group.first;
@@ -516,13 +523,13 @@ Future<void> showQuickConsolidateDialog(BuildContext context, WidgetRef ref) {
                         contentPadding: EdgeInsets.zero,
                         title: Text(
                           'SO ${first.so} — ${first.customer}',
-                          style: const TextStyle(fontWeight: FontWeight.w600),
+                          style: TextStyle(fontWeight: FontWeight.w600),
                         ),
                         subtitle: Text(
                           '${group.length} rows · ${group.map((e) => e.type).join(' | ')}',
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 12),
+                          style: TextStyle(fontSize: 12),
                         ),
                         trailing: PillButton(
                           label: 'Consolidate',
@@ -725,8 +732,7 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
 
   @override
   Widget build(BuildContext context) {
-    final user = ref.watch(currentUserProvider);
-    final canWrite = user != null;
+    const canWrite = true;
     final sorted = _sorted();
     final rows = widget.expanded ? sorted : sorted.take(_previewRows).toList();
     _selected.removeWhere((id) => !sorted.any((e) => e.id == id));
@@ -763,12 +769,12 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
           ],
           onChanged: (v) => setState(() => _sort = v),
         ),
-        _logViewModeToggle(ref),
+        _logViewModeToggle(context, ref),
         if (canWrite)
           PillButton(
             label: 'New Entry',
             icon: Icons.add,
-            color: IndustrialTheme.skyBlue,
+            color: IndustrialTheme.chromeAccent,
             compact: true,
             onPressed: () => showStagingFormSheet(context, ref),
           ),
@@ -776,7 +782,7 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
           PillButton(
             label: _batch ? 'Exit Batch' : 'Batch Mode',
             icon: Icons.checklist,
-            color: IndustrialTheme.skyBlue,
+            color: IndustrialTheme.chromeAccent,
             compact: true,
             onPressed: () => setState(() {
               _batch = !_batch;
@@ -794,7 +800,7 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
           PillButton(
             label: 'Expand',
             icon: Icons.open_in_full,
-            color: IndustrialTheme.skyBlue,
+            color: IndustrialTheme.chromeAccent,
             compact: true,
             onPressed: widget.onExpand,
           ),
@@ -827,9 +833,9 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
               ),
               Text(
                 '${sorted.length} entr${sorted.length == 1 ? 'y' : 'ies'}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
-                  color: IndustrialTheme.textMuted,
+                  color: IndustrialTheme.chromeOf(context).muted,
                 ),
               ),
             ],
@@ -845,10 +851,10 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
               children: [
                 Text(
                   '${_selected.length} selected',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: 12.5,
-                    color: IndustrialTheme.textPrimary,
+                    color: IndustrialTheme.chromeOf(context).ink,
                   ),
                 ),
                 PillButton(
@@ -941,9 +947,9 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
               child: Text(
                 'Showing ${rows.length} of ${sorted.length} — use Expand to view all.',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
-                  color: IndustrialTheme.textMuted,
+                  color: IndustrialTheme.chromeOf(context).muted,
                 ),
               ),
             )
@@ -968,7 +974,8 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
       details: [
         if (e.location.trim().isNotEmpty) e.location,
         if (e.type.trim().isNotEmpty) e.type,
-        if ((e.weight ?? '').isNotEmpty) 'Wt: ${e.weight}',
+        if ((e.weight ?? '').isNotEmpty)
+          'Wt: ${formatWeightDisplay(e.weight)}',
         if ((e.stagedBy ?? '').isNotEmpty) 'Staged by: ${e.stagedBy}',
         if ((e.comments ?? '').isNotEmpty) e.comments!,
       ],
@@ -976,10 +983,10 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
       trailing: canWrite
           ? PopupMenuButton<String>(
               tooltip: 'Actions',
-              icon: const Icon(
+              icon: Icon(
                 Icons.more_vert,
                 size: 20,
-                color: IndustrialTheme.textMuted,
+                color: IndustrialTheme.chromeOf(context).muted,
               ),
               onSelected: (v) {
                 switch (v) {
@@ -1019,7 +1026,7 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
               padding: const EdgeInsets.fromLTRB(4, 8, 4, 4),
               child: Text(
                 'Showing ${rows.length} of $sortedLength — use Expand to view all.',
-                style: const TextStyle(fontSize: 12, color: SlstColors.muted),
+                style: TextStyle(fontSize: 12, color: SlstColors.muted),
               ),
             );
           }
@@ -1038,7 +1045,7 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
               padding: const EdgeInsets.fromLTRB(4, 8, 4, 4),
               child: Text(
                 'Showing ${rows.length} of $sortedLength — use Expand to view all.',
-                style: const TextStyle(fontSize: 12, color: SlstColors.muted),
+                style: TextStyle(fontSize: 12, color: SlstColors.muted),
               ),
             ),
         ],
@@ -1054,10 +1061,10 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
     Widget rowFor(StagingEntry e, int index) {
       final statusLabel = _stagingStatusLabel(e.status);
       final selected = widget.selectedId == e.id;
-      final accent = industrialStatusAccent(statusLabel);
+      final accent = industrialStatusAccent(context, statusLabel);
       return _denseAccentRow(
         accent: accent,
-        background: _zebraRowColor(index, selected: selected),
+        background: _zebraRowColor(context, index, selected: selected),
         onTap: () => _inspect(e),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(12, 12, 8, 12),
@@ -1090,7 +1097,7 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
                             style: IndustrialTheme.mono(
                               fontSize: 15,
                               fontWeight: FontWeight.w700,
-                              color: IndustrialTheme.textPrimary,
+                              color: IndustrialTheme.chromeOf(context).ink,
                             ),
                           ),
                         ),
@@ -1102,10 +1109,10 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
                       e.customer.isEmpty ? '—' : e.customer,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.w500,
                         fontSize: 13,
-                        color: IndustrialTheme.textMuted,
+                        color: IndustrialTheme.chromeOf(context).muted,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -1115,10 +1122,10 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
                         IndustrialZonePill(e.location),
-                        _containerCell(e.type, e.qty),
+                        _containerCell(context, e.type, e.qty),
                         if ((e.weight ?? '').trim().isNotEmpty)
                           IndustrialWeightPill(e.weight),
-                        _mutedStamp(e.entryDate),
+                        _mutedStamp(context, e.entryDate),
                       ],
                     ),
                   ],
@@ -1127,10 +1134,10 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
               if (canWrite)
                 PopupMenuButton<String>(
                   tooltip: 'Actions',
-                  icon: const Icon(
+                  icon: Icon(
                     Icons.more_vert,
                     size: 20,
-                    color: IndustrialTheme.textMuted,
+                    color: IndustrialTheme.chromeOf(context).muted,
                   ),
                   onSelected: (v) {
                     switch (v) {
@@ -1181,16 +1188,16 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
             rows.length +
             (!widget.expanded && sortedLength > rows.length ? 1 : 0),
         separatorBuilder: (_, _) =>
-            const Divider(height: 1, color: IndustrialTheme.borderStroke),
+            Divider(height: 1, color: IndustrialTheme.chromeOf(context).border),
         itemBuilder: (context, index) {
           if (index >= rows.length) {
             return Padding(
               padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
               child: Text(
                 'Showing ${rows.length} of $sortedLength — use Expand to view all.',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
-                  color: IndustrialTheme.textMuted,
+                  color: IndustrialTheme.chromeOf(context).muted,
                 ),
               ),
             );
@@ -1206,7 +1213,7 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
         children: [
           for (var i = 0; i < rows.length; i++) ...[
             if (i > 0)
-              const Divider(height: 1, color: IndustrialTheme.borderStroke),
+              Divider(height: 1, color: IndustrialTheme.chromeOf(context).border),
             rowFor(rows[i], i),
           ],
           if (!widget.expanded && sortedLength > rows.length)
@@ -1214,9 +1221,9 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
               padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
               child: Text(
                 'Showing ${rows.length} of $sortedLength — use Expand to view all.',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
-                  color: IndustrialTheme.textMuted,
+                  color: IndustrialTheme.chromeOf(context).muted,
                 ),
               ),
             ),
@@ -1265,7 +1272,7 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Container(
-            color: IndustrialTheme.darkHeader,
+            color: IndustrialTheme.chromeOf(context).header,
             padding: const EdgeInsets.fromLTRB(0, 10, 12, 10),
             child: Row(
               children: [
@@ -1284,17 +1291,17 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
               ],
             ),
           ),
-          const Divider(height: 1, color: IndustrialTheme.borderStroke),
+          Divider(height: 1, color: IndustrialTheme.chromeOf(context).border),
           for (var i = 0; i < rows.length; i++) ...[
             if (i > 0)
-              const Divider(height: 1, color: IndustrialTheme.borderStroke),
+              Divider(height: 1, color: IndustrialTheme.chromeOf(context).border),
             () {
               final e = rows[i];
               final statusLabel = _stagingStatusLabel(e.status);
               final selected = widget.selectedId == e.id;
-              final accent = industrialStatusAccent(statusLabel);
+              final accent = industrialStatusAccent(context, statusLabel);
               return Material(
-                color: _zebraRowColor(i, selected: selected),
+                color: _zebraRowColor(context, i, selected: selected),
                 child: InkWell(
                   onTap: () => _inspect(e),
                   child: IntrinsicHeight(
@@ -1335,7 +1342,7 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
                           width: clientW,
                           child: Padding(
                             padding: cellPad,
-                            child: _clipText(
+                            child: _clipText(context, 
                               e.customer,
                               maxWidth: clientW - 20,
                               muted: true,
@@ -1353,7 +1360,7 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
                           width: containerW,
                           child: Padding(
                             padding: cellPad,
-                            child: _containerCell(e.type, e.qty),
+                            child: _containerCell(context, e.type, e.qty),
                           ),
                         ),
                         SizedBox(
@@ -1374,7 +1381,7 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
                           width: stagerW,
                           child: Padding(
                             padding: cellPad,
-                            child: _clipText(
+                            child: _clipText(context, 
                               e.stagedBy ?? '',
                               maxWidth: stagerW - 20,
                               muted: true,
@@ -1385,7 +1392,7 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
                           width: timeW,
                           child: Padding(
                             padding: cellPad,
-                            child: _mutedStamp(e.entryDate),
+                            child: _mutedStamp(context, e.entryDate),
                           ),
                         ),
                         SizedBox(
@@ -1418,10 +1425,10 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
                                   ),
                                   PopupMenuButton<String>(
                                     tooltip: 'More actions',
-                                    icon: const Icon(
+                                    icon: Icon(
                                       Icons.more_vert,
                                       size: 20,
-                                      color: IndustrialTheme.textMuted,
+                                      color: IndustrialTheme.chromeOf(context).muted,
                                     ),
                                     onSelected: (v) {
                                       switch (v) {
@@ -1674,8 +1681,7 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
 
   @override
   Widget build(BuildContext context) {
-    final user = ref.watch(currentUserProvider);
-    final canWrite = user != null;
+    const canWrite = true;
     final dark = Theme.of(context).brightness == Brightness.dark;
     final sorted = _sorted();
     final rows = widget.expanded ? sorted : sorted.take(_previewRows).toList();
@@ -1711,7 +1717,7 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
           ],
           onChanged: (v) => setState(() => _sort = v),
         ),
-        _logViewModeToggle(ref),
+        _logViewModeToggle(context, ref),
         if (canWrite && widget.onQuickShip != null)
           PillButton(
             label: 'Quick Ship',
@@ -1724,7 +1730,7 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
           PillButton(
             label: _batch ? 'Exit Batch' : 'Batch Mode',
             icon: Icons.checklist,
-            color: IndustrialTheme.skyBlue,
+            color: IndustrialTheme.chromeAccent,
             compact: true,
             onPressed: () => setState(() {
               _batch = !_batch;
@@ -1742,7 +1748,7 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
           PillButton(
             label: 'Expand',
             icon: Icons.open_in_full,
-            color: IndustrialTheme.skyBlue,
+            color: IndustrialTheme.chromeAccent,
             compact: true,
             onPressed: widget.onExpand,
           ),
@@ -1775,9 +1781,9 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
               ),
               Text(
                 '${sorted.length} entr${sorted.length == 1 ? 'y' : 'ies'}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
-                  color: IndustrialTheme.textMuted,
+                  color: IndustrialTheme.chromeOf(context).muted,
                 ),
               ),
             ],
@@ -1791,10 +1797,10 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
               children: [
                 Text(
                   '${_selected.length} selected',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: 12.5,
-                    color: IndustrialTheme.textPrimary,
+                    color: IndustrialTheme.chromeOf(context).ink,
                   ),
                 ),
                 PillButton(
@@ -1874,9 +1880,9 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
               child: Text(
                 'Showing ${rows.length} of ${sorted.length} — use Expand to view all.',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
-                  color: IndustrialTheme.textMuted,
+                  color: IndustrialTheme.chromeOf(context).muted,
                 ),
               ),
             )
@@ -1905,7 +1911,8 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
         if (e.type.trim().isNotEmpty) e.type,
         if (e.carrier.trim().isNotEmpty) e.carrier,
         if (e.location.trim().isNotEmpty) e.location,
-        if ((e.weight ?? '').isNotEmpty) 'Wt: ${e.weight}',
+        if ((e.weight ?? '').isNotEmpty)
+          'Wt: ${formatWeightDisplay(e.weight)}',
         if ((e.shippedBy ?? '').isNotEmpty) 'Shipped by: ${e.shippedBy}',
         if ((e.comments ?? '').isNotEmpty) e.comments!,
       ],
@@ -1913,10 +1920,10 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
       trailing: canWrite
           ? PopupMenuButton<String>(
               tooltip: 'Actions',
-              icon: const Icon(
+              icon: Icon(
                 Icons.more_vert,
                 size: 20,
-                color: IndustrialTheme.textMuted,
+                color: IndustrialTheme.chromeOf(context).muted,
               ),
               onSelected: (v) {
                 switch (v) {
@@ -1951,7 +1958,7 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
               padding: const EdgeInsets.fromLTRB(4, 8, 4, 4),
               child: Text(
                 'Showing ${rows.length} of $sortedLength — use Expand to view all.',
-                style: const TextStyle(fontSize: 12, color: SlstColors.muted),
+                style: TextStyle(fontSize: 12, color: SlstColors.muted),
               ),
             );
           }
@@ -1970,7 +1977,7 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
               padding: const EdgeInsets.fromLTRB(4, 8, 4, 4),
               child: Text(
                 'Showing ${rows.length} of $sortedLength — use Expand to view all.',
-                style: const TextStyle(fontSize: 12, color: SlstColors.muted),
+                style: TextStyle(fontSize: 12, color: SlstColors.muted),
               ),
             ),
         ],
@@ -1988,12 +1995,12 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
       final returned = e.carrier.toUpperCase() == 'RETURNED TO STOCK';
       final statusLabel = returned ? 'Returned' : 'Shipped';
       final selected = widget.selectedId == e.id;
-      final accent = industrialStatusAccent(statusLabel);
+      final accent = industrialStatusAccent(context, statusLabel);
       return _denseAccentRow(
         accent: accent,
         background: returned
             ? SlstColors.statusPartial
-            : _zebraRowColor(index, selected: selected),
+            : _zebraRowColor(context, index, selected: selected),
         onTap: () => _inspect(e),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(12, 12, 8, 12),
@@ -2026,7 +2033,7 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
                             style: IndustrialTheme.mono(
                               fontSize: 15,
                               fontWeight: FontWeight.w700,
-                              color: IndustrialTheme.textPrimary,
+                              color: IndustrialTheme.chromeOf(context).ink,
                             ),
                           ),
                         ),
@@ -2038,10 +2045,10 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
                       e.customer.isEmpty ? '—' : e.customer,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.w500,
                         fontSize: 13,
-                        color: IndustrialTheme.textMuted,
+                        color: IndustrialTheme.chromeOf(context).muted,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -2051,7 +2058,7 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
                         IndustrialZonePill(e.location),
-                        _containerCell(e.type, e.qty),
+                        _containerCell(context, e.type, e.qty),
                         if (e.carrier.trim().isNotEmpty)
                           Container(
                             padding: const EdgeInsets.symmetric(
@@ -2059,23 +2066,23 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
                               vertical: 3,
                             ),
                             decoration: BoxDecoration(
-                              color: IndustrialTheme.darkHeader,
+                              color: IndustrialTheme.chromeOf(context).header,
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(
-                                color: IndustrialTheme.borderStroke,
+                                color: IndustrialTheme.chromeOf(context).border,
                               ),
                             ),
                             child: Text(
                               e.carrier,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 11.5,
-                                color: IndustrialTheme.textMuted,
+                                color: IndustrialTheme.chromeOf(context).muted,
                               ),
                             ),
                           ),
                         if ((e.weight ?? '').trim().isNotEmpty)
                           IndustrialWeightPill(e.weight),
-                        _mutedStamp(e.shippedAt),
+                        _mutedStamp(context, e.shippedAt),
                       ],
                     ),
                   ],
@@ -2084,10 +2091,10 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
               if (canWrite)
                 PopupMenuButton<String>(
                   tooltip: 'Actions',
-                  icon: const Icon(
+                  icon: Icon(
                     Icons.more_vert,
                     size: 20,
-                    color: IndustrialTheme.textMuted,
+                    color: IndustrialTheme.chromeOf(context).muted,
                   ),
                   onSelected: (v) {
                     switch (v) {
@@ -2123,16 +2130,16 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
             rows.length +
             (!widget.expanded && sortedLength > rows.length ? 1 : 0),
         separatorBuilder: (_, _) =>
-            const Divider(height: 1, color: IndustrialTheme.borderStroke),
+            Divider(height: 1, color: IndustrialTheme.chromeOf(context).border),
         itemBuilder: (context, index) {
           if (index >= rows.length) {
             return Padding(
               padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
               child: Text(
                 'Showing ${rows.length} of $sortedLength — use Expand to view all.',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
-                  color: IndustrialTheme.textMuted,
+                  color: IndustrialTheme.chromeOf(context).muted,
                 ),
               ),
             );
@@ -2148,7 +2155,7 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
         children: [
           for (var i = 0; i < rows.length; i++) ...[
             if (i > 0)
-              const Divider(height: 1, color: IndustrialTheme.borderStroke),
+              Divider(height: 1, color: IndustrialTheme.chromeOf(context).border),
             rowFor(rows[i], i),
           ],
           if (!widget.expanded && sortedLength > rows.length)
@@ -2156,9 +2163,9 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
               padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
               child: Text(
                 'Showing ${rows.length} of $sortedLength — use Expand to view all.',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
-                  color: IndustrialTheme.textMuted,
+                  color: IndustrialTheme.chromeOf(context).muted,
                 ),
               ),
             ),
@@ -2209,7 +2216,7 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Container(
-            color: IndustrialTheme.darkHeader,
+            color: IndustrialTheme.chromeOf(context).header,
             padding: const EdgeInsets.fromLTRB(0, 10, 12, 10),
             child: Row(
               children: [
@@ -2229,20 +2236,20 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
               ],
             ),
           ),
-          const Divider(height: 1, color: IndustrialTheme.borderStroke),
+          Divider(height: 1, color: IndustrialTheme.chromeOf(context).border),
           for (var i = 0; i < rows.length; i++) ...[
             if (i > 0)
-              const Divider(height: 1, color: IndustrialTheme.borderStroke),
+              Divider(height: 1, color: IndustrialTheme.chromeOf(context).border),
             () {
               final e = rows[i];
               final returned = e.carrier.toUpperCase() == 'RETURNED TO STOCK';
               final statusLabel = returned ? 'Returned' : 'Shipped';
               final selected = widget.selectedId == e.id;
-              final accent = industrialStatusAccent(statusLabel);
+              final accent = industrialStatusAccent(context, statusLabel);
               return Material(
                 color: returned
                     ? SlstColors.statusPartial
-                    : _zebraRowColor(i, selected: selected),
+                    : _zebraRowColor(context, i, selected: selected),
                 child: InkWell(
                   onTap: () => _inspect(e),
                   child: IntrinsicHeight(
@@ -2283,7 +2290,7 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
                           width: clientW,
                           child: Padding(
                             padding: cellPad,
-                            child: _clipText(
+                            child: _clipText(context, 
                               e.customer,
                               maxWidth: clientW - 20,
                               muted: true,
@@ -2294,7 +2301,7 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
                           width: containerW,
                           child: Padding(
                             padding: cellPad,
-                            child: _containerCell(e.type, e.qty),
+                            child: _containerCell(context, e.type, e.qty),
                           ),
                         ),
                         SizedBox(
@@ -2303,7 +2310,7 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
                             padding: cellPad,
                             child: returned
                                 ? IndustrialStatusBadge(status: 'Returned')
-                                : _clipText(
+                                : _clipText(context, 
                                     e.carrier,
                                     maxWidth: carrierW - 20,
                                   ),
@@ -2327,14 +2334,14 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
                           width: shippedW,
                           child: Padding(
                             padding: cellPad,
-                            child: _mutedStamp(e.shippedAt),
+                            child: _mutedStamp(context, e.shippedAt),
                           ),
                         ),
                         SizedBox(
                           width: byW,
                           child: Padding(
                             padding: cellPad,
-                            child: _clipText(
+                            child: _clipText(context, 
                               e.shippedBy ?? '',
                               maxWidth: byW - 20,
                               muted: true,
@@ -2345,7 +2352,7 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
                           width: pmdW,
                           child: Padding(
                             padding: cellPad,
-                            child: _pmNotificationCell(e, maxWidth: pmdW - 20),
+                            child: _pmNotificationCell(context, e, maxWidth: pmdW - 20),
                           ),
                         ),
                         SizedBox(
@@ -2363,10 +2370,10 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
                             width: actionsW,
                             child: PopupMenuButton<String>(
                               tooltip: 'Actions',
-                              icon: const Icon(
+                              icon: Icon(
                                 Icons.more_vert,
                                 size: 20,
-                                color: IndustrialTheme.textMuted,
+                                color: IndustrialTheme.chromeOf(context).muted,
                               ),
                               onSelected: (v) {
                                 switch (v) {
@@ -2424,20 +2431,20 @@ class _SortDropdown<T> extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10),
         decoration: BoxDecoration(
-          color: IndustrialTheme.darkHeader,
-          border: Border.all(color: IndustrialTheme.borderStroke),
+          color: IndustrialTheme.chromeOf(context).header,
+          border: Border.all(color: IndustrialTheme.chromeOf(context).border),
           borderRadius: BorderRadius.circular(6),
         ),
         child: DropdownButtonHideUnderline(
           child: DropdownButton<T>(
             value: value,
             isDense: true,
-            dropdownColor: IndustrialTheme.darkSurface,
-            iconEnabledColor: IndustrialTheme.textMuted,
-            style: const TextStyle(
+            dropdownColor: IndustrialTheme.chromeOf(context).surface,
+            iconEnabledColor: IndustrialTheme.chromeOf(context).muted,
+            style: TextStyle(
               fontSize: 12.5,
               fontWeight: FontWeight.w600,
-              color: IndustrialTheme.textPrimary,
+              color: IndustrialTheme.chromeOf(context).ink,
             ),
             items: [
               for (final (v, label) in items)
@@ -2648,10 +2655,9 @@ Future<void> showShippedEditDialog(
                             const InputDecoration(labelText: 'Weight'),
                       ),
                       const SizedBox(height: 10),
-                      TextField(
+                      PersonSuggestionField(
                         controller: shippedBy,
-                        decoration:
-                            const InputDecoration(labelText: 'Shipped by'),
+                        label: 'Shipped by',
                       ),
                       const SizedBox(height: 10),
                       TextField(
@@ -2725,7 +2731,7 @@ class StagingInspectorBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final status = _stagingStatusLabel(entry.status);
-    final canWrite = ref.watch(currentUserProvider) != null;
+    const canWrite = true;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -2786,7 +2792,11 @@ class StagingInspectorBody extends ConsumerWidget {
         _inspectorField(context, 'Customer', entry.customer),
         _inspectorField(context, 'Containers', entry.type),
         _inspectorField(context, 'Location', entry.location),
-        _inspectorField(context, 'Weight', entry.weight ?? '—'),
+        _inspectorField(
+          context,
+          'Weight',
+          formatWeightDisplay(entry.weight, empty: '—'),
+        ),
         _inspectorField(context, 'Staged by', entry.stagedBy ?? '—'),
         _inspectorField(context, 'Entry date', _fmtDate(entry.entryDate)),
         _inspectorField(context, 'Comments', entry.comments ?? '—'),
@@ -2807,7 +2817,7 @@ class ShippedInspectorBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final returned = entry.carrier.toUpperCase() == 'RETURNED TO STOCK';
-    final canWrite = ref.watch(currentUserProvider) != null;
+    const canWrite = true;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -2859,7 +2869,11 @@ class ShippedInspectorBody extends ConsumerWidget {
         _inspectorField(context, 'Containers', entry.type),
         _inspectorField(context, 'Carrier', entry.carrier),
         _inspectorField(context, 'Location', entry.location),
-        _inspectorField(context, 'Weight', entry.weight ?? '—'),
+        _inspectorField(
+          context,
+          'Weight',
+          formatWeightDisplay(entry.weight, empty: '—'),
+        ),
         _inspectorField(context, 'Shipped by', entry.shippedBy ?? '—'),
         _inspectorField(context, 'Shipped at', _fmtDate(entry.shippedAt)),
         _inspectorField(context, "PM'd", entry.pmdEmail ?? '—'),

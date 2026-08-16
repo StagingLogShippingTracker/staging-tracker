@@ -134,7 +134,7 @@ class _ShipDialogState extends ConsumerState<ShipDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      backgroundColor: IndustrialTheme.darkSurface,
+      backgroundColor: IndustrialTheme.chromeOf(context).surface,
       title: Text(
         'Ship SO ${widget.entry.so}',
         style: IndustrialTheme.mono(fontSize: 16, fontWeight: FontWeight.w700),
@@ -279,7 +279,7 @@ class _ReturnDialogState extends ConsumerState<ReturnDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      backgroundColor: IndustrialTheme.darkSurface,
+      backgroundColor: IndustrialTheme.chromeOf(context).surface,
       title: Text(
         'Return SO ${widget.entry.so}',
         style: IndustrialTheme.mono(fontSize: 16, fontWeight: FontWeight.w700),

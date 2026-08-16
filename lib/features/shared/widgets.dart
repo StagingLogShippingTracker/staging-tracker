@@ -81,43 +81,79 @@ EdgeInsets slstPagePadding(
   return EdgeInsets.fromLTRB(h, top, h, b);
 }
 
-/// Full SLST wordmark (transparent PNG) — sidepanel, footer, login.
+const kSwiftChromeLogoAsset =
+    'assets/branding/swift_supply_logo_orange_solid.png';
+
+/// Solid orange Swift Supply mark (same asset as Document Generator chrome).
+class SwiftChromeLogo extends StatelessWidget {
+  const SwiftChromeLogo({super.key, required this.height});
+
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    final dpr = MediaQuery.devicePixelRatioOf(context);
+    final cacheH = (height * dpr * 2).round().clamp(64, 910);
+    return Image.asset(
+      kSwiftChromeLogoAsset,
+      height: height,
+      fit: BoxFit.contain,
+      filterQuality: FilterQuality.high,
+      isAntiAlias: true,
+      cacheHeight: cacheH,
+    );
+  }
+}
+
+/// Orange Swift logo + product name, matching Document Generator chrome.
 class BrandWordmark extends StatelessWidget {
   const BrandWordmark({
     super.key,
     required this.height,
     this.colorFilter,
+    this.compact = false,
   });
 
   final double height;
   final ColorFilter? colorFilter;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
-    final dpr = MediaQuery.devicePixelRatioOf(context);
-    // Oversample decode (≥2× physical) so 100% DPI / large monitors stay sharp
-    // when Flutter paints the bitmap; assets themselves are high-res.
-    final cacheH = (height * dpr * 2.0).round().clamp(64, 4096);
-    Widget image = Image.asset(
-      kBrandWordmarkAsset,
-      height: height,
-      fit: BoxFit.contain,
-      filterQuality: FilterQuality.high,
-      cacheHeight: cacheH,
-      errorBuilder: (_, _, _) => Icon(
-        Icons.inventory_2_outlined,
-        color: SlstColors.brand,
-        size: height * 0.95,
+    final color = Theme.of(context).colorScheme.onSurface;
+    final logoH = (height * 0.55).clamp(18.0, 28.0);
+    Widget text = Text(
+      compact ? kProductCompactName : kProductName,
+      maxLines: compact ? 1 : 3,
+      overflow: TextOverflow.ellipsis,
+      style: TextStyle(
+        fontSize: (height * 0.22).clamp(11.0, 15.0),
+        height: 1.15,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0.2,
+        color: color,
       ),
     );
     if (colorFilter != null) {
-      image = ColorFiltered(colorFilter: colorFilter!, child: image);
+      text = ColorFiltered(colorFilter: colorFilter!, child: text);
     }
-    return Semantics(label: kProductName, child: image);
+    return Semantics(
+      label: kProductName,
+      child: SizedBox(
+        height: height,
+        child: Row(
+          children: [
+            SwiftChromeLogo(height: logoH),
+            const SizedBox(width: 10),
+            Expanded(child: text),
+          ],
+        ),
+      ),
+    );
   }
 }
 
-/// Full SLST logo for login and large brand placements.
+/// Large product name for login.
 class BrandLogo extends StatelessWidget {
   const BrandLogo({super.key, this.height = 96});
 
@@ -125,12 +161,28 @@ class BrandLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final h = height.clamp(64.0, 140.0);
-    return BrandWordmark(height: h);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SwiftChromeLogo(height: (height * 0.55).clamp(36.0, 52.0)),
+        SizedBox(height: height * 0.12),
+        Text(
+          kProductName,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: (height * 0.18).clamp(16.0, 24.0),
+            height: 1.2,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.3,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
+      ],
+    );
   }
 }
 
-/// Compact transparent SLST S-mark for collapsed nav / app bars.
+/// Collapsed-rail mark: solid orange Swift logo.
 class BrandMark extends StatelessWidget {
   const BrandMark({super.key, this.size = 32});
 
@@ -138,22 +190,7 @@ class BrandMark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dpr = MediaQuery.devicePixelRatioOf(context);
-    final cachePx = (size * dpr * 2.0).round().clamp(48, 2048);
-    return Image.asset(
-      kBrandMarkAsset,
-      width: size,
-      height: size,
-      fit: BoxFit.contain,
-      filterQuality: FilterQuality.high,
-      cacheWidth: cachePx,
-      cacheHeight: cachePx,
-      errorBuilder: (_, _, _) => Icon(
-        Icons.inventory_2_outlined,
-        color: SlstColors.brand,
-        size: size * 0.95,
-      ),
-    );
+    return SwiftChromeLogo(height: size * 0.72);
   }
 }
 
@@ -207,9 +244,9 @@ class PillButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final style = FilledButton.styleFrom(
       backgroundColor: color,
-      foregroundColor: IndustrialTheme.textPrimary,
+      foregroundColor: IndustrialTheme.chromeOf(context).ink,
       disabledBackgroundColor: color.withValues(alpha: 0.4),
-      disabledForegroundColor: IndustrialTheme.textMuted,
+      disabledForegroundColor: IndustrialTheme.chromeOf(context).muted,
       padding: compact
           ? const EdgeInsets.symmetric(horizontal: 12, vertical: 8)
           : const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -219,7 +256,7 @@ class PillButton extends StatelessWidget {
         fontWeight: FontWeight.w600,
         letterSpacing: 0.3,
         fontSize: compact ? 12 : 13,
-        color: IndustrialTheme.textPrimary,
+        color: IndustrialTheme.chromeOf(context).ink,
       ),
     );
     if (icon == null) {
@@ -281,9 +318,9 @@ class SectionCard extends StatelessWidget {
     final body = Padding(padding: padding, child: child);
     final card = Container(
       decoration: BoxDecoration(
-        color: IndustrialTheme.darkSurface,
+        color: IndustrialTheme.chromeOf(context).surface,
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: IndustrialTheme.borderStroke),
+        border: Border.all(color: IndustrialTheme.chromeOf(context).border),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
@@ -301,7 +338,7 @@ class SectionCard extends StatelessWidget {
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
                     fontSize: 12,
                     letterSpacing: 0.9,
-                    color: IndustrialTheme.textPrimary,
+                    color: IndustrialTheme.chromeOf(context).ink,
                   ),
                 ),
                 if (headerActions.isNotEmpty)
@@ -319,7 +356,7 @@ class SectionCard extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
               child: subHeader!,
             ),
-          const Divider(height: 1, color: IndustrialTheme.borderStroke),
+          Divider(height: 1, color: IndustrialTheme.chromeOf(context).border),
           if (expandChild) Expanded(child: body) else body,
         ],
       ),
@@ -342,7 +379,6 @@ const List<({String label, Color accent})> _legend = [
   (label: 'Ship On Future Date', accent: IndustrialTheme.purple),
   (label: 'Corp Pick', accent: IndustrialTheme.mintGreen),
   (label: 'Customer Pick-Up', accent: IndustrialTheme.purple),
-  (label: 'Awaiting Instructions', accent: IndustrialTheme.slateMuted),
 ];
 
 /// Desktop swatch legend (muted pastel chips + Inter labels).
@@ -355,7 +391,13 @@ class StagingStatusLegend extends StatelessWidget {
       spacing: 12,
       runSpacing: 6,
       children: [
-        for (final item in _legend)
+        for (final item in [
+          ..._legend,
+          (
+            label: 'Awaiting Instructions',
+            accent: IndustrialTheme.awaitingOf(context),
+          ),
+        ])
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -373,10 +415,10 @@ class StagingStatusLegend extends StatelessWidget {
               const SizedBox(width: 6),
               Text(
                 item.label,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w500,
-                  color: IndustrialTheme.textMuted,
+                  color: IndustrialTheme.chromeOf(context).muted,
                 ),
               ),
             ],
@@ -425,40 +467,40 @@ class SearchField extends StatelessWidget {
       controller: controller,
       onChanged: onChanged,
       textInputAction: TextInputAction.search,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 13.5,
-        color: IndustrialTheme.textPrimary,
+        color: IndustrialTheme.chromeOf(context).ink,
       ),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(
+        hintStyle: TextStyle(
           fontSize: 13,
-          color: IndustrialTheme.textMuted,
+          color: IndustrialTheme.chromeOf(context).muted,
         ),
-        prefixIcon: const Icon(
+        prefixIcon: Icon(
           Icons.search,
           size: 20,
-          color: IndustrialTheme.textMuted,
+          color: IndustrialTheme.chromeOf(context).muted,
         ),
         isDense: true,
         filled: true,
-        fillColor: IndustrialTheme.darkHeader,
+        fillColor: IndustrialTheme.chromeOf(context).header,
         contentPadding: const EdgeInsets.symmetric(
           vertical: 12,
           horizontal: 12,
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(6),
-          borderSide: const BorderSide(color: IndustrialTheme.borderStroke),
+          borderSide: BorderSide(color: IndustrialTheme.chromeOf(context).border),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(6),
-          borderSide: const BorderSide(color: IndustrialTheme.borderStroke),
+          borderSide: BorderSide(color: IndustrialTheme.chromeOf(context).border),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(6),
-          borderSide: const BorderSide(
-            color: IndustrialTheme.skyBlue,
+          borderSide: BorderSide(
+            color: IndustrialTheme.chromeAccent,
             width: 1.5,
           ),
         ),
@@ -472,10 +514,10 @@ class SearchField extends StatelessWidget {
                 controller.clear();
                 onChanged?.call('');
               },
-              icon: const Icon(
+              icon: Icon(
                 Icons.close,
                 size: 18,
-                color: IndustrialTheme.textMuted,
+                color: IndustrialTheme.chromeOf(context).muted,
               ),
             );
           },
@@ -501,27 +543,27 @@ class ComingSoonCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: IndustrialTheme.darkHeader,
+        color: IndustrialTheme.chromeOf(context).header,
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: IndustrialTheme.borderStroke),
+        border: Border.all(color: IndustrialTheme.chromeOf(context).border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w700,
-              color: IndustrialTheme.textMuted,
+              color: IndustrialTheme.chromeOf(context).muted,
             ),
           ),
           const SizedBox(height: 6),
           Text(
             text,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12.5,
-              color: IndustrialTheme.textMuted,
+              color: IndustrialTheme.chromeOf(context).muted,
             ),
           ),
         ],
@@ -731,7 +773,7 @@ Future<void> showPhotosDialog(
                   Expanded(
                     child: Text(
                       title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w700,
                       ),
@@ -807,7 +849,7 @@ class EntryCard extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final style = dbStatus == null ? null : statusStyleOf(context, dbStatus!);
     return Card(
-      color: color ?? IndustrialTheme.darkSurface,
+      color: color ?? IndustrialTheme.chromeOf(context).surface,
       margin: const EdgeInsets.symmetric(vertical: 5),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -818,7 +860,7 @@ class EntryCard extends StatelessWidget {
             children: [
               Container(
                 width: 4,
-                color: style?.accent ?? IndustrialTheme.borderStroke,
+                color: style?.accent ?? IndustrialTheme.chromeOf(context).border,
               ),
               Expanded(
                 child: Padding(
@@ -834,7 +876,7 @@ class EntryCard extends StatelessWidget {
                               style: IndustrialTheme.mono(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w700,
-                                color: IndustrialTheme.textPrimary,
+                                color: IndustrialTheme.chromeOf(context).ink,
                               ),
                             ),
                           ),
@@ -847,10 +889,10 @@ class EntryCard extends StatelessWidget {
                         subtitle,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w500,
-                          color: IndustrialTheme.textPrimary,
+                          color: IndustrialTheme.chromeOf(context).ink,
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -866,10 +908,10 @@ class EntryCard extends StatelessWidget {
                                   vertical: 3,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: IndustrialTheme.darkHeader,
+                                  color: IndustrialTheme.chromeOf(context).header,
                                   borderRadius: BorderRadius.circular(8),
                                   border: Border.all(
-                                    color: IndustrialTheme.borderStroke,
+                                    color: IndustrialTheme.chromeOf(context).border,
                                   ),
                                 ),
                                 child: Text(
@@ -901,78 +943,12 @@ class EntryCard extends StatelessWidget {
   }
 }
 
-/// Footer credit + product scope jargon — matches notify-pm email BrandFooter.
+/// Removed in-app credit line. Kept as an empty slot so old call sites compile.
 class BrandFooter extends StatelessWidget {
   const BrandFooter({super.key});
 
-  static const String creditLine = 'Designed & developed by Brice Johnson';
-
-  static const String scopeJargon =
-      'SLST is an internal operations tool for Swift Nisku warehouse staff. '
-      'It records what is staged, ready to ship, and departed—and notifies '
-      'sales when orders leave. It is not a carrier tracking system, '
-      'proof-of-delivery tool, or comprehensive order-tracking platform.';
-
-  static String pilotJargon([int? year]) =>
-      'SLST is a pilot project and is not an official Swift corporate product. '
-      '© ${year ?? DateTime.now().year}';
-
   @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final muted = scheme.onSurfaceVariant;
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    // Same washout as the wordmark (dark 0.35 / light 0.55) so credit +
-    // jargon match the logo's visual weight — faded, still legible.
-    final fade = dark ? 0.35 : 0.55;
-    final jargonStyle = TextStyle(
-      fontSize: 10,
-      height: 1.45,
-      color: muted,
-    );
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-      child: Column(
-        children: [
-          Opacity(
-            opacity: fade,
-            child: BrandWordmark(
-              height: 28,
-              colorFilter: ColorFilter.mode(muted, BlendMode.modulate),
-            ),
-          ),
-          const SizedBox(height: 6),
-          Opacity(
-            opacity: fade,
-            child: Column(
-              children: [
-                Text(
-                  creditLine,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 12, color: muted),
-                ),
-                const SizedBox(height: 14),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 520),
-                  child: Text(
-                    scopeJargon,
-                    textAlign: TextAlign.center,
-                    style: jargonStyle,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  pilotJargon(),
-                  textAlign: TextAlign.center,
-                  style: jargonStyle,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => const SizedBox.shrink();
 }
 
 Future<void> showError(BuildContext context, Object error) async {

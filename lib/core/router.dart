@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../features/auth/login_screen.dart';
 import '../features/contacts/contacts_screen.dart';
 import '../features/dashboard/dashboard_screen.dart';
 import '../features/notifications/notifications_screen.dart';
@@ -61,11 +60,6 @@ final routerProvider = Provider<GoRouter>((ref) {
                 const NoTransitionPage(child: SettingsScreen()),
           ),
         ],
-      ),
-      GoRoute(
-        path: '/login',
-        name: 'login',
-        builder: (context, state) => const LoginScreen(),
       ),
     ],
   );

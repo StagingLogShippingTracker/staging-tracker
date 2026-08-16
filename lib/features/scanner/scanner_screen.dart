@@ -114,7 +114,7 @@ class _DocumentScannerScreenState extends State<DocumentScannerScreen> {
               padding: EdgeInsets.all(10),
               child: Icon(Icons.document_scanner, color: SlstColors.brand),
             ),
-            title: const Text('SLST Document Scanner'),
+            title: const Text('Document Scanner'),
             actions: [
               const Tooltip(
                 message:

@@ -1,7 +1,8 @@
 /**
- * SLST industrial email layout — dual theme.
- * Default/fallback: cool light (photo 2). Dark ONLY via prefers-color-scheme +
- * Outlook [data-ogsb]/[data-ogsc] (photo 3). Never dark-only / hybrid mud.
+ * Industrial email layout — dual theme.
+ * Default/fallback: Document Generator warm light. Dark ONLY via
+ * prefers-color-scheme + Outlook [data-ogsb]/[data-ogsc] (neutral charcoal,
+ * not navy). Never dark-only / hybrid mud.
  *
  * Gmail/Outlook auto-inversion is blocked with background-image linear-gradient
  * locks on every critical surface (inline + media-query overrides).
@@ -10,7 +11,7 @@
 export const DEFAULT_EMAIL_ASSET_BASE =
   "https://gdrpdiwykmnybmkadlrv.supabase.co/storage/v1/object/public/email-assets";
 
-export const ASSET_VERSION = "20260802dual-theme-v2";
+export const ASSET_VERSION = "20260815pm-copy";
 
 /** Inline bg lock: bgcolor + CSS color + gradient (stops Gmail muddy invert). */
 function bgStyle(color: string): string {
@@ -21,46 +22,35 @@ function bgCss(color: string): string {
   return `background-color: ${color} !important; background-image: linear-gradient(${color}, ${color}) !important;`;
 }
 
-/** App BrandMark — same asset as Flutter `assets/slst-app-icon.png`. */
-const SLST_MARK_URL =
-  "https://raw.githubusercontent.com/StagingLogShippingTracker/staging-tracker/cursor/sst-industrial-email-redesign/assets/slst-app-icon.png";
-
-/**
- * Faded SLST wordmark for BrandFooter — baked #9CA3AF @ 0.35 opacity to mirror
- * Flutter BrandFooter (muted modulate + dark Opacity 0.35).
- */
-const SLST_WORDMARK_FOOTER_URL =
-  "https://raw.githubusercontent.com/StagingLogShippingTracker/staging-tracker/cursor/sst-industrial-email-redesign/assets/email/slst-wordmark-footer.png";
-
 /** Match GoogleFonts.inter / JetBrains Mono from the Flutter app. */
 const FONT =
   "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
 const MONO =
   "'JetBrains Mono', ui-monospace, Consolas, 'Courier New', monospace";
 
-/** Light tokens — cool white-ish industrial (good light screenshot). */
-const L_PAGE = "#E8EAF1";
+/** Light tokens — SwiftBrandColors light chrome (lib/core/theme.dart). */
+const L_PAGE = "#F4F2EF";
 const L_HEADER = "#FFFFFF";
 const L_SHELL = "#FFFFFF";
 const L_CARD = "#FFFFFF";
-const L_INSET = "#F4F6FA";
-const L_BORDER = "#C5CDD8";
-const L_TEXT = "#111827";
-const L_MUTED = "#6B7280";
-/** Footer washout on light canvas. */
-const L_FOOTER_FADE = "#9AA3B2";
+const L_INSET = "#F7F5F2";
+const L_BORDER = "#E6E2DC";
+const L_TEXT = "#1A1A1A";
+const L_MUTED = "#6B6B6B";
+/** Footer washout on warm light canvas. */
+const L_FOOTER_FADE = "#9A9690";
 
-/** Dark tokens — IndustrialTheme (good dark screenshot). */
-const D_PAGE = "#090D16";
-const D_HEADER = "#111827";
-const D_SHELL = "#1F2937";
-const D_CARD = "#1F2937";
-const D_INSET = "#111827";
-const D_BORDER = "#374151";
-const D_TEXT = "#F9FAFB";
-const D_MUTED = "#9CA3AF";
-/** Baked #9CA3AF @ 0.35 over PAGE #090D16. */
-const D_FOOTER_FADE = "#3C424C";
+/** Dark tokens — SwiftBrandColors dark chrome (neutral charcoal, not navy). */
+const D_PAGE = "#121417";
+const D_HEADER = "#16191E";
+const D_SHELL = "#1C1F24";
+const D_CARD = "#1C1F24";
+const D_INSET = "#15181C";
+const D_BORDER = "#2E333A";
+const D_TEXT = "#F2F0EC";
+const D_MUTED = "#A3A29C";
+/** Baked #A3A29C @ 0.35 over PAGE #121417. */
+const D_FOOTER_FADE = "#454546";
 
 const MINT = "#10B981";
 const SKY = "#3B82F6";
@@ -68,7 +58,7 @@ const AMBER = "#F59E0B";
 const PURPLE = "#8B5CF6";
 const DANGER = "#EF4444";
 const SLATE = "#4B5563";
-const SURFACE_HIGH = "#273549";
+const SURFACE_HIGH = "#2A2E35";
 
 export type AccentTone =
   | "mint"
@@ -143,10 +133,6 @@ function accentBorder(accent: string): string {
   }
 }
 
-function slstFooterWordmarkUrl(): string {
-  return `${SLST_WORDMARK_FOOTER_URL}?v=${ASSET_VERSION}`;
-}
-
 export function emailAssetUrl(fileKey: string, baseUrl?: string): string {
   const base = (baseUrl ?? DEFAULT_EMAIL_ASSET_BASE).replace(/\/$/, "");
   const key = fileKey.replace(/\.png$/i, "");
@@ -201,36 +187,25 @@ export function statusBadge(label: string, tone: AccentTone = "mint"): string {
 }
 
 /**
- * Brand strip: SLST mark + section title / Swift logo.
- * Status/sync chrome intentionally omitted — recipients do not need app shell cues.
+ * Header: Swift Supply logo only. Product name is omitted — PMs do not use the app.
  */
 function shellChrome(opts: {
   sectionTitle: string;
   swiftLogoUrl: string;
 }): string {
+  const title = opts.sectionTitle.trim();
+  const titleCell = title
+    ? `<td align="left" valign="middle" class="og-headline" style="font-family: ${FONT}; font-size: 15px; font-weight: 700; color: ${L_TEXT};">
+                    ${esc(title)}
+                  </td>`
+    : `<td align="left" valign="middle"></td>`;
   return `
-          <!-- Brand strip -->
-          <tr>
-            <td class="og-header" bgcolor="${L_HEADER}" style="${bgStyle(L_HEADER)} border-bottom: 1px solid ${L_BORDER}; padding: 12px 16px;">
-              <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
-                <tr>
-                  <td align="left" valign="middle">
-                    <img src="${SLST_MARK_URL}?v=${ASSET_VERSION}" width="36" height="36" alt="SLST"
-                      style="display: block; width: 36px; height: 36px; border-radius: 6px; border: 1px solid ${L_BORDER};">
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          <!-- Section header -->
+          <!-- Brand strip: Swift Supply logo -->
           <tr>
             <td class="og-header" bgcolor="${L_HEADER}" style="${bgStyle(L_HEADER)} border-bottom: 1px solid ${L_BORDER}; padding: 14px 16px;">
               <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
                 <tr>
-                  <td align="left" valign="middle" class="og-headline" style="font-family: ${FONT}; font-size: 15px; font-weight: 700; color: ${L_TEXT};">
-                    ${esc(opts.sectionTitle)}
-                  </td>
+                  ${titleCell}
                   <td align="right" valign="middle" width="100">
                     <img class="logo-swift" src="${esc(opts.swiftLogoUrl)}" alt="Swift Supply" width="88"
                       style="display: block; max-width: 88px; height: auto; border: 0; opacity: 0.92;">
@@ -681,21 +656,14 @@ export function renderBrandedEmail(opts: BrandedEmailOptions): string {
                 ${grid}
                 ${attachmentsSection(attachmentUrls)}
 
-                <!-- BrandFooter (lib/features/shared/widgets.dart) -->
+                <!-- Warehouse disclaimer (no product name — PMs do not use the app) -->
                 <tr>
                   <td align="center" class="og-footer og-canvas" bgcolor="${L_PAGE}" style="padding: 20px 16px 22px 16px; font-family: ${FONT}; ${bgStyle(L_PAGE)}">
-                    <div style="padding-bottom: 6px;">
-                      <img src="${slstFooterWordmarkUrl()}" width="120" height="35" alt="SLST"
-                        style="display: inline-block; width: 120px; height: auto; border: 0; outline: none;">
-                    </div>
-                    <div class="og-footer" style="font-size: 12px; color: ${L_FOOTER_FADE}; padding-bottom: 14px;">
-                      Designed &amp; developed by Brice Johnson
-                    </div>
                     <div class="og-disclaimer" style="font-size: 10px; line-height: 1.45; color: ${L_FOOTER_FADE}; max-width: 520px; margin: 0 auto;">
-                      SLST is an internal operations tool for Swift Nisku warehouse staff. It records what is staged, ready to ship, and departed—and notifies sales when orders leave. It is not a carrier tracking system, proof-of-delivery tool, or comprehensive order-tracking platform.
+                      This service is an internal operations tool for Swift Nisku warehouse staff. It records what is staged, ready to ship, and departed—and notifies sales when orders leave. It is not a carrier tracking system, proof-of-delivery tool, or comprehensive order-tracking platform.
                     </div>
                     <div class="og-disclaimer" style="margin-top: 8px; font-size: 10px; line-height: 1.45; color: ${L_FOOTER_FADE};">
-                      SLST is a pilot project and is not an official Swift corporate product. © ${year}
+                      This service is experimental and is not an official Swift corporate product. © ${year}
                     </div>
                   </td>
                 </tr>

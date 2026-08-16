@@ -6,7 +6,7 @@
     <uses-feature android:name="android.hardware.type.watch" android:required="false"/>
 
     <application
-        android:label="SLST"
+        android:label="Swift Staging and Shipping Log"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

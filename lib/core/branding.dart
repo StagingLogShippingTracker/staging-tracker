@@ -1,17 +1,8 @@
-/// SLST brand constants.
-///
-/// Product name is **SLST** only — do not reintroduce SST or long-form
-/// "Staging & Shipping Tracker" / "Swift Staging Tracker" strings here.
+/// Product brand constants.
 library;
 
-/// Official product name (short).
-const String kProductName = 'SLST';
+/// Official product name (window title, shortcuts, Android/Wear labels).
+const String kProductName = 'Swift Staging & Shipping Log';
 
-/// Square launcher / app-icon mark (S + swish on #0A1017).
-const String kBrandIconAsset = 'assets/slst-app-icon.png';
-
-/// Transparent S + swish mark for in-app chrome (collapsed rail, etc.).
-const String kBrandMarkAsset = 'assets/slst-mark-s.png';
-
-/// Full white SLST wordmark on transparent (sidepanel, footer, login).
-const String kBrandWordmarkAsset = 'assets/slst-wordmark-white.png';
+/// Compact label for tight chrome (collapsed rail).
+const String kProductCompactName = 'Staging Log';

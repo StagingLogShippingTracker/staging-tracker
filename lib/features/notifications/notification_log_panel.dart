@@ -11,6 +11,7 @@ import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:slst_shared/slst_shared.dart' as shared;
 
+import '../../core/format_weight.dart';
 import '../../core/theme.dart';
 import '../../data/app_state.dart';
 import '../shared/widgets.dart';
@@ -124,7 +125,7 @@ List<({String label, String value})> _messageBodyRows(
         'Container',
         _payloadStr(p, const ['containers', 'container', 'type']),
       );
-      add('Weight', _payloadStr(p, const ['weight']));
+      add('Weight', formatWeightDisplay(_payloadStr(p, const ['weight'])));
       add(
         'Details',
         _payloadStr(p, const ['comments', 'details', 'notes']),
@@ -331,7 +332,7 @@ class _NotificationLogPanelState extends ConsumerState<NotificationLogPanel> {
     }
     final csv = buf.toString();
     final name =
-        'SLST_Notification_Log_${_fileStampFmt.format(DateTime.now())}.csv';
+        'Staging_Shipping_Log_Notification_Log_${_fileStampFmt.format(DateTime.now())}.csv';
     try {
       final path = await FilePicker.platform.saveFile(
         dialogTitle: 'Save notification log CSV',
@@ -401,7 +402,7 @@ class _NotificationLogPanelState extends ConsumerState<NotificationLogPanel> {
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<title>SLST Notification Log</title>
+<title>Swift Staging &amp; Shipping Log — Notification Log</title>
 <style>
   @page { size: letter landscape; margin: 0.5in; }
   body { font-family: Segoe UI, Arial, sans-serif; color: #1a1a1a; margin: 24px; }
@@ -419,7 +420,7 @@ class _NotificationLogPanelState extends ConsumerState<NotificationLogPanel> {
   <div class="actions">
     <button onclick="window.print()">Print / Save as PDF</button>
   </div>
-  <h1>SLST — Notification Log</h1>
+  <h1>Swift Staging &amp; Shipping Log — Notification Log</h1>
   <div class="meta">
     ${_rows.length} notification(s)
     ${filterBits.isEmpty ? '' : ' · ${filterBits.join(' · ')}'}
@@ -445,7 +446,7 @@ $rowsHtml
     try {
       final dir = await getTemporaryDirectory();
       final name =
-          'SLST_Notification_Log_${_fileStampFmt.format(DateTime.now())}.html';
+          'Staging_Shipping_Log_Notification_Log_${_fileStampFmt.format(DateTime.now())}.html';
       final file = File('${dir.path}${Platform.pathSeparator}$name');
       await file.writeAsString(html);
       final result = await OpenFilex.open(file.path);
@@ -479,7 +480,7 @@ $rowsHtml
                   width: 120,
                   child: Text(
                     label,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
+                    style: TextStyle(fontWeight: FontWeight.w600),
                   ),
                 ),
                 Expanded(child: SelectableText(value)),
@@ -834,7 +835,7 @@ $rowsHtml
                 ),
                 FilledButton.icon(
                   style: FilledButton.styleFrom(
-                    backgroundColor: IndustrialTheme.skyBlue,
+                    backgroundColor: IndustrialTheme.chromeAccent,
                     foregroundColor: Colors.white,
                   ),
                   onPressed: _rows.isEmpty ? null : _exportPrintableHtml,
@@ -891,7 +892,7 @@ $rowsHtml
               child: DataTable(
                 showCheckboxColumn: false,
                 headingRowColor: WidgetStatePropertyAll(
-                  IndustrialTheme.darkHeader.withValues(alpha: 0.9),
+                  IndustrialTheme.chromeOf(context).header.withValues(alpha: 0.9),
                 ),
                 columns: const [
                   DataColumn(label: Text('When')),
@@ -908,7 +909,7 @@ $rowsHtml
                     DataRow(
                       color: WidgetStatePropertyAll(
                         i.isOdd
-                            ? IndustrialTheme.darkHeader.withValues(alpha: 0.35)
+                            ? IndustrialTheme.chromeOf(context).header.withValues(alpha: 0.35)
                             : Colors.transparent,
                       ),
                       onSelectChanged: (_) => _showDetail(_rows[i]),

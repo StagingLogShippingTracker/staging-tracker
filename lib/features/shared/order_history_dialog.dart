@@ -201,7 +201,7 @@ Future<void> showOrderHistoryDialog(
       data.staging.where((entry) => entry.so.trim().toUpperCase() == order).toList();
   final shipped =
       data.shipped.where((entry) => entry.so.trim().toUpperCase() == order).toList();
-  final canWrite = ref.read(currentUserProvider) != null;
+  const canWrite = true;
   if (usesDesktopPopupChrome(context)) {
     return showGeneralDialog<void>(
       context: context,
@@ -213,7 +213,7 @@ Future<void> showOrderHistoryDialog(
         return Align(
           alignment: Alignment.centerRight,
           child: Material(
-            color: IndustrialTheme.darkSurface,
+            color: IndustrialTheme.chromeOf(context).surface,
             child: SizedBox(
               width: 440,
               height: MediaQuery.sizeOf(dialogContext).height,
@@ -365,12 +365,12 @@ class OrderHistoryDialog extends StatelessWidget {
                       runSpacing: 2,
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        const Text(
+                        Text(
                           'Order History:',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w700,
-                            color: IndustrialTheme.textPrimary,
+                            color: IndustrialTheme.chromeOf(context).ink,
                           ),
                         ),
                         Text(
@@ -379,7 +379,7 @@ class OrderHistoryDialog extends StatelessWidget {
                           style: IndustrialTheme.mono(
                             fontSize: 18,
                             fontWeight: FontWeight.w700,
-                            color: IndustrialTheme.skyBlue,
+                            color: IndustrialTheme.chromeAccent,
                           ),
                         ),
                       ],
@@ -462,7 +462,7 @@ class OrderHistoryDialog extends StatelessWidget {
                         if (snapshot.hasError) {
                           return Text(
                             'Error loading order history: ${snapshot.error}',
-                            style: const TextStyle(color: SlstColors.danger),
+                            style: TextStyle(color: SlstColors.danger),
                           );
                         }
                         final logData = buildOrderHistoryLogData(
@@ -562,7 +562,7 @@ class _Section extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
               child: Text(
                 emptyText,
-                style: const TextStyle(fontSize: 12, color: SlstColors.muted),
+                style: TextStyle(fontSize: 12, color: SlstColors.muted),
               ),
             )
           else
@@ -610,7 +610,7 @@ class _HistoryItem extends StatelessWidget {
                   ),
                   child: Text(
                     badge!,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: SlstColors.purple,
                       fontSize: 10.5,
                       fontWeight: FontWeight.w700,
@@ -619,19 +619,19 @@ class _HistoryItem extends StatelessWidget {
                 ),
               Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                 ),
               ),
               if (detail != null)
-                Text(detail!, style: const TextStyle(fontSize: 13)),
+                Text(detail!, style: TextStyle(fontSize: 13)),
             ],
           ),
           const SizedBox(height: 2),
           Text(
             meta,
-            style: const TextStyle(fontSize: 11, color: SlstColors.muted),
+            style: TextStyle(fontSize: 11, color: SlstColors.muted),
           ),
         ],
       ),

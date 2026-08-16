@@ -347,7 +347,7 @@ class _StagingFormSheetState extends ConsumerState<StagingFormSheet> {
                             widget.existing == null
                                 ? Icons.add_box_outlined
                                 : Icons.edit_outlined,
-                            color: IndustrialTheme.skyBlue,
+                            color: IndustrialTheme.chromeAccent,
                           ),
                           const SizedBox(width: 8),
                           Expanded(
@@ -359,16 +359,16 @@ class _StagingFormSheetState extends ConsumerState<StagingFormSheet> {
                                   .textTheme
                                   .titleLarge
                                   ?.copyWith(
-                                    color: IndustrialTheme.textPrimary,
+                                    color: IndustrialTheme.chromeOf(context).ink,
                                   ),
                             ),
                           ),
                           IconButton(
                             tooltip: 'Close',
                             onPressed: () => Navigator.pop(context),
-                            icon: const Icon(
+                            icon: Icon(
                               Icons.close,
-                              color: IndustrialTheme.textMuted,
+                              color: IndustrialTheme.chromeOf(context).muted,
                             ),
                           ),
                         ],
@@ -506,7 +506,7 @@ class _StagingFormSheetState extends ConsumerState<StagingFormSheet> {
                 OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
                     foregroundColor: SlstColors.purple,
-                    side: const BorderSide(color: SlstColors.purple),
+                    side: BorderSide(color: SlstColors.purple),
                     padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
                   onPressed: _busy ? null : _reverseConsolidation,

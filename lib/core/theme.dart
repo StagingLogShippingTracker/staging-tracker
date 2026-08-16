@@ -3,115 +3,252 @@ import 'dart:ui' show lerpDouble;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// Industrial Command Center dark operations palette + ThemeData.
-///
-/// Windows overhaul default. Prefer [IndustrialTheme] tokens and helpers for
-/// new UI; [SlstColors] / [buildSlstTheme] remain for existing call sites.
+/// Swift Document Generator brand surfaces (chrome only — not status colours).
+class SwiftBrandColors {
+  static const accent = Color(0xFFCE4E30);
+  static const accentHover = Color(0xFFB8442A);
+  static const accentSoftLight = Color(0xFFF8EBE7);
+  static const accentSoftDark = Color(0xFF3A221C);
+  static const bgLight = Color(0xFFF4F2EF);
+  static const surfaceLight = Color(0xFFFFFFFF);
+  static const panelLight = Color(0xFFF7F5F2);
+  static const inkLight = Color(0xFF1A1A1A);
+  static const mutedLight = Color(0xFF6B6B6B);
+  static const borderLight = Color(0xFFE6E2DC);
+  static const inputLight = Color(0xFFFAFAF8);
+  static const elevatedLight = Color(0xFFEDE9E3);
+  static const bgDark = Color(0xFF121417);
+  static const surfaceDark = Color(0xFF1C1F24);
+  static const panelDark = Color(0xFF16191E);
+  static const inkDark = Color(0xFFF2F0EC);
+  static const mutedDark = Color(0xFFA3A29C);
+  static const borderDark = Color(0xFF2E333A);
+  static const inputDark = Color(0xFF15181C);
+  static const elevatedDark = Color(0xFF2A2E35);
+}
+
+/// Resolved light/dark chrome. Status tokens stay on [IndustrialTheme].
+class IndustrialChrome extends ThemeExtension<IndustrialChrome> {
+  const IndustrialChrome({
+    required this.base,
+    required this.surface,
+    required this.header,
+    required this.border,
+    required this.ink,
+    required this.muted,
+    required this.accentSoft,
+    required this.inputFill,
+  });
+
+  final Color base;
+  final Color surface;
+  final Color header;
+  final Color border;
+  final Color ink;
+  final Color muted;
+  final Color accentSoft;
+  final Color inputFill;
+
+  static IndustrialChrome of(BuildContext context) {
+    return Theme.of(context).extension<IndustrialChrome>() ?? dark;
+  }
+
+  static const light = IndustrialChrome(
+    base: SwiftBrandColors.bgLight,
+    surface: SwiftBrandColors.surfaceLight,
+    header: SwiftBrandColors.panelLight,
+    border: SwiftBrandColors.borderLight,
+    ink: SwiftBrandColors.inkLight,
+    muted: SwiftBrandColors.mutedLight,
+    accentSoft: SwiftBrandColors.accentSoftLight,
+    inputFill: SwiftBrandColors.inputLight,
+  );
+
+  static const dark = IndustrialChrome(
+    base: SwiftBrandColors.bgDark,
+    surface: SwiftBrandColors.surfaceDark,
+    header: SwiftBrandColors.panelDark,
+    border: SwiftBrandColors.borderDark,
+    ink: SwiftBrandColors.inkDark,
+    muted: SwiftBrandColors.mutedDark,
+    accentSoft: SwiftBrandColors.accentSoftDark,
+    inputFill: SwiftBrandColors.inputDark,
+  );
+
+  @override
+  IndustrialChrome copyWith({
+    Color? base,
+    Color? surface,
+    Color? header,
+    Color? border,
+    Color? ink,
+    Color? muted,
+    Color? accentSoft,
+    Color? inputFill,
+  }) {
+    return IndustrialChrome(
+      base: base ?? this.base,
+      surface: surface ?? this.surface,
+      header: header ?? this.header,
+      border: border ?? this.border,
+      ink: ink ?? this.ink,
+      muted: muted ?? this.muted,
+      accentSoft: accentSoft ?? this.accentSoft,
+      inputFill: inputFill ?? this.inputFill,
+    );
+  }
+
+  @override
+  IndustrialChrome lerp(covariant IndustrialChrome? other, double t) {
+    if (other == null) return this;
+    return IndustrialChrome(
+      base: Color.lerp(base, other.base, t)!,
+      surface: Color.lerp(surface, other.surface, t)!,
+      header: Color.lerp(header, other.header, t)!,
+      border: Color.lerp(border, other.border, t)!,
+      ink: Color.lerp(ink, other.ink, t)!,
+      muted: Color.lerp(muted, other.muted, t)!,
+      accentSoft: Color.lerp(accentSoft, other.accentSoft, t)!,
+      inputFill: Color.lerp(inputFill, other.inputFill, t)!,
+    );
+  }
+}
+
+/// Industrial layout + Swift chrome. Status colours are independent of theme.
 class IndustrialTheme {
   static const tokens = SlstLayoutTokens();
-  // Deep dark operations palette.
-  static const Color darkBase = Color(0xFF090D16); // Scaffold background
-  static const Color darkSurface = Color(0xFF1F2937); // Card & panel
-  static const Color darkHeader = Color(0xFF111827); // Header & sidebar
-  static const Color borderStroke = Color(0xFF374151); // Panel borders
-  static const Color textPrimary = Color(0xFFF9FAFB); // Main readable text
-  static const Color textMuted = Color(0xFF9CA3AF); // Subtitles / secondary
 
-  // Status accent tokens.
+  /// Dark-mode fallbacks for const/legacy call sites.
+  static const Color darkBase = SwiftBrandColors.bgDark;
+  static const Color darkSurface = SwiftBrandColors.surfaceDark;
+  static const Color darkHeader = SwiftBrandColors.panelDark;
+  static const Color borderStroke = SwiftBrandColors.borderDark;
+  static const Color textPrimary = SwiftBrandColors.inkDark;
+  static const Color textMuted = SwiftBrandColors.mutedDark;
+
+  static IndustrialChrome chromeOf(BuildContext context) =>
+      IndustrialChrome.of(context);
+
+  // Status accent tokens (unchanged across light/dark chrome).
   static const Color mintGreen = Color(0xFF10B981); // Today / ready / live sync
-  static const Color skyBlue = Color(0xFF3B82F6); // Tomorrow / transit / accent
+  static const Color skyBlue = Color(0xFF3B82F6); // Tomorrow / transit (status)
+  static const Color chromeAccent = SwiftBrandColors.accent;
+  static const Color chromeAccentHover = SwiftBrandColors.accentHover;
   static const Color amber = Color(0xFFF59E0B); // Partial / awaiting
   static const Color hotRed = Color(0xFFEF4444); // Rush / Hotshot
   static const Color purple = Color(0xFF8B5CF6); // Future / special action
-  static const Color slateMuted = Color(0xFF4B5563); // Delivered / completed
+  static const Color slateMuted = Color(0xFF4B5563); // Delivered / occupied
+  /// Awaiting Instructions in **light** mode only (darker than empty map seats).
+  static const Color awaiting = Color(0xFF1F2937);
 
-  static ThemeData get darkTheme {
+  /// Dark mode keeps the original mid-gray; light mode uses [awaiting].
+  static Color awaitingOf(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.light
+        ? awaiting
+        : slateMuted;
+  }
+
+  static ThemeData get lightTheme => _theme(Brightness.light);
+  static ThemeData get darkTheme => _theme(Brightness.dark);
+
+  static ThemeData _theme(Brightness brightness) {
+    final dark = brightness == Brightness.dark;
+    final chrome = dark ? IndustrialChrome.dark : IndustrialChrome.light;
+    final base = chrome.base;
+    final surface = chrome.surface;
+    final header = chrome.header;
+    final border = chrome.border;
+    final ink = chrome.ink;
+    final muted = chrome.muted;
+    final elevated =
+        dark ? SwiftBrandColors.elevatedDark : SwiftBrandColors.elevatedLight;
+
     final inter = GoogleFonts.interTextTheme(
-      ThemeData(brightness: Brightness.dark).textTheme,
-    ).apply(bodyColor: textPrimary, displayColor: textPrimary);
+      ThemeData(brightness: brightness).textTheme,
+    ).apply(bodyColor: ink, displayColor: ink);
 
     final textTheme = inter.copyWith(
       headlineMedium: GoogleFonts.inter(
         fontSize: 20,
         fontWeight: FontWeight.bold,
-        color: textPrimary,
+        color: ink,
       ),
       titleLarge: GoogleFonts.inter(
         fontSize: 16,
         fontWeight: FontWeight.w700,
-        color: textPrimary,
+        color: ink,
       ),
       titleMedium: GoogleFonts.inter(
         fontSize: 14,
         fontWeight: FontWeight.w600,
-        color: textPrimary,
+        color: ink,
       ),
       titleSmall: GoogleFonts.inter(
         fontSize: 13,
         fontWeight: FontWeight.w600,
-        color: textPrimary,
+        color: ink,
       ),
-      bodyMedium: GoogleFonts.inter(fontSize: 13, color: textPrimary),
+      bodyMedium: GoogleFonts.inter(fontSize: 13, color: ink),
       bodySmall: GoogleFonts.inter(
         fontSize: 11.5,
         height: 1.25,
-        color: textMuted,
+        color: muted,
       ),
       labelLarge: GoogleFonts.inter(
         fontSize: 12.5,
         fontWeight: FontWeight.w600,
-        color: textPrimary,
+        color: ink,
       ),
       labelMedium: GoogleFonts.inter(
         fontSize: 11.5,
         fontWeight: FontWeight.w600,
-        color: textPrimary,
+        color: ink,
       ),
       labelSmall: GoogleFonts.inter(
         fontSize: 10,
         fontWeight: FontWeight.w700,
         letterSpacing: 0.85,
-        color: textMuted,
+        color: muted,
       ),
     );
 
     final scheme =
         ColorScheme.fromSeed(
-          seedColor: skyBlue,
-          brightness: Brightness.dark,
-          surface: darkSurface,
+          seedColor: chromeAccent,
+          brightness: brightness,
+          surface: surface,
         ).copyWith(
-          primary: skyBlue,
-          onPrimary: textPrimary,
+          primary: chromeAccent,
+          onPrimary: Colors.white,
           secondary: mintGreen,
-          onSecondary: darkBase,
+          onSecondary: Colors.white,
           tertiary: purple,
-          onTertiary: textPrimary,
-          surface: darkSurface,
-          onSurface: textPrimary,
-          onSurfaceVariant: textMuted,
-          surfaceContainerLowest: darkBase,
-          surfaceContainerLow: darkHeader,
-          surfaceContainer: darkSurface,
-          surfaceContainerHigh: const Color(0xFF273549),
-          surfaceContainerHighest: borderStroke,
-          outline: borderStroke,
-          outlineVariant: borderStroke,
+          onTertiary: Colors.white,
+          surface: surface,
+          onSurface: ink,
+          onSurfaceVariant: muted,
+          surfaceContainerLowest: base,
+          surfaceContainerLow: header,
+          surfaceContainer: surface,
+          surfaceContainerHigh: elevated,
+          surfaceContainerHighest: elevated,
+          outline: border,
+          outlineVariant: border,
           error: const Color(0xFFEF4444),
         );
 
     return ThemeData(
       useMaterial3: true,
-      brightness: Brightness.dark,
+      brightness: brightness,
       colorScheme: scheme,
-      scaffoldBackgroundColor: darkBase,
-      primaryColor: darkHeader,
+      scaffoldBackgroundColor: base,
+      primaryColor: header,
       textTheme: textTheme,
-      extensions: const [SlstLayoutTokens()],
+      extensions: [const SlstLayoutTokens(), chrome],
       fontFamily: GoogleFonts.inter().fontFamily,
       appBarTheme: AppBarTheme(
-        backgroundColor: darkHeader,
-        foregroundColor: textPrimary,
+        backgroundColor: header,
+        foregroundColor: ink,
         elevation: 0,
         scrolledUnderElevation: 0,
         surfaceTintColor: Colors.transparent,
@@ -119,72 +256,72 @@ class IndustrialTheme {
         titleTextStyle: textTheme.titleMedium?.copyWith(fontSize: 16),
       ),
       cardTheme: CardThemeData(
-        color: darkSurface,
+        color: surface,
         elevation: 0,
         margin: EdgeInsets.zero,
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
-          side: const BorderSide(color: borderStroke, width: 1),
+          side: BorderSide(color: border, width: 1),
           borderRadius: BorderRadius.circular(6),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: darkHeader,
+        fillColor: chrome.inputFill,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 12,
           vertical: 10,
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(6),
-          borderSide: const BorderSide(color: borderStroke),
+          borderSide: BorderSide(color: border),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(6),
-          borderSide: const BorderSide(color: borderStroke),
+          borderSide: BorderSide(color: border),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(6),
-          borderSide: const BorderSide(color: skyBlue, width: 1.5),
+          borderSide: const BorderSide(color: chromeAccent, width: 1.5),
         ),
       ),
-      dividerTheme: const DividerThemeData(
-        color: borderStroke,
+      dividerTheme: DividerThemeData(
+        color: border,
         thickness: 1,
         space: 1,
       ),
       dialogTheme: DialogThemeData(
-        backgroundColor: darkSurface,
+        backgroundColor: surface,
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),
-          side: const BorderSide(color: borderStroke),
+          side: BorderSide(color: border),
         ),
       ),
-      bottomSheetTheme: const BottomSheetThemeData(
-        backgroundColor: darkSurface,
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: surface,
         showDragHandle: false,
-        shape: RoundedRectangleBorder(
+        shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(8)),
         ),
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
-        backgroundColor: darkHeader,
-        contentTextStyle: GoogleFonts.inter(color: textPrimary, fontSize: 13),
+        backgroundColor: header,
+        contentTextStyle: GoogleFonts.inter(color: ink, fontSize: 13),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
       ),
       tooltipTheme: TooltipThemeData(
-        textStyle: GoogleFonts.inter(color: textPrimary, fontSize: 12),
+        textStyle: GoogleFonts.inter(color: ink, fontSize: 12),
         decoration: BoxDecoration(
-          color: darkHeader,
+          color: header,
           borderRadius: BorderRadius.circular(4),
-          border: Border.all(color: borderStroke),
+          border: Border.all(color: border),
         ),
       ),
       scrollbarTheme: ScrollbarThemeData(
         thumbVisibility: const WidgetStatePropertyAll(true),
-        thumbColor: WidgetStatePropertyAll(borderStroke),
+        thumbColor: WidgetStatePropertyAll(border),
         radius: const Radius.circular(4),
         thickness: const WidgetStatePropertyAll(8),
       ),
@@ -193,33 +330,33 @@ class IndustrialTheme {
           fontWeight: FontWeight.w600,
           fontSize: 12,
           letterSpacing: 0.8,
-          color: textMuted,
+          color: muted,
         ),
-        dataTextStyle: GoogleFonts.inter(fontSize: 13, color: textPrimary),
+        dataTextStyle: GoogleFonts.inter(fontSize: 13, color: ink),
         dividerThickness: 1,
-        headingRowColor: const WidgetStatePropertyAll(darkHeader),
+        headingRowColor: WidgetStatePropertyAll(header),
       ),
-      navigationRailTheme: const NavigationRailThemeData(
-        backgroundColor: darkHeader,
-        indicatorColor: Color(0x333B82F6),
-        selectedIconTheme: IconThemeData(color: skyBlue),
-        unselectedIconTheme: IconThemeData(color: textMuted),
+      navigationRailTheme: NavigationRailThemeData(
+        backgroundColor: header,
+        indicatorColor: chrome.accentSoft,
+        selectedIconTheme: const IconThemeData(color: chromeAccent),
+        unselectedIconTheme: IconThemeData(color: muted),
         selectedLabelTextStyle: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w700,
-          color: textPrimary,
+          color: ink,
         ),
-        unselectedLabelTextStyle: TextStyle(fontSize: 12, color: textMuted),
+        unselectedLabelTextStyle: TextStyle(fontSize: 12, color: muted),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: skyBlue,
-        foregroundColor: textPrimary,
+        backgroundColor: chromeAccent,
+        foregroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
       chipTheme: ChipThemeData(
-        backgroundColor: darkHeader,
-        side: const BorderSide(color: borderStroke),
-        labelStyle: GoogleFonts.inter(fontSize: 12, color: textPrimary),
+        backgroundColor: header,
+        side: BorderSide(color: border),
+        labelStyle: GoogleFonts.inter(fontSize: 12, color: ink),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
       ),
       listTileTheme: const ListTileThemeData(
@@ -234,12 +371,12 @@ class IndustrialTheme {
   static TextStyle mono({
     double fontSize = 13,
     FontWeight fontWeight = FontWeight.normal,
-    Color color = textPrimary,
+    Color? color,
   }) {
     return GoogleFonts.jetBrainsMono(
       fontSize: fontSize,
       fontWeight: fontWeight,
-      color: color,
+      color: color ?? SwiftBrandColors.inkDark,
     );
   }
 }
@@ -248,11 +385,11 @@ class IndustrialTheme {
 /// keep compiling during the phased overhaul.
 class SlstColors {
   // Brand / accents → industrial primary accents.
-  static const brand = IndustrialTheme.skyBlue;
-  static const brandHover = Color(0xFF2563EB);
-  static const brandDark = Color(0xFF2563EB);
-  static const brandLight = Color(0xFF60A5FA);
-  static const brandSoft = Color(0x143B82F6);
+  static const brand = IndustrialTheme.chromeAccent;
+  static const brandHover = IndustrialTheme.chromeAccentHover;
+  static const brandDark = IndustrialTheme.chromeAccentHover;
+  static const brandLight = Color(0xFFFFA45C);
+  static const brandSoft = Color(0x14CE4E30);
 
   // Surfaces (industrial dark).
   static const surface = IndustrialTheme.darkSurface;
@@ -317,7 +454,7 @@ class SlstColors {
   static const future = Color(0x338B5CF6);
   static const ready = Color(0x3310B981);
   static const pickup = Color(0x338B5CF6);
-  static const hold = Color(0x334B5563);
+  static const hold = Color(0x661F2937);
   static const rushHotshot = Color(0x33EF4444);
 }
 
@@ -486,23 +623,29 @@ StatusStyle statusStyleFor({
     );
   }
   if (lower.contains('awaiting')) {
+    final accent = brightness == Brightness.light
+        ? IndustrialTheme.awaiting
+        : IndustrialTheme.slateMuted;
     return build(
       'Awaiting Instructions',
-      IndustrialTheme.slateMuted.withValues(alpha: 0.28),
-      IndustrialTheme.slateMuted,
+      accent.withValues(alpha: brightness == Brightness.light ? 0.40 : 0.28),
+      accent,
       Icons.hourglass_empty,
     );
   }
   return build(
     uiLabel,
-    IndustrialTheme.darkHeader,
-    IndustrialTheme.textMuted,
+    brightness == Brightness.dark
+        ? SwiftBrandColors.panelDark
+        : SwiftBrandColors.panelLight,
+    brightness == Brightness.dark
+        ? SwiftBrandColors.mutedDark
+        : SwiftBrandColors.mutedLight,
     Icons.inventory_2_outlined,
   );
 }
 
-/// Builds the app [ThemeData]. Always returns the industrial dark theme;
-/// [dark] is retained for call-site compatibility.
+/// Builds light or dark Swift chrome [ThemeData]. Status colours are unchanged.
 ThemeData buildSlstTheme({required bool dark}) {
-  return IndustrialTheme.darkTheme;
+  return dark ? IndustrialTheme.darkTheme : IndustrialTheme.lightTheme;
 }

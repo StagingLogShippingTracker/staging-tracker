@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-/// Round-watch safe insets and compact chrome for SLST Wear.
+/// Round-watch safe insets and compact chrome for Wear.
 ///
 /// Wear OS round faces use a circular viewport inside a square Flutter window.
 /// System [SafeArea] / [MediaQuery.padding] alone leave content under the bezel

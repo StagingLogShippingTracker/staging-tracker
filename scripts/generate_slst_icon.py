@@ -1,8 +1,8 @@
 """Generate platform SLST launcher icons + Android/Wear splash from assets.
 
-Launcher source: assets/slst-app-icon.png (S + swish on #0A1017).
+Launcher source: assets/slst-app-icon.png (stage/ship mock card on navy).
 Corners are softened to a rounded square when writing platform icons.
-Splash: full wordmark centered on #091019 (Android + Wear only).
+Splash: launcher icon on navy (Android + Wear).
 """
 
 from __future__ import annotations
@@ -38,8 +38,8 @@ SPLASH_LAUNCH_MAP = {
 BRAND_SIZES = [16, 24, 32, 48, 64, 128, 256, 512, 1024]
 ICO_SIZES = [256, 128, 64, 48, 32, 24, 16]
 
-ICON_BG = (0x0A, 0x10, 0x17, 255)
-SPLASH_BG = (0x09, 0x10, 0x19, 255)
+ICON_BG = (0x12, 0x14, 0x17, 255)
+SPLASH_BG = (0x12, 0x14, 0x17, 255)
 CORNER_RADIUS_FRAC = 0.14
 
 
@@ -100,11 +100,8 @@ def main() -> None:
     if not SRC.exists():
         raise SystemExit(f"Missing SLST logo: {SRC}")
     raw = Image.open(SRC).convert("RGBA")
-    src = apply_rounded_square_mask(ensure_icon_bg(raw))
-    print("source", SRC, raw.size, "rounded", src.size)
-
-    # Refresh canonical asset with rounded corners (idempotent).
-    src.save(SRC, optimize=True)
+    src = ensure_icon_bg(raw)
+    print("source", SRC, raw.size)
 
     BRAND_DIR.mkdir(parents=True, exist_ok=True)
     for s in BRAND_SIZES:

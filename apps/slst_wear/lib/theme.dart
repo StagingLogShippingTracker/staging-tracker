@@ -3,13 +3,13 @@ import 'package:flutter/material.dart';
 /// Compact industrial dark theme for round/square Wear faces.
 /// Uses system sans — intentionally not Oswald-heavy.
 class WearTheme {
-  static const Color base = Color(0xFF090D16);
-  static const Color surface = Color(0xFF1F2937);
-  static const Color header = Color(0xFF111827);
-  static const Color border = Color(0xFF374151);
-  static const Color text = Color(0xFFF9FAFB);
-  static const Color muted = Color(0xFF9CA3AF);
-  static const Color accent = Color(0xFF3B82F6);
+  static const Color base = Color(0xFF121417);
+  static const Color surface = Color(0xFF1C1F24);
+  static const Color header = Color(0xFF16191E);
+  static const Color border = Color(0xFF2E333A);
+  static const Color text = Color(0xFFF2F0EC);
+  static const Color muted = Color(0xFFA3A29C);
+  static const Color accent = Color(0xFFCE4E30);
   static const Color ok = Color(0xFF10B981);
   static const Color warn = Color(0xFFF59E0B);
   static const Color danger = Color(0xFFEF4444);

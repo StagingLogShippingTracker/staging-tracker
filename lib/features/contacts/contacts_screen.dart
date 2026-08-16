@@ -39,7 +39,7 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen> {
     final scheme = Theme.of(context).colorScheme;
 
     return ColoredBox(
-      color: IndustrialTheme.darkBase,
+      color: IndustrialTheme.chromeOf(context).base,
       child: Column(
       children: [
         Padding(
@@ -73,9 +73,8 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen> {
               }
               return ListView.builder(
                 padding: slstPagePadding(context, top: 0, bottom: 12),
-                itemCount: filtered.length + 1,
+                itemCount: filtered.length,
                 itemBuilder: (context, i) {
-                  if (i == filtered.length) return const BrandFooter();
                   final c = filtered[i];
                   return Card(
                     child: Padding(
@@ -84,12 +83,12 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen> {
                         children: [
                           CircleAvatar(
                             radius: 22,
-                            backgroundColor: IndustrialTheme.skyBlue.withValues(alpha: 0.18),
+                            backgroundColor: IndustrialTheme.chromeAccent.withValues(alpha: 0.18),
                             child: Text(
                               _initials(c.name),
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontWeight: FontWeight.w800,
-                                color: IndustrialTheme.skyBlue,
+                                color: IndustrialTheme.chromeAccent,
                               ),
                             ),
                           ),
@@ -155,7 +154,7 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen> {
                             IconButton.filledTonal(
                               tooltip: 'Direct ${c.direct}',
                               style: IconButton.styleFrom(
-                                backgroundColor: IndustrialTheme.skyBlue.withValues(alpha: 0.18),
+                                backgroundColor: IndustrialTheme.chromeAccent.withValues(alpha: 0.18),
                                 foregroundColor: SlstColors.brand,
                               ),
                               onPressed: () => launchUrl(

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:slst_shared/slst_shared.dart';
 
@@ -42,7 +41,6 @@ class _PairWatchCardState extends ConsumerState<PairWatchCard> {
 
   @override
   Widget build(BuildContext context) {
-    final user = ref.watch(currentUserProvider);
     final fmt = DateFormat('h:mm a');
 
     return Semantics(
@@ -60,14 +58,14 @@ class _PairWatchCardState extends ConsumerState<PairWatchCard> {
                   const Icon(
                     Icons.watch,
                     size: 20,
-                    color: IndustrialTheme.skyBlue,
+                    color: IndustrialTheme.chromeAccent,
                   ),
                   const SizedBox(width: 8),
                   Text(
                     'Pair Watch',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w800,
-                          color: IndustrialTheme.textPrimary,
+                          color: IndustrialTheme.chromeOf(context).ink,
                         ),
                   ),
                 ],
@@ -80,30 +78,13 @@ class _PairWatchCardState extends ConsumerState<PairWatchCard> {
               const SizedBox(height: 8),
               Text(
                 'Generate a 6-digit code on this device, then enter it on the '
-                'Wear OS app to sign in with your account.',
+                'Wear OS app to pair this warehouse session.',
                 softWrap: true,
                 overflow: TextOverflow.fade,
                 style: Theme.of(context).textTheme.bodySmall,
               ),
               const SizedBox(height: 16),
-              if (user == null) ...[
-                Text(
-                  'Sign in to create a pairing code.',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: IndustrialTheme.amber,
-                      ),
-                ),
-                const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size(48, 48),
-                  ),
-                  onPressed: () => context.push('/login'),
-                  icon: const Icon(Icons.login, size: 18),
-                  label: const Text('Sign in'),
-                ),
-              ] else ...[
-                Semantics(
+              Semantics(
                   button: true,
                   label: 'Pair Watch',
                   child: FilledButton.icon(
@@ -126,7 +107,7 @@ class _PairWatchCardState extends ConsumerState<PairWatchCard> {
                     label: _error,
                     child: Text(
                       _error!,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: Color(0xFFEF4444),
                         fontSize: 12,
                       ),
@@ -142,9 +123,9 @@ class _PairWatchCardState extends ConsumerState<PairWatchCard> {
                       width: double.infinity,
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: IndustrialTheme.darkHeader,
+                        color: IndustrialTheme.chromeOf(context).header,
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: IndustrialTheme.borderStroke),
+                        border: Border.all(color: IndustrialTheme.chromeOf(context).border),
                       ),
                       child: Column(
                         children: [
@@ -181,7 +162,6 @@ class _PairWatchCardState extends ConsumerState<PairWatchCard> {
                     ),
                   ),
                 ],
-              ],
             ],
           ),
         ),

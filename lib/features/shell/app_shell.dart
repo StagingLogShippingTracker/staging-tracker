@@ -4,8 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../core/branding.dart';
 import '../../core/theme.dart';
 import '../../data/app_state.dart';
+import '../../data/theme_preference.dart';
 import '../shared/widgets.dart';
 import 'command_dock.dart';
 
@@ -170,7 +172,7 @@ class _AppShellState extends ConsumerState<AppShell> {
                 child: widget.child,
               )
             : Scaffold(
-                backgroundColor: IndustrialTheme.darkBase,
+                backgroundColor: IndustrialTheme.chromeOf(context).base,
                 // Tablet/desktop shell draws under Android edge-to-edge
                 // system bars unless inset — otherwise status + nav overlap
                 // the header and command dock (seen on Galaxy Tab).
@@ -229,7 +231,7 @@ class _CompactShell extends ConsumerWidget {
   void _openMoreSheet(BuildContext context) {
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: IndustrialTheme.darkHeader,
+      backgroundColor: IndustrialTheme.chromeOf(context).header,
       showDragHandle: true,
       builder: (sheetContext) {
         return SafeArea(
@@ -244,21 +246,21 @@ class _CompactShell extends ConsumerWidget {
                   style: GoogleFonts.inter(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
-                    color: IndustrialTheme.textPrimary,
+                    color: IndustrialTheme.chromeOf(context).ink,
                   ),
                 ),
               ),
               ListTile(
-                leading: const Icon(
+                leading: Icon(
                   Icons.notifications_outlined,
-                  color: IndustrialTheme.textMuted,
+                  color: IndustrialTheme.chromeOf(context).muted,
                 ),
                 title: Text(
                   'Notifications',
                   style: GoogleFonts.inter(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: IndustrialTheme.textPrimary,
+                    color: IndustrialTheme.chromeOf(context).ink,
                   ),
                 ),
                 onTap: () {
@@ -267,16 +269,16 @@ class _CompactShell extends ConsumerWidget {
                 },
               ),
               ListTile(
-                leading: const Icon(
+                leading: Icon(
                   Icons.contacts_outlined,
-                  color: IndustrialTheme.textMuted,
+                  color: IndustrialTheme.chromeOf(context).muted,
                 ),
                 title: Text(
                   'Contacts',
                   style: GoogleFonts.inter(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: IndustrialTheme.textPrimary,
+                    color: IndustrialTheme.chromeOf(context).ink,
                   ),
                 ),
                 onTap: () {
@@ -285,16 +287,16 @@ class _CompactShell extends ConsumerWidget {
                 },
               ),
               ListTile(
-                leading: const Icon(
+                leading: Icon(
                   Icons.settings_outlined,
-                  color: IndustrialTheme.textMuted,
+                  color: IndustrialTheme.chromeOf(context).muted,
                 ),
                 title: Text(
                   'Settings',
                   style: GoogleFonts.inter(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: IndustrialTheme.textPrimary,
+                    color: IndustrialTheme.chromeOf(context).ink,
                   ),
                 ),
                 onTap: () {
@@ -344,12 +346,12 @@ class _CompactShell extends ConsumerWidget {
         .toList();
 
     return Scaffold(
-      backgroundColor: IndustrialTheme.darkBase,
+      backgroundColor: IndustrialTheme.chromeOf(context).base,
       // Bottom nav covers primary destinations; More sheet covers the rest —
       // no redundant hamburger/drawer on compact Android phones.
       appBar: AppBar(
-        backgroundColor: IndustrialTheme.darkHeader,
-        foregroundColor: IndustrialTheme.textPrimary,
+        backgroundColor: IndustrialTheme.chromeOf(context).header,
+        foregroundColor: IndustrialTheme.chromeOf(context).ink,
         elevation: 0,
         scrolledUnderElevation: 0,
         surfaceTintColor: Colors.transparent,
@@ -359,7 +361,7 @@ class _CompactShell extends ConsumerWidget {
           style: GoogleFonts.inter(
             fontSize: 15,
             fontWeight: FontWeight.w700,
-            color: IndustrialTheme.textPrimary,
+            color: IndustrialTheme.chromeOf(context).ink,
           ),
         ),
         actions: [
@@ -399,7 +401,7 @@ class _CompactShell extends ConsumerWidget {
             onPressed: () => context.go('/notifications'),
             icon: const Icon(Icons.notifications_outlined, size: 20),
           ),
-          const _AccountMenu(),
+          const _ThemeToggleButton(),
           const SizedBox(width: 4),
         ],
         // Pin floor actions in the app bar so Scaffold reserves height and the
@@ -422,8 +424,8 @@ class _CompactShell extends ConsumerWidget {
         top: false,
         child: NavigationBar(
           height: 68,
-          backgroundColor: IndustrialTheme.darkHeader,
-          indicatorColor: IndustrialTheme.skyBlue.withValues(alpha: 0.22),
+          backgroundColor: IndustrialTheme.chromeOf(context).header,
+          indicatorColor: IndustrialTheme.chromeAccent.withValues(alpha: 0.22),
           selectedIndex: barIndex,
           labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
           onDestinationSelected: (i) {
@@ -439,11 +441,11 @@ class _CompactShell extends ConsumerWidget {
               NavigationDestination(
                 icon: Icon(
                   d.path == '/settings' ? Icons.more_horiz : d.icon,
-                  color: IndustrialTheme.textMuted,
+                  color: IndustrialTheme.chromeOf(context).muted,
                 ),
                 selectedIcon: Icon(
                   d.path == '/settings' ? Icons.more_horiz : d.selectedIcon,
-                  color: IndustrialTheme.skyBlue,
+                  color: IndustrialTheme.chromeAccent,
                 ),
                 label: _compactNavLabel(d.path),
               ),
@@ -483,17 +485,17 @@ class _CompactActionStrip extends StatelessWidget {
     // content scrolling underneath (seen on Android portrait when the strip
     // lived in the body Column without a clipped viewport).
     return ColoredBox(
-      color: IndustrialTheme.darkHeader,
+      color: IndustrialTheme.chromeOf(context).header,
       child: SizedBox(
         height: kCompactActionStripHeight,
         width: double.infinity,
         child: Material(
-          color: IndustrialTheme.darkHeader,
+          color: IndustrialTheme.chromeOf(context).header,
           child: Container(
             alignment: Alignment.centerLeft,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               border: Border(
-                bottom: BorderSide(color: IndustrialTheme.borderStroke),
+                bottom: BorderSide(color: IndustrialTheme.chromeOf(context).border),
               ),
             ),
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
@@ -506,11 +508,11 @@ class _CompactActionStrip extends StatelessWidget {
                     FilledButton.tonal(
                       onPressed: actions[i].onPressed,
                       style: FilledButton.styleFrom(
-                        backgroundColor: IndustrialTheme.darkSurface,
+                        backgroundColor: IndustrialTheme.chromeOf(context).surface,
                         foregroundColor: actions[i].onPressed == null
-                            ? IndustrialTheme.textMuted
-                            : IndustrialTheme.textPrimary,
-                        disabledForegroundColor: IndustrialTheme.textMuted,
+                            ? IndustrialTheme.chromeOf(context).muted
+                            : IndustrialTheme.chromeOf(context).ink,
+                        disabledForegroundColor: IndustrialTheme.chromeOf(context).muted,
                         padding: const EdgeInsets.symmetric(
                           horizontal: 12,
                           vertical: 8,
@@ -519,14 +521,14 @@ class _CompactActionStrip extends StatelessWidget {
                         tapTargetSize: MaterialTapTargetSize.padded,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(6),
-                          side: const BorderSide(
-                            color: IndustrialTheme.borderStroke,
+                          side: BorderSide(
+                            color: IndustrialTheme.chromeOf(context).border,
                           ),
                         ),
                       ),
                       child: Text(
                         actions[i].label,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                         ),
@@ -543,86 +545,19 @@ class _CompactActionStrip extends StatelessWidget {
   }
 }
 
-class _AccountMenu extends ConsumerWidget {
-  const _AccountMenu();
+class _ThemeToggleButton extends ConsumerWidget {
+  const _ThemeToggleButton();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final user = ref.watch(currentUserProvider);
-
-    return PopupMenuButton<String>(
-      tooltip: user?.email ?? 'Account',
-      onSelected: (v) async {
-        switch (v) {
-          case 'signin':
-            context.push('/login');
-          case 'signout':
-            await ref.read(supabaseClientProvider).auth.signOut();
-          case 'settings':
-            context.go('/settings');
-        }
-      },
-      itemBuilder: (_) => [
-        PopupMenuItem(
-          enabled: false,
-          child: Text(
-            user?.email ?? 'Signed out — read-only',
-            style: const TextStyle(fontSize: 12),
-          ),
-        ),
-        const PopupMenuDivider(),
-        if (user == null)
-          const PopupMenuItem(
-            value: 'signin',
-            child: ListTile(
-              dense: true,
-              contentPadding: EdgeInsets.zero,
-              leading: Icon(Icons.login),
-              title: Text('Sign in'),
-            ),
-          )
-        else
-          const PopupMenuItem(
-            value: 'signout',
-            child: ListTile(
-              dense: true,
-              contentPadding: EdgeInsets.zero,
-              leading: Icon(Icons.logout),
-              title: Text('Sign out'),
-            ),
-          ),
-        const PopupMenuItem(
-          value: 'settings',
-          child: ListTile(
-            dense: true,
-            contentPadding: EdgeInsets.zero,
-            leading: Icon(Icons.settings_outlined),
-            title: Text('Settings'),
-          ),
-        ),
-      ],
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        child: CircleAvatar(
-          radius: 15,
-          backgroundColor: user == null
-              ? IndustrialTheme.darkSurface
-              : IndustrialTheme.skyBlue.withValues(alpha: 0.22),
-          child: user == null
-              ? const Icon(
-                  Icons.person_outline,
-                  size: 16,
-                  color: IndustrialTheme.textMuted,
-                )
-              : Text(
-                  user.email!.substring(0, 1).toUpperCase(),
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 12,
-                    color: IndustrialTheme.skyBlue,
-                  ),
-                ),
-        ),
+    final dark = ref.watch(darkModeProvider);
+    return IconButton(
+      tooltip: dark ? 'Light mode' : 'Dark mode',
+      onPressed: () => ref.read(darkModeProvider.notifier).toggle(),
+      icon: Icon(
+        dark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+        size: 20,
+        color: IndustrialTheme.chromeOf(context).muted,
       ),
     );
   }
@@ -633,21 +568,9 @@ class _RailBrandWordmark extends StatelessWidget {
 
   final double targetHeight;
 
-  /// Approximate aspect of assets/slst-wordmark-white.png.
-  static const double _aspect = 3108 / 900;
-
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final maxH = constraints.maxWidth / _aspect;
-        final h = targetHeight < maxH ? targetHeight : maxH;
-        return Align(
-          alignment: Alignment.centerLeft,
-          child: BrandWordmark(height: h),
-        );
-      },
-    );
+    return BrandWordmark(height: targetHeight);
   }
 }
 
@@ -663,10 +586,10 @@ class _IndustrialRail extends ConsumerWidget {
       duration: const Duration(milliseconds: 180),
       curve: Curves.easeOutCubic,
       width: collapsed ? 64 : 220,
-      decoration: const BoxDecoration(
-        color: IndustrialTheme.darkBase,
+      decoration: BoxDecoration(
+        color: IndustrialTheme.chromeOf(context).base,
         border: Border(
-          right: BorderSide(color: IndustrialTheme.borderStroke, width: 1),
+          right: BorderSide(color: IndustrialTheme.chromeOf(context).border, width: 1),
         ),
       ),
       child: Column(
@@ -682,17 +605,17 @@ class _IndustrialRail extends ConsumerWidget {
             child: collapsed
                 ? const Center(
                     child: Tooltip(
-                      message: 'SLST',
+                      message: kProductName,
                       child: BrandMark(size: 24),
                     ),
                   )
                 : const Padding(
                     padding: EdgeInsets.only(left: 2),
                     // ~54px effective / 1.5 → ~36px (was 3× prior 34px target).
-                    child: _RailBrandWordmark(targetHeight: 36),
+                    child: _RailBrandWordmark(targetHeight: 52),
                   ),
           ),
-          const Divider(height: 1, color: IndustrialTheme.borderStroke),
+          Divider(height: 1, color: IndustrialTheme.chromeOf(context).border),
           Expanded(
             child: ListView(
               padding: EdgeInsets.symmetric(
@@ -709,7 +632,7 @@ class _IndustrialRail extends ConsumerWidget {
               ],
             ),
           ),
-          const Divider(height: 1, color: IndustrialTheme.borderStroke),
+          Divider(height: 1, color: IndustrialTheme.chromeOf(context).border),
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 6),
             child: Tooltip(
@@ -720,7 +643,7 @@ class _IndustrialRail extends ConsumerWidget {
                 },
                 icon: Icon(
                   collapsed ? Icons.chevron_right : Icons.chevron_left,
-                  color: IndustrialTheme.textMuted,
+                  color: IndustrialTheme.chromeOf(context).muted,
                 ),
               ),
             ),
@@ -745,14 +668,14 @@ class _RailNavTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final fg = selected
-        ? IndustrialTheme.textPrimary
-        : IndustrialTheme.textMuted;
+        ? IndustrialTheme.chromeOf(context).ink
+        : IndustrialTheme.chromeOf(context).muted;
 
     final tile = Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Material(
         color: selected
-            ? IndustrialTheme.skyBlue.withValues(alpha: 0.14)
+            ? IndustrialTheme.chromeAccent.withValues(alpha: 0.14)
             : Colors.transparent,
         borderRadius: BorderRadius.circular(6),
         child: InkWell(
@@ -765,7 +688,7 @@ class _RailNavTile extends StatelessWidget {
                     child: Icon(
                       selected ? item.selectedIcon : item.icon,
                       size: 20,
-                      color: selected ? IndustrialTheme.skyBlue : fg,
+                      color: selected ? IndustrialTheme.chromeAccent : fg,
                     ),
                   )
                 : Row(
@@ -776,14 +699,14 @@ class _RailNavTile extends StatelessWidget {
                         height: selected ? 18 : 0,
                         margin: const EdgeInsets.only(left: 4, right: 8),
                         decoration: BoxDecoration(
-                          color: IndustrialTheme.skyBlue,
+                          color: IndustrialTheme.chromeAccent,
                           borderRadius: BorderRadius.circular(2),
                         ),
                       ),
                       Icon(
                         selected ? item.selectedIcon : item.icon,
                         size: 18,
-                        color: selected ? IndustrialTheme.skyBlue : fg,
+                        color: selected ? IndustrialTheme.chromeAccent : fg,
                       ),
                       const SizedBox(width: 10),
                       Expanded(
@@ -836,10 +759,10 @@ class _TopHeader extends ConsumerWidget {
     return Container(
       height: 52,
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: const BoxDecoration(
-        color: IndustrialTheme.darkHeader,
+      decoration: BoxDecoration(
+        color: IndustrialTheme.chromeOf(context).header,
         border: Border(
-          bottom: BorderSide(color: IndustrialTheme.borderStroke, width: 1),
+          bottom: BorderSide(color: IndustrialTheme.chromeOf(context).border, width: 1),
         ),
       ),
       child: Row(
@@ -852,7 +775,7 @@ class _TopHeader extends ConsumerWidget {
               style: GoogleFonts.inter(
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
-                color: IndustrialTheme.textPrimary,
+                color: IndustrialTheme.chromeOf(context).ink,
               ),
             ),
           ),
@@ -899,13 +822,13 @@ class _TopHeader extends ConsumerWidget {
           IconButton(
             tooltip: 'Notifications',
             onPressed: () => context.go('/notifications'),
-            icon: const Icon(
+            icon: Icon(
               Icons.notifications_outlined,
               size: 20,
-              color: IndustrialTheme.textMuted,
+              color: IndustrialTheme.chromeOf(context).muted,
             ),
           ),
-          const _AccountMenu(),
+          const _ThemeToggleButton(),
         ],
       ),
     );

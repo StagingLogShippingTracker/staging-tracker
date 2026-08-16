@@ -88,9 +88,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Scaffold(
-      backgroundColor: IndustrialTheme.darkBase,
+      backgroundColor: IndustrialTheme.chromeOf(context).base,
       appBar: AppBar(
-        backgroundColor: IndustrialTheme.darkHeader,
+        backgroundColor: IndustrialTheme.chromeOf(context).header,
         title: const Text('Sign In'),
       ),
       body: SafeArea(
@@ -114,12 +114,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             Text(
-                              'Sign in to SLST to create and edit staging or '
-                              'shipping records. Signed-out users cannot view '
-                              'or change operational data.',
-                              style: const TextStyle(
+                              'Sign in to Swift Staging & Shipping Log to create '
+                              'and edit staging or shipping records. Signed-out '
+                              'users cannot view or change operational data.',
+                              style: TextStyle(
                                 fontSize: 13,
-                                color: IndustrialTheme.textMuted,
+                                color: IndustrialTheme.chromeOf(context).muted,
                               ),
                             ),
                             const SizedBox(height: 16),
@@ -201,8 +201,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                       ),
                     ),
-                    const BrandFooter(),
-                  ],
+                          ],
                 ),
               ),
             ),

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/app_state.dart';
+import '../../data/person_name_memory.dart';
+import '../../data/remembered_contacts.dart';
 import '../../domain/models.dart';
 
 enum RememberedEntryKind { customer, person }
@@ -47,7 +50,7 @@ class _RememberedEntryFieldState extends ConsumerState<RememberedEntryField> {
   Widget build(BuildContext context) {
     final suggestions = widget.kind == RememberedEntryKind.customer
         ? ref.watch(customerSuggestionsProvider).valueOrNull ?? const <String>[]
-        : ref.watch(personSuggestionsProvider).valueOrNull ?? const <String>[];
+        : ref.watch(personNameMemoryProvider).names;
     final noun = widget.kind == RememberedEntryKind.customer
         ? 'customer'
         : widget.label.toLowerCase();
@@ -153,22 +156,179 @@ class CustomerSuggestionField extends StatelessWidget {
   );
 }
 
-class PersonSuggestionField extends StatelessWidget {
+class PersonSuggestionField extends ConsumerStatefulWidget {
   const PersonSuggestionField({
     super.key,
     required this.controller,
     required this.label,
+    this.hintText = 'Type a name or pick from shared memory',
   });
 
   final TextEditingController controller;
   final String label;
+  final String hintText;
 
   @override
-  Widget build(BuildContext context) => RememberedEntryField(
-    controller: controller,
-    kind: RememberedEntryKind.person,
-    label: label,
-  );
+  ConsumerState<PersonSuggestionField> createState() =>
+      _PersonSuggestionFieldState();
+}
+
+class _PersonSuggestionFieldState extends ConsumerState<PersonSuggestionField> {
+  final _focusNode = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode.addListener(_onFocusChange);
+  }
+
+  @override
+  void dispose() {
+    _focusNode.removeListener(_onFocusChange);
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  void _onFocusChange() {
+    if (!_focusNode.hasFocus) return;
+    ref.read(personNameMemoryProvider.notifier).sync(forceRefresh: true);
+    final names = ref.read(personNameMemoryProvider).names;
+    if (names.isEmpty) return;
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final t = widget.controller.text;
+      widget.controller.value = TextEditingValue(
+        text: t,
+        selection: TextSelection.collapsed(offset: t.length),
+      );
+    });
+  }
+
+  Future<void> _commit(String raw) async {
+    final name = raw.trim();
+    if (name.isEmpty) return;
+    await ref.read(personNameMemoryProvider.notifier).remember(name);
+  }
+
+  Future<void> _forget(String name) async {
+    final message =
+        await ref.read(personNameMemoryProvider.notifier).forget(name);
+    if (!mounted || message == null) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final memory = ref.watch(personNameMemoryProvider);
+    final remembered = memory.rememberedKeys;
+
+    return LayoutBuilder(
+      builder: (context, constraints) => RawAutocomplete<String>(
+        key: ValueKey(
+          'person-ac-${memory.names.length}-${remembered.length}-'
+          '${widget.label}',
+        ),
+        textEditingController: widget.controller,
+        focusNode: _focusNode,
+        optionsBuilder: (value) =>
+            filterPersonNames(memory.names, value.text),
+        displayStringForOption: (n) => n,
+        onSelected: (n) {
+          widget.controller.value = TextEditingValue(
+            text: n,
+            selection: TextSelection.collapsed(offset: n.length),
+          );
+          _commit(n);
+        },
+        fieldViewBuilder: (context, controller, focusNode, onSubmitted) {
+          return TextField(
+            controller: controller,
+            focusNode: focusNode,
+            textInputAction: TextInputAction.next,
+            onSubmitted: (value) {
+              onSubmitted();
+              _commit(value);
+            },
+            decoration: InputDecoration(
+              labelText: widget.label,
+              hintText: memory.loading
+                  ? 'Loading directory…'
+                  : widget.hintText,
+              helperText: 'Shared across devices',
+              suffixIcon: memory.loading
+                  ? const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    )
+                  : (memory.names.isEmpty
+                      ? IconButton(
+                          tooltip: 'Refresh directory',
+                          onPressed: () => ref
+                              .read(personNameMemoryProvider.notifier)
+                              .sync(forceRefresh: true),
+                          icon: const Icon(Icons.refresh, size: 18),
+                        )
+                      : Icon(
+                          Icons.arrow_drop_down,
+                          color: Theme.of(context).hintColor,
+                        )),
+            ),
+          );
+        },
+        optionsViewBuilder: (context, onSelected, options) {
+          final opts = options.toList(growable: false);
+          if (opts.isEmpty) return const SizedBox.shrink();
+          return Align(
+            alignment: Alignment.topLeft,
+            child: Material(
+              elevation: 8,
+              borderRadius: BorderRadius.circular(8),
+              clipBehavior: Clip.antiAlias,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: 260,
+                  maxWidth: constraints.maxWidth,
+                  minWidth: 220,
+                ),
+                child: ListView.builder(
+                  padding: EdgeInsets.zero,
+                  shrinkWrap: true,
+                  itemCount: opts.length,
+                  itemBuilder: (context, i) {
+                    final name = opts[i];
+                    final isRemembered =
+                        remembered.contains(name.trim().toLowerCase());
+                    return ListTile(
+                      dense: true,
+                      title: Text(name),
+                      subtitle: isRemembered
+                          ? const Text(
+                              'Shared across devices',
+                              style: TextStyle(fontSize: 11),
+                            )
+                          : null,
+                      onTap: () => onSelected(name),
+                      trailing: isRemembered
+                          ? IconButton(
+                              tooltip: 'Remove from shared memory',
+                              icon: const Icon(Icons.close, size: 18),
+                              onPressed: () => _forget(name),
+                            )
+                          : null,
+                    );
+                  },
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
 }
 
 class ContactEmailField extends ConsumerStatefulWidget {

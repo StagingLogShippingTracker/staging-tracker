@@ -3,7 +3,14 @@ import 'package:slst_shared/slst_shared.dart';
 
 void main() {
   group('classifyReleaseAsset', () {
-    test('maps SLST-Android.apk to android only', () {
+    test('maps SwiftStagingLog-Android.apk to android only', () {
+      expect(
+        classifyReleaseAsset('SwiftStagingLog-Android.apk'),
+        ReleaseAssetKind.androidApk,
+      );
+    });
+
+    test('maps legacy SLST-Android.apk to android only', () {
       expect(
         classifyReleaseAsset('SLST-Android.apk'),
         ReleaseAssetKind.androidApk,

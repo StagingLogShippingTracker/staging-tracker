@@ -26,8 +26,6 @@ class ShellCommandDock extends ConsumerWidget {
     WidgetRef ref,
     String location,
   ) {
-    final user = ref.read(currentUserProvider);
-    final signedIn = user != null;
     final path = Uri.tryParse(location)?.path ?? location;
 
     switch (path) {
@@ -36,9 +34,7 @@ class ShellCommandDock extends ConsumerWidget {
           (
             key: 'F1',
             label: 'New Entry',
-            onPressed: signedIn
-                ? () => showStagingFormSheet(context, ref)
-                : null,
+            onPressed: () => showStagingFormSheet(context, ref),
           ),
           (
             key: 'F2',
@@ -53,9 +49,7 @@ class ShellCommandDock extends ConsumerWidget {
           (
             key: 'F4',
             label: 'Consolidate',
-            onPressed: signedIn
-                ? () => showQuickConsolidateDialog(context, ref)
-                : null,
+            onPressed: () => showQuickConsolidateDialog(context, ref),
           ),
           (
             key: 'F5',
@@ -68,7 +62,7 @@ class ShellCommandDock extends ConsumerWidget {
           (
             key: 'F1',
             label: 'Quick Ship',
-            onPressed: signedIn ? () => showQuickShipSheet(context, ref) : null,
+            onPressed: () => showQuickShipSheet(context, ref),
           ),
           (
             key: 'F2',
@@ -174,14 +168,8 @@ class ShellCommandDock extends ConsumerWidget {
           ),
           (
             key: 'F4',
-            label: signedIn ? 'Sign Out' : 'Sign In',
-            onPressed: () async {
-              if (signedIn) {
-                await ref.read(supabaseClientProvider).auth.signOut();
-              } else {
-                context.push('/login');
-              }
-            },
+            label: 'Staging Log',
+            onPressed: () => context.go('/staging'),
           ),
         ];
       default:
@@ -190,21 +178,17 @@ class ShellCommandDock extends ConsumerWidget {
           (
             key: 'F1',
             label: 'New Entry',
-            onPressed: signedIn
-                ? () => showStagingFormSheet(context, ref)
-                : null,
+            onPressed: () => showStagingFormSheet(context, ref),
           ),
           (
             key: 'F2',
             label: 'Quick Ship',
-            onPressed: signedIn ? () => showQuickShipSheet(context, ref) : null,
+            onPressed: () => showQuickShipSheet(context, ref),
           ),
           (
             key: 'F3',
             label: 'Consolidate',
-            onPressed: signedIn
-                ? () => showQuickConsolidateDialog(context, ref)
-                : null,
+            onPressed: () => showQuickConsolidateDialog(context, ref),
           ),
           (
             key: 'F4',
@@ -306,8 +290,8 @@ class _HotkeyChip extends StatelessWidget {
       onPressed: onPressed,
       style: TextButton.styleFrom(
         foregroundColor: enabled
-            ? IndustrialTheme.textPrimary
-            : IndustrialTheme.textMuted,
+            ? IndustrialTheme.chromeOf(context).ink
+            : IndustrialTheme.chromeOf(context).muted,
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         minimumSize: const Size(0, 40),
         tapTargetSize: MaterialTapTargetSize.padded,
@@ -319,9 +303,9 @@ class _HotkeyChip extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: IndustrialTheme.darkSurface,
+                color: IndustrialTheme.chromeOf(context).surface,
                 borderRadius: BorderRadius.circular(4),
-                border: Border.all(color: IndustrialTheme.borderStroke),
+                border: Border.all(color: IndustrialTheme.chromeOf(context).border),
               ),
               child: Text(
                 hotkey,
@@ -340,8 +324,8 @@ class _HotkeyChip extends StatelessWidget {
               fontSize: 12,
               fontWeight: FontWeight.w600,
               color: enabled
-                  ? IndustrialTheme.textPrimary
-                  : IndustrialTheme.textMuted,
+                  ? IndustrialTheme.chromeOf(context).ink
+                  : IndustrialTheme.chromeOf(context).muted,
             ),
           ),
         ],

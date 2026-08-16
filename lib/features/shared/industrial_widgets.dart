@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../core/format_weight.dart';
 import '../../core/theme.dart';
 
 /// Horizontal scrollbar + chevron chrome is for mouse (Windows/desktop).
@@ -105,17 +106,17 @@ class _AsyncBanner extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: IndustrialTheme.skyBlue.withValues(alpha: 0.12),
+        color: IndustrialTheme.chromeAccent.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(6),
         border: Border.all(
-          color: IndustrialTheme.skyBlue.withValues(alpha: 0.35),
+          color: IndustrialTheme.chromeAccent.withValues(alpha: 0.35),
         ),
       ),
       child: Row(
         children: [
-          Icon(icon, size: 16, color: IndustrialTheme.skyBlue),
+          Icon(icon, size: 16, color: IndustrialTheme.chromeAccent),
           const SizedBox(width: 8),
-          Expanded(child: Text(message, style: const TextStyle(fontSize: 12))),
+          Expanded(child: Text(message, style: TextStyle(fontSize: 12))),
           if (action != null) ...[const SizedBox(width: 8), action!],
         ],
       ),
@@ -144,14 +145,14 @@ class _AsyncMessage extends StatelessWidget {
         margin: const EdgeInsets.symmetric(vertical: 32),
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: IndustrialTheme.darkSurface,
+          color: IndustrialTheme.chromeOf(context).surface,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: IndustrialTheme.borderStroke),
+          border: Border.all(color: IndustrialTheme.chromeOf(context).border),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 30, color: IndustrialTheme.textMuted),
+            Icon(icon, size: 30, color: IndustrialTheme.chromeOf(context).muted),
             const SizedBox(height: 10),
             Text(title, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 6),
@@ -249,7 +250,7 @@ class IndustrialPageTitle extends StatelessWidget {
                     fontSize: 13,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 1.0,
-                    color: IndustrialTheme.textPrimary,
+                    color: IndustrialTheme.chromeOf(context).ink,
                   ),
                 ),
                 if (subtitle != null && subtitle!.trim().isNotEmpty) ...[
@@ -258,7 +259,7 @@ class IndustrialPageTitle extends StatelessWidget {
                     subtitle!,
                     style: GoogleFonts.inter(
                       fontSize: 12,
-                      color: IndustrialTheme.textMuted,
+                      color: IndustrialTheme.chromeOf(context).muted,
                     ),
                   ),
                 ],
@@ -313,9 +314,9 @@ class IndustrialSummaryStrip extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: IndustrialTheme.darkSurface,
+        color: IndustrialTheme.chromeOf(context).surface,
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: IndustrialTheme.borderStroke),
+        border: Border.all(color: IndustrialTheme.chromeOf(context).border),
       ),
       child: Wrap(
         spacing: 20,
@@ -331,7 +332,7 @@ class IndustrialSummaryStrip extends StatelessWidget {
                   style: IndustrialTheme.mono(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
-                    color: item.accent ?? IndustrialTheme.textPrimary,
+                    color: item.accent ?? IndustrialTheme.chromeOf(context).ink,
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -341,7 +342,7 @@ class IndustrialSummaryStrip extends StatelessWidget {
                     fontSize: 10,
                     fontWeight: FontWeight.w600,
                     letterSpacing: 0.5,
-                    color: IndustrialTheme.textMuted,
+                    color: IndustrialTheme.chromeOf(context).muted,
                   ),
                 ),
               ],
@@ -358,7 +359,10 @@ class IndustrialStatusBadge extends StatelessWidget {
 
   final String status;
 
-  static ({Color fill, Color accent}) colorsFor(String status) {
+  static ({Color fill, Color accent}) colorsFor(
+    String status, {
+    Brightness brightness = Brightness.dark,
+  }) {
     final s = status.toLowerCase();
     if (s.contains('overdue') || s.contains('urgent')) {
       return (fill: const Color(0x33EF4444), accent: const Color(0xFFEF4444));
@@ -387,9 +391,14 @@ class IndustrialStatusBadge extends StatelessWidget {
       );
     }
     if (s.contains('awaiting') || s.contains('pending')) {
+      final accent = brightness == Brightness.light
+          ? IndustrialTheme.awaiting
+          : IndustrialTheme.slateMuted;
       return (
-        fill: IndustrialTheme.slateMuted.withValues(alpha: 0.28),
-        accent: IndustrialTheme.slateMuted,
+        fill: accent.withValues(
+          alpha: brightness == Brightness.light ? 0.40 : 0.28,
+        ),
+        accent: accent,
       );
     }
     if (s.contains('delivered') || s.contains('completed')) {
@@ -414,7 +423,10 @@ class IndustrialStatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = colorsFor(status);
+    final colors = colorsFor(
+      status,
+      brightness: Theme.of(context).brightness,
+    );
     // Align + widthFactor shrink-wraps under fixed column widths so the
     // decorated Container does not stretch to the full STATUS cell.
     return Align(
@@ -444,8 +456,11 @@ class IndustrialStatusBadge extends StatelessWidget {
 }
 
 /// Accent bar color for a status label (left edge of log / kanban cards).
-Color industrialStatusAccent(String status) =>
-    IndustrialStatusBadge.colorsFor(status).accent;
+Color industrialStatusAccent(BuildContext context, String status) =>
+    IndustrialStatusBadge.colorsFor(
+      status,
+      brightness: Theme.of(context).brightness,
+    ).accent;
 
 /// Subtle location / zone chip used in staging & shipped grids.
 class IndustrialZonePill extends StatelessWidget {
@@ -463,9 +478,9 @@ class IndustrialZonePill extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
         decoration: BoxDecoration(
-          color: IndustrialTheme.darkHeader,
+          color: IndustrialTheme.chromeOf(context).header,
           borderRadius: BorderRadius.circular(4),
-          border: Border.all(color: IndustrialTheme.borderStroke),
+          border: Border.all(color: IndustrialTheme.chromeOf(context).border),
         ),
         child: Text(
           value,
@@ -474,8 +489,8 @@ class IndustrialZonePill extends StatelessWidget {
           style: IndustrialTheme.mono(
             fontSize: 11,
             color: value == '—'
-                ? IndustrialTheme.textMuted
-                : IndustrialTheme.skyBlue,
+                ? IndustrialTheme.chromeOf(context).muted
+                : IndustrialTheme.chromeAccent,
           ),
         ),
       ),
@@ -491,13 +506,13 @@ class IndustrialWeightPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final value = (weight ?? '').trim();
+    final value = formatWeightDisplay(weight);
     if (value.isEmpty) {
       return Text(
         '—',
         style: IndustrialTheme.mono(
           fontSize: 12,
-          color: IndustrialTheme.textMuted,
+          color: IndustrialTheme.chromeOf(context).muted,
         ),
       );
     }
@@ -552,9 +567,9 @@ class IndustrialFilterDropdown extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10),
         decoration: BoxDecoration(
-          color: IndustrialTheme.darkHeader,
+          color: IndustrialTheme.chromeOf(context).header,
           borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: IndustrialTheme.borderStroke),
+          border: Border.all(color: IndustrialTheme.chromeOf(context).border),
         ),
         child: DropdownButtonHideUnderline(
           child: DropdownButton<String>(
@@ -562,12 +577,12 @@ class IndustrialFilterDropdown extends StatelessWidget {
             isExpanded: true,
             isDense: true,
             icon: const Icon(Icons.expand_more, size: 18),
-            iconEnabledColor: IndustrialTheme.textMuted,
-            dropdownColor: IndustrialTheme.darkSurface,
+            iconEnabledColor: IndustrialTheme.chromeOf(context).muted,
+            dropdownColor: IndustrialTheme.chromeOf(context).surface,
             style: GoogleFonts.inter(
               fontSize: 12.5,
               fontWeight: FontWeight.w600,
-              color: IndustrialTheme.textPrimary,
+              color: IndustrialTheme.chromeOf(context).ink,
             ),
             items: [
               for (final item in items)
@@ -610,9 +625,9 @@ class LogSummaryCard extends StatelessWidget {
     return Container(
       padding: pad,
       decoration: BoxDecoration(
-        color: IndustrialTheme.darkSurface,
+        color: IndustrialTheme.chromeOf(context).surface,
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: IndustrialTheme.borderStroke),
+        border: Border.all(color: IndustrialTheme.chromeOf(context).border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -632,7 +647,7 @@ class LogSummaryCard extends StatelessWidget {
                 style: IndustrialTheme.mono(
                   fontSize: compact ? 22 : 32,
                   fontWeight: FontWeight.w800,
-                  color: IndustrialTheme.textPrimary,
+                  color: IndustrialTheme.chromeOf(context).ink,
                 ),
               ),
               const SizedBox(width: 8),
@@ -644,7 +659,7 @@ class LogSummaryCard extends StatelessWidget {
                     fontSize: compact ? 10 : 11,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0.6,
-                    color: IndustrialTheme.textMuted,
+                    color: IndustrialTheme.chromeOf(context).muted,
                   ),
                 ),
               ),
@@ -666,7 +681,7 @@ class LogSummaryCard extends StatelessWidget {
                             style: IndustrialTheme.mono(
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
-                              color: item.accent ?? IndustrialTheme.textPrimary,
+                              color: item.accent ?? IndustrialTheme.chromeOf(context).ink,
                             ),
                           ),
                           TextSpan(
@@ -675,7 +690,7 @@ class LogSummaryCard extends StatelessWidget {
                               fontSize: 9,
                               fontWeight: FontWeight.w600,
                               letterSpacing: 0.4,
-                              color: IndustrialTheme.textMuted,
+                              color: IndustrialTheme.chromeOf(context).muted,
                             ),
                           ),
                         ],
@@ -752,7 +767,7 @@ class IndustrialKpiCard extends StatelessWidget {
               style: IndustrialTheme.mono(
                 fontSize: compact ? 18 : 24,
                 fontWeight: FontWeight.bold,
-                color: IndustrialTheme.textPrimary,
+                color: IndustrialTheme.chromeOf(context).ink,
               ),
             ),
             if (subtext.isNotEmpty) ...[
@@ -800,15 +815,15 @@ class CommandDock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: IndustrialTheme.darkHeader,
+      color: IndustrialTheme.chromeOf(context).header,
       child: Container(
         height: 56,
         constraints: const BoxConstraints(minHeight: 56),
         padding: const EdgeInsets.symmetric(horizontal: 16),
-        decoration: const BoxDecoration(
-          color: IndustrialTheme.darkHeader,
+        decoration: BoxDecoration(
+          color: IndustrialTheme.chromeOf(context).header,
           border: Border(
-            top: BorderSide(color: IndustrialTheme.borderStroke, width: 1),
+            top: BorderSide(color: IndustrialTheme.chromeOf(context).border, width: 1),
           ),
         ),
         child: Row(
@@ -830,7 +845,7 @@ class CommandDock extends StatelessWidget {
                 textAlign: TextAlign.right,
                 style: IndustrialTheme.mono(
                   fontSize: 12,
-                  color: IndustrialTheme.textMuted,
+                  color: IndustrialTheme.chromeOf(context).muted,
                 ),
               ),
             ),
@@ -875,12 +890,15 @@ class SlideOverInspector extends StatelessWidget {
     final panel = Container(
       width: panelWidth,
       decoration: BoxDecoration(
-        color: IndustrialTheme.darkSurface,
+        color: IndustrialTheme.chromeOf(context).surface,
         borderRadius: asPopup ? BorderRadius.circular(8) : null,
         border: asPopup
-            ? Border.all(color: IndustrialTheme.borderStroke)
-            : const Border(
-                left: BorderSide(color: IndustrialTheme.borderStroke, width: 1),
+            ? Border.all(color: IndustrialTheme.chromeOf(context).border)
+            : Border(
+                left: BorderSide(
+                  color: IndustrialTheme.chromeOf(context).border,
+                  width: 1,
+                ),
               ),
       ),
       clipBehavior: asPopup ? Clip.antiAlias : Clip.none,
@@ -888,9 +906,9 @@ class SlideOverInspector extends StatelessWidget {
         children: [
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               border: Border(
-                bottom: BorderSide(color: IndustrialTheme.borderStroke),
+                bottom: BorderSide(color: IndustrialTheme.chromeOf(context).border),
               ),
             ),
             child: Row(
@@ -905,10 +923,10 @@ class SlideOverInspector extends StatelessWidget {
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(
+                  icon: Icon(
                     Icons.close,
                     size: 18,
-                    color: IndustrialTheme.textMuted,
+                    color: IndustrialTheme.chromeOf(context).muted,
                   ),
                   onPressed: onClose,
                 ),
@@ -943,13 +961,13 @@ class IndustrialIdText extends StatelessWidget {
     this.id, {
     super.key,
     this.fontSize = 12,
-    this.color = IndustrialTheme.textMuted,
+    this.color,
     this.maxLines = 1,
   });
 
   final String id;
   final double fontSize;
-  final Color color;
+  final Color? color;
   final int maxLines;
 
   @override
@@ -958,7 +976,10 @@ class IndustrialIdText extends StatelessWidget {
       id,
       maxLines: maxLines,
       overflow: TextOverflow.ellipsis,
-      style: IndustrialTheme.mono(fontSize: fontSize, color: color),
+      style: IndustrialTheme.mono(
+        fontSize: fontSize,
+        color: color ?? IndustrialTheme.chromeOf(context).muted,
+      ),
     );
   }
 }
@@ -980,7 +1001,7 @@ class IndustrialColumnHeader extends StatelessWidget {
           fontSize: 10,
           fontWeight: FontWeight.w700,
           letterSpacing: 0.7,
-          color: IndustrialTheme.textMuted,
+          color: IndustrialTheme.chromeOf(context).muted,
         ),
       ),
     );
@@ -1130,8 +1151,8 @@ class _HorizontalScrollArrow extends StatelessWidget {
           icon,
           size: 22,
           color: enabled
-              ? IndustrialTheme.textPrimary
-              : IndustrialTheme.textMuted.withValues(alpha: 0.35),
+              ? IndustrialTheme.chromeOf(context).ink
+              : IndustrialTheme.chromeOf(context).muted.withValues(alpha: 0.35),
         ),
       ),
     );

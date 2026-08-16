@@ -103,14 +103,15 @@ class AppReleaseInfo {
   }
 
   String? assetLabelFor(AppUpdatePlatform platform) {
-    switch (platform) {
-      case AppUpdatePlatform.windows:
-        return windowsInstallerUrl == null ? null : 'SLST-Setup-User.exe';
-      case AppUpdatePlatform.android:
-        return androidApkUrl == null ? null : 'SLST-Android.apk';
-      case AppUpdatePlatform.wear:
-        return wearApkUrl == null ? null : 'SLST-Wear.apk';
-    }
+    final url = assetUrlFor(platform);
+    if (url == null || url.isEmpty) return null;
+    final name = Uri.tryParse(url)?.pathSegments.last;
+    if (name != null && name.isNotEmpty) return name;
+    return switch (platform) {
+      AppUpdatePlatform.windows => 'SwiftStagingLog-Setup-User.exe',
+      AppUpdatePlatform.android => 'SwiftStagingLog-Android.apk',
+      AppUpdatePlatform.wear => 'SwiftStagingLog-Wear.apk',
+    };
   }
 
   String? assetFileNameFor(AppUpdatePlatform platform) {
@@ -153,7 +154,7 @@ class AppUpdateService {
       Uri.parse(AppConfig.githubLatestReleaseApi),
       headers: const {
         'Accept': 'application/vnd.github+json',
-        'User-Agent': 'SLST',
+        'User-Agent': 'SwiftStagingLog',
         'X-GitHub-Api-Version': '2022-11-28',
       },
     );
@@ -223,8 +224,8 @@ class AppUpdateService {
   /// Fetches latest release and compares against [installedVersion] / [installedBuild].
   ///
   /// [platform] gates the installable package: Android phone/tablet only sees
-  /// `SLST-Android.apk`; Wear only sees `SLST-Wear.apk`; Windows only sees
-  /// `SLST-Setup-User.exe` (portable zip is not used for in-app Update).
+  /// the Android APK; Wear only sees the Wear APK; Windows only sees
+  /// Setup.exe (portable zip is not used for in-app Update).
   /// A newer tag with only another platform's package does **not** count as
   /// an update for this device.
   Future<AppUpdateCheckResult> checkForUpdate({
@@ -259,7 +260,7 @@ class AppUpdateService {
       if (platform == AppUpdatePlatform.windows) {
         throw Exception(
           'No Windows Setup.exe asset on this release. '
-          'In-app Update requires SLST-Setup-User.exe.',
+          'In-app Update requires the Windows Setup installer.',
         );
       }
       throw Exception('No package asset available for this platform.');
@@ -357,7 +358,7 @@ class AppUpdateService {
     final client = http.Client();
     try {
       final req = http.Request('GET', Uri.parse(url));
-      req.headers['User-Agent'] = 'SLST';
+      req.headers['User-Agent'] = 'SwiftStagingLog';
       final res = await client.send(req);
       if (res.statusCode < 200 || res.statusCode >= 300) {
         throw Exception('Download failed (HTTP ${res.statusCode}).');
@@ -427,7 +428,7 @@ enum ReleaseAssetKind {
 ///
 /// Wear APKs are identified first (name contains `wear`) so they are never
 /// treated as phone/tablet Android packages. Phone/tablet APKs must include
-/// `android` in the filename (e.g. `SLST-Android.apk`). Generic `.apk` names
+/// `android` in the filename (e.g. `SwiftStagingLog-Android.apk`). Generic `.apk` names
 /// are ignored to avoid cross-installing the wrong client.
 ReleaseAssetKind classifyReleaseAsset(String fileName) {
   final lower = fileName.trim().toLowerCase();
@@ -443,6 +444,7 @@ ReleaseAssetKind classifyReleaseAsset(String fileName) {
     // Wear wins over "android" if both appear in the name.
     if (lower.contains('wear')) return ReleaseAssetKind.wearApk;
     if (lower.contains('android') ||
+        lower == 'swiftstaginglog-android.apk' ||
         lower == 'sst-android.apk' ||
         lower == 'slst-android.apk') {
       return ReleaseAssetKind.androidApk;

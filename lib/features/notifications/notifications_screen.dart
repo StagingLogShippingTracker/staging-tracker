@@ -95,11 +95,6 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   }
 
   Future<void> _send() async {
-    final user = ref.read(currentUserProvider);
-    if (user == null) {
-      showError(context, 'Sign in required to send notifications.');
-      return;
-    }
     setState(() => _busy = true);
     try {
       final ops = ref.read(operationsProvider);
@@ -209,12 +204,11 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final user = ref.watch(currentUserProvider);
     final scheme = Theme.of(context).colorScheme;
     final narrow = MediaQuery.sizeOf(context).width < 720;
 
     return ColoredBox(
-      color: IndustrialTheme.darkBase,
+      color: IndustrialTheme.chromeOf(context).base,
       child: ListView(
         padding: slstPagePadding(context, includeCompactChrome: true),
         children: [
@@ -228,21 +222,20 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
           const SizedBox(height: 16),
           if (_pageMode == _PageMode.log) ...[
             const NotificationLogPanel(),
-            const BrandFooter(),
           ] else ...[
             Card(
               margin: EdgeInsets.zero,
-              color: IndustrialTheme.skyBlue.withValues(alpha: 0.10),
+              color: IndustrialTheme.chromeAccent.withValues(alpha: 0.10),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(6),
                 side: BorderSide(
-                  color: IndustrialTheme.skyBlue.withValues(alpha: 0.35),
+                  color: IndustrialTheme.chromeAccent.withValues(alpha: 0.35),
                 ),
               ),
               child: const ListTile(
                 leading: Icon(
                   Icons.shield_outlined,
-                  color: IndustrialTheme.skyBlue,
+                  color: IndustrialTheme.chromeAccent,
                 ),
                 title: Text(
                   'Secure delivery',
@@ -319,7 +312,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 minimumSize: const Size.fromHeight(48),
               ),
-              onPressed: (_busy || user == null) ? null : _send,
+              onPressed: _busy ? null : _send,
               icon: _busy
                   ? const SizedBox(
                       width: 18,
@@ -330,13 +323,8 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                       ),
                     )
                   : const Icon(Icons.send),
-              label: Text(
-                user == null
-                    ? 'Sign in to send'
-                    : (_busy ? 'Sending…' : 'Send notification'),
-              ),
+              label: Text(_busy ? 'Sending…' : 'Send notification'),
             ),
-            const BrandFooter(),
           ],
         ],
       ),
@@ -439,7 +427,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
               children: [
                 Text(
                   'PO ${index + 1}',
-                  style: const TextStyle(fontWeight: FontWeight.w700),
+                  style: TextStyle(fontWeight: FontWeight.w700),
                 ),
                 const Spacer(),
                 if (_bulkRows.length > 1)

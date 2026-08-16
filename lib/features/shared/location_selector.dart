@@ -234,7 +234,7 @@ class _LocationSelectorDialogState
                         Expanded(
                           child: Text(
                             category.label,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 17,
                             ),
                           ),
@@ -312,7 +312,7 @@ class _LocationSelectorDialogState
               : ListView.separated(
                   shrinkWrap: true,
                   itemCount: visible.length,
-                  separatorBuilder: (_, _) => const Divider(height: 1),
+                  separatorBuilder: (_, _) => Divider(height: 1),
                   itemBuilder: (context, index) {
                     final value = visible[index];
                     final assessment = assessLocation(
@@ -372,7 +372,7 @@ class _LocationSelectorDialogState
                       ),
                       title: Text(
                         value,
-                        style: const TextStyle(fontWeight: FontWeight.w700),
+                        style: TextStyle(fontWeight: FontWeight.w700),
                       ),
                       subtitle: Text(
                         subtitle,
@@ -414,7 +414,7 @@ Future<LocationAdvisoryDecision> confirmLocationAdvisory(
     await showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: IndustrialTheme.darkSurface,
+        backgroundColor: IndustrialTheme.chromeOf(context).surface,
         title: const Text('Drive-lane bay'),
         content: Text(
           'Bay ${location.trim().toUpperCase()} was removed for a '
@@ -461,8 +461,6 @@ Future<LocationAdvisoryDecision> confirmLocationAdvisory(
     return LocationAdvisoryDecision.proceed;
   }
 
-  final signedIn = ref.read(currentUserProvider) != null;
-
   // Predictive advisory: show a single “better” alternate aisle slot (if we
   // can infer one from remembered locations). This is informational; saving
   // is still blocked only by the existing Proceed/Cancel flow.
@@ -499,8 +497,7 @@ Future<LocationAdvisoryDecision> confirmLocationAdvisory(
       'SO $so is also active at ${assessment.sameOrderElsewhere.map((entry) => entry.location).toSet().join(', ')}.',
     'This warning is advisory; another user can change staging before save.',
   ];
-  final showConsolidate =
-      signedIn && assessment.hasConsolidationOpportunity;
+  final showConsolidate = assessment.hasConsolidationOpportunity;
   final result = await showDialog<LocationAdvisoryDecision>(
     context: context,
     builder: (dialogContext) => AlertDialog(

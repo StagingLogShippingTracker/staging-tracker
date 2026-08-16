@@ -7,7 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../theme.dart';
 import '../wear_layout.dart';
 
-/// Compact Wear Settings → Update: check, confirm, download+install SLST-Wear.apk.
+/// Compact Wear Settings → Update: check, confirm, download+install Wear APK.
 class WearUpdateScreen extends StatefulWidget {
   const WearUpdateScreen({super.key});
 
@@ -79,7 +79,7 @@ class _WearUpdateScreenState extends State<WearUpdateScreen> {
         builder: (ctx) => AlertDialog(
           title: const Text('Update?', style: TextStyle(fontSize: 16)),
           content: Text(
-            '${result.latest.tagName}\nInstall SLST-Wear.apk?',
+            '${result.latest.tagName}\nInstall Wear APK?',
             style: const TextStyle(fontSize: 13),
           ),
           actions: [
@@ -109,7 +109,7 @@ class _WearUpdateScreenState extends State<WearUpdateScreen> {
     if (url == null || url.isEmpty) {
       setState(() {
         _error =
-            'No Wear APK on release ${release.tagName}. Publish SLST-Wear.apk.';
+            'No Wear APK on release ${release.tagName}.';
       });
       return;
     }

@@ -8,7 +8,7 @@ import {
 import { renderNotificationEmail } from "./email-templates/notification-email.ts";
 
 /** Bumped on each intentional notify-pm deploy (theme / logging fixes). */
-const NOTIFY_PM_VERSION = 82;
+const NOTIFY_PM_VERSION = 85;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",

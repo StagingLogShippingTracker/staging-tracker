@@ -10,6 +10,37 @@ import '../../domain/models.dart';
 import '../../domain/status.dart';
 import '../shared/so_history_link.dart';
 
+/// Floor drawing stays on a dark industrial field so occupancy colours remain
+/// readable. In app light mode the field is lifted so the map is not a black
+/// slab against cream chrome.
+IndustrialChrome _mapChrome(BuildContext context) {
+  if (Theme.of(context).brightness == Brightness.light) {
+    return _mapChromeOnLightApp;
+  }
+  return IndustrialChrome.dark;
+}
+
+/// Lifted dark field (~#45 vs dark #12) — still charcoal, not light-theme cream.
+const _mapChromeOnLightApp = IndustrialChrome(
+  base: Color(0xFF454B55),
+  surface: Color(0xFF4E555F),
+  header: Color(0xFF4A515B),
+  border: Color(0xFF6A7280),
+  ink: SwiftBrandColors.inkDark,
+  muted: Color(0xFFD0CFC8),
+  accentSoft: Color(0xFF5A3C34),
+  inputFill: Color(0xFF3F454E),
+);
+
+Color _mapPaneColor(BuildContext context) => _mapChrome(context).header;
+
+Color _mapGapColor(BuildContext context) => _mapChrome(context).base;
+
+/// Dialog / prompt chrome follows the app theme so Awaiting seats contrast
+/// in light mode (map drawing stays on [_mapChrome]).
+IndustrialChrome _shellChrome(BuildContext context) =>
+    IndustrialChrome.of(context);
+
 /// Persisted collapse state for the dashboard Warehouse Floor Map section.
 final floorMapCollapsedProvider =
     StateNotifierProvider<FloorMapCollapsedNotifier, bool>((ref) {
@@ -113,7 +144,7 @@ class WarehouseFloorMap extends ConsumerWidget {
                   Icon(
                     collapsed ? Icons.expand_more : Icons.expand_less,
                     size: 18,
-                    color: IndustrialTheme.textMuted,
+                    color: _mapChrome(context).muted,
                   ),
                 ],
               ),
@@ -247,9 +278,9 @@ class WarehouseFloorMap extends ConsumerWidget {
                             height: headerH,
                             child: DecoratedBox(
                               decoration: BoxDecoration(
-                                color: const Color(0xFF121826),
+                                color: _mapPaneColor(context),
                                 border: Border.all(
-                                  color: IndustrialTheme.borderStroke,
+                                  color: _mapChrome(context).border,
                                   width: 1.5,
                                 ),
                               ),
@@ -278,7 +309,7 @@ class WarehouseFloorMap extends ConsumerWidget {
                           SizedBox(
                             height: corpH,
                             child: ColoredBox(
-                              color: const Color(0xFF121826),
+                              color: _mapPaneColor(context),
                               child: Row(
                                 children: [
                                   Expanded(
@@ -308,7 +339,7 @@ class WarehouseFloorMap extends ConsumerWidget {
                           SizedBox(
                             height: bodyH,
                             child: ColoredBox(
-                              color: const Color(0xFF121826),
+                              color: _mapPaneColor(context),
                               child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -316,11 +347,11 @@ class WarehouseFloorMap extends ConsumerWidget {
                                     width: westW,
                                     height: bodyH,
                                     child: DecoratedBox(
-                                      decoration: const BoxDecoration(
+                                      decoration: BoxDecoration(
                                         border: Border(
                                           left: BorderSide(
                                             color:
-                                                IndustrialTheme.borderStroke,
+                                                _mapChrome(context).border,
                                             width: 1.5,
                                           ),
                                         ),
@@ -413,11 +444,11 @@ class WarehouseFloorMap extends ConsumerWidget {
                                     width: eastW,
                                     height: aislePadTop + longH,
                                     child: DecoratedBox(
-                                      decoration: const BoxDecoration(
+                                      decoration: BoxDecoration(
                                         border: Border(
                                           right: BorderSide(
                                             color:
-                                                IndustrialTheme.borderStroke,
+                                                _mapChrome(context).border,
                                             width: 1.5,
                                           ),
                                         ),
@@ -444,9 +475,9 @@ class WarehouseFloorMap extends ConsumerWidget {
                                   height: southH,
                                   child: DecoratedBox(
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFF121826),
+                                      color: _mapPaneColor(context),
                                       border: Border.all(
-                                        color: IndustrialTheme.borderStroke,
+                                        color: _mapChrome(context).border,
                                         width: 1.5,
                                       ),
                                     ),
@@ -538,7 +569,7 @@ class WarehouseFloorMap extends ConsumerWidget {
                       level,
                       style: IndustrialTheme.mono(
                         fontSize: 11,
-                        color: IndustrialTheme.textMuted,
+                        color: _shellChrome(context).muted,
                       ),
                     ),
                   ),
@@ -560,7 +591,10 @@ class WarehouseFloorMap extends ConsumerWidget {
             bayEntries.isEmpty
                 ? 'Empty bay'
                 : '${bayEntries.length} jobs · $qty containers',
-            style: Theme.of(context).textTheme.bodySmall,
+            style: TextStyle(
+              color: _shellChrome(context).muted,
+              fontSize: 12,
+            ),
           ),
         ],
       ),
@@ -612,8 +646,9 @@ Future<void> _showFloorMapDialog({
   return showDialog<void>(
     context: context,
     builder: (ctx) {
+      final shell = _shellChrome(context);
       return Dialog(
-        backgroundColor: IndustrialTheme.darkSurface,
+        backgroundColor: shell.surface,
         insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
         child: ConstrainedBox(
           constraints: BoxConstraints(maxWidth: maxW, maxHeight: maxH),
@@ -629,12 +664,12 @@ Future<void> _showFloorMapDialog({
                       ? IndustrialTheme.mono(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: IndustrialTheme.textPrimary,
+                          color: shell.ink,
                         )
-                      : const TextStyle(
+                      : TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w800,
-                          color: IndustrialTheme.textPrimary,
+                          color: shell.ink,
                         ),
                 ),
                 const SizedBox(height: 12),
@@ -689,8 +724,8 @@ class _FloorEntryCard extends ConsumerWidget {
             showLocation
                 ? '${entry.customer} · ${entry.location} · ${entry.type}'
                 : '${entry.customer} · ${entry.type} · ${entry.stagedBy}',
-            style: const TextStyle(
-              color: IndustrialTheme.textMuted,
+            style: TextStyle(
+              color: _shellChrome(context).muted,
               fontSize: 12,
             ),
           ),
@@ -708,21 +743,17 @@ class _FloorEntryCard extends ConsumerWidget {
   }
 }
 
-/// Single SE bite cut out of the warehouse outline (one shape).
-/// Lighter blue + diagonal hatch marks “not applicable” floor space.
+/// Hatched “not applicable” floor space, tinted to match Swift chrome.
 class _NotUsBite extends StatelessWidget {
   const _NotUsBite();
 
-  static const _fill = Color(0xFF1E3A5F); // lighter than dark map panes
-  static const _stripe = Color(0xFF3B6EA5);
-  static const _label = Color(0xFF93C5FD);
-
   @override
   Widget build(BuildContext context) {
+    final chrome = _mapChrome(context);
     const corner = BorderRadius.only(topLeft: Radius.circular(4));
     return DecoratedBox(
       decoration: BoxDecoration(
-        border: Border.all(color: IndustrialTheme.borderStroke, width: 1.5),
+        border: Border.all(color: chrome.border, width: 1.5),
         borderRadius: corner,
       ),
       child: ClipRRect(
@@ -730,8 +761,8 @@ class _NotUsBite extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            const ColoredBox(color: _fill),
-            const CustomPaint(painter: _NotUsHatchPainter(color: _stripe)),
+            ColoredBox(color: chrome.accentSoft),
+            CustomPaint(painter: _NotUsHatchPainter(color: chrome.border)),
             Center(
               child: Text(
                 'NOT US',
@@ -739,7 +770,7 @@ class _NotUsBite extends StatelessWidget {
                 style: IndustrialTheme.mono(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: _label,
+                  color: chrome.muted,
                 ),
               ),
             ),
@@ -886,7 +917,7 @@ class _WestRail extends StatelessWidget {
 class _VRule extends StatelessWidget {
   @override
   Widget build(BuildContext context) =>
-      Container(width: 1, color: IndustrialTheme.borderStroke);
+      Container(width: 1, color: _mapChrome(context).border);
 }
 
 class _Pane extends ConsumerWidget {
@@ -917,16 +948,16 @@ class _Pane extends ConsumerWidget {
       context: context,
       title: title,
       body: entries.isEmpty
-          ? const Text(
+          ? Text(
               'No active staging in this zone.',
-              style: TextStyle(color: IndustrialTheme.textMuted),
+              style: TextStyle(color: _shellChrome(context).muted),
             )
           : Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               mainAxisSize: MainAxisSize.min,
               children: [
                 for (var i = 0; i < entries.length; i++) ...[
-                  if (i > 0) const Divider(height: 1),
+                  if (i > 0) Divider(height: 1),
                   _FloorEntryCard(entry: entries[i], showLocation: true),
                 ],
               ],
@@ -938,7 +969,7 @@ class _Pane extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final occupied = entries.isNotEmpty && !muted;
     final border =
-        muted ? IndustrialTheme.borderStroke : _borderForEntries(entries);
+        muted ? _mapChrome(context).border : _borderForEntries(entries, context);
     final tip = muted
         ? label.replaceAll('\n', ' ')
         : (entries.isEmpty
@@ -954,8 +985,8 @@ class _Pane extends ConsumerWidget {
         fontSize: compact ? 8 : 9,
         fontWeight: FontWeight.bold,
         color: occupied
-            ? IndustrialTheme.textPrimary
-            : IndustrialTheme.textMuted,
+            ? _mapChrome(context).ink
+            : _mapSeatLabelColor(context, occupied: false),
       ),
       maxLines: verticalText ? 12 : 3,
       overflow: TextOverflow.ellipsis,
@@ -966,14 +997,14 @@ class _Pane extends ConsumerWidget {
             alignment: Alignment.center,
             padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
             decoration: BoxDecoration(
-              color: IndustrialTheme.darkHeader.withValues(alpha: 0.55),
+              color: _mapChrome(context).header.withValues(alpha: 0.55),
               border: Border.all(color: border.withValues(alpha: 0.85)),
             ),
             child:
                 verticalText ? RotatedBox(quarterTurns: 1, child: text) : text,
           )
         : _OccupancyBox(
-            colors: _statusBandColors(entries),
+            colors: _statusBandColors(entries, context),
             borderColor: border.withValues(alpha: 0.85),
             padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
             child:
@@ -1024,76 +1055,105 @@ class _SouthWallFocusPage extends StatelessWidget {
     final size = mq.size;
     // Exact map South Wall proportions (width/height). Fit inside the viewport
     // without stretching toward a square dialog.
+    const titleH = 42.0;
     final maxW = min(size.width - 48, 1100.0);
     final maxH = size.height - mq.padding.vertical - 120;
     var gridW = maxW;
     var gridH = gridW / aspectRatio;
-    if (gridH > maxH) {
-      gridH = maxH;
+    if (gridH + titleH > maxH) {
+      gridH = maxH - titleH;
       gridW = gridH * aspectRatio;
     }
 
+    final border = _mapChrome(context).border;
     final panel = Material(
-      color: const Color(0xFF121826),
+      color: _mapPaneColor(context),
       elevation: 12,
       shadowColor: Colors.black87,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(6),
-        side: const BorderSide(
-          color: IndustrialTheme.borderStroke,
+        side: BorderSide(
+          color: border,
           width: 1.5,
         ),
       ),
       clipBehavior: Clip.antiAlias,
       child: SizedBox(
         width: gridW,
-        height: gridH,
+        height: gridH + titleH,
         child: Column(
           children: [
-            Expanded(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  for (var i = 0; i < _top.length; i++) ...[
-                    if (i > 0)
-                      const VerticalDivider(
-                        width: 1,
-                        thickness: 1,
-                        color: IndustrialTheme.borderStroke,
-                      ),
-                    Expanded(
-                      child: _SouthWallSectionCell(
-                        section: _top[i],
-                        entries: index.southWallSectionEntries(_top[i]),
-                      ),
-                    ),
-                  ],
-                ],
+            SizedBox(
+              height: titleH,
+              width: double.infinity,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(color: border, width: 1.5),
+                  ),
+                ),
+                child: Center(
+                  child: Text(
+                    'SOUTH WALL',
+                    style: IndustrialTheme.mono(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: _mapChrome(context).ink,
+                    ).copyWith(letterSpacing: 1.2),
+                  ),
+                ),
               ),
             ),
-            const Divider(
-              height: 2,
-              thickness: 2,
-              color: IndustrialTheme.borderStroke,
-            ),
             Expanded(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+              child: Column(
                 children: [
-                  for (var i = 0; i < _bottom.length; i++) ...[
-                    if (i > 0)
-                      const VerticalDivider(
-                        width: 1,
-                        thickness: 1,
-                        color: IndustrialTheme.borderStroke,
-                      ),
-                    Expanded(
-                      child: _SouthWallSectionCell(
-                        section: _bottom[i],
-                        entries: index.southWallSectionEntries(_bottom[i]),
-                      ),
+                  Expanded(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        for (var i = 0; i < _top.length; i++) ...[
+                          if (i > 0)
+                            VerticalDivider(
+                              width: 1,
+                              thickness: 1,
+                              color: border,
+                            ),
+                          Expanded(
+                            child: _SouthWallSectionCell(
+                              section: _top[i],
+                              entries: index.southWallSectionEntries(_top[i]),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
-                  ],
+                  ),
+                  Divider(
+                    height: 2,
+                    thickness: 2,
+                    color: border,
+                  ),
+                  Expanded(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        for (var i = 0; i < _bottom.length; i++) ...[
+                          if (i > 0)
+                            VerticalDivider(
+                              width: 1,
+                              thickness: 1,
+                              color: border,
+                            ),
+                          Expanded(
+                            child: _SouthWallSectionCell(
+                              section: _bottom[i],
+                              entries: index.southWallSectionEntries(_bottom[i]),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -1142,16 +1202,16 @@ class _SouthWallSectionCell extends StatelessWidget {
       title: label,
       titleMono: true,
       body: entries.isEmpty
-          ? const Text(
+          ? Text(
               'No active staging in this section.',
-              style: TextStyle(color: IndustrialTheme.textMuted),
+              style: TextStyle(color: _shellChrome(context).muted),
             )
           : Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               mainAxisSize: MainAxisSize.min,
               children: [
                 for (var i = 0; i < entries.length; i++) ...[
-                  if (i > 0) const Divider(height: 1),
+                  if (i > 0) Divider(height: 1),
                   _FloorEntryCard(entry: entries[i], showLocation: true),
                 ],
               ],
@@ -1161,7 +1221,7 @@ class _SouthWallSectionCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final border = _borderForEntries(entries);
+    final border = _borderForEntries(entries, context);
     final tip = entries.isEmpty
         ? 'SW $section · empty · click for details'
         : 'SW $section · ${entries.length} jobs · '
@@ -1175,7 +1235,7 @@ class _SouthWallSectionCell extends StatelessWidget {
         child: InkWell(
           onTap: () => _openSection(context),
           child: _OccupancyBox(
-            colors: _statusBandColors(entries),
+            colors: _statusBandColors(entries, context),
             borderColor: border.withValues(alpha: 0.85),
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
             child: Center(
@@ -1188,8 +1248,8 @@ class _SouthWallSectionCell extends StatelessWidget {
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
                     color: entries.isEmpty
-                        ? IndustrialTheme.textMuted
-                        : IndustrialTheme.textPrimary,
+                        ? _mapSeatLabelColor(context, occupied: false)
+                        : _mapChrome(context).ink,
                   ),
                 ),
               ),
@@ -1206,13 +1266,13 @@ class _StatusLegend extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const items = <(String, Color)>[
-      ('Empty', Color(0xFF111827)),
+    final items = <(String, Color)>[
+      ('Empty', _emptyFill(context)),
       ('Rush / Hotshot', IndustrialTheme.hotRed),
       ('Today / Ready', IndustrialTheme.mintGreen),
       ('Tomorrow / Transit', IndustrialTheme.skyBlue),
       ('Partial', IndustrialTheme.amber),
-      ('Awaiting', IndustrialTheme.slateMuted),
+      ('Awaiting', IndustrialTheme.awaitingOf(context)),
       ('Future / Corp', IndustrialTheme.purple),
       ('Occupied', IndustrialTheme.slateMuted),
     ];
@@ -1233,7 +1293,7 @@ class _StatusLegend extends StatelessWidget {
                       borderRadius: BorderRadius.circular(2),
                       border: Border.all(
                         color: item.$1 == 'Empty'
-                            ? IndustrialTheme.borderStroke
+                            ? _mapChrome(context).border
                             : item.$2,
                       ),
                     ),
@@ -1337,7 +1397,7 @@ class _AisleRow extends StatelessWidget {
                 style: IndustrialTheme.mono(
                   fontSize: 9,
                   fontWeight: FontWeight.bold,
-                  color: IndustrialTheme.textMuted,
+                  color: _mapChrome(context).muted,
                 ),
               ),
             ),
@@ -1357,11 +1417,11 @@ class _DriveGap extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ColoredBox(
-      color: const Color(0xFF0B1220),
+      color: _mapGapColor(context),
       child: Center(
         child: Container(
           width: 1.5,
-          color: IndustrialTheme.borderStroke.withValues(alpha: 0.4),
+          color: _mapChrome(context).border.withValues(alpha: 0.4),
         ),
       ),
     );
@@ -1383,7 +1443,7 @@ class _BaySeat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final border = _borderForEntries(entries);
+    final border = _borderForEntries(entries, context);
     final jobs = entries.length;
     final qty = entries.fold<int>(0, (s, e) => s + e.qty);
     final tip = entries.isEmpty
@@ -1391,7 +1451,7 @@ class _BaySeat extends StatelessWidget {
         : '$bayKey · $jobs jobs · $qty containers';
 
     final box = _OccupancyBox(
-      colors: _statusBandColors(entries),
+      colors: _statusBandColors(entries, context),
       borderColor: border,
       borderRadius: BorderRadius.circular(3),
     );
@@ -1430,16 +1490,16 @@ class _SubSlotChip extends ConsumerWidget {
       title: fullLocation,
       titleMono: true,
       body: entries.isEmpty
-          ? const Text(
+          ? Text(
               'Empty slot — no active staging here.',
-              style: TextStyle(color: IndustrialTheme.textMuted),
+              style: TextStyle(color: _shellChrome(context).muted),
             )
           : Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               mainAxisSize: MainAxisSize.min,
               children: [
                 for (var i = 0; i < entries.length; i++) ...[
-                  if (i > 0) const Divider(height: 1),
+                  if (i > 0) Divider(height: 1),
                   _FloorEntryCard(entry: entries[i]),
                 ],
               ],
@@ -1449,7 +1509,7 @@ class _SubSlotChip extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final border = _borderForEntries(entries);
+    final border = _borderForEntries(entries, context);
     final tip = entries.isEmpty
         ? '$fullLocation · empty · click'
         : '$fullLocation · ${entries.length} jobs · '
@@ -1465,7 +1525,7 @@ class _SubSlotChip extends ConsumerWidget {
           child: SizedBox(
             height: 28,
             child: _OccupancyBox(
-              colors: _statusBandColors(entries),
+              colors: _statusBandColors(entries, context),
               borderColor: border,
               borderRadius: BorderRadius.circular(4),
               child: Text(
@@ -1474,8 +1534,8 @@ class _SubSlotChip extends ConsumerWidget {
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
                   color: entries.isEmpty
-                      ? IndustrialTheme.textMuted
-                      : IndustrialTheme.textPrimary,
+                      ? _mapSeatLabelColor(context, occupied: false)
+                      : _mapChrome(context).ink,
                 ),
               ),
             ),
@@ -1486,12 +1546,27 @@ class _SubSlotChip extends ConsumerWidget {
   }
 }
 
-Color _emptyFill() => IndustrialTheme.darkHeader;
-Color _emptyBorder() => IndustrialTheme.borderStroke;
+Color _emptyFill(BuildContext context) {
+  if (Theme.of(context).brightness == Brightness.light) {
+    // Slightly lighter than the map field, still charcoal so labels stay readable.
+    return const Color(0xFF5C636C);
+  }
+  return _mapChrome(context).header;
+}
+
+Color _mapSeatLabelColor(BuildContext context, {required bool occupied}) {
+  if (occupied) return _mapChrome(context).ink;
+  if (Theme.of(context).brightness == Brightness.light) {
+    return _mapChrome(context).ink;
+  }
+  return _mapChrome(context).muted;
+}
+Color _emptyBorder(BuildContext context) =>
+    _mapChrome(context).border;
 
 /// Distinct status colors for a location, urgency-sorted (highest first).
-List<Color> _statusBandColors(List<StagingEntry> entries) {
-  if (entries.isEmpty) return [_emptyFill()];
+List<Color> _statusBandColors(List<StagingEntry> entries, BuildContext context) {
+  if (entries.isEmpty) return [_emptyFill(context)];
   final bestByUi = <String, StagingEntry>{};
   for (final e in entries) {
     final ui = StatusRules.formatUi(e.status);
@@ -1508,15 +1583,15 @@ List<Color> _statusBandColors(List<StagingEntry> entries) {
           StatusRules.urgencyWeight(b.status) -
           StatusRules.urgencyWeight(a.status),
     );
-  return [for (final e in ordered) _colorForStatus(e.status)];
+  return [for (final e in ordered) _colorForStatus(e.status, context)];
 }
 
-Color _borderForEntries(List<StagingEntry> entries) {
-  if (entries.isEmpty) return _emptyBorder();
-  return _statusBandColors(entries).first;
+Color _borderForEntries(List<StagingEntry> entries, BuildContext context) {
+  if (entries.isEmpty) return _emptyBorder(context);
+  return _statusBandColors(entries, context).first;
 }
 
-Color _colorForStatus(String dbStatus) {
+Color _colorForStatus(String dbStatus, BuildContext context) {
   final ui = StatusRules.formatUi(dbStatus).toLowerCase();
   if (StatusRules.isRushHotshot(dbStatus) ||
       ui.contains('rush') ||
@@ -1535,7 +1610,7 @@ Color _colorForStatus(String dbStatus) {
     return IndustrialTheme.amber;
   }
   if (ui.contains('awaiting')) {
-    return IndustrialTheme.slateMuted;
+    return IndustrialTheme.awaitingOf(context);
   }
   if (ui.contains('future') ||
       ui.contains('corp pick') ||
@@ -1567,7 +1642,7 @@ class _OccupancyBox extends StatelessWidget {
   Widget build(BuildContext context) {
     return CustomPaint(
       painter: _OccupancyPainter(
-        colors: colors.isEmpty ? [_emptyFill()] : colors,
+        colors: colors.isEmpty ? [_emptyFill(context)] : colors,
         borderColor: borderColor,
         borderRadius: borderRadius,
       ),

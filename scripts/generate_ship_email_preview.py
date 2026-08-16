@@ -65,7 +65,7 @@ def main() -> None:
   <meta charset="utf-8" />
   <meta name="color-scheme" content="light only" />
   <meta name="supported-color-schemes" content="light" />
-  <title>SLST ship confirmation preview</title>
+  <title>Ship confirmation preview</title>
   <style>
     :root {{ color-scheme: light only; }}
     body {{ margin:0; background:{PAGE_BG}; }}
@@ -81,7 +81,7 @@ def main() -> None:
       <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" bgcolor="{CARD_SHELL}"
         style="width:100%;max-width:600px;background-color:{CARD_SHELL};border-radius:18px;border:1px solid {BORDER};box-shadow:0 18px 48px rgba(42,42,42,0.10);">
         <tr><td align="center" style="padding:42px 36px 10px 36px;background-image:url('{wm}');background-repeat:repeat;">
-          <img src="{logo}" width="300" alt="SLST" style="display:block;margin:0 auto;border:0;max-width:86%;height:auto;" />
+          <img src="{logo}" width="300" alt="Swift Staging &amp; Shipping Log" style="display:block;margin:0 auto;border:0;max-width:86%;height:auto;" />
         </td></tr>
         <tr><td align="center" style="padding:26px 36px 6px 36px;">
           <h1 style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:28px;line-height:1.28;font-weight:700;color:{INK};">Your order has now been shipped!</h1>
@@ -108,9 +108,9 @@ def main() -> None:
         <tr><td style="padding:22px 36px 32px 36px;">
           <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
             <td style="font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.55;color:{INK};">
-              <strong>Thank you for using SLST!</strong><br />
-              SLST - Staging Log &amp; Shipping Tracker<br />
-              <span style="font-size:12px;color:{MUTED};">Copyright © 2026 SLST. All rights reserved.</span>
+              <strong>Thank you for using Swift Staging &amp; Shipping Log!</strong><br />
+              Swift Staging &amp; Shipping Log<br />
+              <span style="font-size:12px;color:{MUTED};">Copyright © 2026 Swift Supply. All rights reserved.</span>
             </td>
             <td align="right" style="font-family:Arial,Helvetica,sans-serif;font-size:13px;white-space:nowrap;">
               <a href="mailto:warehouse1@swiftsupply.ca" style="color:{BRAND};"><img src="{asset("icon-mail")}" width="14" height="14" alt="" style="vertical-align:middle;margin-right:5px;border:0;" />Email</a>
@@ -120,7 +120,7 @@ def main() -> None:
           </tr></table>
         </td></tr>
       </table>
-      <div style="font-family:Arial,Helvetica,sans-serif;font-size:11px;color:{MUTED};padding-top:18px;">Sent via SLST · Swift Supply</div>
+      <div style="font-family:Arial,Helvetica,sans-serif;font-size:11px;color:{MUTED};padding-top:18px;">Sent via Swift Staging &amp; Shipping Log · Swift Supply</div>
       <p style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:{MUTED};max-width:600px;text-align:left;margin:24px auto 0;">
         Local preview — images load from the live <code>email-assets</code> Edge Function. Open this file after deploy.
       </p>
