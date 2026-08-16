@@ -1,5 +1,7 @@
 package ca.swiftsupply.slst
 
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.content.res.Configuration
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -7,6 +9,7 @@ import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
     private val desktopModeChannel = "slst/desktop_mode"
+    private val siblingAppsChannel = "slst/sibling_apps"
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -19,6 +22,35 @@ class MainActivity : FlutterActivity() {
                 else -> result.notImplemented()
             }
         }
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            siblingAppsChannel,
+        ).setMethodCallHandler { call, result ->
+            val packageName = call.argument<String>("packageName").orEmpty()
+            when (call.method) {
+                "isInstalled" -> result.success(isSiblingInstalled(packageName))
+                "launch" -> result.success(launchSibling(packageName))
+                else -> result.notImplemented()
+            }
+        }
+    }
+
+    private fun isSiblingInstalled(packageName: String): Boolean {
+        if (packageName.isEmpty()) return false
+        return try {
+            packageManager.getPackageInfo(packageName, 0)
+            true
+        } catch (_: PackageManager.NameNotFoundException) {
+            false
+        }
+    }
+
+    private fun launchSibling(packageName: String): Boolean {
+        if (packageName.isEmpty()) return false
+        val intent = packageManager.getLaunchIntentForPackage(packageName) ?: return false
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        startActivity(intent)
+        return true
     }
 
     /**

@@ -12,19 +12,16 @@ class AppChangelog {
   AppChangelog._();
 
   /// Bump this when starting a new What's New wave.
-  static const campaignId = 'whats_new_1_1_35';
+  static const campaignId = 'whats_new_1_1_36';
   static const maxShows = 3;
-  static const title = "What's new (v1.1.35)";
+  static const title = "What's new (v1.1.36)";
 
   static const sections = <ChangelogSection>[
     ChangelogSection(
-      version: 'v1.1.35',
+      version: 'v1.1.36',
       bullets: [
-        'Staged By, Shipped By, Picked By, and Returned By use shared name memory (same as Document Generator), including delete',
-        'Success chime after ship confirm, quick ship, and PM notifications',
-        'Light/dark chrome matches Document Generator; Wear uses the same charcoal palette',
-        'PM emails use warehouse chrome without the app name; disclaimer starts with This service',
-        'Warehouse floor map, logs, and notifications no longer require sign-in',
+        'Expanded sidebar includes a More Apps tile for Swift Document Generator',
+        'If Document Generator is installed, the tile opens it; otherwise it downloads Setup/APK and starts install',
       ],
     ),
   ];

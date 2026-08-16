@@ -1,7 +1,7 @@
 ; Non-admin per-user installer for Swift Staging & Shipping Log
 ; Inno uses && to display a single &
 #define MyAppName "Swift Staging && Shipping Log"
-#define MyAppVersion "1.1.35"
+#define MyAppVersion "1.1.36"
 #define MyAppPublisher "Swift Supply"
 #define MyAppExeName "SwiftStagingLog.exe"
 

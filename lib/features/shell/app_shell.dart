@@ -10,6 +10,7 @@ import '../../data/app_state.dart';
 import '../../data/theme_preference.dart';
 import '../shared/widgets.dart';
 import 'command_dock.dart';
+import 'operations_apps_rail.dart';
 
 /// Width below which phone layout uses NavigationBar (no drawer) instead of rail.
 const double kCompactShellBreakpoint = 700;
@@ -633,6 +634,7 @@ class _IndustrialRail extends ConsumerWidget {
             ),
           ),
           Divider(height: 1, color: IndustrialTheme.chromeOf(context).border),
+          if (!collapsed) const OperationsAppsRail(),
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 6),
             child: Tooltip(
