@@ -36,6 +36,9 @@ String _typeLabel(String type) {
       return 'Bulk PO';
     case 'return_notification':
       return 'Return';
+    case 'feedback':
+    case 'feedback_notification':
+      return 'Feedback';
     default:
       return type;
   }
@@ -162,6 +165,19 @@ List<({String label, String value})> _messageBodyRows(
         'Details',
         _payloadStr(p, const ['details', 'notes', 'comments']),
       );
+      break;
+    case 'feedback':
+    case 'feedback_notification':
+      add('Category', _payloadStr(p, const ['category']));
+      add('Name', _payloadStr(p, const ['name', 'sender_name']));
+      add('Contact', _payloadStr(p, const ['contact', 'email']));
+      add('Summary', _payloadStr(p, const ['summary']));
+      add(
+        'Details',
+        _payloadStr(p, const ['details', 'message', 'comments']),
+      );
+      add('Version', _payloadStr(p, const ['app_version', 'version']));
+      add('Platform', _payloadStr(p, const ['platform']));
       break;
     default:
       add('SO', entry.so ?? _payloadStr(p, const ['so']));

@@ -583,17 +583,6 @@ class _ThemeToggleButton extends ConsumerWidget {
   }
 }
 
-class _RailBrandWordmark extends StatelessWidget {
-  const _RailBrandWordmark({required this.targetHeight});
-
-  final double targetHeight;
-
-  @override
-  Widget build(BuildContext context) {
-    return BrandWordmark(height: targetHeight);
-  }
-}
-
 class _IndustrialRail extends ConsumerWidget {
   const _IndustrialRail({required this.selectedPath});
   final String selectedPath;
@@ -622,18 +611,14 @@ class _IndustrialRail extends ConsumerWidget {
               collapsed ? 8 : 16,
               14,
             ),
-            child: collapsed
-                ? const Center(
-                    child: Tooltip(
-                      message: kProductName,
-                      child: BrandMark(size: 32),
-                    ),
-                  )
-                : const Padding(
-                    padding: EdgeInsets.only(left: 2),
-                    // ~54px effective / 1.5 → ~36px (was 3× prior 34px target).
-                    child: _RailBrandWordmark(targetHeight: 72),
-                  ),
+            child: Center(
+              child: Tooltip(
+                message: kProductName,
+                child: collapsed
+                    ? const BrandMark(size: 32)
+                    : const SwiftChromeLogo(height: 56),
+              ),
+            ),
           ),
           Divider(height: 1, color: IndustrialTheme.chromeOf(context).border),
           Expanded(

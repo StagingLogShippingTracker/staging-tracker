@@ -109,7 +109,7 @@ def load_payload() -> dict:
         "F4F2EF",
         "linear-gradient",
         "prefers-color-scheme: dark",
-        "NOTIFY_PM_VERSION = 85",
+        "NOTIFY_PM_VERSION = 86",
         "appendNotificationLog",
         "This service is experimental",
         "This service is an internal operations tool",

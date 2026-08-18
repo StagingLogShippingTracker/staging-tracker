@@ -10,6 +10,12 @@ import '../../data/app_state.dart';
 /// Warehouse feedback inbox — Settings → Feedback (mirrors shipping-label Help).
 const kWarehouseFeedbackEmail = 'warehouse2@swiftsupply.ca';
 
+/// Roster name Make / contacts use for [kWarehouseFeedbackEmail].
+const kWarehouseFeedbackPmName = 'Warehouse 2';
+
+/// Make PM-email scenario matches `*_notification` types (PO / return).
+const kWarehouseFeedbackNotificationType = 'feedback_notification';
+
 /// Settings card that opens an authenticated feedback form emailed via notify-pm.
 class FeedbackCard extends ConsumerWidget {
   const FeedbackCard({super.key});
@@ -167,8 +173,12 @@ class _FeedbackFormDialogState extends ConsumerState<_FeedbackFormDialog> {
     try {
       await ref.read(notifyRepoProvider).sendPmNotification({
         'to': kWarehouseFeedbackEmail,
+        'to_email': kWarehouseFeedbackEmail,
+        'email': kWarehouseFeedbackEmail,
+        'pm_email': kWarehouseFeedbackEmail,
+        'recipient': kWarehouseFeedbackEmail,
         'subject': 'Swift Staging & Shipping Log feedback: $subjectSummary',
-        'notification_type': 'feedback',
+        'notification_type': kWarehouseFeedbackNotificationType,
         'category': _category,
         'name': name,
         'contact': contact,
@@ -177,7 +187,9 @@ class _FeedbackFormDialogState extends ConsumerState<_FeedbackFormDialog> {
         'message': details,
         'app_version': _installedVersion,
         'platform': platform,
-        'pm_name': 'Warehouse',
+        'pm_name': kWarehouseFeedbackPmName,
+        // Same legacy key PO notifications send for older Make mappings.
+        'customer': 'App feedback',
         'body':
             'Swift Staging & Shipping Log feedback<br><br>'
             '<b>Category</b> | $_category<br>'

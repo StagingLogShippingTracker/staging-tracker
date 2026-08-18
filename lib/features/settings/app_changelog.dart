@@ -19,6 +19,13 @@ class AppChangelog {
   /// Ordered newest-first, same campaign-wave pattern as Document Generator.
   static const sections = <ChangelogSection>[
     ChangelogSection(
+      version: 'v1.1.40',
+      bullets: [
+        'Sidebar shows only the Swift logo, centered (product name no longer squeezed next to it)',
+        'Settings feedback emails now reach warehouse2@swiftsupply.ca through the same Make path as PM notifications',
+      ],
+    ),
+    ChangelogSection(
       version: 'v1.1.39',
       bullets: [
         'Launcher keeps Staging Log STAGE & SHIP artwork in a rounded-square tile (not Document Generator art)',

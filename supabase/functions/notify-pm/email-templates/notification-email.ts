@@ -284,6 +284,7 @@ export function renderNotificationEmail(
     case "bulk_po_notification":
       return renderBulkPoNotificationEmail(body, attachmentUrls);
     case "feedback":
+    case "feedback_notification":
       return renderFeedbackEmail(body, attachmentUrls);
     default:
       return null;

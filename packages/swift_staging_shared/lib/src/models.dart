@@ -199,6 +199,9 @@ class NotificationLogEntry {
         return 'Bulk PO';
       case 'return_notification':
         return 'Return';
+      case 'feedback':
+      case 'feedback_notification':
+        return 'Feedback';
       default:
         return notificationType.isEmpty ? 'Unknown' : notificationType;
     }

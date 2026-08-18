@@ -8,7 +8,17 @@ import {
 import { renderNotificationEmail } from "./email-templates/notification-email.ts";
 
 /** Bumped on each intentional notify-pm deploy (theme / logging fixes). */
-const NOTIFY_PM_VERSION = 85;
+const NOTIFY_PM_VERSION = 86;
+
+const WAREHOUSE_FEEDBACK_EMAIL = "warehouse2@swiftsupply.ca";
+const WAREHOUSE_FEEDBACK_PM_NAME = "Warehouse 2";
+
+function isFeedbackType(notificationType: string): boolean {
+  return (
+    notificationType === "feedback" ||
+    notificationType === "feedback_notification"
+  );
+}
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -273,10 +283,29 @@ Deno.serve(async (req: Request) => {
     }
 
     const body = await req.json();
-    const to = String(body.to ?? "").trim();
-    const notificationType = String(body.notification_type ?? "").trim();
+    let to = String(body.to ?? "").trim();
+    let notificationType = String(body.notification_type ?? "").trim();
+    if (isFeedbackType(notificationType)) {
+      // Make's PM-email scenario matches `*_notification` types and looks up
+      // the roster name "Warehouse 2" (not a shortened "Warehouse").
+      notificationType = "feedback_notification";
+      to = WAREHOUSE_FEEDBACK_EMAIL;
+      body.to = to;
+      body.to_email = to;
+      body.email = to;
+      body.pm_email = to;
+      body.recipient = to;
+      body.notification_type = notificationType;
+      body.pm_name = WAREHOUSE_FEEDBACK_PM_NAME;
+      // Legacy Make mappings expect `customer` on every PM email payload.
+      if (!String(body.customer ?? "").trim()) {
+        body.customer = "App feedback";
+      }
+    }
     const sentBy = userData.user.email ?? userData.user.id;
-    const pmName = resolvePmName(body);
+    const pmName = isFeedbackType(notificationType)
+      ? WAREHOUSE_FEEDBACK_PM_NAME
+      : resolvePmName(body);
     const vendor = String(body.vendor ?? "").trim() || null;
     const customer = String(body.customer ?? "").trim() || vendor;
 
@@ -346,7 +375,7 @@ Deno.serve(async (req: Request) => {
     } else if (notificationType === "return_notification") {
       if (!String(body.so ?? "").trim()) missing.push("so");
       if (!String(body.customer ?? "").trim()) missing.push("customer");
-    } else if (notificationType === "feedback") {
+    } else if (isFeedbackType(notificationType)) {
       if (!String(body.details ?? body.message ?? "").trim()) {
         missing.push("details");
       }
