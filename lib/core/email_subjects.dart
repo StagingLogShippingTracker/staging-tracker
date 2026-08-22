@@ -1,5 +1,2 @@
-/// Uppercases the full PM notification email subject line.
-String capitalizeEmailSubject(String subject) {
-  if (subject.trim().isEmpty) return subject;
-  return subject.toUpperCase();
-}
+/// Re-export shared subject helper — single source of truth.
+export 'package:swift_staging_shared/src/email_subjects.dart';

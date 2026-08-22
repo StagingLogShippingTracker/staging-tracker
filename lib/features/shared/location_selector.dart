@@ -6,6 +6,7 @@ import '../../data/app_state.dart';
 import '../../domain/location_intelligence.dart';
 import '../../domain/location_prediction.dart';
 import '../../domain/models.dart';
+import 'warehouse_location_picker.dart';
 import 'widgets.dart';
 
 typedef LocationSelection = ({String value, LocationCategory category});
@@ -47,8 +48,7 @@ class LocationSelectorField extends ConsumerWidget {
       },
       decoration: InputDecoration(
         labelText: label,
-        helperText:
-            'Pick a category or remembered location, or type a new one',
+        helperText: 'Choose a category, then pick on the warehouse floor map',
         helperMaxLines: 2,
         suffixIcon: const Icon(Icons.chevron_right),
       ),
@@ -94,27 +94,10 @@ class LocationSelectorDialog extends ConsumerStatefulWidget {
 class _LocationSelectorDialogState
     extends ConsumerState<LocationSelectorDialog> {
   LocationCategory? _category;
-  final _query = TextEditingController();
-  final _hiddenLocal = <String>{};
 
-  @override
-  void dispose() {
-    _query.dispose();
-    super.dispose();
-  }
-
-  Future<void> _hideMemory(String value) async {
-    final key = value.trim().toLowerCase();
-    if (key.isEmpty) return;
-    setState(() => _hiddenLocal.add(key));
-    await hideRememberedMemory(ref, value);
-  }
-
-  void _select(String value) {
-    final category = _category;
+  LocationSelection? _finalize(String value, LocationCategory category) {
     var clean = value.trim();
-    if (category == null || clean.isEmpty) return;
-    // Legacy B-02 A/B slots → combined partial-box bay.
+    if (clean.isEmpty) return null;
     if (category == LocationCategory.aisle &&
         supersededAisleLocations.contains(locationKey(clean))) {
       clean = b02PartialLocation;
@@ -131,9 +114,31 @@ class _LocationSelectorDialogState
           ),
         ),
       );
+      return null;
+    }
+    return (value: clean, category: category);
+  }
+
+  Future<void> _pickCategory(LocationCategory category) async {
+    if (category == LocationCategory.outside) {
+      setState(() => _category = category);
       return;
     }
-    Navigator.pop(context, (value: clean, category: category));
+    final picked = await showWarehouseLocationPicker(
+      context,
+      ref,
+      category: category,
+    );
+    if (!mounted || picked == null) return;
+    final result = _finalize(picked, category);
+    if (result == null) return;
+    Navigator.pop(context, result);
+  }
+
+  void _selectOutside(String value) {
+    final result = _finalize(value, LocationCategory.outside);
+    if (result == null) return;
+    Navigator.pop(context, result);
   }
 
   @override
@@ -156,10 +161,7 @@ class _LocationSelectorDialogState
                     IconButton(
                       key: const Key('location-selector-back'),
                       tooltip: 'Back to location categories',
-                      onPressed: () => setState(() {
-                        _category = null;
-                        _query.clear();
-                      }),
+                      onPressed: () => setState(() => _category = null),
                       icon: const Icon(Icons.arrow_back),
                     )
                   else
@@ -185,7 +187,7 @@ class _LocationSelectorDialogState
               Flexible(
                 child: _category == null
                     ? _buildCategories()
-                    : _buildLocations(_category!),
+                    : _buildOutsidePicker(),
               ),
             ],
           ),
@@ -216,13 +218,7 @@ class _LocationSelectorDialogState
                   height: columns == 1 ? 82 : 108,
                   child: OutlinedButton(
                     key: Key('location-category-${category.name}'),
-                    onPressed: () => setState(() {
-                      _category = category;
-                      _query.text =
-                          category == classifyLocation(widget.initialValue)
-                          ? widget.initialValue
-                          : '';
-                    }),
+                    onPressed: () => _pickCategory(category),
                     style: OutlinedButton.styleFrom(
                       alignment: Alignment.centerLeft,
                       padding: const EdgeInsets.symmetric(horizontal: 18),
@@ -234,7 +230,7 @@ class _LocationSelectorDialogState
                         Expanded(
                           child: Text(
                             category.label,
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 17,
                             ),
                           ),
@@ -251,148 +247,51 @@ class _LocationSelectorDialogState
     );
   }
 
-  Widget _buildLocations(LocationCategory category) {
-    final data = ref.watch(appDataProvider);
-    final movements =
-        ref.watch(recentBinMovementsProvider).valueOrNull ?? const [];
-    final remembered =
-        ref.watch(locationSuggestionsProvider(category)).valueOrNull ??
-        const <String>[];
-    final query = _query.text.trim().toLowerCase();
-    final visible = remembered
-        .where(
-          (value) =>
-              !_hiddenLocal.contains(value.trim().toLowerCase()) &&
-              (query.isEmpty || value.toLowerCase().contains(query)),
-        )
-        .toList();
-
+  Widget _buildOutsidePicker() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        TextField(
-          key: const Key('location-selector-input'),
-          controller: _query,
-          autofocus: true,
-          textCapitalization: TextCapitalization.characters,
-          decoration: InputDecoration(
-            labelText: 'Search or type a new ${category.label.toLowerCase()}',
-            prefixIcon: const Icon(Icons.search),
-            suffixIcon: _query.text.isEmpty
-                ? null
-                : IconButton(
-                    tooltip: 'Clear',
-                    onPressed: () => setState(_query.clear),
-                    icon: const Icon(Icons.clear),
-                  ),
+        Text(
+          'Outside locations are not shown on the floor map. '
+          'Choose a standard label below.',
+          style: TextStyle(
+            color: IndustrialTheme.chromeOf(context).muted,
+            fontSize: 13,
+            height: 1.35,
           ),
-          onChanged: (_) => setState(() {}),
-          onSubmitted: _select,
         ),
-        const SizedBox(height: 10),
-        if (_query.text.trim().isNotEmpty &&
-            !remembered.any(
-              (value) => locationKey(value) == locationKey(_query.text),
-            ))
-          FilledButton.icon(
-            key: const Key('location-selector-add-new'),
-            onPressed: () => _select(_query.text),
-            icon: const Icon(Icons.add_location_alt_outlined),
-            label: Text('Use new location "${_query.text.trim()}"'),
-          ),
-        if (_query.text.trim().isNotEmpty) const SizedBox(height: 8),
-        Flexible(
-          child: visible.isEmpty
-              ? const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(24),
-                    child: Text('No remembered locations in this category.'),
-                  ),
-                )
-              : ListView.separated(
-                  shrinkWrap: true,
-                  itemCount: visible.length,
-                  separatorBuilder: (_, _) => Divider(height: 1),
-                  itemBuilder: (context, index) {
-                    final value = visible[index];
-                    final assessment = assessLocation(
-                      location: value,
-                      so: widget.so,
-                      active: data.staging,
-                      shipped: data.shipped,
-                      ignoreEntryId: widget.ignoreEntryId,
-                    );
-                    final occupied = !assessment.vacant;
-                    final sharedPartial = isB02PartialLocation(value);
-                    final occupantText = assessment.occupants
-                        .map(
-                          (entry) =>
-                              'SO ${entry.so} · ${entry.customer} · ${entry.type}',
-                        )
-                        .join('\n');
-                    final history = assessment.recentHistory.isEmpty
-                        ? ''
-                        : '\nRecent: ${assessment.recentHistory.map((entry) => 'SO ${entry.so}').join(', ')}';
-                    final movement = movements
-                        .where(
-                          (entry) => entry.action.toUpperCase().contains(
-                            locationKey(value),
-                          ),
-                        )
-                        .take(1)
-                        .map(
-                          (entry) => entry.action.replaceFirst(
-                            RegExp(r'^Bin Movement:\s*', caseSensitive: false),
-                            '',
-                          ),
-                        )
-                        .join();
-                    final movementText = movement.isEmpty
-                        ? ''
-                        : '\nMovement: $movement';
-                    final subtitle = sharedPartial
-                        ? (occupied
-                              ? 'Shared partial-box bay · ${assessment.occupants.length} active ${assessment.occupants.length == 1 ? 'entry' : 'entries'}$history$movementText'
-                              : 'Shared partial-box bay (multiple box entries OK)$history$movementText')
-                        : (occupied
-                              ? 'Occupied: $occupantText$history$movementText'
-                              : 'Vacant$history$movementText');
-                    return ListTile(
-                      leading: Icon(
-                        sharedPartial
-                            ? Icons.inventory_2_outlined
-                            : occupied
-                                ? Icons.warning_amber_rounded
-                                : Icons.check_circle_outline,
-                        color: sharedPartial
-                            ? IndustrialTheme.amber
-                            : occupied
-                                ? SlstColors.warning
-                                : SlstColors.success,
-                      ),
-                      title: Text(
-                        value,
-                        style: TextStyle(fontWeight: FontWeight.w700),
-                      ),
-                      subtitle: Text(
-                        subtitle,
-                        maxLines: 4,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      trailing: IconButton(
-                        tooltip: 'Forget this location',
-                        icon: const Icon(
-                          Icons.close,
-                          size: 18,
-                          color: Color(0xFFEF4444),
-                        ),
-                        onPressed: () => _hideMemory(value),
-                      ),
-                      onTap: () => _select(value),
-                    );
-                  },
+        const SizedBox(height: 16),
+        for (final label in seededOutsideLocations)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: OutlinedButton(
+              key: Key('outside-location-${label.toLowerCase()}'),
+              onPressed: () => _selectOutside(label),
+              style: OutlinedButton.styleFrom(
+                alignment: Alignment.centerLeft,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 16,
                 ),
-        ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.landscape_outlined),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      label,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  const Icon(Icons.check_circle_outline),
+                ],
+              ),
+            ),
+          ),
       ],
     );
   }

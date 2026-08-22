@@ -1,0 +1,42 @@
+{
+  "ts": "2026-08-22T18:45:34.603582Z",
+  "domain": "scanner",
+  "cases": [
+    {
+      "case_id": "scan_work_state_machine",
+      "ok": true,
+      "duration_ms": 3,
+      "metrics_raw": {
+        "coverage": 1.0
+      }
+    },
+    {
+      "case_id": "document_corners_full_default",
+      "ok": true,
+      "duration_ms": 3
+    },
+    {
+      "case_id": "enhancement_enum_stable",
+      "ok": true,
+      "duration_ms": 1
+    },
+    {
+      "case_id": "ocr_result_model_fields",
+      "ok": true,
+      "duration_ms": 0
+    },
+    {
+      "case_id": "offline_ocr_service_constructs",
+      "ok": true,
+      "duration_ms": 2
+    },
+    {
+      "case_id": "scan_screen_exports",
+      "ok": true,
+      "duration_ms": 31
+    }
+  ],
+  "notes": [
+    "Scanner pipeline state machine + OCR models."
+  ]
+}

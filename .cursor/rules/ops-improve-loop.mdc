@@ -1,0 +1,20 @@
+---
+description: Continue staging/ship/return ops improve loop unprompted
+globs: packages/swift_staging_shared/**/*,lib/data/app_state.dart,lib/domain/**/*,test/ops_improve_loop_test.dart,test/container_counts_test.dart,test/so_advisories_test.dart,qa_ops/**/*,scripts/ops_improve_*.py
+alwaysApply: true
+---
+
+# Ops improve loop — CONTINUE UNPROMPTED (training)
+
+When this agent touches staging, ship, return-to-stock, containers, SO advisories,
+or shared validation, **own the ops improve loop**.
+
+## Mandatory loop
+
+1. Read `qa_ops/synthetic/improve_summary_latest.json`.
+2. Fix real top failures (container math, validation, advisories).
+3. Re-run: `python scripts/ops_improve_loop.py`.
+4. Append lessons to `qa_ops/synthetic/training_lessons.json`.
+5. Expand cases when new inventory edge cases appear.
+
+Docs: `qa_ops/synthetic/README.md`.

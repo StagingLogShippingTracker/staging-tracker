@@ -118,7 +118,11 @@ export function isShipConfirmationType(
   notificationType: string | undefined | null,
 ): boolean {
   const t = String(notificationType ?? "").trim().toLowerCase();
-  return t === "ship_confirm" || t === "quick_ship";
+  return (
+    t === "ship_confirm" ||
+    t === "quick_ship" ||
+    t === "ship_notification"
+  );
 }
 
 export function shipDataFromPayload(

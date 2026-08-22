@@ -1,0 +1,201 @@
+{
+  "domain": "reports",
+  "version": 1,
+  "purpose": "Incremental training memory for this improve loop. Score \u2192 fix \u2192 re-score \u2192 keep lessons \u2192 expand cases. Covers every design element, function, operation, and third-party connector for this domain.",
+  "lessons": [],
+  "run_snapshots": [
+    {
+      "ts": "2026-08-22T18:36:18Z",
+      "run_id": "20260822T183618Z",
+      "mean_composite": 1.0,
+      "ok": true,
+      "top_failures": [
+        {
+          "case_id": "audit_location_order_box_before_aisle",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "box_before_aisle": true,
+            "all_ok": true
+          },
+          "duration_ms": 3.0
+        },
+        {
+          "case_id": "audit_mode_enum_roundtrip",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 0.0
+        },
+        {
+          "case_id": "loc_key_priority_bands",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0,
+            "integrity": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 1.0
+        },
+        {
+          "case_id": "wear_svr_same_comparator",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 9.0
+        }
+      ],
+      "gate_fails": [],
+      "next": "Read qa_reports summary; SVR/audit/order-inspector parity with ops location order."
+    },
+    {
+      "ts": "2026-08-22T18:38:48Z",
+      "run_id": "20260822T183848Z",
+      "mean_composite": 1.0,
+      "ok": true,
+      "top_failures": [
+        {
+          "case_id": "audit_location_order_box_before_aisle",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "box_before_aisle": true,
+            "all_ok": true
+          },
+          "duration_ms": 1.0
+        },
+        {
+          "case_id": "audit_mode_enum_roundtrip",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 0.0
+        },
+        {
+          "case_id": "loc_key_priority_bands",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0,
+            "integrity": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 0.0
+        },
+        {
+          "case_id": "wear_svr_same_comparator",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 5.0
+        }
+      ],
+      "gate_fails": [],
+      "next": "Read qa_reports summary; SVR/audit/order-inspector parity with ops location order."
+    },
+    {
+      "ts": "2026-08-22T18:45:24Z",
+      "run_id": "20260822T184524Z",
+      "mean_composite": 1.0,
+      "ok": true,
+      "top_failures": [
+        {
+          "case_id": "audit_location_order_box_before_aisle",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "box_before_aisle": true,
+            "all_ok": true
+          },
+          "duration_ms": 3.0
+        },
+        {
+          "case_id": "audit_mode_enum_roundtrip",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 0.0
+        },
+        {
+          "case_id": "loc_key_priority_bands",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0,
+            "integrity": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 1.0
+        },
+        {
+          "case_id": "wear_svr_same_comparator",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 9.0
+        }
+      ],
+      "gate_fails": [],
+      "next": "Read qa_reports summary; SVR/audit/order-inspector parity with ops location order."
+    }
+  ],
+  "updated_at": "2026-08-22T18:45:24Z"
+}

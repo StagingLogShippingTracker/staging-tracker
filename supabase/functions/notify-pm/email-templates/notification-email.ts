@@ -278,6 +278,7 @@ export function renderNotificationEmail(
     case "return_notification":
       return renderReturnNotificationEmail(body, attachmentUrls);
     case "return_to_stock":
+    case "return_to_stock_notification":
       return renderReturnToStockEmail(body, attachmentUrls);
     case "po_notification":
       return renderPoNotificationEmail(body, attachmentUrls);

@@ -1,0 +1,27 @@
+---
+description: Continue notify/email improve loop unprompted (Make + notify-pm + subjects)
+globs: supabase/functions/notify-pm/**/*,lib/**/feedback*.dart,lib/data/app_state.dart,packages/swift_staging_shared/**/ship_operations.dart,test/notify_improve_loop_test.dart,qa_notify/**/*,scripts/notify_improve_*.py
+alwaysApply: true
+---
+
+# Notify improve loop — CONTINUE UNPROMPTED (training)
+
+When this agent touches PM email, feedback, Make, or `notify-pm`, **own the
+notify improve loop**. Training contract: `improve-loops-training.mdc`.
+
+## Mandatory loop
+
+1. Read `qa_notify/synthetic/improve_summary_latest.json`.
+2. Fix real top failures (missing to/cc, type aliases, subject casing, body).
+3. Re-run: `python scripts/notify_improve_loop.py`.
+4. Append lessons to `qa_notify/synthetic/training_lessons.json`.
+5. Expand cases when a new notification type or Make failure appears.
+
+## Curriculum focus
+
+- All types: ship_confirm, quick_ship, return_to_stock, po, bulk_po, return, feedback
+- Make webhook contract: `to`, `cc`, `subject`, `body`, `attachments`, `has_attachments`
+- Never embed Make webhook URL in Flutter
+- Keep Make scenario **active** when fixing delivery (do not leave it off)
+
+Docs: `qa_notify/synthetic/README.md`.

@@ -1,0 +1,40 @@
+{
+  "ts": "2026-08-22T18:45:53.295651Z",
+  "domain": "theme",
+  "cases": [
+    {
+      "case_id": "product_name_official",
+      "ok": true,
+      "duration_ms": 0,
+      "gates_raw": {
+        "brand_exact": true
+      }
+    },
+    {
+      "case_id": "product_compact_name",
+      "ok": true,
+      "duration_ms": 0
+    },
+    {
+      "case_id": "theme_preference_modes",
+      "ok": true,
+      "duration_ms": 0
+    },
+    {
+      "case_id": "status_color_rush_distinct",
+      "ok": true,
+      "duration_ms": 5,
+      "metrics_raw": {
+        "integrity": true
+      }
+    },
+    {
+      "case_id": "no_bare_slst_product_title",
+      "ok": true,
+      "duration_ms": 22
+    }
+  ],
+  "notes": [
+    "Brand strings must stay Swift Staging & Shipping Log."
+  ]
+}

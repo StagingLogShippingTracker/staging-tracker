@@ -63,7 +63,7 @@ Widget testApp() => ProviderScope(
 );
 
 void main() {
-  testWidgets('phone selector drills in, goes back, and closes with X', (
+  testWidgets('phone selector shows categories, outside picker, and closes', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(360, 800);
@@ -79,10 +79,10 @@ void main() {
     expect(find.byKey(const Key('location-selector-close')), findsOneWidget);
     expect(tester.takeException(), isNull);
 
-    await tester.tap(find.text('Aisle Location'));
+    await tester.tap(find.text('Outside'));
     await tester.pumpAndSettle();
-    expect(find.byKey(const Key('location-selector-input')), findsOneWidget);
-    expect(find.text('A-01-A-1'), findsOneWidget);
+    expect(find.text('Outside'), findsWidgets);
+    expect(find.byKey(const Key('outside-location-outside')), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('location-selector-back')));
     await tester.pumpAndSettle();
@@ -94,9 +94,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('phone selector accepts a free-text location without overflow', (
-    tester,
-  ) async {
+  testWidgets('outside picker assigns a fixed label', (tester) async {
     tester.view.physicalSize = const Size(360, 640);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -106,16 +104,10 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Outside'));
     await tester.pumpAndSettle();
-    await tester.enterText(
-      find.byKey(const Key('location-selector-input')),
-      'North Yard',
-    );
-    await tester.pump();
-    expect(find.textContaining('Use new location'), findsOneWidget);
-    await tester.tap(find.byKey(const Key('location-selector-add-new')));
+    await tester.tap(find.byKey(const Key('outside-location-yard')));
     await tester.pumpAndSettle();
 
-    expect(find.text('Selected: North Yard'), findsOneWidget);
+    expect(find.text('Selected: Yard'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

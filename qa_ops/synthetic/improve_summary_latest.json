@@ -1,0 +1,188 @@
+{
+  "run_id": "20260822T184514Z",
+  "ts": "2026-08-22T18:45:14Z",
+  "domain": "ops",
+  "ok": true,
+  "harness_ok": true,
+  "harness_note": "ok",
+  "n_cases": 10,
+  "n_scored": 10,
+  "mean_composite": 1.0,
+  "elapsed_s": 7.75,
+  "gate_fails": [],
+  "top_failures": [
+    {
+      "case_id": "container_counts_total",
+      "composite": 1.0,
+      "metrics": {
+        "success": 1.0,
+        "speed": 1.0,
+        "integrity": 1.0
+      },
+      "gates": {
+        "success": true,
+        "all_ok": true
+      },
+      "duration_ms": 2.0
+    },
+    {
+      "case_id": "container_type_label",
+      "composite": 1.0,
+      "metrics": {
+        "success": 1.0,
+        "speed": 1.0
+      },
+      "gates": {
+        "success": true,
+        "all_ok": true
+      },
+      "duration_ms": 0.0
+    },
+    {
+      "case_id": "ship_fields_reject_empty",
+      "composite": 1.0,
+      "metrics": {
+        "success": 1.0,
+        "speed": 1.0
+      },
+      "gates": {
+        "success": true,
+        "rejects_empty_customer": true,
+        "all_ok": true
+      },
+      "duration_ms": 0.0
+    },
+    {
+      "case_id": "return_fields_reject_empty",
+      "composite": 1.0,
+      "metrics": {
+        "success": 1.0,
+        "speed": 1.0
+      },
+      "gates": {
+        "success": true,
+        "all_ok": true
+      },
+      "duration_ms": 1.0
+    },
+    {
+      "case_id": "so_advisories_smoke",
+      "composite": 1.0,
+      "metrics": {
+        "success": 1.0,
+        "speed": 1.0,
+        "integrity": 1.0
+      },
+      "gates": {
+        "success": true,
+        "all_ok": true
+      },
+      "duration_ms": 0.0
+    },
+    {
+      "case_id": "container_parse_mixed",
+      "composite": 1.0,
+      "metrics": {
+        "success": 1.0,
+        "speed": 1.0
+      },
+      "gates": {
+        "success": true,
+        "all_ok": true
+      },
+      "duration_ms": 0.0
+    },
+    {
+      "case_id": "container_add_commutative",
+      "composite": 1.0,
+      "metrics": {
+        "success": 1.0,
+        "speed": 1.0
+      },
+      "gates": {
+        "success": true,
+        "all_ok": true
+      },
+      "duration_ms": 0.0
+    },
+    {
+      "case_id": "rpc_method_names_stable",
+      "composite": 1.0,
+      "metrics": {
+        "success": 1.0,
+        "speed": 1.0,
+        "coverage": 1.0
+      },
+      "gates": {
+        "success": true,
+        "all_ok": true
+      },
+      "duration_ms": 9.0
+    },
+    {
+      "case_id": "consolidate_undo_window_2m",
+      "composite": 1.0,
+      "metrics": {
+        "success": 1.0,
+        "speed": 1.0
+      },
+      "gates": {
+        "success": true,
+        "all_ok": true
+      },
+      "duration_ms": 1.0
+    },
+    {
+      "case_id": "status_urgency_weights",
+      "composite": 1.0,
+      "metrics": {
+        "success": 1.0,
+        "speed": 1.0
+      },
+      "gates": {
+        "success": true,
+        "all_ok": true
+      },
+      "duration_ms": 13.0
+    }
+  ],
+  "metric_hotspots": [],
+  "top_wins": [
+    {
+      "case_id": "container_counts_total",
+      "composite": 1.0
+    },
+    {
+      "case_id": "container_type_label",
+      "composite": 1.0
+    },
+    {
+      "case_id": "ship_fields_reject_empty",
+      "composite": 1.0
+    },
+    {
+      "case_id": "return_fields_reject_empty",
+      "composite": 1.0
+    },
+    {
+      "case_id": "so_advisories_smoke",
+      "composite": 1.0
+    }
+  ],
+  "notes": [],
+  "budgets_ms": {
+    "container_counts_total": 300,
+    "container_type_label": 300,
+    "container_parse_mixed": 300,
+    "container_add_commutative": 300,
+    "ship_fields_reject_empty": 200,
+    "return_fields_reject_empty": 200,
+    "so_advisories_smoke": 500,
+    "rpc_method_names_stable": 400,
+    "consolidate_undo_window_2m": 200,
+    "status_urgency_weights": 300
+  },
+  "log": "qa_ops/synthetic/improve_log.jsonl",
+  "next": "Read qa_ops summary; fix container/status/split/consolidate failures; expand inventory edges.",
+  "training_lessons": "qa_ops/synthetic/training_lessons.json"
+}

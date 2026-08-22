@@ -1,0 +1,82 @@
+{
+  "ts": "2026-08-22T18:46:10.618824Z",
+  "domain": "update",
+  "cases": [
+    {
+      "case_id": "classify_windows_setup_exe",
+      "ok": true,
+      "duration_ms": 0,
+      "metrics_raw": {
+        "integrity": true
+      }
+    },
+    {
+      "case_id": "classify_windows_portable_zip",
+      "ok": true,
+      "duration_ms": 16
+    },
+    {
+      "case_id": "classify_android_apk",
+      "ok": true,
+      "duration_ms": 4
+    },
+    {
+      "case_id": "classify_wear_apk",
+      "ok": true,
+      "duration_ms": 0
+    },
+    {
+      "case_id": "wear_wins_over_android_token",
+      "ok": true,
+      "duration_ms": 1,
+      "gates_raw": {
+        "wear_precedence": true
+      }
+    },
+    {
+      "case_id": "generic_apk_unknown",
+      "ok": true,
+      "duration_ms": 0,
+      "gates_raw": {
+        "no_cross_install": true
+      }
+    },
+    {
+      "case_id": "windows_update_requires_setup_not_portable",
+      "ok": true,
+      "duration_ms": 4,
+      "gates_raw": {
+        "setup_required": true
+      }
+    },
+    {
+      "case_id": "android_never_reads_wear_url",
+      "ok": true,
+      "duration_ms": 0
+    },
+    {
+      "case_id": "wear_never_reads_android_url",
+      "ok": true,
+      "duration_ms": 1
+    },
+    {
+      "case_id": "github_latest_api_configured",
+      "ok": true,
+      "duration_ms": 0
+    },
+    {
+      "case_id": "denver_prompt_1500",
+      "ok": true,
+      "duration_ms": 1
+    },
+    {
+      "case_id": "snooze_three_days",
+      "ok": true,
+      "duration_ms": 0
+    }
+  ],
+  "notes": [
+    "Windows Update requires Setup.exe; portable zip is not enough.",
+    "Wear APK must never install on phone and vice versa."
+  ]
+}

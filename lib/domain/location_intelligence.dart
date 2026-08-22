@@ -11,6 +11,60 @@ enum LocationCategory {
   final String rosterType;
 }
 
+/// Filtered warehouse floor map modes for location assignment.
+enum WarehouseMapPickMode { aisle, floor, shipping }
+
+extension LocationCategoryMapPick on LocationCategory {
+  WarehouseMapPickMode? get mapPickMode => switch (this) {
+        LocationCategory.aisle => WarehouseMapPickMode.aisle,
+        LocationCategory.floor => WarehouseMapPickMode.floor,
+        LocationCategory.shipping => WarehouseMapPickMode.shipping,
+        LocationCategory.outside => null,
+      };
+}
+
+/// Internal zone keys aligned with the floor map occupancy index.
+abstract final class FloorMapZones {
+  static const offices = 'Offices';
+  static const corpDrop = 'Corp Drop';
+  static const boxRack = 'Box Rack';
+  static const stainless = 'Stainless';
+  static const wDoors = 'W-Doors';
+  static const southWall = 'South Wall';
+  static const shippingBoxRack = 'Shipping Box Rack';
+  static const shippingAreas = 'Shipping Areas';
+
+  /// Canonical location string saved on staging entries.
+  static String canonicalLocation(String zoneKey) => switch (zoneKey) {
+        corpDrop => 'Corp Drop-Off',
+        boxRack => 'Box Rack',
+        stainless => 'Stainless',
+        wDoors => 'W-Doors',
+        southWall => 'South Wall',
+        shippingBoxRack => 'S.Box',
+        shippingAreas => 'Shipping Areas',
+        _ => zoneKey,
+      };
+
+  static bool isPickable(WarehouseMapPickMode mode, String zoneKey) {
+    switch (mode) {
+      case WarehouseMapPickMode.aisle:
+        return false;
+      case WarehouseMapPickMode.floor:
+        return zoneKey == corpDrop ||
+            zoneKey == boxRack ||
+            zoneKey == stainless ||
+            zoneKey == wDoors ||
+            zoneKey == southWall;
+      case WarehouseMapPickMode.shipping:
+        return zoneKey == shippingBoxRack || zoneKey == shippingAreas;
+    }
+  }
+}
+
+/// Fixed outside labels — no free-text yard names in the default flow.
+const seededOutsideLocations = ['Outside', 'Yard'];
+
 /// Combined partial-box bay: replaces B-02-A-1/A-2/B-1/B-2.
 const b02PartialLocation = 'B-02-Partial';
 

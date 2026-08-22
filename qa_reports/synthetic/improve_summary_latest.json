@@ -1,0 +1,100 @@
+{
+  "run_id": "20260822T184524Z",
+  "ts": "2026-08-22T18:45:24Z",
+  "domain": "reports",
+  "ok": true,
+  "harness_ok": true,
+  "harness_note": "ok",
+  "n_cases": 4,
+  "n_scored": 4,
+  "mean_composite": 1.0,
+  "elapsed_s": 9.61,
+  "gate_fails": [],
+  "top_failures": [
+    {
+      "case_id": "audit_location_order_box_before_aisle",
+      "composite": 1.0,
+      "metrics": {
+        "success": 1.0,
+        "speed": 1.0
+      },
+      "gates": {
+        "success": true,
+        "box_before_aisle": true,
+        "all_ok": true
+      },
+      "duration_ms": 3.0
+    },
+    {
+      "case_id": "audit_mode_enum_roundtrip",
+      "composite": 1.0,
+      "metrics": {
+        "success": 1.0,
+        "speed": 1.0
+      },
+      "gates": {
+        "success": true,
+        "all_ok": true
+      },
+      "duration_ms": 0.0
+    },
+    {
+      "case_id": "loc_key_priority_bands",
+      "composite": 1.0,
+      "metrics": {
+        "success": 1.0,
+        "speed": 1.0,
+        "integrity": 1.0
+      },
+      "gates": {
+        "success": true,
+        "all_ok": true
+      },
+      "duration_ms": 1.0
+    },
+    {
+      "case_id": "wear_svr_same_comparator",
+      "composite": 1.0,
+      "metrics": {
+        "success": 1.0,
+        "speed": 1.0
+      },
+      "gates": {
+        "success": true,
+        "all_ok": true
+      },
+      "duration_ms": 9.0
+    }
+  ],
+  "metric_hotspots": [],
+  "top_wins": [
+    {
+      "case_id": "audit_location_order_box_before_aisle",
+      "composite": 1.0
+    },
+    {
+      "case_id": "audit_mode_enum_roundtrip",
+      "composite": 1.0
+    },
+    {
+      "case_id": "loc_key_priority_bands",
+      "composite": 1.0
+    },
+    {
+      "case_id": "wear_svr_same_comparator",
+      "composite": 1.0
+    }
+  ],
+  "notes": [
+    "SVR walk order must match Windows/Android and Wear."
+  ],
+  "budgets_ms": {
+    "audit_location_order_box_before_aisle": 300,
+    "audit_mode_enum_roundtrip": 200,
+    "loc_key_priority_bands": 300,
+    "wear_svr_same_comparator": 300
+  },
+  "log": "qa_reports/synthetic/improve_log.jsonl",
+  "next": "Read qa_reports summary; SVR/audit/order-inspector parity with ops location order.",
+  "training_lessons": "qa_reports/synthetic/training_lessons.json"
+}

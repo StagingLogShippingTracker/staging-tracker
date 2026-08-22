@@ -1,0 +1,423 @@
+{
+  "domain": "app",
+  "version": 1,
+  "purpose": "Incremental training memory for this improve loop. Score \u2192 fix \u2192 re-score \u2192 keep lessons \u2192 expand cases.",
+  "lessons": [
+    {
+      "id": "20260822T181450Z",
+      "ts": "2026-08-22T18:14:50Z",
+      "title": "Single capitalizeEmailSubject source",
+      "lesson": "lib/core/email_subjects.dart duplicated shared helper and broke dual imports in harness. Re-export shared implementation.",
+      "do_not_regress": "Do not redefine capitalizeEmailSubject in lib/core; re-export from swift_staging_shared.",
+      "case_ids": [],
+      "tags": [
+        "email",
+        "harness"
+      ]
+    },
+    {
+      "id": "20260822T183928Z",
+      "ts": "2026-08-22T18:39:28Z",
+      "title": "12-domain curriculum covers full product surface",
+      "lesson": "Improve loops now cover app/auth/contacts/location/make/notify/ops/reports/scanner/theme/update/wear. Run scripts/run_all_improve_loops.py after broad changes. Hunt redundancies and flow-breakers inside the same loops.",
+      "do_not_regress": "Do not shrink domain set without replacing coverage; keep mean_composite gates.",
+      "case_ids": [],
+      "tags": [
+        "curriculum"
+      ]
+    }
+  ],
+  "run_snapshots": [
+    {
+      "ts": "2026-08-22T18:14:39Z",
+      "run_id": "20260822T181439Z",
+      "mean_composite": 1.0,
+      "ok": true,
+      "top_failures": [
+        {
+          "case_id": "shared_validation_ship",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "rejects_empty_so": true,
+            "all_ok": true
+          },
+          "duration_ms": 1.0
+        },
+        {
+          "case_id": "shared_validation_po",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 0.0
+        },
+        {
+          "case_id": "email_subject_casing",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0,
+            "integrity": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 0.0
+        },
+        {
+          "case_id": "audit_location_order",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 3.0
+        },
+        {
+          "case_id": "kpi_math_smoke",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0,
+            "integrity": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 1.0
+        }
+      ],
+      "gate_fails": [],
+      "next": "Read qa_app/synthetic/improve_summary_latest.json + training_lessons.json; fix top_failures; expand curriculum; re-run; append score-proven lessons."
+    },
+    {
+      "ts": "2026-08-22T18:31:02Z",
+      "run_id": "20260822T183102Z",
+      "mean_composite": 1.0,
+      "ok": true,
+      "top_failures": [
+        {
+          "case_id": "shared_validation_ship",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "rejects_empty_so": true,
+            "all_ok": true
+          },
+          "duration_ms": 1.0
+        },
+        {
+          "case_id": "shared_validation_po",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 1.0
+        },
+        {
+          "case_id": "email_subject_casing",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0,
+            "integrity": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 1.0
+        },
+        {
+          "case_id": "audit_location_order",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 7.0
+        },
+        {
+          "case_id": "kpi_math_smoke",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0,
+            "integrity": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 4.0
+        }
+      ],
+      "gate_fails": [],
+      "next": "Read qa_app/synthetic/improve_summary_latest.json + training_lessons.json; fix top_failures; expand curriculum; re-run; append score-proven lessons."
+    },
+    {
+      "ts": "2026-08-22T18:35:27Z",
+      "run_id": "20260822T183527Z",
+      "mean_composite": 1.0,
+      "ok": true,
+      "top_failures": [
+        {
+          "case_id": "shared_validation_ship",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "rejects_empty_so": true,
+            "all_ok": true
+          },
+          "duration_ms": 0.0
+        },
+        {
+          "case_id": "shared_validation_po",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 1.0
+        },
+        {
+          "case_id": "email_subject_casing",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0,
+            "integrity": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 0.0
+        },
+        {
+          "case_id": "audit_location_order",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 4.0
+        },
+        {
+          "case_id": "kpi_math_smoke",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0,
+            "integrity": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 3.0
+        }
+      ],
+      "gate_fails": [],
+      "next": "Read qa_app summary + training_lessons; fix shell/KPI/validation failures; expand UI cases."
+    },
+    {
+      "ts": "2026-08-22T18:38:16Z",
+      "run_id": "20260822T183816Z",
+      "mean_composite": 1.0,
+      "ok": true,
+      "top_failures": [
+        {
+          "case_id": "shared_validation_ship",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "rejects_empty_so": true,
+            "all_ok": true
+          },
+          "duration_ms": 0.0
+        },
+        {
+          "case_id": "shared_validation_po",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 1.0
+        },
+        {
+          "case_id": "email_subject_casing",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0,
+            "integrity": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 0.0
+        },
+        {
+          "case_id": "audit_location_order",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 1.0
+        },
+        {
+          "case_id": "kpi_math_smoke",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0,
+            "integrity": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 0.0
+        }
+      ],
+      "gate_fails": [],
+      "next": "Read qa_app summary + training_lessons; fix shell/KPI/validation failures; expand UI cases."
+    },
+    {
+      "ts": "2026-08-22T18:44:35Z",
+      "run_id": "20260822T184435Z",
+      "mean_composite": 1.0,
+      "ok": true,
+      "top_failures": [
+        {
+          "case_id": "shared_validation_ship",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "rejects_empty_so": true,
+            "all_ok": true
+          },
+          "duration_ms": 0.0
+        },
+        {
+          "case_id": "shared_validation_po",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 1.0
+        },
+        {
+          "case_id": "email_subject_casing",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0,
+            "integrity": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 0.0
+        },
+        {
+          "case_id": "audit_location_order",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 1.0
+        },
+        {
+          "case_id": "kpi_math_smoke",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0,
+            "integrity": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 0.0
+        }
+      ],
+      "gate_fails": [],
+      "next": "Read qa_app summary + training_lessons; fix shell/KPI/validation failures; expand UI cases."
+    }
+  ],
+  "updated_at": "2026-08-22T18:44:35Z"
+}

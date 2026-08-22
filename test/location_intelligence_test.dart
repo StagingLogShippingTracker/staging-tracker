@@ -37,6 +37,45 @@ void main() {
     expect(classifyLocation('Ambiguous new place'), LocationCategory.floor);
   });
 
+  test('floor map pick zones expose canonical labels', () {
+    expect(
+      FloorMapZones.canonicalLocation(FloorMapZones.corpDrop),
+      'Corp Drop-Off',
+    );
+    expect(
+      FloorMapZones.canonicalLocation(FloorMapZones.shippingBoxRack),
+      'S.Box',
+    );
+    expect(
+      FloorMapZones.isPickable(
+        WarehouseMapPickMode.floor,
+        FloorMapZones.wDoors,
+      ),
+      isTrue,
+    );
+    expect(
+      FloorMapZones.isPickable(
+        WarehouseMapPickMode.shipping,
+        FloorMapZones.wDoors,
+      ),
+      isFalse,
+    );
+    expect(
+      FloorMapZones.isPickable(
+        WarehouseMapPickMode.shipping,
+        FloorMapZones.shippingAreas,
+      ),
+      isTrue,
+    );
+    expect(
+      FloorMapZones.isPickable(
+        WarehouseMapPickMode.aisle,
+        FloorMapZones.boxRack,
+      ),
+      isFalse,
+    );
+  });
+
   test('normalizes South Wall spelling variants onto SW N', () {
     expect(normalizeLocationLabel('SW3'), 'SW 3');
     expect(normalizeLocationLabel('sw-3'), 'SW 3');

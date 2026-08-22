@@ -8,16 +8,134 @@ import {
 import { renderNotificationEmail } from "./email-templates/notification-email.ts";
 
 /** Bumped on each intentional notify-pm deploy (theme / logging fixes). */
-const NOTIFY_PM_VERSION = 86;
+const NOTIFY_PM_VERSION = 89;
 
 const WAREHOUSE_FEEDBACK_EMAIL = "warehouse2@swiftsupply.ca";
 const WAREHOUSE_FEEDBACK_PM_NAME = "Warehouse 2";
+/** Default CC when clients omit it — Make's Outlook module rejects empty CC. */
+const WAREHOUSE_DEFAULT_CC = "warehouse1@swiftsupply.ca";
+
+/** Every in-app email type the Flutter clients can send. */
+const ALL_NOTIFICATION_TYPES = [
+  "ship_notification",
+  "return_to_stock_notification",
+  "po_notification",
+  "bulk_po_notification",
+  "return_notification",
+  "feedback_notification",
+] as const;
 
 function isFeedbackType(notificationType: string): boolean {
   return (
     notificationType === "feedback" ||
     notificationType === "feedback_notification"
   );
+}
+
+/**
+ * Normalize client aliases → Make/log types.
+ * Make itself is type-agnostic (sends to/subject/body); we still normalize so
+ * templates, logs, and any future filters stay consistent.
+ */
+function normalizeMakeNotificationType(raw: string): {
+  makeType: string;
+  clientType: string;
+} {
+  const clientType = raw.trim();
+  const lower = clientType.toLowerCase();
+  switch (lower) {
+    case "ship_confirm":
+    case "quick_ship":
+    case "ship_notification":
+      return { makeType: "ship_notification", clientType: clientType || lower };
+    case "return_to_stock":
+    case "return_to_stock_notification":
+      return {
+        makeType: "return_to_stock_notification",
+        clientType: clientType || lower,
+      };
+    case "po_notification":
+      return { makeType: "po_notification", clientType: clientType || lower };
+    case "bulk_po_notification":
+      return {
+        makeType: "bulk_po_notification",
+        clientType: clientType || lower,
+      };
+    case "return_notification":
+      return {
+        makeType: "return_notification",
+        clientType: clientType || lower,
+      };
+    case "feedback":
+    case "feedback_notification":
+      return {
+        makeType: "feedback_notification",
+        clientType: clientType || lower,
+      };
+    default:
+      return { makeType: clientType, clientType };
+  }
+}
+
+/** Ensure every common Make email recipient mapping field is populated. */
+function applyRecipientAliases(
+  body: Record<string, unknown>,
+  to: string,
+): void {
+  body.to = to;
+  body.to_email = to;
+  body.email = to;
+  body.pm_email = to;
+  body.recipient = to;
+}
+
+/**
+ * Final JSON posted to Make — must satisfy the webhook interface for every
+ * notification type (ship, quick ship, return-to-stock, PO, bulk PO, return,
+ * feedback). Outlook rejects empty `to` / empty CC arrays.
+ */
+function buildMakeWebhookPayload(
+  enriched: Record<string, unknown>,
+  opts: {
+    to: string;
+    cc: string;
+    notificationType: string;
+    pmName: string | null;
+    sentBy: string;
+    attachmentUrls: string[];
+  },
+): Record<string, unknown> {
+  const subject = String(enriched.subject ?? "").trim() ||
+    `Swift Staging notification (${opts.notificationType || "email"})`;
+  const bodyHtml = String(
+    enriched.body ?? enriched.html ?? enriched.html_body ?? "",
+  ).trim() ||
+    `<p>Swift Staging &amp; Shipping Log notification</p><p>Type: ${opts.notificationType}</p>`;
+  const httpsOnly = opts.attachmentUrls.filter((u) =>
+    /^https?:\/\//i.test(u)
+  );
+  return {
+    ...enriched,
+    to: opts.to,
+    cc: opts.cc,
+    subject,
+    body: bodyHtml,
+    html: bodyHtml,
+    html_body: bodyHtml,
+    attachments: httpsOnly,
+    attachment_urls: httpsOnly,
+    photo_urls: httpsOnly,
+    public_photo_url: httpsOnly[0] ?? "",
+    publicPhotoUrl: httpsOnly[0] ?? "",
+    // Boolean (not string) — Make router uses length(attachments) + this flag.
+    has_attachments: httpsOnly.length > 0,
+    attachment_count: httpsOnly.length,
+    notification_type: opts.notificationType,
+    pm_name: opts.pmName ?? enriched.pm_name,
+    sent_by: opts.sentBy,
+    notify_pm_version: NOTIFY_PM_VERSION,
+    supported_notification_types: [...ALL_NOTIFICATION_TYPES],
+  };
 }
 
 const corsHeaders = {
@@ -284,24 +402,28 @@ Deno.serve(async (req: Request) => {
 
     const body = await req.json();
     let to = String(body.to ?? "").trim();
-    let notificationType = String(body.notification_type ?? "").trim();
-    if (isFeedbackType(notificationType)) {
+    const incomingType = String(body.notification_type ?? "").trim();
+    const { makeType, clientType } = normalizeMakeNotificationType(incomingType);
+    let notificationType = makeType;
+    body.client_notification_type = clientType;
+    body.notification_type = notificationType;
+
+    if (isFeedbackType(incomingType) || isFeedbackType(notificationType)) {
       // Make's PM-email scenario matches `*_notification` types and looks up
       // the roster name "Warehouse 2" (not a shortened "Warehouse").
       notificationType = "feedback_notification";
       to = WAREHOUSE_FEEDBACK_EMAIL;
-      body.to = to;
-      body.to_email = to;
-      body.email = to;
-      body.pm_email = to;
-      body.recipient = to;
+      applyRecipientAliases(body, to);
       body.notification_type = notificationType;
       body.pm_name = WAREHOUSE_FEEDBACK_PM_NAME;
       // Legacy Make mappings expect `customer` on every PM email payload.
       if (!String(body.customer ?? "").trim()) {
         body.customer = "App feedback";
       }
+    } else if (to.includes("@")) {
+      applyRecipientAliases(body, to);
     }
+
     const sentBy = userData.user.email ?? userData.user.id;
     const pmName = isFeedbackType(notificationType)
       ? WAREHOUSE_FEEDBACK_PM_NAME
@@ -357,14 +479,16 @@ Deno.serve(async (req: Request) => {
     }
 
     const missing: string[] = [];
-    if (
+    if (isShipConfirmationType(notificationType) ||
       notificationType === "ship_confirm" ||
-      notificationType === "quick_ship"
-    ) {
+      notificationType === "quick_ship") {
       if (!String(body.so ?? "").trim()) missing.push("so");
       if (!String(body.customer ?? "").trim()) missing.push("customer");
       if (!String(body.carrier ?? "").trim()) missing.push("carrier");
-    } else if (notificationType === "return_to_stock") {
+    } else if (
+      notificationType === "return_to_stock" ||
+      notificationType === "return_to_stock_notification"
+    ) {
       if (!String(body.so ?? "").trim()) missing.push("so");
       if (!String(body.reason ?? "").trim()) missing.push("reason");
     } else if (notificationType === "po_notification") {
@@ -403,9 +527,12 @@ Deno.serve(async (req: Request) => {
     }
 
     const attachments = normalizeAttachments(body.attachments);
+    const cc = String(body.cc ?? "").trim() || WAREHOUSE_DEFAULT_CC;
+    body.cc = cc;
     logBase.payload = sanitizePayloadForLog({
       ...body,
       to,
+      cc,
       pm_name: pmName,
       sent_by: sentBy,
       attachment_count: attachments.length,
@@ -418,14 +545,15 @@ Deno.serve(async (req: Request) => {
       error_detail: "notify-pm aborted before delivery",
     };
 
-    const enriched = enrichEmailBody({ ...body, to, attachments }, attachments);
-    const payload = {
-      ...enriched,
+    const enriched = enrichEmailBody({ ...body, to, cc, attachments }, attachments);
+    const payload = buildMakeWebhookPayload(enriched, {
       to,
-      pm_name: pmName ?? enriched.pm_name,
-      sent_by: sentBy,
-      notify_pm_version: NOTIFY_PM_VERSION,
-    };
+      cc,
+      notificationType,
+      pmName,
+      sentBy,
+      attachmentUrls: attachments,
+    });
 
     let makeRes: Response;
     try {

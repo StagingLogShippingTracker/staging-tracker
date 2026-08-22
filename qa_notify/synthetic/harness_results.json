@@ -1,0 +1,151 @@
+{
+  "ts": "2026-08-22T18:45:06.884431Z",
+  "domain": "notify",
+  "cases": [
+    {
+      "case_id": "payload_keys_ship",
+      "ok": true,
+      "duration_ms": 0,
+      "metrics_raw": {
+        "integrity": true
+      },
+      "gates_raw": {
+        "has_to": true,
+        "has_cc": true,
+        "has_subject": true,
+        "has_body": true
+      }
+    },
+    {
+      "case_id": "payload_keys_quick_ship",
+      "ok": true,
+      "duration_ms": 0,
+      "metrics_raw": {
+        "integrity": true
+      },
+      "gates_raw": {
+        "has_to": true,
+        "has_cc": true,
+        "has_subject": true,
+        "has_body": true
+      }
+    },
+    {
+      "case_id": "payload_keys_return_to_stock",
+      "ok": true,
+      "duration_ms": 0,
+      "metrics_raw": {
+        "integrity": true
+      },
+      "gates_raw": {
+        "has_to": true,
+        "has_cc": true,
+        "has_subject": true,
+        "has_body": true
+      }
+    },
+    {
+      "case_id": "payload_keys_po",
+      "ok": true,
+      "duration_ms": 0,
+      "metrics_raw": {
+        "integrity": true
+      },
+      "gates_raw": {
+        "has_to": true,
+        "has_cc": true,
+        "has_subject": true,
+        "has_body": true
+      }
+    },
+    {
+      "case_id": "payload_keys_bulk_po",
+      "ok": true,
+      "duration_ms": 0,
+      "metrics_raw": {
+        "integrity": true
+      },
+      "gates_raw": {
+        "has_to": true,
+        "has_cc": true,
+        "has_subject": true,
+        "has_body": true
+      }
+    },
+    {
+      "case_id": "payload_keys_return",
+      "ok": true,
+      "duration_ms": 0,
+      "metrics_raw": {
+        "integrity": true
+      },
+      "gates_raw": {
+        "has_to": true,
+        "has_cc": true,
+        "has_subject": true,
+        "has_body": true
+      }
+    },
+    {
+      "case_id": "payload_keys_feedback",
+      "ok": true,
+      "duration_ms": 0,
+      "metrics_raw": {
+        "integrity": true
+      },
+      "gates_raw": {
+        "has_to": true,
+        "has_cc": true,
+        "has_subject": true,
+        "has_body": true
+      }
+    },
+    {
+      "case_id": "subject_uppercase_all_types",
+      "ok": true,
+      "duration_ms": 0,
+      "metrics_raw": {
+        "coverage": 1.0
+      }
+    },
+    {
+      "case_id": "cc_required_contract",
+      "ok": true,
+      "duration_ms": 0,
+      "gates_raw": {
+        "warehouse_cc_configured": true
+      }
+    },
+    {
+      "case_id": "type_alias_coverage",
+      "ok": true,
+      "duration_ms": 0,
+      "metrics_raw": {
+        "coverage": 1.0,
+        "integrity": true
+      }
+    },
+    {
+      "case_id": "no_make_webhook_in_flutter",
+      "ok": true,
+      "duration_ms": 59,
+      "gates_raw": {
+        "no_webhook_in_clients": true
+      }
+    },
+    {
+      "case_id": "feedback_to_warehouse2",
+      "ok": true,
+      "duration_ms": 1
+    },
+    {
+      "case_id": "warehouse_cc_default",
+      "ok": true,
+      "duration_ms": 0
+    }
+  ],
+  "notes": [
+    "Client payload contract only — Make must stay active separately.",
+    "notify-pm normalizes ship_confirm/quick_ship → ship_notification."
+  ]
+}

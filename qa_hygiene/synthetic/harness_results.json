@@ -1,0 +1,54 @@
+{
+  "ts": "2026-08-22T18:44:48Z",
+  "domain": "hygiene",
+  "cases": [
+    {
+      "case_id": "auto_delete_safe_dead_paths",
+      "ok": true,
+      "duration_ms": 0,
+      "metrics_raw": {
+        "integrity": true,
+        "coverage": 1.0
+      },
+      "gates_raw": {
+        "delete_errors_zero": true
+      }
+    },
+    {
+      "case_id": "no_remaining_safe_dead_roots",
+      "ok": true,
+      "duration_ms": 0,
+      "gates_raw": {
+        "clean_roots": true
+      }
+    },
+    {
+      "case_id": "gitignore_blocks_dead_patterns",
+      "ok": true,
+      "duration_ms": 1,
+      "gates_raw": {
+        "legacy_ignored": true,
+        "tmp_ignored": true
+      }
+    },
+    {
+      "case_id": "protected_trees_intact",
+      "ok": true,
+      "duration_ms": 0,
+      "gates_raw": {
+        "protected_ok": true
+      }
+    },
+    {
+      "case_id": "no_nested_full_repo_mirror",
+      "ok": true,
+      "duration_ms": 0,
+      "gates_raw": {
+        "no_mirror": true
+      }
+    }
+  ],
+  "notes": [
+    "freed_files=0 freed_bytes=0"
+  ]
+}

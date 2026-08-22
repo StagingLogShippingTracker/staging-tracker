@@ -1,0 +1,25 @@
+---
+description: Continue location/map improve loop unprompted
+globs: lib/**/location*.dart,lib/**/warehouse*.dart,test/location*.dart,test/location_improve_loop_test.dart,qa_location/**/*,scripts/location_improve_*.py
+alwaysApply: true
+---
+
+# Location improve loop — CONTINUE UNPROMPTED (training)
+
+When this agent touches warehouse map, aisle/floor/shipping pick, or location
+intelligence, **own the location improve loop**.
+
+## Mandatory loop
+
+1. Read `qa_location/synthetic/improve_summary_latest.json`.
+2. Fix real top failures (wrong zone filters, free-text regressions, pick mode).
+3. Re-run: `python scripts/location_improve_loop.py`.
+4. Append lessons to `qa_location/synthetic/training_lessons.json`.
+5. Expand cases for new map categories / blocked zones.
+
+## Constraints
+
+- Aisle / floor / shipping: map-first pick — no free-text entry for those categories.
+- Outside may use tiles; do not reintroduce free-text for map categories.
+
+Docs: `qa_location/synthetic/README.md`.

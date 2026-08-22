@@ -1,0 +1,24 @@
+---
+description: Continue Make.com connector improve loop unprompted
+globs: supabase/functions/notify-pm/**/*,qa_make/**/*,scripts/make_improve_harness.py,scripts/improve_loop_runner.py
+alwaysApply: true
+---
+
+# Make improve loop — CONTINUE UNPROMPTED (training)
+
+When this agent touches Make.com, `notify-pm`, or PM email delivery, **own the
+make improve loop**. Training contract: `improve-loops-training.mdc`.
+
+## Mandatory loop
+
+1. Read `qa_make/synthetic/improve_summary_latest.json`.
+2. Refresh `qa_make/synthetic/scenario_active.json` via Make MCP when checking delivery.
+3. Fix real failures (scenario off, empty CC, webhook leaked to clients).
+4. Re-run: `python scripts/improve_loop_runner.py make`
+5. Append lessons to `qa_make/synthetic/training_lessons.json`.
+
+## Hard rules
+
+- Keep scenario **5572398** active after email work.
+- Never put `MAKE_EMAIL_WEBHOOK_URL` in Flutter clients.
+- Outlook rejects empty CC — always default `warehouse1@swiftsupply.ca`.

@@ -1,0 +1,208 @@
+{
+  "run_id": "20260822T184457Z",
+  "ts": "2026-08-22T18:44:57Z",
+  "domain": "location",
+  "ok": true,
+  "harness_ok": true,
+  "harness_note": "ok",
+  "n_cases": 11,
+  "n_scored": 11,
+  "mean_composite": 1.0,
+  "elapsed_s": 8.65,
+  "gate_fails": [],
+  "top_failures": [
+    {
+      "case_id": "location_parse_aisle",
+      "composite": 1.0,
+      "metrics": {
+        "success": 1.0,
+        "speed": 1.0,
+        "integrity": 1.0
+      },
+      "gates": {
+        "success": true,
+        "all_ok": true
+      },
+      "duration_ms": 4.0
+    },
+    {
+      "case_id": "location_category_filter",
+      "composite": 1.0,
+      "metrics": {
+        "success": 1.0,
+        "speed": 1.0,
+        "coverage": 1.0
+      },
+      "gates": {
+        "success": true,
+        "all_ok": true
+      },
+      "duration_ms": 2.0
+    },
+    {
+      "case_id": "map_pick_mode_blocks_freetext",
+      "composite": 1.0,
+      "metrics": {
+        "success": 1.0,
+        "speed": 1.0
+      },
+      "gates": {
+        "success": true,
+        "aisle_has_map_mode": true,
+        "floor_has_map_mode": true,
+        "shipping_has_map_mode": true,
+        "outside_no_map_mode": true,
+        "all_ok": true
+      },
+      "duration_ms": 1.0
+    },
+    {
+      "case_id": "outside_tiles_ok",
+      "composite": 1.0,
+      "metrics": {
+        "success": 1.0,
+        "speed": 1.0
+      },
+      "gates": {
+        "success": true,
+        "all_ok": true
+      },
+      "duration_ms": 0.0
+    },
+    {
+      "case_id": "floor_zone_pickable_matrix",
+      "composite": 1.0,
+      "metrics": {
+        "success": 1.0,
+        "speed": 1.0,
+        "coverage": 1.0
+      },
+      "gates": {
+        "success": true,
+        "all_ok": true
+      },
+      "duration_ms": 0.0
+    },
+    {
+      "case_id": "canonical_location_labels",
+      "composite": 1.0,
+      "metrics": {
+        "success": 1.0,
+        "speed": 1.0
+      },
+      "gates": {
+        "success": true,
+        "all_ok": true
+      },
+      "duration_ms": 0.0
+    },
+    {
+      "case_id": "b02_partial_supersedes_slots",
+      "composite": 1.0,
+      "metrics": {
+        "success": 1.0,
+        "speed": 1.0
+      },
+      "gates": {
+        "success": true,
+        "all_ok": true
+      },
+      "duration_ms": 2.0
+    },
+    {
+      "case_id": "partial_bay_conflict_skids_crates",
+      "composite": 1.0,
+      "metrics": {
+        "success": 1.0,
+        "speed": 1.0
+      },
+      "gates": {
+        "success": true,
+        "all_ok": true
+      },
+      "duration_ms": 0.0
+    },
+    {
+      "case_id": "drive_gap_bays_reserved",
+      "composite": 1.0,
+      "metrics": {
+        "success": 1.0,
+        "speed": 1.0
+      },
+      "gates": {
+        "success": true,
+        "all_ok": true
+      },
+      "duration_ms": 0.0
+    },
+    {
+      "case_id": "seeded_outside_no_freetext",
+      "composite": 1.0,
+      "metrics": {
+        "success": 1.0,
+        "speed": 1.0
+      },
+      "gates": {
+        "success": true,
+        "no_freetext_outside_seeds": true,
+        "all_ok": true
+      },
+      "duration_ms": 0.0
+    },
+    {
+      "case_id": "classify_shipping_w2",
+      "composite": 1.0,
+      "metrics": {
+        "success": 1.0,
+        "speed": 1.0
+      },
+      "gates": {
+        "success": true,
+        "all_ok": true
+      },
+      "duration_ms": 0.0
+    }
+  ],
+  "metric_hotspots": [],
+  "top_wins": [
+    {
+      "case_id": "location_parse_aisle",
+      "composite": 1.0
+    },
+    {
+      "case_id": "location_category_filter",
+      "composite": 1.0
+    },
+    {
+      "case_id": "map_pick_mode_blocks_freetext",
+      "composite": 1.0
+    },
+    {
+      "case_id": "outside_tiles_ok",
+      "composite": 1.0
+    },
+    {
+      "case_id": "floor_zone_pickable_matrix",
+      "composite": 1.0
+    }
+  ],
+  "notes": [
+    "Map-first: aisle/floor/shipping use WarehouseMapPickMode; outside does not."
+  ],
+  "budgets_ms": {
+    "location_parse_aisle": 300,
+    "location_category_filter": 500,
+    "map_pick_mode_blocks_freetext": 300,
+    "outside_tiles_ok": 300,
+    "floor_zone_pickable_matrix": 400,
+    "canonical_location_labels": 300,
+    "b02_partial_supersedes_slots": 300,
+    "partial_bay_conflict_skids_crates": 300,
+    "drive_gap_bays_reserved": 300,
+    "seeded_outside_no_freetext": 200,
+    "classify_shipping_w2": 200
+  },
+  "log": "qa_location/synthetic/improve_log.jsonl",
+  "next": "Read qa_location summary; keep map-first aisle/floor/shipping; expand zone matrix cases.",
+  "training_lessons": "qa_location/synthetic/training_lessons.json"
+}

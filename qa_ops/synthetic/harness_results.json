@@ -1,0 +1,69 @@
+{
+  "ts": "2026-08-22T18:45:14.603243Z",
+  "domain": "ops",
+  "cases": [
+    {
+      "case_id": "container_counts_total",
+      "ok": true,
+      "duration_ms": 2,
+      "metrics_raw": {
+        "integrity": true
+      }
+    },
+    {
+      "case_id": "container_type_label",
+      "ok": true,
+      "duration_ms": 0
+    },
+    {
+      "case_id": "ship_fields_reject_empty",
+      "ok": true,
+      "duration_ms": 0,
+      "gates_raw": {
+        "rejects_empty_customer": true
+      }
+    },
+    {
+      "case_id": "return_fields_reject_empty",
+      "ok": true,
+      "duration_ms": 1
+    },
+    {
+      "case_id": "so_advisories_smoke",
+      "ok": true,
+      "duration_ms": 0,
+      "metrics_raw": {
+        "integrity": true
+      }
+    },
+    {
+      "case_id": "container_parse_mixed",
+      "ok": true,
+      "duration_ms": 0
+    },
+    {
+      "case_id": "container_add_commutative",
+      "ok": true,
+      "duration_ms": 0
+    },
+    {
+      "case_id": "rpc_method_names_stable",
+      "ok": true,
+      "duration_ms": 9,
+      "metrics_raw": {
+        "coverage": 1.0
+      }
+    },
+    {
+      "case_id": "consolidate_undo_window_2m",
+      "ok": true,
+      "duration_ms": 1
+    },
+    {
+      "case_id": "status_urgency_weights",
+      "ok": true,
+      "duration_ms": 13
+    }
+  ],
+  "notes": []
+}

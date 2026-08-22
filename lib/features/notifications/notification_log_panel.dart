@@ -25,10 +25,12 @@ String _escCsv(String? v) => '"${(v ?? '').replaceAll('"', '""')}"';
 String _typeLabel(String type) {
   switch (type) {
     case 'ship_confirm':
+    case 'ship_notification':
       return 'Ship confirm';
     case 'quick_ship':
       return 'Quick ship';
     case 'return_to_stock':
+    case 'return_to_stock_notification':
       return 'Return to stock';
     case 'po_notification':
       return 'PO';
@@ -117,6 +119,7 @@ List<({String label, String value})> _messageBodyRows(
       add('Linked SO', _payloadStr(p, const ['so', 'linked_so', 'linkedSo']));
       break;
     case 'ship_confirm':
+    case 'ship_notification':
     case 'quick_ship':
       add('SO', entry.so ?? _payloadStr(p, const ['so', 'so_number']));
       add(
@@ -143,6 +146,7 @@ List<({String label, String value})> _messageBodyRows(
       );
       break;
     case 'return_to_stock':
+    case 'return_to_stock_notification':
       add('SO', entry.so ?? _payloadStr(p, const ['so', 'so_number']));
       add(
         'Customer',

@@ -4,6 +4,8 @@ node_modules/
 
 # Flutter / Dart
 .dart_tool/
+__pycache__/
+*.py[cod]
 .flutter-plugins
 .flutter-plugins-dependencies
 .packages
@@ -43,3 +45,8 @@ Thumbs.db
 
 # Local Supabase CLI
 supabase/.temp/
+# Dead / legacy / agent scratch (hygiene improve loop)
+_legacy*/
+legacy-*/
+dist-native-log.txt
+flutter_*.log

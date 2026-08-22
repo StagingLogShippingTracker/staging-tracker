@@ -177,6 +177,8 @@ class _FeedbackFormDialogState extends ConsumerState<_FeedbackFormDialog> {
         'email': kWarehouseFeedbackEmail,
         'pm_email': kWarehouseFeedbackEmail,
         'recipient': kWarehouseFeedbackEmail,
+        // Make Outlook module rejects empty CC; match other PM emails.
+        'cc': 'warehouse1@swiftsupply.ca',
         'subject': 'Swift Staging & Shipping Log feedback: $subjectSummary',
         'notification_type': kWarehouseFeedbackNotificationType,
         'category': _category,

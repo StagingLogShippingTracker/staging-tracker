@@ -1,0 +1,65 @@
+---
+description: All Swift Staging & Shipping Log improve loops are ongoing training systems
+alwaysApply: true
+---
+
+# Improve loops = incremental training (always)
+
+This repo’s improve loops are **not one-shot QA**. They are the product’s
+**training curriculum**: score → fix → re-score → keep lessons → expand cases.
+Agents must treat them as continuous improvement of the app and its functions.
+
+Coverage goal: **every** design element, function, operation, and third-party
+connector (Make.com, Supabase edge, GitHub Update assets) belongs in a loop.
+
+## Active loops (own without waiting for re-prompt)
+
+| Domain | Summary path | Runner |
+|--------|--------------|--------|
+| Whole app / shell | `qa_app/synthetic/improve_summary_latest.json` | `scripts/app_improve_loop.py` |
+| Notify / email | `qa_notify/synthetic/improve_summary_latest.json` | `scripts/notify_improve_loop.py` |
+| Location / map | `qa_location/synthetic/improve_summary_latest.json` | `scripts/location_improve_loop.py` |
+| Ops (stage/ship/return) | `qa_ops/synthetic/improve_summary_latest.json` | `scripts/ops_improve_loop.py` |
+| Wear OS | `qa_wear/synthetic/improve_summary_latest.json` | `python scripts/improve_loop_runner.py wear` |
+| In-app Update | `qa_update/synthetic/improve_summary_latest.json` | `python scripts/improve_loop_runner.py update` |
+| Auth / watch-pair / RLS | `qa_auth/synthetic/improve_summary_latest.json` | `python scripts/improve_loop_runner.py auth` |
+| Scanner / OCR | `qa_scanner/synthetic/improve_summary_latest.json` | `python scripts/improve_loop_runner.py scanner` |
+| Theme / brand | `qa_theme/synthetic/improve_summary_latest.json` | `python scripts/improve_loop_runner.py theme` |
+| Contacts / roster | `qa_contacts/synthetic/improve_summary_latest.json` | `python scripts/improve_loop_runner.py contacts` |
+| Reports / SVR | `qa_reports/synthetic/improve_summary_latest.json` | `python scripts/improve_loop_runner.py reports` |
+| Make.com connector | `qa_make/synthetic/improve_summary_latest.json` | `python scripts/improve_loop_runner.py make` |
+| Repo hygiene | `qa_hygiene/synthetic/improve_summary_latest.json` | `python scripts/improve_loop_runner.py hygiene` |
+
+**Run all:** `python scripts/run_all_improve_loops.py`
+
+Also hunt and lock regressions for: redundancies, broken/dead UI, missing
+flow-breakers (empty CC, wrong Update APK, pair create≠redeem, map free-text).
+
+**Hygiene (auto-delete):** each hygiene run deletes safe dead/legacy/scratch
+paths (`_legacy*`, `.tmp-*`, `_mcp_deploy`, nested full-repo mirrors, etc.)
+and hardens `.gitignore` so they never return to GitHub. Do not ask — run it.
+
+## Training contract (every loop)
+
+1. **Read** the latest `improve_summary_latest.json` before changing that domain.
+2. **Attack** top failures that are real (not scorer false positives / honest limits).
+3. **Re-run** the domain runner; promote only score-proven changes.
+4. **Record lessons** in that domain’s `training_lessons.json` (append).
+5. **Expand the curriculum** when new failure modes appear.
+6. **Do not plateau silently** — document honest limits in `training_lessons.json`.
+
+## Cross-domain
+
+- Fixing notify must not break ops validation (and vice versa) without a scored check.
+- Location map pick mode must not reintroduce free-text aisle/floor/shipping entry.
+- Never put `MAKE_EMAIL_WEBHOOK_URL` in Flutter clients.
+- Keep Make PM email scenario **active** after email work.
+- Do not ADB-install after packaging; do not publish GitHub Releases unless asked.
+- Commit/push only per session commit policy / explicit user ask.
+
+## Session habit
+
+When the user’s task touches any domain above, run at least **one** improve-loop
+iteration for that domain before stopping — unless blocked on a long in-flight
+build/publish the user just requested. Prefer `run_all_improve_loops.py` after
+broad product changes.

@@ -1,0 +1,16 @@
+---
+description: Continue Wear / Update / Auth improve loops when those surfaces change
+globs: apps/wear/**/*,packages/swift_staging_shared/lib/src/app_update.dart,packages/swift_staging_shared/lib/src/watch_pairing.dart,lib/features/auth/**/*,lib/features/settings/**/*,qa_wear/**/*,qa_update/**/*,qa_auth/**/*
+alwaysApply: false
+---
+
+# Wear / Update / Auth improve loops
+
+When changing Wear, in-app Update, login, or watch-pair:
+
+1. Run the matching domain via `python scripts/improve_loop_runner.py <wear|update|auth>`
+2. Read that domain’s `improve_summary_latest.json` + `training_lessons.json`
+3. Fix score failures; append lessons; expand cases
+
+Key gates: Wear redeems only; phone creates codes; Windows Update needs Setup.exe;
+Wear≠Android APK; no service_role / Make webhook in clients.

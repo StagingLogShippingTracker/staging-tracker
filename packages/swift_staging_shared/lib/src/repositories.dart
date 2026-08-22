@@ -241,8 +241,10 @@ class NotificationLogRepository {
 
   static const knownTypes = <String>[
     'ship_confirm',
+    'ship_notification',
     'quick_ship',
     'return_to_stock',
+    'return_to_stock_notification',
     'po_notification',
     'bulk_po_notification',
     'return_notification',

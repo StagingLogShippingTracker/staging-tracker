@@ -1,0 +1,35 @@
+{
+  "ts": "2026-08-22T18:45:24.210338Z",
+  "domain": "reports",
+  "cases": [
+    {
+      "case_id": "audit_location_order_box_before_aisle",
+      "ok": true,
+      "duration_ms": 3,
+      "gates_raw": {
+        "box_before_aisle": true
+      }
+    },
+    {
+      "case_id": "audit_mode_enum_roundtrip",
+      "ok": true,
+      "duration_ms": 0
+    },
+    {
+      "case_id": "loc_key_priority_bands",
+      "ok": true,
+      "duration_ms": 1,
+      "metrics_raw": {
+        "integrity": true
+      }
+    },
+    {
+      "case_id": "wear_svr_same_comparator",
+      "ok": true,
+      "duration_ms": 9
+    }
+  ],
+  "notes": [
+    "SVR walk order must match Windows/Android and Wear."
+  ]
+}

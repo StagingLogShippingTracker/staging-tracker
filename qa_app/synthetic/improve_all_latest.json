@@ -1,0 +1,111 @@
+{
+  "ok": true,
+  "n_domains": 13,
+  "n_passed": 13,
+  "domains": [
+    {
+      "domain": "app",
+      "ok": true,
+      "mean_composite": 1.0,
+      "n_cases": 11,
+      "gate_fails": [],
+      "harness_ok": true
+    },
+    {
+      "domain": "auth",
+      "ok": true,
+      "mean_composite": 1.0,
+      "n_cases": 8,
+      "gate_fails": [],
+      "harness_ok": true
+    },
+    {
+      "domain": "contacts",
+      "ok": true,
+      "mean_composite": 1.0,
+      "n_cases": 4,
+      "gate_fails": [],
+      "harness_ok": true
+    },
+    {
+      "domain": "hygiene",
+      "ok": true,
+      "mean_composite": 1.0,
+      "n_cases": 5,
+      "gate_fails": [],
+      "harness_ok": true
+    },
+    {
+      "domain": "location",
+      "ok": true,
+      "mean_composite": 1.0,
+      "n_cases": 11,
+      "gate_fails": [],
+      "harness_ok": true
+    },
+    {
+      "domain": "make",
+      "ok": true,
+      "mean_composite": 1.0,
+      "n_cases": 8,
+      "gate_fails": [],
+      "harness_ok": true
+    },
+    {
+      "domain": "notify",
+      "ok": true,
+      "mean_composite": 1.0,
+      "n_cases": 13,
+      "gate_fails": [],
+      "harness_ok": true
+    },
+    {
+      "domain": "ops",
+      "ok": true,
+      "mean_composite": 1.0,
+      "n_cases": 10,
+      "gate_fails": [],
+      "harness_ok": true
+    },
+    {
+      "domain": "reports",
+      "ok": true,
+      "mean_composite": 1.0,
+      "n_cases": 4,
+      "gate_fails": [],
+      "harness_ok": true
+    },
+    {
+      "domain": "scanner",
+      "ok": true,
+      "mean_composite": 1.0,
+      "n_cases": 6,
+      "gate_fails": [],
+      "harness_ok": true
+    },
+    {
+      "domain": "theme",
+      "ok": true,
+      "mean_composite": 1.0,
+      "n_cases": 5,
+      "gate_fails": [],
+      "harness_ok": true
+    },
+    {
+      "domain": "update",
+      "ok": true,
+      "mean_composite": 1.0,
+      "n_cases": 12,
+      "gate_fails": [],
+      "harness_ok": true
+    },
+    {
+      "domain": "wear",
+      "ok": true,
+      "mean_composite": 1.0,
+      "n_cases": 7,
+      "gate_fails": [],
+      "harness_ok": true
+    }
+  ]
+}

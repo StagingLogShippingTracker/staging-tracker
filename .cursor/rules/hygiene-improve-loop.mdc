@@ -1,0 +1,26 @@
+---
+description: Repo hygiene improve loop — auto-delete dead/legacy/scratch storage waste
+globs: scripts/repo_hygiene_improve_harness.py,qa_hygiene/**/*,.gitignore
+alwaysApply: true
+---
+
+# Hygiene improve loop — CONTINUE UNPROMPTED (training)
+
+Own dead-storage cleanup as part of the training curriculum.
+
+## Mandatory loop
+
+1. Read `qa_hygiene/synthetic/improve_summary_latest.json` (run if missing).
+2. Run: `python scripts/improve_loop_runner.py hygiene`
+   - Auto-deletes safe dead roots (`_legacy*`, `.tmp-*`, `_mcp_deploy`, …)
+   - Refuses protected trees (`lib`, `apps`, `packages`, `supabase`, …)
+   - Updates `.gitignore` so junk never lands on GitHub
+3. Append lessons when a new junk pattern appears.
+4. Expand `SAFE_ROOT_PATTERNS` in `scripts/repo_hygiene_improve_harness.py`
+   when a new waste class shows up.
+
+## Do not
+
+- Delete `third_party`, `lib`, `apps`, `packages`, live `docs`, or `.tools`
+- Commit secrets while cleaning
+- Leave nested full-repo mirrors (`_legacy-downloads-copy`, etc.)

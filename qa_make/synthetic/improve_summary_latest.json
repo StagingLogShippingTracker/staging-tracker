@@ -1,0 +1,171 @@
+{
+  "run_id": "20260822T184457Z",
+  "ts": "2026-08-22T18:44:57Z",
+  "domain": "make",
+  "ok": true,
+  "harness_ok": true,
+  "harness_note": "ok",
+  "n_cases": 8,
+  "n_scored": 8,
+  "mean_composite": 1.0,
+  "elapsed_s": 0.33,
+  "gate_fails": [],
+  "top_failures": [
+    {
+      "case_id": "make_scenario_active_marker",
+      "composite": 1.0,
+      "metrics": {
+        "success": 1.0,
+        "speed": 1.0
+      },
+      "gates": {
+        "success": true,
+        "scenario_marked_active": true,
+        "all_ok": true
+      },
+      "duration_ms": 0.0
+    },
+    {
+      "case_id": "make_webhook_not_in_clients",
+      "composite": 1.0,
+      "metrics": {
+        "success": 1.0,
+        "speed": 1.0,
+        "integrity": 1.0
+      },
+      "gates": {
+        "success": true,
+        "no_webhook_in_flutter": true,
+        "all_ok": true
+      },
+      "duration_ms": 129.0
+    },
+    {
+      "case_id": "notify_pm_has_payload_builder",
+      "composite": 1.0,
+      "metrics": {
+        "success": 1.0,
+        "speed": 1.0
+      },
+      "gates": {
+        "success": true,
+        "buildMakeWebhookPayload": true,
+        "all_ok": true
+      },
+      "duration_ms": 0.0
+    },
+    {
+      "case_id": "notify_pm_all_types_list",
+      "composite": 1.0,
+      "metrics": {
+        "success": 1.0,
+        "speed": 1.0,
+        "coverage": 1.0
+      },
+      "gates": {
+        "success": true,
+        "all_types_present": true,
+        "all_ok": true
+      },
+      "duration_ms": 0.0
+    },
+    {
+      "case_id": "notify_pm_https_attachments",
+      "composite": 1.0,
+      "metrics": {
+        "success": 1.0,
+        "speed": 1.0
+      },
+      "gates": {
+        "success": true,
+        "https_filter": true,
+        "all_ok": true
+      },
+      "duration_ms": 0.0
+    },
+    {
+      "case_id": "secret_server_side_only",
+      "composite": 1.0,
+      "metrics": {
+        "success": 1.0,
+        "speed": 1.0
+      },
+      "gates": {
+        "success": true,
+        "env_secret_pattern": true,
+        "no_hardcoded_hook": true,
+        "all_ok": true
+      },
+      "duration_ms": 0.0
+    },
+    {
+      "case_id": "outlook_cc_contract_documented",
+      "composite": 1.0,
+      "metrics": {
+        "success": 1.0,
+        "speed": 1.0
+      },
+      "gates": {
+        "success": true,
+        "default_cc": true,
+        "all_ok": true
+      },
+      "duration_ms": 0.0
+    },
+    {
+      "case_id": "make_scenario_id_known",
+      "composite": 1.0,
+      "metrics": {
+        "success": 1.0,
+        "speed": 1.0
+      },
+      "gates": {
+        "success": true,
+        "scenario_id": true,
+        "all_ok": true
+      },
+      "duration_ms": 0.0
+    }
+  ],
+  "metric_hotspots": [],
+  "top_wins": [
+    {
+      "case_id": "make_scenario_active_marker",
+      "composite": 1.0
+    },
+    {
+      "case_id": "make_webhook_not_in_clients",
+      "composite": 1.0
+    },
+    {
+      "case_id": "notify_pm_has_payload_builder",
+      "composite": 1.0
+    },
+    {
+      "case_id": "notify_pm_all_types_list",
+      "composite": 1.0
+    },
+    {
+      "case_id": "notify_pm_https_attachments",
+      "composite": 1.0
+    }
+  ],
+  "notes": [
+    "Client must never embed Make webhook URL.",
+    "Outlook module rejects empty CC \u2014 notify-pm always sets default.",
+    "Make scenarioId=5572398 team=2470824"
+  ],
+  "budgets_ms": {
+    "make_scenario_active_marker": 200,
+    "make_webhook_not_in_clients": 800,
+    "notify_pm_has_payload_builder": 400,
+    "notify_pm_all_types_list": 400,
+    "notify_pm_https_attachments": 400,
+    "secret_server_side_only": 400,
+    "outlook_cc_contract_documented": 300,
+    "make_scenario_id_known": 200
+  },
+  "log": "qa_make/synthetic/improve_log.jsonl",
+  "next": "Read qa_make summary; keep scenario active; webhook secret server-side only; all types deliver.",
+  "training_lessons": "qa_make/synthetic/training_lessons.json"
+}

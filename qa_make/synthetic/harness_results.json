@@ -1,0 +1,82 @@
+{
+  "ts": "2026-08-22T18:44:57Z",
+  "domain": "make",
+  "cases": [
+    {
+      "case_id": "make_scenario_active_marker",
+      "ok": true,
+      "duration_ms": 0,
+      "gates_raw": {
+        "scenario_marked_active": true
+      }
+    },
+    {
+      "case_id": "make_webhook_not_in_clients",
+      "ok": true,
+      "duration_ms": 129,
+      "metrics_raw": {
+        "integrity": true
+      },
+      "gates_raw": {
+        "no_webhook_in_flutter": true
+      }
+    },
+    {
+      "case_id": "notify_pm_has_payload_builder",
+      "ok": true,
+      "duration_ms": 0,
+      "gates_raw": {
+        "buildMakeWebhookPayload": true
+      }
+    },
+    {
+      "case_id": "notify_pm_all_types_list",
+      "ok": true,
+      "duration_ms": 0,
+      "metrics_raw": {
+        "coverage": 1.0
+      },
+      "gates_raw": {
+        "all_types_present": true
+      }
+    },
+    {
+      "case_id": "notify_pm_https_attachments",
+      "ok": true,
+      "duration_ms": 0,
+      "gates_raw": {
+        "https_filter": true
+      }
+    },
+    {
+      "case_id": "secret_server_side_only",
+      "ok": true,
+      "duration_ms": 0,
+      "gates_raw": {
+        "env_secret_pattern": true,
+        "no_hardcoded_hook": true
+      }
+    },
+    {
+      "case_id": "outlook_cc_contract_documented",
+      "ok": true,
+      "duration_ms": 0,
+      "gates_raw": {
+        "default_cc": true
+      }
+    },
+    {
+      "case_id": "make_scenario_id_known",
+      "ok": true,
+      "duration_ms": 0,
+      "gates_raw": {
+        "scenario_id": true
+      }
+    }
+  ],
+  "notes": [
+    "Client must never embed Make webhook URL.",
+    "Outlook module rejects empty CC \u2014 notify-pm always sets default.",
+    "Make scenarioId=5572398 team=2470824"
+  ]
+}

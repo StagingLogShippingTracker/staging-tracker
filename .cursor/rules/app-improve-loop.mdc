@@ -1,0 +1,21 @@
+---
+description: Continue whole-app improve loop unprompted (shared domain, shell, reliability)
+globs: lib/**/*,packages/swift_staging_shared/**/*,test/app_improve_loop_test.dart,qa_app/**/*,scripts/app_improve_*.py
+alwaysApply: true
+---
+
+# App improve loop — CONTINUE UNPROMPTED (training)
+
+When this agent touches shell, shared models, updates, KPIs, or general app
+reliability, **own the app improve loop**. Same training contract as notify /
+location / ops (see `improve-loops-training.mdc`).
+
+## Mandatory loop
+
+1. Read `qa_app/synthetic/improve_summary_latest.json` (create/run if missing).
+2. Fix real top failures (validation gaps, subject casing, shared helpers).
+3. Re-run: `python scripts/app_improve_loop.py` from repo root.
+4. Append lessons to `qa_app/synthetic/training_lessons.json`.
+5. Expand cases when new glitches appear.
+
+Docs: `qa_app/synthetic/README.md`.

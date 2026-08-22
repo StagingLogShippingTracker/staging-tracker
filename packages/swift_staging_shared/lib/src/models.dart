@@ -188,10 +188,12 @@ class NotificationLogEntry {
   String get typeLabel {
     switch (notificationType) {
       case 'ship_confirm':
+      case 'ship_notification':
         return 'Ship confirm';
       case 'quick_ship':
         return 'Quick ship';
       case 'return_to_stock':
+      case 'return_to_stock_notification':
         return 'Return to stock';
       case 'po_notification':
         return 'PO';

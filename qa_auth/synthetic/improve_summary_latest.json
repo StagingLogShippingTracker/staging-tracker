@@ -1,0 +1,164 @@
+{
+  "run_id": "20260822T184441Z",
+  "ts": "2026-08-22T18:44:41Z",
+  "domain": "auth",
+  "ok": true,
+  "harness_ok": true,
+  "harness_note": "ok",
+  "n_cases": 8,
+  "n_scored": 8,
+  "mean_composite": 1.0,
+  "elapsed_s": 5.7,
+  "gate_fails": [],
+  "top_failures": [
+    {
+      "case_id": "no_service_role_in_clients",
+      "composite": 1.0,
+      "metrics": {
+        "success": 1.0,
+        "speed": 1.0,
+        "integrity": 1.0
+      },
+      "gates": {
+        "success": true,
+        "no_service_role": true,
+        "all_ok": true
+      },
+      "duration_ms": 43.0
+    },
+    {
+      "case_id": "no_make_webhook_in_clients",
+      "composite": 1.0,
+      "metrics": {
+        "success": 1.0,
+        "speed": 1.0
+      },
+      "gates": {
+        "success": true,
+        "no_webhook": true,
+        "all_ok": true
+      },
+      "duration_ms": 27.0
+    },
+    {
+      "case_id": "watch_pair_create_redeem_split",
+      "composite": 1.0,
+      "metrics": {
+        "success": 1.0,
+        "speed": 1.0
+      },
+      "gates": {
+        "success": true,
+        "create_and_redeem_distinct": true,
+        "all_ok": true
+      },
+      "duration_ms": 1.0
+    },
+    {
+      "case_id": "watch_pair_six_digit_contract",
+      "composite": 1.0,
+      "metrics": {
+        "success": 1.0,
+        "speed": 1.0
+      },
+      "gates": {
+        "success": true,
+        "all_ok": true
+      },
+      "duration_ms": 0.0
+    },
+    {
+      "case_id": "rls_staging_select_authenticated",
+      "composite": 1.0,
+      "metrics": {
+        "success": 1.0,
+        "speed": 1.0
+      },
+      "gates": {
+        "success": true,
+        "all_ok": true
+      },
+      "duration_ms": 0.0
+    },
+    {
+      "case_id": "rls_writes_authenticated",
+      "composite": 1.0,
+      "metrics": {
+        "success": 1.0,
+        "speed": 1.0
+      },
+      "gates": {
+        "success": true,
+        "all_ok": true
+      },
+      "duration_ms": 0.0
+    },
+    {
+      "case_id": "app_config_anon_key_only",
+      "composite": 1.0,
+      "metrics": {
+        "success": 1.0,
+        "speed": 1.0,
+        "integrity": 1.0
+      },
+      "gates": {
+        "success": true,
+        "all_ok": true
+      },
+      "duration_ms": 1.0
+    },
+    {
+      "case_id": "login_empty_field_messages",
+      "composite": 1.0,
+      "metrics": {
+        "success": 1.0,
+        "speed": 1.0
+      },
+      "gates": {
+        "success": true,
+        "all_ok": true
+      },
+      "duration_ms": 0.0
+    }
+  ],
+  "metric_hotspots": [],
+  "top_wins": [
+    {
+      "case_id": "no_service_role_in_clients",
+      "composite": 1.0
+    },
+    {
+      "case_id": "no_make_webhook_in_clients",
+      "composite": 1.0
+    },
+    {
+      "case_id": "watch_pair_create_redeem_split",
+      "composite": 1.0
+    },
+    {
+      "case_id": "watch_pair_six_digit_contract",
+      "composite": 1.0
+    },
+    {
+      "case_id": "rls_staging_select_authenticated",
+      "composite": 1.0
+    }
+  ],
+  "notes": [
+    "Watch create is phone/Windows; redeem is Wear only.",
+    "Clients must never ship service_role or Make webhook URL."
+  ],
+  "budgets_ms": {
+    "no_service_role_in_clients": 800,
+    "no_make_webhook_in_clients": 800,
+    "watch_pair_create_redeem_split": 400,
+    "watch_pair_six_digit_contract": 300,
+    "rls_staging_select_authenticated": 400,
+    "rls_writes_authenticated": 400,
+    "app_config_anon_key_only": 200,
+    "login_empty_field_messages": 300
+  },
+  "log": "qa_auth/synthetic/improve_log.jsonl",
+  "next": "Read qa_auth summary; keep secrets out of clients; watch-pair create\u2260redeem contract.",
+  "training_lessons": "qa_auth/synthetic/training_lessons.json"
+}

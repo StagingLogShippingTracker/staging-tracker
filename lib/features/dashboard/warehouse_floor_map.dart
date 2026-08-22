@@ -47,6 +47,22 @@ final floorMapCollapsedProvider =
   return FloorMapCollapsedNotifier(ref);
 });
 
+/// When set, the map assigns locations instead of opening view-only drill-downs.
+class WarehouseFloorMapPickConfig {
+  const WarehouseFloorMapPickConfig({
+    required this.mode,
+    required this.onPick,
+  });
+
+  final WarehouseMapPickMode mode;
+  final void Function(String location) onPick;
+
+  bool zoneEnabled(String zoneKey) =>
+      FloorMapZones.isPickable(mode, zoneKey);
+
+  bool get aisleEnabled => mode == WarehouseMapPickMode.aisle;
+}
+
 class FloorMapCollapsedNotifier extends StateNotifier<bool> {
   FloorMapCollapsedNotifier(this._ref) : super(false) {
     _hydrate();
@@ -75,9 +91,14 @@ class FloorMapCollapsedNotifier extends StateNotifier<bool> {
 /// - South Wall stops where NOT US begins
 /// - East Stainless only beside the long-aisle block (above NOT US)
 class WarehouseFloorMap extends ConsumerWidget {
-  const WarehouseFloorMap({super.key, required this.staging});
+  const WarehouseFloorMap({
+    super.key,
+    required this.staging,
+    this.pickConfig,
+  });
 
   final List<StagingEntry> staging;
+  final WarehouseFloorMapPickConfig? pickConfig;
 
   /// A–N = 30-section (long) aisles. O–Z = 12-section (short) aisles.
   static const _longAisles = [
@@ -123,13 +144,15 @@ class WarehouseFloorMap extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final collapsed = ref.watch(floorMapCollapsedProvider);
+    final picking = pickConfig != null;
+    final collapsed = picking ? false : ref.watch(floorMapCollapsedProvider);
 
     Widget header() => Material(
           color: Colors.transparent,
           child: InkWell(
-            onTap: () =>
-                ref.read(floorMapCollapsedProvider.notifier).toggle(),
+            onTap: picking
+                ? null
+                : () => ref.read(floorMapCollapsedProvider.notifier).toggle(),
             borderRadius: BorderRadius.circular(4),
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 2),
@@ -137,15 +160,16 @@ class WarehouseFloorMap extends ConsumerWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      'WAREHOUSE FLOOR MAP',
+                      picking ? 'SELECT ON FLOOR MAP' : 'WAREHOUSE FLOOR MAP',
                       style: Theme.of(context).textTheme.labelSmall,
                     ),
                   ),
-                  Icon(
-                    collapsed ? Icons.expand_more : Icons.expand_less,
-                    size: 18,
-                    color: _mapChrome(context).muted,
-                  ),
+                  if (!picking)
+                    Icon(
+                      collapsed ? Icons.expand_more : Icons.expand_less,
+                      size: 18,
+                      color: _mapChrome(context).muted,
+                    ),
                 ],
               ),
             ),
@@ -205,8 +229,10 @@ class WarehouseFloorMap extends ConsumerWidget {
             header(),
             const SizedBox(height: 2),
             Text(
-              'Nisku terminal · click bays, zones, or A–F / 1–2 slots · '
-              'Density $densityPct%',
+              picking
+                  ? 'Nisku terminal · tap highlighted zones or aisle slots only'
+                  : 'Nisku terminal · click bays, zones, or A–F / 1–2 slots · '
+                      'Density $densityPct%',
               softWrap: true,
               overflow: TextOverflow.fade,
               style: Theme.of(context).textTheme.bodySmall,
@@ -291,7 +317,9 @@ class WarehouseFloorMap extends ConsumerWidget {
                                     flex: 5,
                                     child: _Pane(
                                       label: 'Offices',
+                                      zoneKey: FloorMapZones.offices,
                                       entries: index.zoneEntries('Offices'),
+                                      pickConfig: pickConfig,
                                     ),
                                   ),
                                   _VRule(),
@@ -299,7 +327,9 @@ class WarehouseFloorMap extends ConsumerWidget {
                                     flex: 4,
                                     child: _Pane(
                                       label: 'Stainless',
+                                      zoneKey: FloorMapZones.stainless,
                                       entries: index.zoneEntries('Stainless'),
+                                      pickConfig: pickConfig,
                                     ),
                                   ),
                                 ],
@@ -320,9 +350,11 @@ class WarehouseFloorMap extends ConsumerWidget {
                                         height: 16,
                                         child: _Pane(
                                           label: 'Corp Drop-Off',
+                                          zoneKey: FloorMapZones.corpDrop,
                                           entries:
                                               index.zoneEntries('Corp Drop'),
                                           compact: true,
+                                          pickConfig: pickConfig,
                                         ),
                                       ),
                                     ),
@@ -365,6 +397,7 @@ class WarehouseFloorMap extends ConsumerWidget {
                                           shortRows: shortRows,
                                           rowH: _rowH,
                                           index: index,
+                                          pickConfig: pickConfig,
                                         ),
                                       ),
                                     ),
@@ -388,11 +421,12 @@ class WarehouseFloorMap extends ConsumerWidget {
                                               bays: longLayout,
                                               cellWidth: cellW,
                                               index: index,
-                                              onBayTap: (k) =>
-                                                  _showBayDrillDown(
+                                              pickConfig: pickConfig,
+                                              onBayTap: (k) => _handleBayTap(
                                                 context,
                                                 k,
                                                 index,
+                                                pickConfig,
                                               ),
                                             ),
                                           SizedBox(
@@ -410,11 +444,13 @@ class WarehouseFloorMap extends ConsumerWidget {
                                                           bays: shortLayout,
                                                           cellWidth: cellW,
                                                           index: index,
+                                                          pickConfig: pickConfig,
                                                           onBayTap: (k) =>
-                                                              _showBayDrillDown(
+                                                              _handleBayTap(
                                                             context,
                                                             k,
                                                             index,
+                                                            pickConfig,
                                                           ),
                                                         ),
                                                     ],
@@ -455,9 +491,11 @@ class WarehouseFloorMap extends ConsumerWidget {
                                       ),
                                       child: _Pane(
                                         label: 'Stainless',
+                                        zoneKey: FloorMapZones.stainless,
                                         entries:
                                             index.zoneEntries('Stainless'),
                                         verticalText: true,
+                                        pickConfig: pickConfig,
                                       ),
                                     ),
                                   ),
@@ -483,8 +521,10 @@ class WarehouseFloorMap extends ConsumerWidget {
                                     ),
                                     child: _Pane(
                                       label: 'South Wall',
+                                      zoneKey: FloorMapZones.southWall,
                                       entries:
                                           index.zoneEntries('South Wall'),
+                                      pickConfig: pickConfig,
                                       onOpen: () {
                                         final southW = (layoutW - biteW)
                                             .clamp(1.0, layoutW);
@@ -492,6 +532,7 @@ class WarehouseFloorMap extends ConsumerWidget {
                                           context,
                                           index,
                                           aspectRatio: southW / southH,
+                                          pickConfig: pickConfig,
                                         );
                                       },
                                     ),
@@ -538,6 +579,78 @@ class WarehouseFloorMap extends ConsumerWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  static void _handleBayTap(
+    BuildContext context,
+    String bayKey,
+    _FloorOccupancyIndex index,
+    WarehouseFloorMapPickConfig? pickConfig,
+  ) {
+    if (pickConfig != null && pickConfig.mode == WarehouseMapPickMode.aisle) {
+      _showBaySlotPicker(context, bayKey, index, pickConfig);
+      return;
+    }
+    _showBayDrillDown(context, bayKey, index);
+  }
+
+  static Future<void> _showBaySlotPicker(
+    BuildContext context,
+    String bayKey,
+    _FloorOccupancyIndex index,
+    WarehouseFloorMapPickConfig pickConfig,
+  ) {
+    return _showFloorMapDialog(
+      context: context,
+      title: bayKey,
+      titleMono: true,
+      pickLabel: 'Select slot',
+      body: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (bayKey == 'B-02') ...[
+            OutlinedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                pickConfig.onPick(b02PartialLocation);
+              },
+              child: const Text('B-02-Partial (shared partial-box bay)'),
+            ),
+            const SizedBox(height: 10),
+          ],
+          for (final level in _levels)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 18,
+                    child: Text(
+                      level,
+                      style: IndustrialTheme.mono(
+                        fontSize: 11,
+                        color: _shellChrome(context).muted,
+                      ),
+                    ),
+                  ),
+                  for (final side in ['1', '2']) ...[
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: _SubSlotChip(
+                        label: '$level-$side',
+                        fullLocation: '$bayKey-$level-$side',
+                        entries: index.slotEntries('$bayKey-$level-$side'),
+                        pickConfig: pickConfig,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -605,6 +718,7 @@ class WarehouseFloorMap extends ConsumerWidget {
     BuildContext context,
     _FloorOccupancyIndex index, {
     required double aspectRatio,
+    WarehouseFloorMapPickConfig? pickConfig,
   }) {
     // Centered modal — no Hero (Hero flight from the map SW corner made the
     // sheet look off-centre). Keep the map South Wall width/height ratio.
@@ -618,6 +732,7 @@ class WarehouseFloorMap extends ConsumerWidget {
         return _SouthWallFocusPage(
           index: index,
           aspectRatio: aspectRatio,
+          pickConfig: pickConfig,
         );
       },
       transitionBuilder: (ctx, animation, secondaryAnimation, child) {
@@ -638,6 +753,7 @@ Future<void> _showFloorMapDialog({
   required String title,
   required Widget body,
   bool titleMono = false,
+  String? pickLabel,
 }) {
   final size = MediaQuery.sizeOf(context);
   final maxW = min(420.0, size.width - 40);
@@ -686,7 +802,7 @@ Future<void> _showFloorMapDialog({
                   alignment: Alignment.centerRight,
                   child: TextButton(
                     onPressed: () => Navigator.of(ctx).pop(),
-                    child: const Text('Close'),
+                    child: Text(pickLabel ?? 'Close'),
                   ),
                 ),
               ],
@@ -738,6 +854,103 @@ class _FloorEntryCard extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+Color _pickAccent(BuildContext context) => IndustrialTheme.chromeAccent;
+
+/// Dark fill + diagonal hatch for zones/bays that cannot be selected.
+class _PickBlockedOverlay extends StatelessWidget {
+  const _PickBlockedOverlay({this.borderRadius});
+
+  final BorderRadius? borderRadius;
+
+  @override
+  Widget build(BuildContext context) {
+    final radius = borderRadius ?? BorderRadius.zero;
+    return IgnorePointer(
+      child: ClipRRect(
+        borderRadius: radius,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            ColoredBox(
+              color: Colors.black.withValues(alpha: 0.72),
+            ),
+            CustomPaint(
+              painter: _PickBlockedHatchPainter(
+                color: _mapChrome(context).border.withValues(alpha: 0.55),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PickBlockedHatchPainter extends CustomPainter {
+  const _PickBlockedHatchPainter({required this.color});
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 1.1
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.butt;
+
+    const spacing = 5.5;
+    final extent = size.width + size.height;
+    for (var d = -size.height; d < extent; d += spacing) {
+      canvas.drawLine(
+        Offset(d, 0),
+        Offset(d + size.height, size.height),
+        paint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _PickBlockedHatchPainter oldDelegate) =>
+      oldDelegate.color != color;
+}
+
+/// Bright accent ring so selectable targets pop in pick mode.
+class _PickSelectableFrame extends StatelessWidget {
+  const _PickSelectableFrame({
+    required this.child,
+    this.borderRadius,
+    this.compact = false,
+  });
+
+  final Widget child;
+  final BorderRadius? borderRadius;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = _pickAccent(context);
+    final radius = borderRadius ?? BorderRadius.circular(compact ? 3 : 4);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: radius,
+        border: Border.all(color: accent, width: compact ? 1.5 : 2),
+        boxShadow: [
+          BoxShadow(
+            color: accent.withValues(alpha: 0.45),
+            blurRadius: compact ? 3 : 6,
+            spreadRadius: compact ? 0.5 : 1,
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: radius,
+        child: child,
       ),
     );
   }
@@ -817,12 +1030,14 @@ class _WestRail extends StatelessWidget {
     required this.shortRows,
     required this.rowH,
     required this.index,
+    this.pickConfig,
   });
 
   final int longRows;
   final int shortRows;
   final double rowH;
   final _FloorOccupancyIndex index;
+  final WarehouseFloorMapPickConfig? pickConfig;
 
   @override
   Widget build(BuildContext context) {
@@ -853,8 +1068,10 @@ class _WestRail extends StatelessWidget {
                       height: boxH,
                       child: _Pane(
                         label: 'Box\nRack',
+                        zoneKey: FloorMapZones.boxRack,
                         entries: index.zoneEntries('Box Rack'),
                         compact: true,
+                        pickConfig: pickConfig,
                       ),
                     ),
                     SizedBox(height: afterBoxInRecv),
@@ -865,8 +1082,10 @@ class _WestRail extends StatelessWidget {
               Expanded(
                 child: _Pane(
                   label: 'Receiving\n(Buyouts)',
+                  zoneKey: FloorMapZones.offices,
                   entries: const [],
                   muted: true,
+                  pickConfig: pickConfig,
                 ),
               ),
             ],
@@ -885,15 +1104,19 @@ class _WestRail extends StatelessWidget {
                       height: shipBoxH,
                       child: _Pane(
                         label: 'S.Box',
+                        zoneKey: FloorMapZones.shippingBoxRack,
                         entries: index.zoneEntries('Shipping Box Rack'),
                         compact: true,
+                        pickConfig: pickConfig,
                       ),
                     ),
                     Expanded(
                       child: _Pane(
                         label: 'W-Doors',
+                        zoneKey: FloorMapZones.wDoors,
                         entries: index.zoneEntries('W-Doors'),
                         compact: true,
+                        pickConfig: pickConfig,
                       ),
                     ),
                   ],
@@ -903,7 +1126,9 @@ class _WestRail extends StatelessWidget {
               Expanded(
                 child: _Pane(
                   label: 'Shipping\nAreas',
+                  zoneKey: FloorMapZones.shippingAreas,
                   entries: index.zoneEntries('Shipping Areas'),
+                  pickConfig: pickConfig,
                 ),
               ),
             ],
@@ -924,21 +1149,51 @@ class _Pane extends ConsumerWidget {
   const _Pane({
     required this.label,
     required this.entries,
+    this.zoneKey,
     this.compact = false,
     this.muted = false,
     this.verticalText = false,
     this.onOpen,
+    this.pickConfig,
   });
 
   final String label;
   final List<StagingEntry> entries;
+  final String? zoneKey;
   final bool compact;
   final bool muted;
   final bool verticalText;
   final VoidCallback? onOpen;
+  final WarehouseFloorMapPickConfig? pickConfig;
+
+  bool get _enabledInPickMode {
+    final pick = pickConfig;
+    if (pick == null) return true;
+    if (muted) return false;
+    final key = zoneKey;
+    if (key == null) return false;
+    return pick.zoneEnabled(key);
+  }
+
+  void _pickZone(BuildContext context) {
+    final pick = pickConfig;
+    final key = zoneKey;
+    if (pick == null || key == null) return;
+    if (key == FloorMapZones.southWall) {
+      onOpen?.call();
+      return;
+    }
+    pick.onPick(FloorMapZones.canonicalLocation(key));
+  }
 
   void _openZone(BuildContext context) {
     if (muted) return;
+    final pick = pickConfig;
+    if (pick != null) {
+      if (!_enabledInPickMode) return;
+      _pickZone(context);
+      return;
+    }
     if (onOpen != null) {
       onOpen!();
       return;
@@ -967,16 +1222,22 @@ class _Pane extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final pick = pickConfig;
+    final enabled = _enabledInPickMode;
     final occupied = entries.isNotEmpty && !muted;
     final border =
         muted ? _mapChrome(context).border : _borderForEntries(entries, context);
     final tip = muted
         ? label.replaceAll('\n', ' ')
-        : (entries.isEmpty
-            ? '${label.replaceAll('\n', ' ')} · empty · click for details'
-            : '${label.replaceAll('\n', ' ')} · ${entries.length} jobs · '
-                '${entries.fold<int>(0, (s, e) => s + e.qty)} containers · '
-                'click for list');
+        : (pick != null
+            ? (enabled
+                ? '${label.replaceAll('\n', ' ')} · tap to assign'
+                : '${label.replaceAll('\n', ' ')} · not selectable')
+            : (entries.isEmpty
+                ? '${label.replaceAll('\n', ' ')} · empty · click for details'
+                : '${label.replaceAll('\n', ' ')} · ${entries.length} jobs · '
+                    '${entries.fold<int>(0, (s, e) => s + e.qty)} containers · '
+                    'click for list'));
 
     final text = Text(
       label.toUpperCase(),
@@ -984,9 +1245,11 @@ class _Pane extends ConsumerWidget {
       style: IndustrialTheme.mono(
         fontSize: compact ? 8 : 9,
         fontWeight: FontWeight.bold,
-        color: occupied
-            ? _mapChrome(context).ink
-            : _mapSeatLabelColor(context, occupied: false),
+        color: pick != null && enabled
+            ? _pickAccent(context)
+            : occupied
+                ? _mapChrome(context).ink
+                : _mapSeatLabelColor(context, occupied: false),
       ),
       maxLines: verticalText ? 12 : 3,
       overflow: TextOverflow.ellipsis,
@@ -1004,8 +1267,17 @@ class _Pane extends ConsumerWidget {
                 verticalText ? RotatedBox(quarterTurns: 1, child: text) : text,
           )
         : _OccupancyBox(
-            colors: _statusBandColors(entries, context),
-            borderColor: border.withValues(alpha: 0.85),
+            colors: pick != null && enabled
+                ? [
+                    Color.alphaBlend(
+                      _pickAccent(context).withValues(alpha: 0.22),
+                      _emptyFill(context),
+                    ),
+                  ]
+                : _statusBandColors(entries, context),
+            borderColor: pick != null && enabled
+                ? _pickAccent(context).withValues(alpha: 0.95)
+                : border.withValues(alpha: 0.85),
             padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
             child:
                 verticalText ? RotatedBox(quarterTurns: 1, child: text) : text,
@@ -1015,15 +1287,41 @@ class _Pane extends ConsumerWidget {
       return Tooltip(
         message: tip,
         waitDuration: const Duration(milliseconds: 350),
-        child: body,
+        child: pick != null
+            ? Stack(
+                fit: StackFit.expand,
+                children: [
+                  body,
+                  const _PickBlockedOverlay(),
+                ],
+              )
+            : body,
       );
     }
+
+    if (pick != null && !enabled) {
+      return Tooltip(
+        message: tip,
+        waitDuration: const Duration(milliseconds: 350),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            body,
+            const _PickBlockedOverlay(),
+          ],
+        ),
+      );
+    }
+
+    final framed = pick != null && enabled
+        ? _PickSelectableFrame(compact: compact, child: body)
+        : body;
 
     final interactive = Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: () => _openZone(context),
-        child: body,
+        child: framed,
       ),
     );
 
@@ -1041,10 +1339,12 @@ class _SouthWallFocusPage extends StatelessWidget {
   const _SouthWallFocusPage({
     required this.index,
     required this.aspectRatio,
+    this.pickConfig,
   });
 
   final _FloorOccupancyIndex index;
   final double aspectRatio;
+  final WarehouseFloorMapPickConfig? pickConfig;
 
   static const _top = [1, 2, 3, 4];
   static const _bottom = [5, 6, 7, 8];
@@ -1122,6 +1422,7 @@ class _SouthWallFocusPage extends StatelessWidget {
                             child: _SouthWallSectionCell(
                               section: _top[i],
                               entries: index.southWallSectionEntries(_top[i]),
+                              pickConfig: pickConfig,
                             ),
                           ),
                         ],
@@ -1148,6 +1449,7 @@ class _SouthWallFocusPage extends StatelessWidget {
                             child: _SouthWallSectionCell(
                               section: _bottom[i],
                               entries: index.southWallSectionEntries(_bottom[i]),
+                              pickConfig: pickConfig,
                             ),
                           ),
                         ],
@@ -1190,12 +1492,21 @@ class _SouthWallSectionCell extends StatelessWidget {
   const _SouthWallSectionCell({
     required this.section,
     required this.entries,
+    this.pickConfig,
   });
 
   final int section;
   final List<StagingEntry> entries;
+  final WarehouseFloorMapPickConfig? pickConfig;
 
   void _openSection(BuildContext context) {
+    final pick = pickConfig;
+    if (pick != null) {
+      if (pick.mode != WarehouseMapPickMode.floor) return;
+      Navigator.of(context).pop();
+      pick.onPick(southWallSectionLabel(section));
+      return;
+    }
     final label = 'SW $section';
     _showFloorMapDialog(
       context: context,
@@ -1335,6 +1646,7 @@ class _AisleRow extends StatelessWidget {
     required this.index,
     required this.onBayTap,
     this.cellWidth,
+    this.pickConfig,
   });
 
   final String aisle;
@@ -1344,9 +1656,18 @@ class _AisleRow extends StatelessWidget {
   final ValueChanged<String> onBayTap;
   /// Shared pitch with long aisles so O–Z columns align with A–N.
   final double? cellWidth;
+  final WarehouseFloorMapPickConfig? pickConfig;
+
+  /// `null` = dashboard view; `true` = aisle pick; `false` = blocked in pick.
+  bool? get _aislePickState {
+    final pick = pickConfig;
+    if (pick == null) return null;
+    return pick.aisleEnabled;
+  }
 
   @override
   Widget build(BuildContext context) {
+    final aislePick = _aislePickState;
     Widget seatAt(int i) {
       final bay = bays[i];
       final fixedW = cellWidth;
@@ -1365,6 +1686,7 @@ class _AisleRow extends StatelessWidget {
         bayKey: '$aisle-$bay',
         size: fixedW == null ? WarehouseFloorMap._seat : null,
         entries: index.bayEntries('$aisle-$bay'),
+        pickState: aislePick,
         onTap: () => onBayTap('$aisle-$bay'),
       );
       if (fixedW != null) {
@@ -1392,12 +1714,17 @@ class _AisleRow extends StatelessWidget {
           children: [
             SizedBox(
               width: WarehouseFloorMap._aisleLabelW,
-              child: Text(
-                aisle,
-                style: IndustrialTheme.mono(
-                  fontSize: 9,
-                  fontWeight: FontWeight.bold,
-                  color: _mapChrome(context).muted,
+              child: Opacity(
+                opacity: aislePick == false ? 0.25 : 1,
+                child: Text(
+                  aisle,
+                  style: IndustrialTheme.mono(
+                    fontSize: 9,
+                    fontWeight: FontWeight.bold,
+                    color: aislePick == true
+                        ? _pickAccent(context)
+                        : _mapChrome(context).muted,
+                  ),
                 ),
               ),
             ),
@@ -1434,6 +1761,7 @@ class _BaySeat extends StatelessWidget {
     required this.entries,
     required this.onTap,
     this.size,
+    this.pickState,
   });
 
   final String bayKey;
@@ -1441,32 +1769,66 @@ class _BaySeat extends StatelessWidget {
   final VoidCallback onTap;
   final double? size;
 
+  /// `null` = normal map view; `true` = selectable; `false` = blocked.
+  final bool? pickState;
+
   @override
   Widget build(BuildContext context) {
-    final border = _borderForEntries(entries, context);
+    final selectable = pickState == true;
+    final blocked = pickState == false;
+    final interactive = pickState != false;
     final jobs = entries.length;
     final qty = entries.fold<int>(0, (s, e) => s + e.qty);
     final tip = entries.isEmpty
         ? '$bayKey · empty'
         : '$bayKey · $jobs jobs · $qty containers';
 
-    final box = _OccupancyBox(
-      colors: _statusBandColors(entries, context),
-      borderColor: border,
+    final occupancyColors = _statusBandColors(entries, context);
+    final seatFill = _OccupancyBox(
+      colors: selectable && entries.isEmpty
+          ? [
+              Color.alphaBlend(
+                _pickAccent(context).withValues(alpha: 0.32),
+                _emptyFill(context),
+              ),
+            ]
+          : occupancyColors,
+      borderColor: selectable
+          ? _pickAccent(context)
+          : _borderForEntries(entries, context),
       borderRadius: BorderRadius.circular(3),
     );
 
+    Widget child = seatFill;
+    if (selectable) {
+      child = _PickSelectableFrame(
+        compact: true,
+        borderRadius: BorderRadius.circular(3),
+        child: seatFill,
+      );
+    } else if (blocked) {
+      child = Stack(
+        fit: StackFit.expand,
+        children: [
+          seatFill,
+          _PickBlockedOverlay(
+            borderRadius: BorderRadius.circular(3),
+          ),
+        ],
+      );
+    }
+
     return Tooltip(
-      message: tip,
+      message: blocked ? '$bayKey · not selectable' : tip,
       waitDuration: const Duration(milliseconds: 350),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: onTap,
+          onTap: interactive ? onTap : null,
           borderRadius: BorderRadius.circular(3),
           child: size == null
-              ? SizedBox.expand(child: box)
-              : SizedBox(width: size, height: size, child: box),
+              ? SizedBox.expand(child: child)
+              : SizedBox(width: size, height: size, child: child),
         ),
       ),
     );
@@ -1478,13 +1840,26 @@ class _SubSlotChip extends ConsumerWidget {
     required this.label,
     required this.fullLocation,
     required this.entries,
+    this.pickConfig,
   });
 
   final String label;
   final String fullLocation;
   final List<StagingEntry> entries;
+  final WarehouseFloorMapPickConfig? pickConfig;
 
   void _openSlot(BuildContext context) {
+    final pick = pickConfig;
+    if (pick != null) {
+      if (supersededAisleLocations.contains(locationKey(fullLocation))) {
+        Navigator.of(context).pop();
+        pick.onPick(b02PartialLocation);
+        return;
+      }
+      Navigator.of(context).pop();
+      pick.onPick(fullLocation);
+      return;
+    }
     _showFloorMapDialog(
       context: context,
       title: fullLocation,

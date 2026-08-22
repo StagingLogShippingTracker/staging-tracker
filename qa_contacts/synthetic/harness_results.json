@@ -1,0 +1,38 @@
+{
+  "ts": "2026-08-22T18:44:48.170289Z",
+  "domain": "contacts",
+  "cases": [
+    {
+      "case_id": "contacts_asset_present",
+      "ok": true,
+      "duration_ms": 1,
+      "gates_raw": {
+        "asset_on_disk": true
+      }
+    },
+    {
+      "case_id": "bundled_contacts_json_parses",
+      "ok": true,
+      "duration_ms": 23,
+      "metrics_raw": {
+        "integrity": true
+      }
+    },
+    {
+      "case_id": "contact_required_fields",
+      "ok": true,
+      "duration_ms": 17
+    },
+    {
+      "case_id": "roster_types_stable",
+      "ok": true,
+      "duration_ms": 7,
+      "metrics_raw": {
+        "coverage": 1.0
+      }
+    }
+  ],
+  "notes": [
+    "Bundled contacts.json must parse; warehouse emails via withWarehouseContacts."
+  ]
+}

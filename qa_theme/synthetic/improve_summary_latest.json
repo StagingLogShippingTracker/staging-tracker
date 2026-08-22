@@ -1,0 +1,118 @@
+{
+  "run_id": "20260822T184553Z",
+  "ts": "2026-08-22T18:45:53Z",
+  "domain": "theme",
+  "ok": true,
+  "harness_ok": true,
+  "harness_note": "ok",
+  "n_cases": 5,
+  "n_scored": 5,
+  "mean_composite": 1.0,
+  "elapsed_s": 18.69,
+  "gate_fails": [],
+  "top_failures": [
+    {
+      "case_id": "product_name_official",
+      "composite": 1.0,
+      "metrics": {
+        "success": 1.0,
+        "speed": 1.0
+      },
+      "gates": {
+        "success": true,
+        "brand_exact": true,
+        "all_ok": true
+      },
+      "duration_ms": 0.0
+    },
+    {
+      "case_id": "product_compact_name",
+      "composite": 1.0,
+      "metrics": {
+        "success": 1.0,
+        "speed": 1.0
+      },
+      "gates": {
+        "success": true,
+        "all_ok": true
+      },
+      "duration_ms": 0.0
+    },
+    {
+      "case_id": "theme_preference_modes",
+      "composite": 1.0,
+      "metrics": {
+        "success": 1.0,
+        "speed": 1.0
+      },
+      "gates": {
+        "success": true,
+        "all_ok": true
+      },
+      "duration_ms": 0.0
+    },
+    {
+      "case_id": "status_color_rush_distinct",
+      "composite": 1.0,
+      "metrics": {
+        "success": 1.0,
+        "speed": 1.0,
+        "integrity": 1.0
+      },
+      "gates": {
+        "success": true,
+        "all_ok": true
+      },
+      "duration_ms": 5.0
+    },
+    {
+      "case_id": "no_bare_slst_product_title",
+      "composite": 1.0,
+      "metrics": {
+        "success": 1.0,
+        "speed": 1.0
+      },
+      "gates": {
+        "success": true,
+        "all_ok": true
+      },
+      "duration_ms": 22.0
+    }
+  ],
+  "metric_hotspots": [],
+  "top_wins": [
+    {
+      "case_id": "product_name_official",
+      "composite": 1.0
+    },
+    {
+      "case_id": "product_compact_name",
+      "composite": 1.0
+    },
+    {
+      "case_id": "theme_preference_modes",
+      "composite": 1.0
+    },
+    {
+      "case_id": "status_color_rush_distinct",
+      "composite": 1.0
+    },
+    {
+      "case_id": "no_bare_slst_product_title",
+      "composite": 1.0
+    }
+  ],
+  "notes": [
+    "Brand strings must stay Swift Staging & Shipping Log."
+  ],
+  "budgets_ms": {
+    "product_name_official": 200,
+    "product_compact_name": 200,
+    "theme_preference_modes": 300,
+    "status_color_rush_distinct": 300,
+    "no_bare_slst_product_title": 500
+  },
+  "log": "qa_theme/synthetic/improve_log.jsonl",
+  "next": "Read qa_theme summary; protect brand names, status styles, pubspec brand assets.",
+  "training_lessons": "qa_theme/synthetic/training_lessons.json"
+}

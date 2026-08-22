@@ -1,0 +1,77 @@
+{
+  "ts": "2026-08-22T18:44:35.604926Z",
+  "domain": "app",
+  "cases": [
+    {
+      "case_id": "shared_validation_ship",
+      "ok": true,
+      "duration_ms": 0,
+      "gates_raw": {
+        "rejects_empty_so": true
+      }
+    },
+    {
+      "case_id": "shared_validation_po",
+      "ok": true,
+      "duration_ms": 1
+    },
+    {
+      "case_id": "email_subject_casing",
+      "ok": true,
+      "duration_ms": 0,
+      "metrics_raw": {
+        "integrity": true
+      }
+    },
+    {
+      "case_id": "audit_location_order",
+      "ok": true,
+      "duration_ms": 1
+    },
+    {
+      "case_id": "kpi_math_smoke",
+      "ok": true,
+      "duration_ms": 0,
+      "metrics_raw": {
+        "integrity": true
+      }
+    },
+    {
+      "case_id": "shared_validation_return_notif",
+      "ok": true,
+      "duration_ms": 0
+    },
+    {
+      "case_id": "router_shell_routes_complete",
+      "ok": true,
+      "duration_ms": 9,
+      "metrics_raw": {
+        "coverage": 1.0
+      }
+    },
+    {
+      "case_id": "status_ui_to_db_roundtrip",
+      "ok": true,
+      "duration_ms": 11
+    },
+    {
+      "case_id": "status_urgency_weights",
+      "ok": true,
+      "duration_ms": 1
+    },
+    {
+      "case_id": "status_overdue_ymd",
+      "ok": true,
+      "duration_ms": 1
+    },
+    {
+      "case_id": "product_brand_constants",
+      "ok": true,
+      "duration_ms": 0,
+      "gates_raw": {
+        "brand": true
+      }
+    }
+  ],
+  "notes": []
+}

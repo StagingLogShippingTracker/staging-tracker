@@ -1,0 +1,57 @@
+{
+  "ts": "2026-08-22T18:46:26.289197Z",
+  "domain": "wear",
+  "cases": [
+    {
+      "case_id": "wear_brand_title",
+      "ok": true,
+      "duration_ms": 0,
+      "gates_raw": {
+        "brand_title": true
+      }
+    },
+    {
+      "case_id": "wear_theme_dark_only",
+      "ok": true,
+      "duration_ms": 160
+    },
+    {
+      "case_id": "wear_ship_payload_cc",
+      "ok": true,
+      "duration_ms": 0,
+      "metrics_raw": {
+        "integrity": true
+      }
+    },
+    {
+      "case_id": "wear_ship_validation_empty_carrier",
+      "ok": true,
+      "duration_ms": 2
+    },
+    {
+      "case_id": "wear_update_platform_is_wear",
+      "ok": true,
+      "duration_ms": 0,
+      "gates_raw": {
+        "wear_platform": true
+      }
+    },
+    {
+      "case_id": "wear_pair_redeem_six_digit",
+      "ok": true,
+      "duration_ms": 0,
+      "gates_raw": {
+        "redeem_only": true
+      }
+    },
+    {
+      "case_id": "wear_verify_audit_order",
+      "ok": true,
+      "duration_ms": 7
+    }
+  ],
+  "notes": [
+    "Wear redeems pairing codes; phone/Windows create them.",
+    "Wear Update must request AppUpdatePlatform.wear only."
+  ]
+}

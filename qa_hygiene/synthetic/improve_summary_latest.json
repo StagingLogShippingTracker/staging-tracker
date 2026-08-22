@@ -1,0 +1,124 @@
+{
+  "run_id": "20260822T184448Z",
+  "ts": "2026-08-22T18:44:48Z",
+  "domain": "hygiene",
+  "ok": true,
+  "harness_ok": true,
+  "harness_note": "ok",
+  "n_cases": 5,
+  "n_scored": 5,
+  "mean_composite": 1.0,
+  "elapsed_s": 0.19,
+  "gate_fails": [],
+  "top_failures": [
+    {
+      "case_id": "auto_delete_safe_dead_paths",
+      "composite": 1.0,
+      "metrics": {
+        "success": 1.0,
+        "speed": 1.0,
+        "integrity": 1.0,
+        "coverage": 1.0
+      },
+      "gates": {
+        "success": true,
+        "delete_errors_zero": true,
+        "all_ok": true
+      },
+      "duration_ms": 0.0
+    },
+    {
+      "case_id": "no_remaining_safe_dead_roots",
+      "composite": 1.0,
+      "metrics": {
+        "success": 1.0,
+        "speed": 1.0
+      },
+      "gates": {
+        "success": true,
+        "clean_roots": true,
+        "all_ok": true
+      },
+      "duration_ms": 0.0
+    },
+    {
+      "case_id": "gitignore_blocks_dead_patterns",
+      "composite": 1.0,
+      "metrics": {
+        "success": 1.0,
+        "speed": 1.0
+      },
+      "gates": {
+        "success": true,
+        "legacy_ignored": true,
+        "tmp_ignored": true,
+        "all_ok": true
+      },
+      "duration_ms": 1.0
+    },
+    {
+      "case_id": "protected_trees_intact",
+      "composite": 1.0,
+      "metrics": {
+        "success": 1.0,
+        "speed": 1.0
+      },
+      "gates": {
+        "success": true,
+        "protected_ok": true,
+        "all_ok": true
+      },
+      "duration_ms": 0.0
+    },
+    {
+      "case_id": "no_nested_full_repo_mirror",
+      "composite": 1.0,
+      "metrics": {
+        "success": 1.0,
+        "speed": 1.0
+      },
+      "gates": {
+        "success": true,
+        "no_mirror": true,
+        "all_ok": true
+      },
+      "duration_ms": 0.0
+    }
+  ],
+  "metric_hotspots": [],
+  "top_wins": [
+    {
+      "case_id": "auto_delete_safe_dead_paths",
+      "composite": 1.0
+    },
+    {
+      "case_id": "no_remaining_safe_dead_roots",
+      "composite": 1.0
+    },
+    {
+      "case_id": "gitignore_blocks_dead_patterns",
+      "composite": 1.0
+    },
+    {
+      "case_id": "protected_trees_intact",
+      "composite": 1.0
+    },
+    {
+      "case_id": "no_nested_full_repo_mirror",
+      "composite": 1.0
+    }
+  ],
+  "notes": [
+    "freed_files=0 freed_bytes=0"
+  ],
+  "budgets_ms": {
+    "auto_delete_safe_dead_paths": 120000,
+    "no_remaining_safe_dead_roots": 5000,
+    "gitignore_blocks_dead_patterns": 500,
+    "protected_trees_intact": 500,
+    "no_nested_full_repo_mirror": 5000
+  },
+  "log": "qa_hygiene/synthetic/improve_log.jsonl",
+  "next": "Read qa_hygiene summary; delete dead/legacy/scratch paths; keep .gitignore blocking re-commit.",
+  "training_lessons": "qa_hygiene/synthetic/training_lessons.json"
+}

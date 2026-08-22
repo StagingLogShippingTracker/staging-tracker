@@ -1,0 +1,82 @@
+{
+  "ts": "2026-08-22T18:44:56.988079Z",
+  "domain": "location",
+  "cases": [
+    {
+      "case_id": "location_parse_aisle",
+      "ok": true,
+      "duration_ms": 4,
+      "metrics_raw": {
+        "integrity": true
+      }
+    },
+    {
+      "case_id": "location_category_filter",
+      "ok": true,
+      "duration_ms": 2,
+      "metrics_raw": {
+        "coverage": 1.0
+      }
+    },
+    {
+      "case_id": "map_pick_mode_blocks_freetext",
+      "ok": true,
+      "duration_ms": 1,
+      "gates_raw": {
+        "aisle_has_map_mode": true,
+        "floor_has_map_mode": true,
+        "shipping_has_map_mode": true,
+        "outside_no_map_mode": true
+      }
+    },
+    {
+      "case_id": "outside_tiles_ok",
+      "ok": true,
+      "duration_ms": 0
+    },
+    {
+      "case_id": "floor_zone_pickable_matrix",
+      "ok": true,
+      "duration_ms": 0,
+      "metrics_raw": {
+        "coverage": 1.0
+      }
+    },
+    {
+      "case_id": "canonical_location_labels",
+      "ok": true,
+      "duration_ms": 0
+    },
+    {
+      "case_id": "b02_partial_supersedes_slots",
+      "ok": true,
+      "duration_ms": 2
+    },
+    {
+      "case_id": "partial_bay_conflict_skids_crates",
+      "ok": true,
+      "duration_ms": 0
+    },
+    {
+      "case_id": "drive_gap_bays_reserved",
+      "ok": true,
+      "duration_ms": 0
+    },
+    {
+      "case_id": "seeded_outside_no_freetext",
+      "ok": true,
+      "duration_ms": 0,
+      "gates_raw": {
+        "no_freetext_outside_seeds": true
+      }
+    },
+    {
+      "case_id": "classify_shipping_w2",
+      "ok": true,
+      "duration_ms": 0
+    }
+  ],
+  "notes": [
+    "Map-first: aisle/floor/shipping use WarehouseMapPickMode; outside does not."
+  ]
+}
