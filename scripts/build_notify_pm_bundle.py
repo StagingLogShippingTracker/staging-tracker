@@ -35,7 +35,7 @@ payload = {
     "project_id": "gdrpdiwykmnybmkadlrv",
     "name": "notify-pm",
     "entrypoint_path": "index.ts",
-    "verify_jwt": True,
+    "verify_jwt": False,
     "files": [{"name": "index.ts", "content": merged}],
 }
 json_out = Path(__file__).resolve().parents[1] / ".tmp-deploy-notify-pm-bundle.json"

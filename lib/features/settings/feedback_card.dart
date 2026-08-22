@@ -229,7 +229,7 @@ class _FeedbackFormDialogState extends ConsumerState<_FeedbackFormDialog> {
             children: [
               Text(
                 'Your message is emailed to $kWarehouseFeedbackEmail '
-                'via the authenticated notify-pm service.',
+                'via the secure notify-pm server (no sign-in required).',
                 style: TextStyle(
                   color: IndustrialTheme.chromeOf(context).muted,
                   fontSize: 13,

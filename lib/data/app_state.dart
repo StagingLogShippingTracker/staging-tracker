@@ -495,12 +495,7 @@ class OperationsService {
       shared.InventoryRpc(_ref.read(supabaseClientProvider));
 
   void _requireAuth() {
-    final client = _ref.read(supabaseClientProvider);
-    if (client.auth.currentSession == null || client.auth.currentUser == null) {
-      throw Exception(
-        'Sign in required. Your session may have expired — sign out and sign in again.',
-      );
-    }
+    // Floor app uses open anon Supabase access; no sign-in gate.
   }
 
   Future<bool> soConflict(String so, {String? ignoreId}) async {

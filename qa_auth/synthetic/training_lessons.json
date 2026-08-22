@@ -240,7 +240,86 @@
       ],
       "gate_fails": [],
       "next": "Read qa_auth summary; keep secrets out of clients; watch-pair create\u2260redeem contract."
+    },
+    {
+      "ts": "2026-08-22T22:41:50Z",
+      "run_id": "20260822T224150Z",
+      "mean_composite": 1.0,
+      "ok": true,
+      "top_failures": [
+        {
+          "case_id": "no_service_role_in_clients",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0,
+            "integrity": 1.0
+          },
+          "gates": {
+            "success": true,
+            "no_service_role": true,
+            "all_ok": true
+          },
+          "duration_ms": 37.0
+        },
+        {
+          "case_id": "no_make_webhook_in_clients",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "no_webhook": true,
+            "all_ok": true
+          },
+          "duration_ms": 18.0
+        },
+        {
+          "case_id": "watch_pair_create_redeem_split",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "create_and_redeem_distinct": true,
+            "all_ok": true
+          },
+          "duration_ms": 0.0
+        },
+        {
+          "case_id": "watch_pair_six_digit_contract",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 3.0
+        },
+        {
+          "case_id": "rls_staging_select_authenticated",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 3.0
+        }
+      ],
+      "gate_fails": [],
+      "next": "Read qa_auth summary; keep secrets out of clients; watch-pair create\u2260redeem contract."
     }
   ],
-  "updated_at": "2026-08-22T18:44:41Z"
+  "updated_at": "2026-08-22T22:41:50Z"
 }

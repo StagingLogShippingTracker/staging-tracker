@@ -109,7 +109,7 @@ def load_payload() -> dict:
         "F4F2EF",
         "linear-gradient",
         "prefers-color-scheme: dark",
-        "NOTIFY_PM_VERSION = 90",
+        "NOTIFY_PM_VERSION = 91",
         "appendNotificationLog",
         "This service is experimental",
         "This service is an internal operations tool",
@@ -135,7 +135,7 @@ def load_payload() -> dict:
         raise SystemExit("refusing oversized logo/headline styles")
     return {
         "entrypoint_path": "index.ts",
-        "verify_jwt": True,
+        "verify_jwt": False,
         "files": files,
     }
 

@@ -1,7 +1,7 @@
 name: swift_staging_log
 description: Swift Staging & Shipping Log — Flutter Windows/Android client (shared domain in packages/swift_staging_shared; Wear in apps/wear).
 publish_to: 'none'
-version: 1.1.42+45
+version: 1.1.43+46
 
 environment:
   sdk: ^3.12.2

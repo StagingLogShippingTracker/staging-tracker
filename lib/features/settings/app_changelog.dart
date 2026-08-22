@@ -19,6 +19,14 @@ class AppChangelog {
   /// Ordered newest-first, same campaign-wave pattern as Document Generator.
   static const sections = <ChangelogSection>[
     ChangelogSection(
+      version: 'v1.1.43',
+      bullets: [
+        'Bulk PO, PO, and other PM notifications work again without sign-in (floor app uses secure server proxy only)',
+        'Staging, ship, and return operations no longer block on missing session',
+        'Notifications screen copy reflects no sign-in required',
+      ],
+    ),
+    ChangelogSection(
       version: 'v1.1.40',
       bullets: [
         'Sidebar shows only the Swift logo, centered (product name no longer squeezed next to it)',

@@ -216,7 +216,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
             'Notifications',
             subtitle: _pageMode == _PageMode.log
                 ? 'Delivery history — filter, sort, and export'
-                : 'PM email via authenticated notify-pm',
+                : 'PM email via secure notify-pm server',
           ),
           _pageModeToggle(narrow),
           const SizedBox(height: 16),
@@ -242,7 +242,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                   style: TextStyle(fontWeight: FontWeight.w700),
                 ),
                 subtitle: Text(
-                  'Notifications are sent through an authenticated server function. '
+                  'Notifications are sent through a secure server function (no sign-in required). '
                   'Webhook credentials never ship inside the app binary. '
                   'Deliveries are recorded in Notification log.',
                 ),

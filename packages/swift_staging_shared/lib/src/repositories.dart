@@ -223,46 +223,15 @@ class NotifyRepository {
   final SupabaseClient _client;
 
   Future<void> sendPmNotification(Map<String, dynamic> payload) async {
-    final session = _client.auth.currentSession;
-    if (session == null) {
-      throw Exception(
-        'Sign in required. Your session may have expired — sign out and sign in again.',
-      );
-    }
-
-    try {
-      await _client.auth.refreshSession();
-    } catch (_) {
-      // If refresh fails, still attempt invoke — edge returns 401 with auth_hint.
-    }
-
     final body = Map<String, dynamic>.from(payload);
     final subject = body['subject'];
     if (subject is String && subject.trim().isNotEmpty) {
       body['subject'] = capitalizeEmailSubject(subject);
     }
 
-    final accessToken =
-        _client.auth.currentSession?.accessToken ?? session.accessToken;
-    final res = await _client.functions.invoke(
-      'notify-pm',
-      body: body,
-      headers: {'Authorization': 'Bearer $accessToken'},
-    );
+    final res = await _client.functions.invoke('notify-pm', body: body);
     if (res.status >= 400) {
-      final details = res.data;
-      if (res.status == 401) {
-        final hint = details is Map ? details['auth_hint'] : null;
-        if (hint == 'session_expired') {
-          throw Exception(
-            'Your session expired. Sign out, sign in again, then resend the notification.',
-          );
-        }
-        throw Exception(
-          'Notification unauthorized (401). Sign out and sign in again, then retry.',
-        );
-      }
-      throw Exception('Notification failed (${res.status}): $details');
+      throw Exception('Notification failed (${res.status}): ${res.data}');
     }
   }
 }

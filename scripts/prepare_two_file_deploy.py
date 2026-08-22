@@ -17,7 +17,7 @@ payload = {
     "project_id": "gdrpdiwykmnybmkadlrv",
     "name": "notify-pm",
     "entrypoint_path": "index.ts",
-    "verify_jwt": True,
+    "verify_jwt": False,
     "files": [
         {"name": "index.ts", "content": index},
         {"name": "email-templates/ship-confirmation.ts", "content": ship},

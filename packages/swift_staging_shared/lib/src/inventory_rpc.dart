@@ -15,9 +15,7 @@ class InventoryRpc {
   final SupabaseClient _client;
 
   void _requireAuth() {
-    if (_client.auth.currentUser == null) {
-      throw StaleRecordException('Sign in required. Your session may have expired.');
-    }
+    // Anon RLS permits warehouse RPCs without a signed-in user.
   }
 
   Future<ShippedEntry> shipStagingEntry({

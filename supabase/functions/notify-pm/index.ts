@@ -8,7 +8,7 @@ import {
 import { renderNotificationEmail } from "./email-templates/notification-email.ts";
 
 /** Bumped on each intentional notify-pm deploy (theme / logging fixes). */
-const NOTIFY_PM_VERSION = 90;
+const NOTIFY_PM_VERSION = 91;
 
 const WAREHOUSE_FEEDBACK_EMAIL = "warehouse2@swiftsupply.ca";
 const WAREHOUSE_FEEDBACK_PM_NAME = "Warehouse 2";
@@ -151,6 +151,66 @@ function serviceAdmin() {
   return createClient(url, serviceKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
+}
+
+const ANON_FLOOR_SENT_BY = "warehouse-floor";
+
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
+  try {
+    const parts = token.split(".");
+    if (parts.length < 2) return null;
+    const b64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const pad = b64 + "=".repeat((4 - (b64.length % 4)) % 4);
+    return JSON.parse(atob(pad)) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
+function isProjectAnonKey(req: Request): boolean {
+  const apikey = req.headers.get("apikey") ?? "";
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+  return apikey.length > 0 && anonKey.length > 0 && apikey === anonKey;
+}
+
+function isAnonBearer(token: string): boolean {
+  return decodeJwtPayload(token)?.role === "anon";
+}
+
+type CallerInfo = { sentBy: string; userId: string | null };
+
+async function resolveCaller(
+  req: Request,
+  token: string | null,
+  admin: ReturnType<typeof serviceAdmin>,
+): Promise<CallerInfo | Response> {
+  if (token && admin) {
+    const { data: userData, error: userError } = await admin.auth.getUser(token);
+    if (!userError && userData?.user) {
+      return {
+        sentBy: userData.user.email ?? userData.user.id,
+        userId: userData.user.id,
+      };
+    }
+  }
+
+  // Floor app: open anon access (no user sign-in).
+  if (isProjectAnonKey(req) || (token && isAnonBearer(token))) {
+    return { sentBy: ANON_FLOOR_SENT_BY, userId: null };
+  }
+
+  const hint = "invalid_session";
+  return new Response(
+    JSON.stringify({
+      error: "Unauthorized",
+      auth_hint: hint,
+      notify_pm_version: NOTIFY_PM_VERSION,
+    }),
+    {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    },
+  );
 }
 
 function publicPhotoUrl(path: string): string {
@@ -367,21 +427,11 @@ Deno.serve(async (req: Request) => {
     }
 
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(
-        JSON.stringify({
-          error: "Missing Authorization",
-          notify_pm_version: NOTIFY_PM_VERSION,
-        }),
-        {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
-    }
+    const token = authHeader?.startsWith("Bearer ")
+      ? authHeader.replace(/^Bearer\s+/i, "").trim()
+      : null;
 
-    const token = authHeader.replace(/^Bearer\s+/i, "").trim();
-    if (!token) {
+    if (!token && !isProjectAnonKey(req)) {
       return new Response(
         JSON.stringify({
           error: "Missing Authorization",
@@ -408,22 +458,9 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const { data: userData, error: userError } = await admin.auth.getUser(token);
-    if (userError || !userData.user) {
-      const hint = (userError?.message ?? "").toLowerCase().includes("expired")
-        ? "session_expired"
-        : "invalid_session";
-      return new Response(
-        JSON.stringify({
-          error: "Unauthorized",
-          auth_hint: hint,
-          notify_pm_version: NOTIFY_PM_VERSION,
-        }),
-        {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
+    const callerResult = await resolveCaller(req, token, admin);
+    if (callerResult instanceof Response) {
+      return callerResult;
     }
 
     const body = await req.json();
@@ -450,7 +487,10 @@ Deno.serve(async (req: Request) => {
       applyRecipientAliases(body, to);
     }
 
-    const sentBy = userData.user.email ?? userData.user.id;
+    const sentByOverride = String(
+      body.shipped_by ?? body.staged_by ?? body.sent_by ?? "",
+    ).trim();
+    const sentBy = sentByOverride || callerResult.sentBy;
     const pmName = isFeedbackType(notificationType)
       ? WAREHOUSE_FEEDBACK_PM_NAME
       : resolvePmName(body);
