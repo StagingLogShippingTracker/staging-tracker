@@ -14,6 +14,20 @@
         "make",
         "cc"
       ]
+    },
+    {
+      "id": "20260822T222029Z",
+      "ts": "2026-08-22T22:20:29Z",
+      "title": "notify-pm 401 Unauthorized on PO send",
+      "lesson": "PO notifications failed with FunctionException 401 Unauthorized when notify-pm used anon createClient().auth.getUser() without explicit JWT. Fix: validate Bearer token via serviceAdmin().auth.getUser(token); client refreshSession + explicit Authorization header; restore app_state _requireAuth(). Deployed notify-pm v90 (platform v94).",
+      "do_not_regress": "Never validate notify-pm caller with anon getUser() alone; always pass explicit Bearer access token from client.",
+      "case_ids": [
+        "payload_keys_po"
+      ],
+      "tags": [
+        "auth",
+        "notify-pm"
+      ]
     }
   ],
   "run_snapshots": [
@@ -518,5 +532,5 @@
       "next": "Read qa_notify summary; keep Make active; never embed webhook URL; expand attachment/alias cases."
     }
   ],
-  "updated_at": "2026-08-22T18:45:07Z"
+  "updated_at": "2026-08-22T22:20:29Z"
 }

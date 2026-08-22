@@ -494,7 +494,14 @@ class OperationsService {
   shared.InventoryRpc get _rpc =>
       shared.InventoryRpc(_ref.read(supabaseClientProvider));
 
-  void _requireAuth() {}
+  void _requireAuth() {
+    final client = _ref.read(supabaseClientProvider);
+    if (client.auth.currentSession == null || client.auth.currentUser == null) {
+      throw Exception(
+        'Sign in required. Your session may have expired — sign out and sign in again.',
+      );
+    }
+  }
 
   Future<bool> soConflict(String so, {String? ignoreId}) async {
     final data = _ref.read(appDataProvider);

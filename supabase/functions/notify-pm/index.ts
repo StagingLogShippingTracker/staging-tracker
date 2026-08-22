@@ -8,7 +8,7 @@ import {
 import { renderNotificationEmail } from "./email-templates/notification-email.ts";
 
 /** Bumped on each intentional notify-pm deploy (theme / logging fixes). */
-const NOTIFY_PM_VERSION = 89;
+const NOTIFY_PM_VERSION = 90;
 
 const WAREHOUSE_FEEDBACK_EMAIL = "warehouse2@swiftsupply.ca";
 const WAREHOUSE_FEEDBACK_PM_NAME = "Warehouse 2";
@@ -367,7 +367,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
+    if (!authHeader?.startsWith("Bearer ")) {
       return new Response(
         JSON.stringify({
           error: "Missing Authorization",
@@ -380,17 +380,43 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-      { global: { headers: { Authorization: authHeader } } },
-    );
+    const token = authHeader.replace(/^Bearer\s+/i, "").trim();
+    if (!token) {
+      return new Response(
+        JSON.stringify({
+          error: "Missing Authorization",
+          notify_pm_version: NOTIFY_PM_VERSION,
+        }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
 
-    const { data: userData, error: userError } = await supabase.auth.getUser();
+    const admin = serviceAdmin();
+    if (!admin) {
+      return new Response(
+        JSON.stringify({
+          error: "Server auth misconfigured (missing service role)",
+          notify_pm_version: NOTIFY_PM_VERSION,
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    const { data: userData, error: userError } = await admin.auth.getUser(token);
     if (userError || !userData.user) {
+      const hint = (userError?.message ?? "").toLowerCase().includes("expired")
+        ? "session_expired"
+        : "invalid_session";
       return new Response(
         JSON.stringify({
           error: "Unauthorized",
+          auth_hint: hint,
           notify_pm_version: NOTIFY_PM_VERSION,
         }),
         {
