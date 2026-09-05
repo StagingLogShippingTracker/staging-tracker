@@ -14,6 +14,22 @@
         "make",
         "connector"
       ]
+    },
+    {
+      "id": "20260905T220700Z",
+      "ts": "2026-09-05T22:07:00Z",
+      "title": "Router must make photo routes mutually exclusive",
+      "lesson": "Scenario 5572398 has two Outlook send routes. Make evaluates every matching route, not first-match-only. Route A (WITH photos) filters length(attachments)>0 AND to contains @. Route B (WITHOUT photos) must also require length(attachments)<=0 \u2014 otherwise any photo notification matches both routes and sends two emails. Verified live: photo runs drop from ~6-7 ops (double send) to ~5 ops (single send).",
+      "do_not_regress": "Never leave Route B as to-contains-@ only. Keep WITH and WITHOUT photo filters mutually exclusive on scenario 5572398.",
+      "case_ids": [
+        "notify_pm_https_attachments"
+      ],
+      "tags": [
+        "make",
+        "duplicate-email",
+        "router",
+        "attachments"
+      ]
     }
   ],
   "run_snapshots": [
@@ -262,7 +278,89 @@
       ],
       "gate_fails": [],
       "next": "Read qa_make summary; keep scenario active; webhook secret server-side only; all types deliver."
+    },
+    {
+      "ts": "2026-09-05T22:08:13Z",
+      "run_id": "20260905T220813Z",
+      "mean_composite": 1.0,
+      "ok": true,
+      "top_failures": [
+        {
+          "case_id": "make_scenario_active_marker",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "scenario_marked_active": true,
+            "all_ok": true
+          },
+          "duration_ms": 0.0
+        },
+        {
+          "case_id": "make_webhook_not_in_clients",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0,
+            "integrity": 1.0
+          },
+          "gates": {
+            "success": true,
+            "no_webhook_in_flutter": true,
+            "all_ok": true
+          },
+          "duration_ms": 38.0
+        },
+        {
+          "case_id": "notify_pm_has_payload_builder",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "buildMakeWebhookPayload": true,
+            "all_ok": true
+          },
+          "duration_ms": 0.0
+        },
+        {
+          "case_id": "notify_pm_all_types_list",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0,
+            "coverage": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_types_present": true,
+            "all_ok": true
+          },
+          "duration_ms": 0.0
+        },
+        {
+          "case_id": "notify_pm_https_attachments",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "https_filter": true,
+            "all_ok": true
+          },
+          "duration_ms": 0.0
+        }
+      ],
+      "gate_fails": [],
+      "next": "Read qa_make summary; keep scenario active; webhook secret server-side only; all types deliver."
     }
   ],
-  "updated_at": "2026-08-22T18:44:57Z"
+  "updated_at": "2026-09-05T22:08:13Z"
 }

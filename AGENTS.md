@@ -2,7 +2,7 @@
 
 ## What this is
 
-Swift Staging & Shipping Log — Flutter clients for **Windows**, **Android**, and **Wear OS**, backed by a **hosted Supabase** project. Make.com PM email is invoked only through the authenticated Edge Function `notify-pm`.
+Swift Staging & Shipping Log — Flutter clients for **Windows**, **Android**, and **Wear OS**, backed by a **hosted Supabase** project. Make.com PM email is invoked only through the Edge Function `notify-pm` (server-side Make proxy; floor clients need no user sign-in).
 
 There is **no** web/PWA client and **no** Prophet21 / Epicor integration.
 
@@ -10,7 +10,7 @@ There is **no** web/PWA client and **no** Prophet21 / Epicor integration.
 
 Development and Flutter packaging builds run on the **local Windows checkout**. Prefer this machine’s `.tools/flutter` bootstrap (or Flutter on PATH), plus local `build/` / `dist/` artifacts. Do not default to Cursor Cloud Agents for app work unless the user asks.
 
-Preferred local folder: this Windows checkout (`Downloads/Swift-Staging-and-Shipping-Log`). GitHub remote: `StagingLogShippingTracker/staging-tracker`. Product brand is **Swift Staging & Shipping Log**. The folder uses hyphens (no `&` or spaces) so Windows Flutter native-asset hooks can build.
+Preferred local folder: this Windows checkout (`Projects/Swift-Staging-and-Shipping-Log`). GitHub remote: `StagingLogShippingTracker/staging-tracker`. Product brand is **Swift Staging & Shipping Log**. The folder uses hyphens (no `&` or spaces) so Windows Flutter native-asset hooks can build.
 
 ## Dev commands (local)
 
@@ -39,17 +39,15 @@ Then publish GitHub `releases/latest` with `SwiftStagingLog-*` assets so clients
 ## Live production backend — be careful
 
 - `lib/core/app_config.dart` (and `packages/swift_staging_shared`) points at the **live** Supabase project.
-- Authenticated create/edit/ship/delete/notify writes affect real data and can trigger real PM email via Make.
-- Prefer read-only exploration unless you have explicit approval and a confirmed test account.
-- Authenticated clients read/write staging/shipped data; RLS blocks anonymous
-  SELECT and all writes. Sign in is required to see operational inventory.
+- Since the `20260815150000_open_anon_app_access.sql` migration (v1.1.43+46), `staging`/`shipped`/`changelog`/`dropdown_roster`/notify/inventory RPCs are open to the Supabase **anon** role — the floor app has no sign-in gate. Create/edit/ship/delete/notify writes still affect real data and can trigger real PM email via Make, with or without a signed-in session.
+- Prefer read-only exploration unless you have explicit approval, regardless of auth state.
 
 ## Auth
 
-- Email/password via Supabase Auth (Windows / Android).
-- Wear pairs via Settings → **Pair Watch** → `watch-pair` Edge Function redeem.
-- New accounts require email confirmation (`email_not_confirmed` until confirmed).
-- UI gates write actions on `currentUser`; RLS is the real enforcement.
+- The floor app (staging, shipping, notifications, reports, contacts) and **Wear pairing** work fully **without signing in** — RLS/anon grants are the only gate, and `OperationsService._requireAuth()` / `InventoryRpc._requireAuth()` are intentional no-ops. Do not reintroduce `currentUser`/`currentSession` checks on those write paths (see `qa_notify/synthetic/training_lessons.json`).
+- Settings → **Pair Watch** creates a 6-digit code via `watch-pair` (anon). Wear redeems the code and stays on anon access — no email/password login.
+- `lib/features/auth/login_screen.dart` is unused legacy UI (do not wire it back as a floor gate).
+- New accounts / email confirmation are irrelevant to floor ops.
 
 ## Layout
 

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
+import '../../core/popup_gate.dart';
 import '../../core/theme.dart';
 import '../../data/app_state.dart';
 
@@ -16,7 +17,7 @@ const kWarehouseFeedbackPmName = 'Warehouse 2';
 /// Make PM-email scenario matches `*_notification` types (PO / return).
 const kWarehouseFeedbackNotificationType = 'feedback_notification';
 
-/// Settings card that opens an authenticated feedback form emailed via notify-pm.
+/// Settings card that opens a feedback form emailed via notify-pm (no sign-in).
 class FeedbackCard extends ConsumerWidget {
   const FeedbackCard({super.key});
 
@@ -81,13 +82,15 @@ Future<void> openFeedbackForm(
   String? prefillContact,
   String? prefillName,
 }) {
-  return showDialog<void>(
-    context: context,
-    builder: (ctx) => _FeedbackFormDialog(
-      prefillContact: prefillContact,
-      prefillName: prefillName,
-    ),
-  );
+  return PopupGate.exclusive<void>(PopupKeys.feedback, () {
+    return showDialog<void>(
+      context: context,
+      builder: (ctx) => _FeedbackFormDialog(
+        prefillContact: prefillContact,
+        prefillName: prefillName,
+      ),
+    );
+  });
 }
 
 class _FeedbackFormDialog extends ConsumerStatefulWidget {

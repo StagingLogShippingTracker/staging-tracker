@@ -11,7 +11,7 @@ Uses the existing hosted Supabase project for Auth, Postgres, Storage, and the `
 - Flutter / Dart (Material 3)
 - Riverpod (state), GoRouter (navigation)
 - `supabase_flutter` (Auth, Database, Storage, Functions)
-- Make.com notifications via authenticated Edge Function `notify-pm` (webhook URL is **not** embedded in the app)
+- Make.com notifications via Edge Function `notify-pm` (server proxy; webhook URL is **not** embedded in the app; no user sign-in required)
 - Production document scanner with shared Dart image processing and native offline OCR
 
 ## Offline document scanner
@@ -67,10 +67,10 @@ Android Maven coordinate above, while Windows supplies its signed system model.
 # or
 .\.tools\flutter\bin\flutter.bat run -d android
 # Wear OS (see apps/wear/README.md):
-.\.tools\flutter\bin\flutter.bat -C apps\slst_wear run -d <wear-device>
+.\.tools\flutter\bin\flutter.bat -C apps\wear run -d <wear-device>
 ```
 
-Anonymous users are **read-only**. Sign in with a confirmed Supabase email/password account to create/edit/ship/notify.
+Staging, shipping, notifications, and Wear pairing work without signing in — the floor app uses open anon Supabase access.
 On Wear, open **Settings → Pair Watch** on Windows/Android, then enter the 6-digit code on the watch.
 
 ## Configuration
@@ -153,8 +153,8 @@ GitHub Pages is **not** used.
 ## Backend notes
 
 - Tables: `staging`, `shipped`, `changelog`, `dropdown_roster`
-- Storage bucket: `freight-photos` (public read, authenticated write)
-- RLS: staging/shipped/changelog require authenticated **select**; all writes require auth
+- Storage bucket: `freight-photos` (public read; anon upload/update/delete since open-anon migration)
+- RLS: staging/shipped/changelog/dropdown_roster and notify/inventory RPCs are open to the **anon** role (since `20260815150000_open_anon_app_access.sql`) — no sign-in required for floor operations
 - No Prophet21 / Epicor / Search Order integration
 
 ## Remembered entry fields and locations
@@ -180,7 +180,7 @@ user is retained for a newly typed ambiguous value through category-specific
 Location occupancy is calculated only from current `staging` rows. Shipped
 records and recent movement/history data are displayed as context but never
 mark a bin occupied. Before assigning a conflicting bin, the app refreshes its
-read model and presents an advisory with proceed or authenticated consolidation
+read model and presents an advisory with proceed or consolidate
 choices. This is intentionally not a transactional lock: another user can
 change staging between the advisory and the eventual save, so warehouse users
 must still resolve concurrent conflicts when warned.

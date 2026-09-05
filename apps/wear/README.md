@@ -1,15 +1,15 @@
 # Swift Staging & Shipping Log — Wear OS
 
-Minimal Flutter client for Wear OS watches. Signs in via a short-lived pairing
-code from the Windows/Android **Pair Watch** Settings action (`watch-pair`
-Edge Function), then lists active staging, confirms ship, and runs a lean
+Minimal Flutter client for Wear OS watches. Pairs via a short-lived code from
+the Windows/Android **Pair Watch** Settings action (`watch-pair` Edge Function;
+no sign-in), then lists active staging, confirms ship, and runs a lean
 staging verification walk (SVR-style).
 
 ## Prerequisites
 
 - Flutter SDK 3.44+ with Android toolchain (JDK 17 + Android SDK)
 - A Wear OS emulator or physical watch
-- Main Swift Staging & Shipping Log app signed in to create a pairing code (Settings → Pair Watch)
+- Main Swift Staging & Shipping Log app to create a pairing code (Settings → Pair Watch; no sign-in)
 
 ## Configure
 

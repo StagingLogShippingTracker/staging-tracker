@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/popup_gate.dart';
 import '../../core/theme.dart';
 import '../../data/app_state.dart';
 import '../../domain/models.dart';
@@ -11,10 +12,12 @@ Future<void> showSplitDialog(
   WidgetRef ref, {
   required StagingEntry entry,
 }) {
-  return showDialog<void>(
-    context: context,
-    builder: (_) => SplitDialog(entry: entry),
-  );
+  return PopupGate.exclusive<void>(PopupKeys.split, () {
+    return showDialog<void>(
+      context: context,
+      builder: (_) => SplitDialog(entry: entry),
+    );
+  });
 }
 
 class SplitDialog extends ConsumerStatefulWidget {

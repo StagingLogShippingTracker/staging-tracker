@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/popup_gate.dart';
 import '../../core/theme.dart';
 import '../../data/app_state.dart';
 import '../../domain/models.dart';
@@ -14,10 +15,12 @@ Future<void> showShipDialog(
   WidgetRef ref, {
   required StagingEntry entry,
 }) {
-  return showDialog<void>(
-    context: context,
-    builder: (_) => ShipDialog(entry: entry),
-  );
+  return PopupGate.exclusive<void>(PopupKeys.ship, () {
+    return showDialog<void>(
+      context: context,
+      builder: (_) => ShipDialog(entry: entry),
+    );
+  });
 }
 
 Future<void> showReturnDialog(
@@ -25,10 +28,12 @@ Future<void> showReturnDialog(
   WidgetRef ref, {
   required StagingEntry entry,
 }) {
-  return showDialog<void>(
-    context: context,
-    builder: (_) => ReturnDialog(entry: entry),
-  );
+  return PopupGate.exclusive<void>(PopupKeys.returnToStock, () {
+    return showDialog<void>(
+      context: context,
+      builder: (_) => ReturnDialog(entry: entry),
+    );
+  });
 }
 
 class ShipDialog extends ConsumerStatefulWidget {

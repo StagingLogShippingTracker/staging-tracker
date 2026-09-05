@@ -55,7 +55,7 @@ Docs (`AGENTS.md`, README) now match Win+Android+Wear. No PWA — correct for th
 
 ## 5. Remaining risks / tech debt
 
-1. **Live production backend** in client config — every authenticated write/notify is real. Discipline required; no staging environment called out as default.
+1. **Live production backend** in client config — every floor write/notify hits live data (open anon access since the open-anon migration). Discipline required; no staging environment called out as default.
 2. **Theme dual-track** — finish migrating remaining Material-default dialogs to Industrial tokens.
 3. **Wear / Android maturity** — code restored; field soak and CI matrix for non-Windows builds still thin relative to Windows.
 4. **Test surface** — solid unit coverage for intelligence/scanner helpers; limited widget/integration coverage for board, dock shortcuts, consolidate, overdue loop.

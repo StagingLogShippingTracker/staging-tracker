@@ -122,6 +122,7 @@ class _ScheduledUpdateHostState extends State<ScheduledUpdateHost>
         UpdatePromptPrefs.lastPromptDenverDate,
         DenverTime.dateKey(now),
       );
+      if (!mounted) return;
 
       _dialogOpen = true;
       final choice = await showDialog<bool>(

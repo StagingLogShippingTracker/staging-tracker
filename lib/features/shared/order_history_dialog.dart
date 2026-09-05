@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/popup_gate.dart';
 import '../../core/theme.dart';
 import '../../data/app_state.dart';
 import '../../domain/models.dart';
@@ -201,115 +202,85 @@ Future<void> showOrderHistoryDialog(
       data.staging.where((entry) => entry.so.trim().toUpperCase() == order).toList();
   final shipped =
       data.shipped.where((entry) => entry.so.trim().toUpperCase() == order).toList();
-  const canWrite = true;
-  if (usesDesktopPopupChrome(context)) {
-    return showGeneralDialog<void>(
-      context: context,
-      barrierDismissible: true,
-      barrierLabel: 'Order History',
-      barrierColor: const Color(0x73000000),
-      transitionDuration: const Duration(milliseconds: 180),
-      pageBuilder: (dialogContext, animation, secondaryAnimation) {
-        return Align(
-          alignment: Alignment.centerRight,
-          child: Material(
-            color: IndustrialTheme.chromeOf(context).surface,
-            child: SizedBox(
-              width: 440,
-              height: MediaQuery.sizeOf(dialogContext).height,
-              child: OrderHistoryDialog(
-      so: so,
-      activeEntries: active,
-      shippedEntries: shipped,
-      historyFuture: ref.read(changelogRepoProvider).forOrder(so),
-      onAddEntry: canWrite
-          ? () {
-              final customer = active.isNotEmpty
-                  ? active.first.customer
-                  : (shipped.isNotEmpty ? shipped.first.customer : '');
-              Navigator.pop(dialogContext);
-              showStagingFormSheet(
-                context,
-                ref,
-                initialSo: so,
-                initialCustomer: customer,
-                allowExistingSo: true,
-                lockIdentity: true,
-              );
-            }
-          : null,
-      onConsolidate: canWrite && active.length > 1
-          ? () async {
-              Navigator.pop(dialogContext);
-              final ok = await confirmDialog(
-                context,
-                title: 'Consolidate SO $so?',
-                message:
-                    'Merge ${active.length} active staging rows into one entry.',
-                confirmLabel: 'Consolidate',
-                confirmColor: SlstColors.purple,
-              );
-              if (!ok || !context.mounted) return;
-              try {
-                await ref.read(operationsProvider).consolidateStaging(active);
-                if (context.mounted) showOk(context, 'Consolidated SO $so');
-              } catch (error) {
-                if (context.mounted) showError(context, error);
-              }
-            }
-          : null,
-    ),
-            ),
-          ),
-        );
-      },
+  // Floor app is open-anon: write actions are always available (RLS is the gate).
+  void onAddEntry(BuildContext dialogContext) {
+    final customer = active.isNotEmpty
+        ? active.first.customer
+        : (shipped.isNotEmpty ? shipped.first.customer : '');
+    Navigator.pop(dialogContext);
+    showStagingFormSheet(
+      context,
+      ref,
+      initialSo: so,
+      initialCustomer: customer,
+      allowExistingSo: true,
+      lockIdentity: true,
     );
   }
-  return showDialog<void>(
-    context: context,
-    builder: (dialogContext) => OrderHistoryDialog(
-      so: so,
-      activeEntries: active,
-      shippedEntries: shipped,
-      historyFuture: ref.read(changelogRepoProvider).forOrder(so),
-      onAddEntry: canWrite
-          ? () {
-              final customer = active.isNotEmpty
-                  ? active.first.customer
-                  : (shipped.isNotEmpty ? shipped.first.customer : '');
-              Navigator.pop(dialogContext);
-              showStagingFormSheet(
-                context,
-                ref,
-                initialSo: so,
-                initialCustomer: customer,
-                allowExistingSo: true,
-                lockIdentity: true,
-              );
-            }
-          : null,
-      onConsolidate: canWrite && active.length > 1
-          ? () async {
-              Navigator.pop(dialogContext);
-              final ok = await confirmDialog(
-                context,
-                title: 'Consolidate SO $so?',
-                message:
-                    'Merge ${active.length} active staging rows into one entry.',
-                confirmLabel: 'Consolidate',
-                confirmColor: SlstColors.purple,
-              );
-              if (!ok || !context.mounted) return;
-              try {
-                await ref.read(operationsProvider).consolidateStaging(active);
-                if (context.mounted) showOk(context, 'Consolidated SO $so');
-              } catch (error) {
-                if (context.mounted) showError(context, error);
-              }
-            }
-          : null,
-    ),
-  );
+
+  Future<void> onConsolidate(BuildContext dialogContext) async {
+    Navigator.pop(dialogContext);
+    final ok = await confirmDialog(
+      context,
+      title: 'Consolidate SO $so?',
+      message: 'Merge ${active.length} active staging rows into one entry.',
+      confirmLabel: 'Consolidate',
+      confirmColor: SlstColors.purple,
+    );
+    if (!ok || !context.mounted) return;
+    try {
+      await ref.read(operationsProvider).consolidateStaging(active);
+      if (context.mounted) showOk(context, 'Consolidated SO $so');
+    } catch (error) {
+      if (context.mounted) showError(context, error);
+    }
+  }
+
+  return PopupGate.exclusive<void>(PopupKeys.orderHistory, () {
+    if (usesDesktopPopupChrome(context)) {
+      return showGeneralDialog<void>(
+        context: context,
+        barrierDismissible: true,
+        barrierLabel: 'Order History',
+        barrierColor: const Color(0x73000000),
+        transitionDuration: const Duration(milliseconds: 180),
+        pageBuilder: (dialogContext, animation, secondaryAnimation) {
+          return Align(
+            alignment: Alignment.centerRight,
+            child: Material(
+              color: IndustrialTheme.chromeOf(context).surface,
+              child: SizedBox(
+                width: 440,
+                height: MediaQuery.sizeOf(dialogContext).height,
+                child: OrderHistoryDialog(
+                  so: so,
+                  activeEntries: active,
+                  shippedEntries: shipped,
+                  historyFuture: ref.read(changelogRepoProvider).forOrder(so),
+                  onAddEntry: () => onAddEntry(dialogContext),
+                  onConsolidate: active.length > 1
+                      ? () => onConsolidate(dialogContext)
+                      : null,
+                ),
+              ),
+            ),
+          );
+        },
+      );
+    }
+    return showDialog<void>(
+      context: context,
+      builder: (dialogContext) => OrderHistoryDialog(
+        so: so,
+        activeEntries: active,
+        shippedEntries: shipped,
+        historyFuture: ref.read(changelogRepoProvider).forOrder(so),
+        onAddEntry: () => onAddEntry(dialogContext),
+        onConsolidate:
+            active.length > 1 ? () => onConsolidate(dialogContext) : null,
+      ),
+    );
+  });
 }
 
 class OrderHistoryDialog extends StatelessWidget {

@@ -18,6 +18,16 @@ function Invoke-RepoFlutter {
   }
 }
 
+function Get-RepoVersion {
+  $pubspec = Join-Path $script:RepoRoot 'pubspec.yaml'
+  $line = Select-String -Path $pubspec -Pattern '^version:\s*(\S+)' | Select-Object -First 1
+  if (-not $line) {
+    throw "Could not find a version: line in $pubspec"
+  }
+  $full = $line.Matches[0].Groups[1].Value
+  return $full.Split('+')[0]
+}
+
 function Write-RepoSha256 {
   param(
     [Parameter(Mandatory = $true)]

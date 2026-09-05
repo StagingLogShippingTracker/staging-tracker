@@ -5,6 +5,8 @@ import '../../core/theme.dart';
 import '../../data/theme_preference.dart';
 import '../shared/industrial_widgets.dart';
 import '../shared/widgets.dart';
+import 'app_changelog.dart';
+import 'how_to_use.dart';
 import 'pair_watch_card.dart';
 import 'app_update_card.dart';
 import 'feedback_card.dart';
@@ -36,6 +38,24 @@ class SettingsScreen extends ConsumerWidget {
         const PairWatchCard(),
         const SizedBox(height: 16),
         const AppUpdateCard(),
+        const SizedBox(height: 16),
+        Card(
+          child: Column(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.campaign_outlined),
+                title: const Text("What's new"),
+                onTap: () => showWhatsNewDialog(context),
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(Icons.help_outline),
+                title: const Text('How to use'),
+                onTap: () => showHowToUseDialog(context),
+              ),
+            ],
+          ),
+        ),
         const SizedBox(height: 16),
         const FeedbackCard(),
       ],

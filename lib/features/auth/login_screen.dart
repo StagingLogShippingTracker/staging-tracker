@@ -49,7 +49,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             email: email,
             password: password,
           );
-      if (mounted) context.go('/');
+      if (!mounted) return;
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      } else {
+        context.go('/');
+      }
     } catch (e) {
       setState(() => _error = _friendlyAuthError(e));
     } finally {
@@ -114,9 +119,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             Text(
-                              'Sign in to Swift Staging & Shipping Log to create '
-                              'and edit staging or shipping records. Signed-out '
-                              'users cannot view or change operational data.',
+                              'Staging, shipping, and notifications work without '
+                              'signing in. Sign in only if you need to pair a '
+                              'Wear OS watch to this session.',
                               style: TextStyle(
                                 fontSize: 13,
                                 color: IndustrialTheme.chromeOf(context).muted,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/popup_gate.dart';
 import '../../core/theme.dart';
 import '../../data/app_state.dart';
 import '../../domain/location_intelligence.dart';
@@ -66,6 +67,7 @@ Future<LocationSelection?> showLocationSelector(
   return showAdaptivePopup<LocationSelection>(
     context,
     maxWidth: 720,
+    exclusiveKey: PopupKeys.locationSelector,
     builder: (_) => LocationSelectorDialog(
       initialValue: initialValue,
       so: so,
@@ -397,44 +399,49 @@ Future<LocationAdvisoryDecision> confirmLocationAdvisory(
     'This warning is advisory; another user can change staging before save.',
   ];
   final showConsolidate = assessment.hasConsolidationOpportunity;
-  final result = await showDialog<LocationAdvisoryDecision>(
-    context: context,
-    builder: (dialogContext) => AlertDialog(
-      title: const Text('Location assignment warning'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(lines.join('\n\n')),
-          const SizedBox(height: 16),
-          FilledButton(
-            onPressed: () => Navigator.pop(
-              dialogContext,
-              LocationAdvisoryDecision.proceed,
-            ),
-            child: const Text('Proceed anyway'),
-          ),
-          if (showConsolidate) ...[
-            const SizedBox(height: 8),
-            OutlinedButton(
-              onPressed: () => Navigator.pop(
-                dialogContext,
-                LocationAdvisoryDecision.consolidate,
+  final result = await PopupGate.exclusive<LocationAdvisoryDecision>(
+    PopupKeys.locationAdvisory,
+    () {
+      return showDialog<LocationAdvisoryDecision>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Location assignment warning'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(lines.join('\n\n')),
+              const SizedBox(height: 16),
+              FilledButton(
+                onPressed: () => Navigator.pop(
+                  dialogContext,
+                  LocationAdvisoryDecision.proceed,
+                ),
+                child: const Text('Proceed anyway'),
               ),
-              child: const Text('Save & consolidate'),
-            ),
-          ],
-          const SizedBox(height: 4),
-          TextButton(
-            onPressed: () => Navigator.pop(
-              dialogContext,
-              LocationAdvisoryDecision.cancel,
-            ),
-            child: const Text('Cancel'),
+              if (showConsolidate) ...[
+                const SizedBox(height: 8),
+                OutlinedButton(
+                  onPressed: () => Navigator.pop(
+                    dialogContext,
+                    LocationAdvisoryDecision.consolidate,
+                  ),
+                  child: const Text('Save & consolidate'),
+                ),
+              ],
+              const SizedBox(height: 4),
+              TextButton(
+                onPressed: () => Navigator.pop(
+                  dialogContext,
+                  LocationAdvisoryDecision.cancel,
+                ),
+                child: const Text('Cancel'),
+              ),
+            ],
           ),
-        ],
-      ),
-    ),
+        ),
+      );
+    },
   );
   return result ?? LocationAdvisoryDecision.cancel;
 }

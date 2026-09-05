@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/popup_gate.dart';
 import '../../core/theme.dart';
 import '../../data/app_state.dart';
 import '../../domain/models.dart';
@@ -20,49 +21,51 @@ Future<bool> confirmPartialShipAdvisory(
   final locationLine = locations.isEmpty
       ? '${leftovers.length} other staging ${leftovers.length == 1 ? 'entry' : 'entries'}'
       : locations.join(', ');
-  final result = await showDialog<bool>(
-    context: context,
-    builder: (dialogContext) => AlertDialog(
-      title: Row(
-        children: [
-          const Icon(Icons.warning_amber_rounded, color: SlstColors.warning),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              'Other locations remain',
-              style: Theme.of(dialogContext).textTheme.titleLarge,
+  final result = await PopupGate.exclusive<bool>(PopupKeys.soAdvisory, () {
+    return showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded, color: SlstColors.warning),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Other locations remain',
+                style: Theme.of(dialogContext).textTheme.titleLarge,
+              ),
             ),
-          ),
-          IconButton(
-            tooltip: 'Close',
+            IconButton(
+              tooltip: 'Close',
+              onPressed: () => Navigator.pop(dialogContext, false),
+              icon: const Icon(Icons.close),
+            ),
+          ],
+        ),
+        content: Text(
+          'SO $so still has staging at:\n\n'
+          '$locationLine\n\n'
+          'Shipping only this location is sometimes intentional '
+          '(for example fittings ahead of valves). '
+          'Remaining entries stay in Staging until shipped separately.',
+        ),
+        actions: [
+          TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            icon: const Icon(Icons.close),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: SlstColors.green,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Ship anyway'),
           ),
         ],
       ),
-      content: Text(
-        'SO $so still has staging at:\n\n'
-        '$locationLine\n\n'
-        'Shipping only this location is sometimes intentional '
-        '(for example fittings ahead of valves). '
-        'Remaining entries stay in Staging until shipped separately.',
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(dialogContext, false),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          style: FilledButton.styleFrom(
-            backgroundColor: SlstColors.green,
-            foregroundColor: Colors.white,
-          ),
-          onPressed: () => Navigator.pop(dialogContext, true),
-          child: const Text('Ship anyway'),
-        ),
-      ],
-    ),
-  );
+    );
+  });
   return result ?? false;
 }
 
@@ -87,9 +90,10 @@ Future<bool> confirmSoMultiEntryAdvisory(
           '$locationLine\n\n'
           'Multiple locations for one SO are allowed. '
           'Continue only if this is intentional.';
-  final result = await showDialog<bool>(
-    context: context,
-    builder: (dialogContext) => AlertDialog(
+  final result = await PopupGate.exclusive<bool>(PopupKeys.soAdvisory, () {
+    return showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
       title: Row(
         children: [
           const Icon(Icons.info_outline, color: SlstColors.info),
@@ -119,7 +123,8 @@ Future<bool> confirmSoMultiEntryAdvisory(
         ),
       ],
     ),
-  );
+    );
+  });
   return result ?? false;
 }
 

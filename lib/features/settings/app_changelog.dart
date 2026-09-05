@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../core/popup_gate.dart';
 import '../../core/theme.dart';
 
 /// In-app "What's new" prompt for the first [maxShows] launches of each
@@ -18,6 +19,26 @@ class AppChangelog {
 
   /// Ordered newest-first, same campaign-wave pattern as Document Generator.
   static const sections = <ChangelogSection>[
+    ChangelogSection(
+      version: 'v1.1.45',
+      bullets: [
+        'Prompt windows no longer stack from rapid clicks or F-keys (intentional multi-step dialogs still work)',
+        'Wear Pair Watch works with no sign-in; Unpair replaces Sign out on the watch',
+        'Android launch screen is solid dark — no light tile / white padding behind the splash logo',
+        'CI and packaging use SwiftStagingLog-* names; installer version tracks pubspec',
+      ],
+    ),
+    ChangelogSection(
+      version: 'v1.1.44',
+      bullets: [
+        'Settings → Pair Watch creates a Wear pairing code with no sign-in (anon floor)',
+        'Windows installer version tracks pubspec (no more stale 1.1.40 label)',
+        'Staging log action column no longer overflows on Ship + menu',
+        "What's New and How to use can be reopened anytime from Settings",
+        'PM emails with photos no longer send twice (Make router routes are mutually exclusive)',
+        'How to Use matches Notifications compose tabs and Settings Pair Watch / What’s New',
+      ],
+    ),
     ChangelogSection(
       version: 'v1.1.43',
       bullets: [
@@ -112,6 +133,26 @@ Future<void> saveChangelogPromptState(ChangelogPromptState state) async {
   await prefs.setInt(ChangelogPromptPrefs.timesShown, state.timesShown);
 }
 
+/// Shows the What's New dialog on demand (e.g. from Settings), regardless of
+/// the auto-prompt's per-device show count.
+Future<void> showWhatsNewDialog(BuildContext context) async {
+  if (!context.mounted) return;
+  String version = 'unknown';
+  String versionLabel = '';
+  try {
+    final info = await PackageInfo.fromPlatform();
+    version = info.version.trim();
+    versionLabel = '${info.version}+${info.buildNumber}';
+  } catch (_) {}
+  if (!context.mounted) return;
+  await _showChangelogDialog(
+    context,
+    version: version,
+    versionLabel: versionLabel,
+    footer: 'You can reopen this anytime from Settings.',
+  );
+}
+
 /// Shows the What's New dialog when this device still has shows remaining.
 Future<void> maybeShowChangelogPrompt(BuildContext context) async {
   if (!context.mounted) return;
@@ -147,11 +188,33 @@ Future<void> maybeShowChangelogPrompt(BuildContext context) async {
           ? 'This summary will appear 1 more time on this device.'
           : 'This summary will appear $remainingAfter more times on this device.';
 
-  await showDialog<void>(
-    context: context,
-    barrierDismissible: true,
-    useRootNavigator: true,
-    builder: (ctx) {
+  await _showChangelogDialog(
+    context,
+    version: version,
+    versionLabel: versionLabel,
+    footer: footer,
+  );
+
+  await saveChangelogPromptState(
+    ChangelogPromptState(
+      campaignId: campaignId,
+      timesShown: state.timesShown + 1,
+    ),
+  );
+}
+
+Future<void> _showChangelogDialog(
+  BuildContext context, {
+  required String version,
+  required String versionLabel,
+  required String footer,
+}) async {
+  await PopupGate.exclusive<void>(PopupKeys.whatsNew, () {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      useRootNavigator: true,
+      builder: (ctx) {
       final chrome = IndustrialTheme.chromeOf(ctx);
       return AlertDialog(
         title: Text(AppChangelog.titleFor(version)),
@@ -229,12 +292,6 @@ Future<void> maybeShowChangelogPrompt(BuildContext context) async {
         ],
       );
     },
-  );
-
-  await saveChangelogPromptState(
-    ChangelogPromptState(
-      campaignId: campaignId,
-      timesShown: state.timesShown + 1,
-    ),
-  );
+    );
+  });
 }

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/desktop_mode.dart';
+import '../../core/popup_gate.dart';
 import '../../core/theme.dart';
 import '../../data/app_state.dart';
 import '../../domain/models.dart';
@@ -231,7 +232,10 @@ class ShellCommandDock extends ConsumerWidget {
       final key = logicalKeyFor(action.key);
       final onPressed = action.onPressed;
       if (key == null || onPressed == null) continue;
-      bindings[SingleActivator(key)] = onPressed;
+      bindings[SingleActivator(key)] = () {
+        if (PopupGate.isOpen) return;
+        onPressed();
+      };
     }
     return bindings;
   }

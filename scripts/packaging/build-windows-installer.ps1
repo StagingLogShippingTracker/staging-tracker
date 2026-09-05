@@ -17,7 +17,8 @@ if (-not $iscc) {
 }
 
 $iss = Join-Path $PSScriptRoot 'swift-staging-log-user-install.iss'
-& $iscc $iss
+$version = Get-RepoVersion
+& $iscc "/DMyAppVersion=$version" $iss
 if ($LASTEXITCODE -ne 0) {
   throw "Inno Setup compilation failed (exit $LASTEXITCODE)."
 }

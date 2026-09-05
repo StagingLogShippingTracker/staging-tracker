@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../../core/app_config.dart';
 import '../../core/branding.dart';
+import '../../core/popup_gate.dart';
 import '../../core/theme.dart';
 import '../../data/app_state.dart';
 import '../../domain/models.dart';
@@ -21,32 +22,44 @@ bool usesDesktopPopupChrome(BuildContext context) {
 /// Uses a conventional dialog on desktop and a bottom sheet on touch-first
 /// mobile platforms. Popup content is expected to render its own explicit X
 /// close control on every platform (sheets remain swipe-dismissible too).
+///
+/// Pass [exclusiveKey] (see [PopupKeys]) so rapid re-clicks cannot open the
+/// same prompt twice. Omit the key only for one-shot helpers that should not
+/// participate in exclusivity.
 Future<T?> showAdaptivePopup<T>(
   BuildContext context, {
   required WidgetBuilder builder,
   double maxWidth = 680,
+  Object? exclusiveKey,
 }) {
-  if (usesDesktopPopupChrome(context)) {
-    return showDialog<T>(
-      context: context,
-      builder: (dialogContext) => Dialog(
-        insetPadding: const EdgeInsets.all(24),
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxWidth: maxWidth,
-            maxHeight: MediaQuery.sizeOf(dialogContext).height * 0.9,
+  Future<T?> open() {
+    if (usesDesktopPopupChrome(context)) {
+      return showDialog<T>(
+        context: context,
+        builder: (dialogContext) => Dialog(
+          insetPadding: const EdgeInsets.all(24),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: maxWidth,
+              maxHeight: MediaQuery.sizeOf(dialogContext).height * 0.9,
+            ),
+            child: builder(dialogContext),
           ),
-          child: builder(dialogContext),
         ),
-      ),
+      );
+    }
+    return showModalBottomSheet<T>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: builder,
     );
   }
-  return showModalBottomSheet<T>(
-    context: context,
-    isScrollControlled: true,
-    useSafeArea: true,
-    builder: builder,
-  );
+
+  if (exclusiveKey != null) {
+    return PopupGate.exclusive<T>(exclusiveKey, open);
+  }
+  return open();
 }
 
 /// Resolves the [StatusStyle] for a raw DB status string.
@@ -757,69 +770,71 @@ Future<void> showPhotosDialog(
   required String title,
   required List<String> paths,
 }) {
-  return showDialog<void>(
-    context: context,
-    builder: (context) => Dialog(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 720, maxHeight: 560),
-        child: Padding(
-          padding: const EdgeInsets.all(18),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      title,
-                      style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w700,
+  return PopupGate.exclusive<void>(PopupKeys.photos, () {
+    return showDialog<void>(
+      context: context,
+      builder: (context) => Dialog(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 720, maxHeight: 560),
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
-                  ),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Flexible(
-                child: paths.isEmpty
-                    ? const Padding(
-                        padding: EdgeInsets.all(24),
-                        child: Text('No photos attached.'),
-                      )
-                    : GridView.builder(
-                        shrinkWrap: true,
-                        gridDelegate:
-                            const SliverGridDelegateWithMaxCrossAxisExtent(
-                              maxCrossAxisExtent: 220,
-                              mainAxisSpacing: 10,
-                              crossAxisSpacing: 10,
-                            ),
-                        itemCount: paths.length,
-                        itemBuilder: (context, i) => ClipRRect(
-                          borderRadius: BorderRadius.circular(10),
-                          child: Image.network(
-                            AppConfig.publicPhotoUrl(paths[i]),
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, _, _) => Container(
-                              color: Colors.black12,
-                              child: const Icon(Icons.broken_image),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Flexible(
+                  child: paths.isEmpty
+                      ? const Padding(
+                          padding: EdgeInsets.all(24),
+                          child: Text('No photos attached.'),
+                        )
+                      : GridView.builder(
+                          shrinkWrap: true,
+                          gridDelegate:
+                              const SliverGridDelegateWithMaxCrossAxisExtent(
+                                maxCrossAxisExtent: 220,
+                                mainAxisSpacing: 10,
+                                crossAxisSpacing: 10,
+                              ),
+                          itemCount: paths.length,
+                          itemBuilder: (context, i) => ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: Image.network(
+                              AppConfig.publicPhotoUrl(paths[i]),
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, _, _) => Container(
+                                color: Colors.black12,
+                                child: const Icon(Icons.broken_image),
+                              ),
                             ),
                           ),
                         ),
-                      ),
-              ),
-            ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
-    ),
-  );
+    );
+  });
 }
 
 /// Card for one staging/shipped entry. Supports both a Windows-style row tint
@@ -973,23 +988,25 @@ Future<bool> confirmDialog(
   String confirmLabel = 'Confirm',
   Color confirmColor = SlstColors.danger,
 }) async {
-  final result = await showDialog<bool>(
-    context: context,
-    builder: (ctx) => AlertDialog(
-      title: Text(title),
-      content: Text(message),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(ctx, false),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          style: FilledButton.styleFrom(backgroundColor: confirmColor),
-          onPressed: () => Navigator.pop(ctx, true),
-          child: Text(confirmLabel),
-        ),
-      ],
-    ),
-  );
+  final result = await PopupGate.exclusive<bool>(PopupKeys.confirm, () {
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: confirmColor),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(confirmLabel),
+          ),
+        ],
+      ),
+    );
+  });
   return result ?? false;
 }

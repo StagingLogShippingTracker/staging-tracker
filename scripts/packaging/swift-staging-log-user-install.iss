@@ -3,7 +3,11 @@
 ; single & (they are not caption fields — && would appear as two ampersands).
 #define MyAppName "Swift Staging && Shipping Log"
 #define MyAppShortcutName "Swift Staging & Shipping Log"
-#define MyAppVersion "1.1.40"
+; Overridden from the build script via /DMyAppVersion=X.Y.Z (read live from
+; pubspec.yaml) so the installer never drifts from the packaged app version.
+#ifndef MyAppVersion
+  #define MyAppVersion "1.1.45"
+#endif
 #define MyAppPublisher "Swift Supply"
 #define MyAppExeName "SwiftStagingLog.exe"
 

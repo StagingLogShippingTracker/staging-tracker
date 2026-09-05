@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/popup_gate.dart';
 import '../../core/theme.dart';
 import '../../data/app_state.dart';
 import '../../domain/models.dart';
@@ -79,10 +80,12 @@ const _sortLabels = [
 ];
 
 Future<void> showStatDetailDialog(BuildContext context, StatDetailMode mode) {
-  return showDialog<void>(
-    context: context,
-    builder: (context) => _StatDetailDialog(mode: mode),
-  );
+  return PopupGate.exclusive<void>(PopupKeys.statDetail, () {
+    return showDialog<void>(
+      context: context,
+      builder: (context) => _StatDetailDialog(mode: mode),
+    );
+  });
 }
 
 /// One expanded row: an entry plus the container label being represented.

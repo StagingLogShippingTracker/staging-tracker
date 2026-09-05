@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/branding.dart';
+import '../../core/popup_gate.dart';
 import '../../core/theme.dart';
 import '../../data/app_state.dart';
 import '../../data/theme_preference.dart';
@@ -165,6 +166,11 @@ class _AppShellState extends ConsumerState<AppShell> {
       final onPressed = action.onPressed;
       if (key == null || onPressed == null) continue;
       if (event.logicalKey == key) {
+        // Consume dock hotkeys while any modal is up so F1–F5 cannot double-
+        // fire entry actions (PopupGate also blocks same-key re-entry).
+        if (PopupGate.isOpen || PopupGate.topIsModal(context)) {
+          return true;
+        }
         onPressed();
         return true;
       }

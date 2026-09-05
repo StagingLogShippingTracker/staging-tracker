@@ -1,5 +1,5 @@
 {
-  "ts": "2026-08-22T22:41:44.402668Z",
+  "ts": "2026-09-05T22:08:26.889393Z",
   "domain": "notify",
   "cases": [
     {
@@ -103,7 +103,7 @@
     {
       "case_id": "subject_uppercase_all_types",
       "ok": true,
-      "duration_ms": 1,
+      "duration_ms": 0,
       "metrics_raw": {
         "coverage": 1.0
       }
@@ -128,7 +128,7 @@
     {
       "case_id": "no_make_webhook_in_flutter",
       "ok": true,
-      "duration_ms": 47,
+      "duration_ms": 64,
       "gates_raw": {
         "no_webhook_in_clients": true
       }

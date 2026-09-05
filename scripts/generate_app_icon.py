@@ -15,7 +15,6 @@ from PIL import Image, ImageDraw
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "assets" / "swift-staging-log-app-icon.png"
 WORDMARK = ROOT / "assets" / "swift-staging-log-wordmark-white.png"
-SPLASH_SQUARE_SRC = ROOT / "assets" / "swift-staging-log-splash-wordmark.png"
 BRAND_DIR = ROOT / "brand" / "app-icon"
 ICO_PATH = ROOT / "windows" / "runner" / "resources" / "app_icon.ico"
 
@@ -39,9 +38,12 @@ BRAND_SIZES = [16, 24, 32, 48, 64, 128, 256, 512, 1024]
 ICO_SIZES = [256, 128, 64, 48, 32, 24, 16]
 
 ICON_BG = (0x12, 0x14, 0x17, 255)
-SPLASH_BG = (0x12, 0x14, 0x17, 255)
+# Must match android/.../values/colors.xml launch_background (#091019).
+SPLASH_BG = (0x09, 0x10, 0x19, 255)
 # Match Document Generator's outer tile roundness (~22% of edge).
 CORNER_RADIUS_FRAC = 0.22
+# Android 12 splash icon is masked to a circle — keep artwork inside ~66%.
+SPLASH_SAFE_FRAC = 0.62
 
 
 def resize(src: Image.Image, size: int) -> Image.Image:
@@ -81,27 +83,34 @@ def apply_rounded_square_mask(
     return out
 
 
-def make_splash_from_wordmark(size: int) -> Image.Image:
-    if SPLASH_SQUARE_SRC.exists():
-        return resize(Image.open(SPLASH_SQUARE_SRC).convert("RGBA"), size)
+def make_splash_plate(size: int) -> Image.Image:
+    """Opaque #091019 plate with white wordmark (or icon mark) — no light tile.
+
+    Transparent splash corners + Android 12's icon circle made the light
+    launcher tile look like white padding on the dark launch screen.
+    """
     canvas = Image.new("RGBA", (size, size), SPLASH_BG)
-    if not WORDMARK.exists():
-        if not SRC.exists():
-            raise SystemExit(f"Missing splash wordmark and icon: {WORDMARK}")
-        mark = resize(Image.open(SRC).convert("RGBA"), size)
-        canvas.alpha_composite(mark)
+    if WORDMARK.exists():
+        wm = Image.open(WORDMARK).convert("RGBA")
+        bbox = wm.getbbox()
+        if bbox:
+            wm = wm.crop(bbox)
+        max_w = int(size * SPLASH_SAFE_FRAC)
+        max_h = int(size * 0.28)
+        scale = min(max_w / max(wm.width, 1), max_h / max(wm.height, 1))
+        nw = max(1, int(wm.width * scale))
+        nh = max(1, int(wm.height * scale))
+        resized = wm.resize((nw, nh), Image.Resampling.LANCZOS)
+        canvas.alpha_composite(resized, ((size - nw) // 2, (size - nh) // 2))
         return canvas
-    wm = Image.open(WORDMARK).convert("RGBA")
-    bbox = wm.getbbox()
-    if bbox:
-        wm = wm.crop(bbox)
-    max_w = int(size * 0.78)
-    max_h = int(size * 0.28)
-    scale = min(max_w / wm.width, max_h / wm.height)
-    nw = max(1, int(wm.width * scale))
-    nh = max(1, int(wm.height * scale))
-    resized = wm.resize((nw, nh), Image.Resampling.LANCZOS)
-    canvas.alpha_composite(resized, ((size - nw) // 2, (size - nh) // 2))
+
+    if not SRC.exists():
+        raise SystemExit(f"Missing splash wordmark and icon: {WORDMARK}")
+    # Fallback: dark plate + launcher art (still no transparent corners).
+    mark = resize(Image.open(SRC).convert("RGBA"), int(size * SPLASH_SAFE_FRAC))
+    canvas.alpha_composite(
+        mark, ((size - mark.width) // 2, (size - mark.height) // 2)
+    )
     return canvas
 
 
@@ -147,12 +156,15 @@ def main() -> None:
             im.save(dest, optimize=True)
             print(dest.relative_to(ROOT))
 
-    splash_master = make_splash_from_wordmark(1152)
+    # Always rebuild splash from wordmark on opaque dark — never reuse a
+    # corrupted/light splash-wordmark asset that looks like white padding.
+    splash_master = make_splash_plate(1152)
     splash_asset = ROOT / "assets" / "swift-staging-log-splash-wordmark.png"
     resize(splash_master, 1024).save(splash_asset, optimize=True)
+    print("splash", splash_asset)
 
     for folder, s in SPLASH_LAUNCH_MAP.items():
-        im = make_splash_from_wordmark(s)
+        im = make_splash_plate(s)
         for res_root in android_res_roots():
             dest = res_root / folder / "launch_image.png"
             dest.parent.mkdir(parents=True, exist_ok=True)
@@ -162,6 +174,7 @@ def main() -> None:
         drawable = res_root / "drawable"
         drawable.mkdir(parents=True, exist_ok=True)
         resize(splash_master, 576).save(drawable / "splash_logo.png", optimize=True)
+        print(drawable.relative_to(ROOT) / "splash_logo.png")
 
 
 if __name__ == "__main__":

@@ -215,24 +215,26 @@ void main() {
     }
   });
 
-  testWidgets('Staging table shows entry columns while signed out', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(1920, 1200);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(tester.view.reset);
-    await tester.pumpWidget(
-      _wrap(StagingLogCard(entries: [_staging()], expanded: true), prefs),
-    );
-    await tester.pumpAndSettle();
-    expect(find.text('ACTIVE STAGING ENTRIES'), findsOneWidget);
-    expect(find.text('SO-1001'), findsOneWidget);
-    expect(find.text('Acme Industrial'), findsOneWidget);
-    // Signed out: no write affordances.
-    expect(find.text('Batch Mode'), findsNothing);
-    expect(find.text('New Entry'), findsNothing);
-    expect(find.text('EDIT'), findsNothing);
-  });
+  testWidgets(
+    'Staging table shows entry columns and write actions while signed out',
+    (tester) async {
+      tester.view.physicalSize = const Size(1920, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        _wrap(StagingLogCard(entries: [_staging()], expanded: true), prefs),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('ACTIVE STAGING ENTRIES'), findsOneWidget);
+      expect(find.text('SO-1001'), findsOneWidget);
+      expect(find.text('Acme Industrial'), findsOneWidget);
+      // Floor app uses open anon Supabase access: write affordances are
+      // shown whether or not this device is signed in (RLS is the real
+      // gate). See AGENTS.md "Auth".
+      expect(find.text('Batch Mode'), findsOneWidget);
+      expect(find.text('New Entry'), findsOneWidget);
+    },
+  );
 
   testWidgets('Shipped table renders and flags returns', (tester) async {
     tester.view.physicalSize = const Size(1920, 1200);

@@ -2,8 +2,7 @@
   "scenarioId": 5572398,
   "name": "Integration Webhooks, Microsoft 365 Email (Outlook)",
   "isActive": true,
-  "teamId": 2470824,
-  "hookId": 2536873,
-  "checked_at": "2026-08-22T18:35:00Z",
-  "source": "make_mcp_scenarios_get"
+  "checked_at": "2026-09-05T22:07:00Z",
+  "source": "cursor_mcp_scenarios_get",
+  "notes": "Route B filter includes length(attachments)<=0; routes mutually exclusive."
 }

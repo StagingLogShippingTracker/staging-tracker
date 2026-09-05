@@ -9,6 +9,6 @@ Phone and Wear clients update via **Settings → Update** (GitHub `releases/late
 
 - Do **not** run `adb install`, wireless ADB pairing, or ADB push/install loops for Android or Wear after packaging.
 - Do **not** poll for devices, restart the ADB server, or ask the user to enable wireless debugging for installs.
-- After packaging, publish GitHub Release assets (`SLST-Android.apk`, `SLST-Wear.apk`, etc.) so in-app Update can fetch them.
-- Windows may still be launched locally from `dist/SLST-Windows-Portable/` when useful.
+- After packaging, publish GitHub Release assets (`SwiftStagingLog-Android.apk`, `SwiftStagingLog-Wear.apk`, etc.) so in-app Update can fetch them.
+- Windows may still be launched locally from `dist/SwiftStagingLog-Windows-Portable/` when useful.
 - Only use ADB if the user **explicitly** asks for an ADB install or device debugging in that message.

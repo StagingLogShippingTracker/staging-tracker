@@ -1,4 +1,4 @@
-name: Build SLST
+name: Build Swift Staging Log
 
 on:
   push:
@@ -37,14 +37,14 @@ jobs:
           $release = "build\windows\x64\runner\Release"
           $dist = "dist"
           New-Item -ItemType Directory -Force -Path $dist | Out-Null
-          $artifact = "$dist\SLST-Windows-Portable.zip"
+          $artifact = "$dist\SwiftStagingLog-Windows-Portable.zip"
           Compress-Archive -Path "$release\*" -DestinationPath $artifact -Force
           $hash = (Get-FileHash -Algorithm SHA256 -Path $artifact).Hash.ToLowerInvariant()
-          Set-Content -Path "$artifact.sha256" -Value "$hash *SLST-Windows-Portable.zip" -NoNewline
+          Set-Content -Path "$artifact.sha256" -Value "$hash *SwiftStagingLog-Windows-Portable.zip" -NoNewline
       - uses: actions/upload-artifact@v4
         with:
-          name: SLST-Windows-Portable
-          path: dist/SLST-Windows-Portable.zip*
+          name: SwiftStagingLog-Windows-Portable
+          path: dist/SwiftStagingLog-Windows-Portable.zip*
 
   android:
     needs: test
@@ -65,14 +65,14 @@ jobs:
           if [ -f android/key.properties ]; then
             flutter build apk --release
             mkdir -p dist
-            cp build/app/outputs/flutter-apk/app-release.apk dist/SLST-Android.apk
+            cp build/app/outputs/flutter-apk/app-release.apk dist/SwiftStagingLog-Android.apk
           else
             flutter build apk --debug
             mkdir -p dist
-            cp build/app/outputs/flutter-apk/app-debug.apk dist/SLST-Android.apk
+            cp build/app/outputs/flutter-apk/app-debug.apk dist/SwiftStagingLog-Android.apk
           fi
-          sha256sum dist/SLST-Android.apk > dist/SLST-Android.apk.sha256
+          sha256sum dist/SwiftStagingLog-Android.apk > dist/SwiftStagingLog-Android.apk.sha256
       - uses: actions/upload-artifact@v4
         with:
-          name: SLST-Android
-          path: dist/SLST-Android.apk*
+          name: SwiftStagingLog-Android
+          path: dist/SwiftStagingLog-Android.apk*

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../core/popup_gate.dart';
 import '../../core/theme.dart';
 import '../../data/app_state.dart';
 import '../../platform/photo_picker.dart';
@@ -14,13 +15,15 @@ Future<List<PhotoBytes>?> showDocumentScanner(
   BuildContext context, {
   List<PhotoBytes> initialPages = const [],
 }) {
-  return showDialog<List<PhotoBytes>>(
-    context: context,
-    barrierDismissible: false,
-    builder: (_) => Dialog.fullscreen(
-      child: DocumentScannerScreen(initialPages: initialPages),
-    ),
-  );
+  return PopupGate.exclusive<List<PhotoBytes>>(PopupKeys.documentScanner, () {
+    return showDialog<List<PhotoBytes>>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => Dialog.fullscreen(
+        child: DocumentScannerScreen(initialPages: initialPages),
+      ),
+    );
+  });
 }
 
 class ScanDocumentButton extends StatelessWidget {

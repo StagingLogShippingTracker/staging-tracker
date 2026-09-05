@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/popup_gate.dart';
 import '../../core/theme.dart';
 import '../../data/app_state.dart';
 import '../../domain/location_intelligence.dart';
@@ -17,28 +18,30 @@ Future<String?> showWarehouseLocationPicker(
   if (mode == null) return null;
   final staging = ref.read(appDataProvider).staging;
 
-  return showGeneralDialog<String>(
-    context: context,
-    barrierDismissible: true,
-    barrierLabel: 'Close location map',
-    barrierColor: Colors.black54,
-    transitionDuration: const Duration(milliseconds: 200),
-    pageBuilder: (ctx, animation, secondaryAnimation) {
-      return _WarehouseLocationPickerPage(
-        category: category,
-        mode: mode,
-        staging: staging,
-      );
-    },
-    transitionBuilder: (ctx, animation, secondaryAnimation, child) {
-      final curved = CurvedAnimation(
-        parent: animation,
-        curve: Curves.easeOutCubic,
-        reverseCurve: Curves.easeInCubic,
-      );
-      return FadeTransition(opacity: curved, child: child);
-    },
-  );
+  return PopupGate.exclusive<String>(PopupKeys.locationMap, () {
+    return showGeneralDialog<String>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Close location map',
+      barrierColor: Colors.black54,
+      transitionDuration: const Duration(milliseconds: 200),
+      pageBuilder: (ctx, animation, secondaryAnimation) {
+        return _WarehouseLocationPickerPage(
+          category: category,
+          mode: mode,
+          staging: staging,
+        );
+      },
+      transitionBuilder: (ctx, animation, secondaryAnimation, child) {
+        final curved = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+          reverseCurve: Curves.easeInCubic,
+        );
+        return FadeTransition(opacity: curved, child: child);
+      },
+    );
+  });
 }
 
 class _WarehouseLocationPickerPage extends StatefulWidget {

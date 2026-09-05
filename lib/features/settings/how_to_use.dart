@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../core/popup_gate.dart';
 import '../../core/theme.dart';
 
 /// How To Use prompt: first [maxShows] launches of each app version, until
@@ -52,8 +53,9 @@ class HowToUsePrompt {
     HowToUseSection(
       title: 'Notifications',
       body:
-          'History of PM emails this app sent (ship confirm, PO, bulk, returns). '
-          'Use it to see whether a message went out and to retry if it failed.',
+          'Compose PO, Bulk PO, and Return emails to project managers, or open '
+          'Notification log to see delivery history and whether a message went out. '
+          'Ship confirm and return-to-stock emails also record here after you send them.',
     ),
     HowToUseSection(
       title: 'Contacts',
@@ -65,9 +67,10 @@ class HowToUsePrompt {
     HowToUseSection(
       title: 'Settings',
       body:
-          'Theme, Pair Watch (Wear OS), in-app Update from GitHub, and warehouse '
-          'feedback. Update downloads the Windows Setup or Android APK for this '
-          'app only.',
+          'Theme, in-app Update from GitHub, warehouse feedback, and Pair Watch '
+          '(Wear OS — generate a 6-digit code; no sign-in). Reopen What’s New '
+          'or How to use anytime. Update downloads the Windows Setup or Android APK '
+          'for this app only.',
     ),
     HowToUseSection(
       title: 'More Apps',
@@ -114,6 +117,16 @@ Future<void> saveHowToUsePromptState(HowToUsePromptState state) async {
   await prefs.setInt(HowToUsePromptPrefs.timesShown, state.timesShown);
 }
 
+/// Shows How To Use on demand (e.g. from Settings), regardless of the
+/// auto-prompt's per-device show count.
+Future<void> showHowToUseDialog(BuildContext context) async {
+  if (!context.mounted) return;
+  await _showHowToUseDialog(
+    context,
+    footer: 'You can reopen this anytime from Settings.',
+  );
+}
+
 /// Shows How To Use for the first [HowToUsePrompt.maxShows] launches of
 /// each installed version on this device.
 Future<void> maybeShowHowToUsePrompt(BuildContext context) async {
@@ -144,11 +157,26 @@ Future<void> maybeShowHowToUsePrompt(BuildContext context) async {
           ? 'This guide will appear 1 more time on this device.'
           : 'This guide will appear $remainingAfter more times on this device.';
 
-  await showDialog<void>(
-    context: context,
-    barrierDismissible: true,
-    useRootNavigator: true,
-    builder: (ctx) {
+  await _showHowToUseDialog(context, footer: footer);
+
+  await saveHowToUsePromptState(
+    HowToUsePromptState(
+      campaignId: campaignId,
+      timesShown: state.timesShown + 1,
+    ),
+  );
+}
+
+Future<void> _showHowToUseDialog(
+  BuildContext context, {
+  required String footer,
+}) async {
+  await PopupGate.exclusive<void>(PopupKeys.howToUse, () {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      useRootNavigator: true,
+      builder: (ctx) {
       final chrome = IndustrialTheme.chromeOf(ctx);
       return AlertDialog(
         title: const Text(HowToUsePrompt.title),
@@ -209,12 +237,6 @@ Future<void> maybeShowHowToUsePrompt(BuildContext context) async {
         ],
       );
     },
-  );
-
-  await saveHowToUsePromptState(
-    HowToUsePromptState(
-      campaignId: campaignId,
-      timesShown: state.timesShown + 1,
-    ),
-  );
+    );
+  });
 }

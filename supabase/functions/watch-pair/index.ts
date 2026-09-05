@@ -22,6 +22,24 @@ function json(status: number, body: unknown) {
   });
 }
 
+function isProjectAnonKey(req: Request): boolean {
+  const apikey = req.headers.get("apikey") ?? "";
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+  return apikey.length > 0 && anonKey.length > 0 && apikey === anonKey;
+}
+
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
+  try {
+    const parts = token.split(".");
+    if (parts.length < 2) return null;
+    const b64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const pad = b64 + "=".repeat((4 - (b64.length % 4)) % 4);
+    return JSON.parse(atob(pad)) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -40,45 +58,64 @@ Deno.serve(async (req: Request) => {
     const action = String(body.action ?? "").trim().toLowerCase();
 
     if (action === "create") {
-      const authHeader = req.headers.get("Authorization");
-      if (!authHeader) return json(401, { error: "Missing Authorization" });
+      // Floor apps create codes with the project anon key — no user sign-in.
+      if (!isProjectAnonKey(req)) {
+        return json(401, { error: "Missing or invalid apikey" });
+      }
 
-      const userClient = createClient(supabaseUrl, anonKey, {
-        global: { headers: { Authorization: authHeader } },
-      });
-      const { data: userData, error: userError } = await userClient.auth
-        .getUser();
-      if (userError || !userData.user) {
-        return json(401, { error: "Unauthorized" });
+      const authHeader = req.headers.get("Authorization") ?? "";
+      const token = authHeader.startsWith("Bearer ")
+        ? authHeader.replace(/^Bearer\s+/i, "").trim()
+        : "";
+      let userId: string | null = null;
+      if (token && decodeJwtPayload(token)?.role !== "anon") {
+        const { data: userData } = await admin.auth.getUser(token);
+        userId = userData?.user?.id ?? null;
       }
 
       const code = String(Math.floor(100000 + Math.random() * 900000));
       const codeHash = await sha256Hex(code);
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
-      const { error: replaceError } = await admin.rpc(
-        "replace_watch_pairing_code",
-        {
-          p_user_id: userData.user.id,
-          p_code_hash: codeHash,
-          p_expires_at: expiresAt,
-        },
-      );
-      if (replaceError) {
-        return json(500, { error: replaceError.message });
+      if (userId) {
+        const { error: replaceError } = await admin.rpc(
+          "replace_watch_pairing_code",
+          {
+            p_user_id: userId,
+            p_code_hash: codeHash,
+            p_expires_at: expiresAt,
+          },
+        );
+        if (replaceError) {
+          return json(500, { error: replaceError.message });
+        }
+      } else {
+        const { error: replaceError } = await admin.rpc(
+          "replace_floor_watch_pairing_code",
+          {
+            p_code_hash: codeHash,
+            p_expires_at: expiresAt,
+          },
+        );
+        if (replaceError) {
+          return json(500, { error: replaceError.message });
+        }
       }
 
       return json(200, { code, expires_at: expiresAt });
     }
 
     if (action === "redeem") {
+      if (!isProjectAnonKey(req)) {
+        return json(401, { error: "Missing or invalid apikey" });
+      }
+
       const code = String(body.code ?? "").trim();
       if (!/^\d{6}$/.test(code)) {
         return json(400, { error: "Invalid code" });
       }
       const codeHash = await sha256Hex(code);
 
-      // Atomically claim the code before minting a session.
       const { data: row, error: claimError } = await admin.rpc(
         "claim_watch_pairing_code",
         { p_code_hash: codeHash },
@@ -88,6 +125,12 @@ Deno.serve(async (req: Request) => {
         return json(404, { error: "Code not found, expired, or already used" });
       }
 
+      // Floor codes (null user_id): mark paired — Wear uses anon access like the phone.
+      if (!row.user_id) {
+        return json(200, { paired: true, floor: true });
+      }
+
+      // Legacy user-bound codes: mint a session for the creating account.
       const { data: userData, error: getUserError } = await admin.auth.admin
         .getUserById(row.user_id);
       if (getUserError || !userData.user?.email) {
@@ -122,6 +165,7 @@ Deno.serve(async (req: Request) => {
           });
         }
         return json(200, {
+          paired: true,
           access_token: retry.data.session.access_token,
           refresh_token: retry.data.session.refresh_token,
           expires_in: retry.data.session.expires_in,
@@ -130,6 +174,7 @@ Deno.serve(async (req: Request) => {
       }
 
       return json(200, {
+        paired: true,
         access_token: otpData.session.access_token,
         refresh_token: otpData.session.refresh_token,
         expires_in: otpData.session.expires_in,

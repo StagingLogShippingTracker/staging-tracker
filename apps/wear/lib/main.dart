@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'screens/home_screen.dart';
 import 'screens/pair_screen.dart';
 import 'theme.dart';
+import 'wear_pair_prefs.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -34,8 +35,27 @@ class SlstWearApp extends ConsumerWidget {
   }
 }
 
-class _AuthGate extends StatelessWidget {
+class _AuthGate extends StatefulWidget {
   const _AuthGate();
+
+  @override
+  State<_AuthGate> createState() => _AuthGateState();
+}
+
+class _AuthGateState extends State<_AuthGate> {
+  bool? _floorPaired;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPaired();
+  }
+
+  Future<void> _loadPaired() async {
+    final paired = await WearPairPrefs.isPaired();
+    if (!mounted) return;
+    setState(() => _floorPaired = paired);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -44,8 +64,16 @@ class _AuthGate extends StatelessWidget {
       builder: (context, snapshot) {
         final session = snapshot.data?.session ??
             Supabase.instance.client.auth.currentSession;
-        if (session == null) return const PairScreen();
-        return const HomeScreen();
+        final floorPaired = _floorPaired;
+        if (floorPaired == null && session == null) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+          );
+        }
+        if (session != null || floorPaired == true) {
+          return HomeScreen(onUnpaired: _loadPaired);
+        }
+        return PairScreen(onPaired: _loadPaired);
       },
     );
   }

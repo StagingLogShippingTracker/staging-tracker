@@ -1,6 +1,6 @@
 {
-  "run_id": "20260822T224150Z",
-  "ts": "2026-08-22T22:41:50Z",
+  "run_id": "20260905T225851Z",
+  "ts": "2026-09-05T22:58:51Z",
   "domain": "auth",
   "ok": true,
   "harness_ok": true,
@@ -8,7 +8,7 @@
   "n_cases": 8,
   "n_scored": 8,
   "mean_composite": 1.0,
-  "elapsed_s": 5.53,
+  "elapsed_s": 51.26,
   "gate_fails": [],
   "top_failures": [
     {
@@ -24,7 +24,7 @@
         "no_service_role": true,
         "all_ok": true
       },
-      "duration_ms": 37.0
+      "duration_ms": 131.0
     },
     {
       "case_id": "no_make_webhook_in_clients",
@@ -38,7 +38,7 @@
         "no_webhook": true,
         "all_ok": true
       },
-      "duration_ms": 18.0
+      "duration_ms": 116.0
     },
     {
       "case_id": "watch_pair_create_redeem_split",
@@ -52,7 +52,7 @@
         "create_and_redeem_distinct": true,
         "all_ok": true
       },
-      "duration_ms": 0.0
+      "duration_ms": 6.0
     },
     {
       "case_id": "watch_pair_six_digit_contract",
@@ -65,7 +65,7 @@
         "success": true,
         "all_ok": true
       },
-      "duration_ms": 3.0
+      "duration_ms": 6.0
     },
     {
       "case_id": "rls_staging_select_authenticated",
@@ -78,7 +78,7 @@
         "success": true,
         "all_ok": true
       },
-      "duration_ms": 3.0
+      "duration_ms": 5.0
     },
     {
       "case_id": "rls_writes_authenticated",
@@ -91,7 +91,7 @@
         "success": true,
         "all_ok": true
       },
-      "duration_ms": 1.0
+      "duration_ms": 2.0
     },
     {
       "case_id": "app_config_anon_key_only",
@@ -118,7 +118,7 @@
         "success": true,
         "all_ok": true
       },
-      "duration_ms": 0.0
+      "duration_ms": 1.0
     }
   ],
   "metric_hotspots": [],

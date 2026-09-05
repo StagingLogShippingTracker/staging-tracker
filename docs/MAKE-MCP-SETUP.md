@@ -45,9 +45,10 @@ If OAuth does not work:
 
 Zone for Swift: **us2** (`us2.make.com`).
 
-## 5. SLST email scenario
+## 5. Swift Staging & Shipping Log email scenario
 
-The Flutter app calls authenticated Edge Function `notify-pm`, which POSTs to Make.
+The Flutter app calls the Edge Function `notify-pm` (server-side Make proxy; floor
+clients use the anon key and do **not** require user sign-in), which POSTs to Make.
 
 - Webhook URL: Edge secret `MAKE_EMAIL_WEBHOOK_URL` or `private.app_secrets`
 - Source: `supabase/functions/notify-pm/index.ts`

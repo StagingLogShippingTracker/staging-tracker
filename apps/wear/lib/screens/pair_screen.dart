@@ -6,10 +6,13 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../launch_prompts.dart';
 import '../theme.dart';
 import '../wear_layout.dart';
+import '../wear_pair_prefs.dart';
 
 /// Redeem a 6-digit pairing code from Windows/Android Settings → Pair Watch.
 class PairScreen extends StatefulWidget {
-  const PairScreen({super.key});
+  const PairScreen({super.key, this.onPaired});
+
+  final Future<void> Function()? onPaired;
 
   @override
   State<PairScreen> createState() => _PairScreenState();
@@ -38,7 +41,14 @@ class _PairScreenState extends State<PairScreen> {
     });
     try {
       final client = WatchPairingClient(Supabase.instance.client);
-      await client.redeemCode(code);
+      final result = await client.redeemCode(code);
+      if (!result.paired) {
+        throw Exception('Pairing failed');
+      }
+      if (!result.sessionSet) {
+        await WearPairPrefs.setPaired(true);
+      }
+      await widget.onPaired?.call();
     } catch (e) {
       if (!mounted) return;
       setState(() => _error = wearSafeError(e));

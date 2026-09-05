@@ -1,6 +1,6 @@
 // Repository compatibility barrel.
 //
-// Production implementations live in `slst_shared`; this app file remains
+// Production implementations live in `swift_staging_shared`; this app file remains
 // solely to preserve existing Riverpod provider imports.
 export 'package:swift_staging_shared/swift_staging_shared.dart'
     show

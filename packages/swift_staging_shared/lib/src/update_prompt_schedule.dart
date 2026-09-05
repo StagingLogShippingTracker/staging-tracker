@@ -2,6 +2,7 @@
 ///
 /// Checks are due at 15:00 Denver local. Choosing "Later" snoozes for 3 days.
 /// Eligible prompts always re-fetch GitHub `releases/latest` (no cached target).
+library;
 
 /// Preference keys for scheduled update prompts (SharedPreferences).
 abstract final class UpdatePromptPrefs {

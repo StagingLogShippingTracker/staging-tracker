@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/format_weight.dart';
+import '../../core/popup_gate.dart';
 import '../../core/theme.dart';
 import '../../data/app_state.dart';
 import '../../data/log_view_mode.dart';
@@ -319,10 +320,11 @@ Future<void> showChangelogDialog(
   String? table,
 }) {
   final future = ref.read(changelogRepoProvider).recent();
-  return showDialog<void>(
-    context: context,
-    builder: (context) {
-      return Dialog(
+  return PopupGate.exclusive<void>(PopupKeys.changelog, () {
+    return showDialog<void>(
+      context: context,
+      builder: (context) {
+        return Dialog(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 760, maxHeight: 600),
           child: Padding(
@@ -451,7 +453,8 @@ Future<void> showChangelogDialog(
         ),
       );
     },
-  );
+    );
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -467,9 +470,10 @@ Future<void> showQuickConsolidateDialog(BuildContext context, WidgetRef ref) {
   final dupes = groups.values.where((g) => g.length > 1).toList()
     ..sort((a, b) => a.first.so.compareTo(b.first.so));
 
-  return showDialog<void>(
-    context: context,
-    builder: (context) => Dialog(
+  return PopupGate.exclusive<void>(PopupKeys.consolidate, () {
+    return showDialog<void>(
+      context: context,
+      builder: (context) => Dialog(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 640, maxHeight: 560),
         child: Padding(
@@ -566,8 +570,9 @@ Future<void> showQuickConsolidateDialog(BuildContext context, WidgetRef ref) {
           ),
         ),
       ),
-    ),
-  );
+      ),
+    );
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -1245,7 +1250,7 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
     const stagerW = 118.0;
     const timeW = 128.0;
     const photosW = 80.0;
-    const actionsW = 132.0;
+    const actionsW = 148.0;
     const cellPad = EdgeInsets.symmetric(horizontal: 10, vertical: 10);
     final batchW = _batch ? 44.0 : 0.0;
     final totalW =
@@ -2602,6 +2607,7 @@ Future<void> showShippedEditDialog(
   return showAdaptivePopup<void>(
     context,
     maxWidth: 520,
+    exclusiveKey: PopupKeys.shippedEdit,
     builder: (ctx) {
       final maxH = MediaQuery.sizeOf(ctx).height * 0.85;
       return ConstrainedBox(

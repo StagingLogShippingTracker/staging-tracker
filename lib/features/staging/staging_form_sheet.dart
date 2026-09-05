@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/popup_gate.dart';
 import '../../core/theme.dart';
 import '../../data/app_state.dart';
 import '../../data/consolidation_undo.dart';
@@ -25,6 +26,7 @@ Future<void> showStagingFormSheet(
   return showAdaptivePopup<void>(
     context,
     maxWidth: 680,
+    exclusiveKey: PopupKeys.stagingForm,
     builder: (_) => StagingFormSheet(
       existing: existing,
       initialSo: initialSo,

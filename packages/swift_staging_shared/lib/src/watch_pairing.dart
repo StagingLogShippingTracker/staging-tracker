@@ -10,11 +10,22 @@ class WatchPairCreateResult {
   final DateTime expiresAt;
 }
 
+class WatchPairRedeemResult {
+  const WatchPairRedeemResult({
+    required this.paired,
+    this.sessionSet = false,
+  });
+
+  final bool paired;
+  /// True when a Supabase Auth session was established (legacy user-bound codes).
+  final bool sessionSet;
+}
+
 class WatchPairingClient {
   WatchPairingClient(this._client);
   final SupabaseClient _client;
 
-  /// Authenticated phone/Windows: create a short-lived pairing code.
+  /// Phone/Windows: create a short-lived pairing code (anon floor OK).
   Future<WatchPairCreateResult> createCode() async {
     final res = await _client.functions.invoke(
       'watch-pair',
@@ -30,8 +41,9 @@ class WatchPairingClient {
     );
   }
 
-  /// Wear (anonymous or no session): redeem code for a Supabase session.
-  Future<AuthResponse> redeemCode(String code) async {
+  /// Wear: redeem code. Floor codes mark paired without a user session;
+  /// legacy user-bound codes still set a Supabase session when tokens return.
+  Future<WatchPairRedeemResult> redeemCode(String code) async {
     final res = await _client.functions.invoke(
       'watch-pair',
       body: {'action': 'redeem', 'code': code.trim()},
@@ -40,10 +52,14 @@ class WatchPairingClient {
       throw Exception('Pair redeem failed (${res.status}): ${res.data}');
     }
     final data = Map<String, dynamic>.from(res.data as Map);
-    final refresh = '${data['refresh_token']}';
-    if (refresh.isEmpty) {
-      throw Exception('Pair redeem returned no refresh token');
+    final refresh = '${data['refresh_token'] ?? ''}'.trim();
+    if (refresh.isNotEmpty) {
+      await _client.auth.setSession(refresh);
+      return const WatchPairRedeemResult(paired: true, sessionSet: true);
     }
-    return _client.auth.setSession(refresh);
+    if (data['paired'] == true) {
+      return const WatchPairRedeemResult(paired: true);
+    }
+    throw Exception('Pair redeem returned no pairing confirmation');
   }
 }

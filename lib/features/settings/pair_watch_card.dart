@@ -8,6 +8,7 @@ import '../../core/theme.dart';
 import '../../data/app_state.dart';
 
 /// Creates a short-lived Wear pairing code via the `watch-pair` Edge Function.
+/// No sign-in — floor apps use the anon key like every other warehouse action.
 class PairWatchCard extends ConsumerStatefulWidget {
   const PairWatchCard({super.key});
 
@@ -78,90 +79,92 @@ class _PairWatchCardState extends ConsumerState<PairWatchCard> {
               const SizedBox(height: 8),
               Text(
                 'Generate a 6-digit code on this device, then enter it on the '
-                'Wear OS app to pair this warehouse session.',
+                'Wear OS app to pair this warehouse session. No sign-in required.',
                 softWrap: true,
                 overflow: TextOverflow.fade,
                 style: Theme.of(context).textTheme.bodySmall,
               ),
               const SizedBox(height: 16),
               Semantics(
-                  button: true,
-                  label: 'Pair Watch',
-                  child: FilledButton.icon(
-                    key: const ValueKey('pair-watch-generate'),
-                    onPressed: _busy ? null : _createCode,
-                    icon: _busy
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.watch, size: 18),
-                    label: Text(_busy ? 'Creating…' : 'Pair Watch'),
+                button: true,
+                label: 'Pair Watch',
+                child: FilledButton.icon(
+                  key: const ValueKey('pair-watch-generate'),
+                  onPressed: _busy ? null : _createCode,
+                  icon: _busy
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.watch, size: 18),
+                  label: Text(_busy ? 'Creating…' : 'Pair Watch'),
+                ),
+              ),
+              if (_error != null) ...[
+                const SizedBox(height: 12),
+                Semantics(
+                  liveRegion: true,
+                  label: _error,
+                  child: Text(
+                    _error!,
+                    style: const TextStyle(
+                      color: Color(0xFFEF4444),
+                      fontSize: 12,
+                    ),
                   ),
                 ),
-                if (_error != null) ...[
-                  const SizedBox(height: 12),
-                  Semantics(
-                    liveRegion: true,
-                    label: _error,
-                    child: Text(
-                      _error!,
-                      style: TextStyle(
-                        color: Color(0xFFEF4444),
-                        fontSize: 12,
+              ],
+              if (_result != null) ...[
+                const SizedBox(height: 16),
+                Semantics(
+                  liveRegion: true,
+                  label: 'Pairing code ${_result!.code}',
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: IndustrialTheme.chromeOf(context).header,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: IndustrialTheme.chromeOf(context).border,
                       ),
                     ),
-                  ),
-                ],
-                if (_result != null) ...[
-                  const SizedBox(height: 16),
-                  Semantics(
-                    liveRegion: true,
-                    label: 'Pairing code ${_result!.code}',
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: IndustrialTheme.chromeOf(context).header,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: IndustrialTheme.chromeOf(context).border),
-                      ),
-                      child: Column(
-                        children: [
-                          SelectableText(
-                            _result!.code,
-                            key: const ValueKey('pair-watch-code'),
-                            style: IndustrialTheme.mono(
-                              fontSize: 32,
-                              fontWeight: FontWeight.w800,
-                              color: IndustrialTheme.mintGreen,
-                            ).copyWith(letterSpacing: 6),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Expires ${fmt.format(_result!.expiresAt.toLocal())}',
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                          const SizedBox(height: 10),
-                          TextButton.icon(
-                            onPressed: () async {
-                              await Clipboard.setData(
-                                ClipboardData(text: _result!.code),
-                              );
-                              if (!context.mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Code copied')),
-                              );
-                            },
-                            icon: const Icon(Icons.copy, size: 16),
-                            label: const Text('Copy code'),
-                          ),
-                        ],
-                      ),
+                    child: Column(
+                      children: [
+                        SelectableText(
+                          _result!.code,
+                          key: const ValueKey('pair-watch-code'),
+                          style: IndustrialTheme.mono(
+                            fontSize: 32,
+                            fontWeight: FontWeight.w800,
+                            color: IndustrialTheme.mintGreen,
+                          ).copyWith(letterSpacing: 6),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Expires ${fmt.format(_result!.expiresAt.toLocal())}',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                        const SizedBox(height: 10),
+                        TextButton.icon(
+                          onPressed: () async {
+                            await Clipboard.setData(
+                              ClipboardData(text: _result!.code),
+                            );
+                            if (!context.mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Code copied')),
+                            );
+                          },
+                          icon: const Icon(Icons.copy, size: 16),
+                          label: const Text('Copy code'),
+                        ),
+                      ],
                     ),
                   ),
-                ],
+                ),
+              ],
             ],
           ),
         ),

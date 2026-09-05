@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/popup_gate.dart';
 import '../../core/theme.dart';
 import '../../data/app_state.dart';
 import '../../domain/location_intelligence.dart';
@@ -14,6 +15,7 @@ Future<void> showQuickShipSheet(BuildContext context, WidgetRef ref) {
   return showAdaptivePopup<void>(
     context,
     maxWidth: 680,
+    exclusiveKey: PopupKeys.quickShip,
     builder: (_) => const QuickShipSheet(),
   );
 }

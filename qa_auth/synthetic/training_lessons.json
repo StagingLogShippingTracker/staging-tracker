@@ -2,7 +2,23 @@
   "domain": "auth",
   "version": 1,
   "purpose": "Incremental training memory for this improve loop. Score \u2192 fix \u2192 re-score \u2192 keep lessons \u2192 expand cases. Covers every design element, function, operation, and third-party connector for this domain.",
-  "lessons": [],
+  "lessons": [
+    {
+      "id": "20260905T225500Z",
+      "ts": "2026-09-05T22:55:00Z",
+      "title": "Wear pair without sign-in",
+      "lesson": "watch-pair create accepts project anon apikey and stores floor codes with null user_id via replace_floor_watch_pairing_code. Redeem returns {paired:true} for floor codes; Wear stores wear_floor_paired in prefs and uses anon like the phone. Do not require LoginScreen / warehouse email for Pair Watch.",
+      "do_not_regress": "Never gate Pair Watch on currentUser; keep watch-pair verify_jwt false; keep create\u2260redeem contract.",
+      "case_ids": [
+        "watch_pair_create_redeem_split"
+      ],
+      "tags": [
+        "watch-pair",
+        "anon",
+        "wear"
+      ]
+    }
+  ],
   "run_snapshots": [
     {
       "ts": "2026-08-22T18:35:36Z",
@@ -319,7 +335,165 @@
       ],
       "gate_fails": [],
       "next": "Read qa_auth summary; keep secrets out of clients; watch-pair create\u2260redeem contract."
+    },
+    {
+      "ts": "2026-09-05T22:08:33Z",
+      "run_id": "20260905T220833Z",
+      "mean_composite": 1.0,
+      "ok": true,
+      "top_failures": [
+        {
+          "case_id": "no_service_role_in_clients",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0,
+            "integrity": 1.0
+          },
+          "gates": {
+            "success": true,
+            "no_service_role": true,
+            "all_ok": true
+          },
+          "duration_ms": 32.0
+        },
+        {
+          "case_id": "no_make_webhook_in_clients",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "no_webhook": true,
+            "all_ok": true
+          },
+          "duration_ms": 18.0
+        },
+        {
+          "case_id": "watch_pair_create_redeem_split",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "create_and_redeem_distinct": true,
+            "all_ok": true
+          },
+          "duration_ms": 1.0
+        },
+        {
+          "case_id": "watch_pair_six_digit_contract",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 0.0
+        },
+        {
+          "case_id": "rls_staging_select_authenticated",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 0.0
+        }
+      ],
+      "gate_fails": [],
+      "next": "Read qa_auth summary; keep secrets out of clients; watch-pair create\u2260redeem contract."
+    },
+    {
+      "ts": "2026-09-05T22:58:51Z",
+      "run_id": "20260905T225851Z",
+      "mean_composite": 1.0,
+      "ok": true,
+      "top_failures": [
+        {
+          "case_id": "no_service_role_in_clients",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0,
+            "integrity": 1.0
+          },
+          "gates": {
+            "success": true,
+            "no_service_role": true,
+            "all_ok": true
+          },
+          "duration_ms": 131.0
+        },
+        {
+          "case_id": "no_make_webhook_in_clients",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "no_webhook": true,
+            "all_ok": true
+          },
+          "duration_ms": 116.0
+        },
+        {
+          "case_id": "watch_pair_create_redeem_split",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "create_and_redeem_distinct": true,
+            "all_ok": true
+          },
+          "duration_ms": 6.0
+        },
+        {
+          "case_id": "watch_pair_six_digit_contract",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 6.0
+        },
+        {
+          "case_id": "rls_staging_select_authenticated",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 5.0
+        }
+      ],
+      "gate_fails": [],
+      "next": "Read qa_auth summary; keep secrets out of clients; watch-pair create\u2260redeem contract."
     }
   ],
-  "updated_at": "2026-08-22T22:41:50Z"
+  "updated_at": "2026-09-05T22:58:51Z"
 }

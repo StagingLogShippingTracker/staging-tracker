@@ -2,16 +2,15 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as im;
-import 'package:integration_test/integration_test.dart';
 
 import 'package:swift_staging_log/features/scanner/services/offline_ocr_service.dart';
 
+/// Host-side OCR smoke test (no integration_test plugin — that package
+/// registers into Android release builds and breaks APK packaging).
 void main() {
-  IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+  TestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('native OCR recognizes a bundled synthetic freight form', (
-    tester,
-  ) async {
+  test('native OCR recognizes a bundled synthetic freight form', () async {
     final image = im.Image(width: 1200, height: 500);
     im.fill(image, color: im.ColorRgb8(255, 255, 255));
     im.drawString(

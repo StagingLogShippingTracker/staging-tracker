@@ -7,12 +7,15 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../launch_prompts.dart';
 import '../theme.dart';
 import '../wear_layout.dart';
+import '../wear_pair_prefs.dart';
 import 'ship_confirm_screen.dart';
 import 'update_screen.dart';
 import 'verify_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  const HomeScreen({super.key, this.onUnpaired});
+
+  final Future<void> Function()? onUnpaired;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -118,9 +121,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
-  Future<void> _signOut() async {
+  Future<void> _unpair() async {
     _unbindRealtime();
+    await WearPairPrefs.setPaired(false);
     await Supabase.instance.client.auth.signOut();
+    await widget.onUnpaired?.call();
   }
 
   @override
@@ -171,9 +176,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       color: WearTheme.muted,
                     ),
                     WearIconAction(
-                      tooltip: 'Sign out',
-                      onPressed: _signOut,
-                      icon: Icons.logout,
+                      tooltip: 'Unpair',
+                      onPressed: _unpair,
+                      icon: Icons.link_off,
                       color: WearTheme.muted,
                     ),
                   ],

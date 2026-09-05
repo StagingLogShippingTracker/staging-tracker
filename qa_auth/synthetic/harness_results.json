@@ -1,11 +1,11 @@
 {
-  "ts": "2026-08-22T22:41:50.080815Z",
+  "ts": "2026-09-05T22:58:50.584061Z",
   "domain": "auth",
   "cases": [
     {
       "case_id": "no_service_role_in_clients",
       "ok": true,
-      "duration_ms": 37,
+      "duration_ms": 131,
       "metrics_raw": {
         "integrity": true
       },
@@ -16,7 +16,7 @@
     {
       "case_id": "no_make_webhook_in_clients",
       "ok": true,
-      "duration_ms": 18,
+      "duration_ms": 116,
       "gates_raw": {
         "no_webhook": true
       }
@@ -24,7 +24,7 @@
     {
       "case_id": "watch_pair_create_redeem_split",
       "ok": true,
-      "duration_ms": 0,
+      "duration_ms": 6,
       "gates_raw": {
         "create_and_redeem_distinct": true
       }
@@ -32,17 +32,17 @@
     {
       "case_id": "watch_pair_six_digit_contract",
       "ok": true,
-      "duration_ms": 3
+      "duration_ms": 6
     },
     {
       "case_id": "rls_staging_select_authenticated",
       "ok": true,
-      "duration_ms": 3
+      "duration_ms": 5
     },
     {
       "case_id": "rls_writes_authenticated",
       "ok": true,
-      "duration_ms": 1
+      "duration_ms": 2
     },
     {
       "case_id": "app_config_anon_key_only",
@@ -55,7 +55,7 @@
     {
       "case_id": "login_empty_field_messages",
       "ok": true,
-      "duration_ms": 0
+      "duration_ms": 1
     }
   ],
   "notes": [
