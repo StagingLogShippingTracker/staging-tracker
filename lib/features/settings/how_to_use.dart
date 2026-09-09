@@ -32,9 +32,11 @@ class HowToUsePrompt {
       title: 'Active Staging Entries Log',
       body:
           'Everything still in the warehouse. Add a new entry (F1 on Windows), '
-          'edit location or status, scan documents onto the order, consolidate '
-          'or split lines, then ship when freight leaves. Staged By / Picked By '
-          'remember names across this app and Document Generator.',
+          'edit location or status, mark Prepared for Shipping when a line is '
+          'physically ready to load (informational only — Ship and Quick Ship '
+          'still work the same), scan documents onto the order, consolidate or '
+          'split lines, then ship when freight leaves. Staged By / Picked By / '
+          'Carrier remember values across this app, Wear, and Document Generator.',
     ),
     HowToUseSection(
       title: 'Shipped Staging Entries Log',

@@ -8,6 +8,7 @@ export 'src/repositories.dart';
 export 'src/audit_state_repository.dart';
 export 'src/watch_pairing.dart';
 export 'src/ship_operations.dart';
+export 'src/shared_name_directory.dart';
 export 'src/contacts.dart';
 export 'src/formatters.dart';
 export 'src/inventory_constants.dart';

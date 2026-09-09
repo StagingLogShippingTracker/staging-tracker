@@ -237,7 +237,85 @@
       ],
       "gate_fails": [],
       "next": "Read qa_wear summary; fix pair/ship/verify/update Wear regressions."
+    },
+    {
+      "ts": "2026-09-09T18:26:39Z",
+      "run_id": "20260909T182639Z",
+      "mean_composite": 1.0,
+      "ok": true,
+      "top_failures": [
+        {
+          "case_id": "wear_brand_title",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "brand_title": true,
+            "all_ok": true
+          },
+          "duration_ms": 0.0
+        },
+        {
+          "case_id": "wear_theme_dark_only",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 104.0
+        },
+        {
+          "case_id": "wear_ship_payload_cc",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0,
+            "integrity": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 0.0
+        },
+        {
+          "case_id": "wear_ship_validation_empty_carrier",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 0.0
+        },
+        {
+          "case_id": "wear_update_platform_is_wear",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "wear_platform": true,
+            "all_ok": true
+          },
+          "duration_ms": 0.0
+        }
+      ],
+      "gate_fails": [],
+      "next": "Read qa_wear summary; fix pair/ship/verify/update Wear regressions."
     }
   ],
-  "updated_at": "2026-08-22T18:46:26Z"
+  "updated_at": "2026-09-09T18:26:39Z"
 }

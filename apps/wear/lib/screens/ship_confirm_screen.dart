@@ -32,8 +32,11 @@ class _ShipConfirmScreenState extends State<ShipConfirmScreen> {
 
   Future<void> _loadRoster() async {
     try {
-      final carriers = await widget.ops.roster.valuesFor('carrier');
-      final people = await widget.ops.roster.valuesFor('person_by');
+      // Shared cross-app directories — same stores as "Carrier"/"Staged
+      // By"/"Shipped By" on Windows/Android and Swift Document Generator's
+      // "Carrier"/"Swift Contact" fields, not the legacy per-app roster.
+      final carriers = await widget.ops.carriers.fetchNames();
+      final people = await widget.ops.contacts.fetchNames();
       if (!mounted) return;
       setState(() {
         _carriers = carriers;

@@ -455,6 +455,55 @@ class IndustrialStatusBadge extends StatelessWidget {
   }
 }
 
+/// Secondary "Pending"-style marker for a staged entry that's been physically
+/// prepped and is ready to load, without changing its urgency status. Shown
+/// alongside — never instead of — [IndustrialStatusBadge].
+class PreparedForShippingBadge extends StatelessWidget {
+  const PreparedForShippingBadge({super.key, this.compact = false});
+
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      widthFactor: 1,
+      heightFactor: 1,
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: compact ? 6 : 7, vertical: 2),
+        decoration: BoxDecoration(
+          color: IndustrialTheme.skyBlue.withValues(alpha: 0.18),
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(
+            color: IndustrialTheme.skyBlue.withValues(alpha: 0.35),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.inventory_2_outlined,
+              size: compact ? 10 : 11,
+              color: IndustrialTheme.skyBlue,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              'PREPARED',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.35,
+                color: IndustrialTheme.skyBlue,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// Accent bar color for a status label (left edge of log / kanban cards).
 Color industrialStatusAccent(BuildContext context, String status) =>
     IndustrialStatusBadge.colorsFor(

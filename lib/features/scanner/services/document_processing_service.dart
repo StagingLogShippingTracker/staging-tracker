@@ -37,26 +37,16 @@ EdgeDetection detectDocument(Uint8List bytes) {
   if (decoded == null) {
     throw const FormatException('The selected file is not a supported image.');
   }
-  var source = im.bakeOrientation(decoded);
-  final maxDim = math.max(source.width, source.height);
-  if (maxDim > 1600) {
-    final scale = 1600 / maxDim;
-    source = im.copyResize(
-      source,
-      width: math.max(1, (source.width * scale).round()),
-      height: math.max(1, (source.height * scale).round()),
-      interpolation: im.Interpolation.average,
-    );
-  }
-  final scale = math.min(1.0, 640 / math.max(source.width, source.height));
+  final oriented = im.bakeOrientation(decoded);
+  final scale = math.min(1.0, 640 / math.max(oriented.width, oriented.height));
   final image = scale < 1
       ? im.copyResize(
-          source,
-          width: math.max(1, (source.width * scale).round()),
-          height: math.max(1, (source.height * scale).round()),
+          oriented,
+          width: math.max(1, (oriented.width * scale).round()),
+          height: math.max(1, (oriented.height * scale).round()),
           interpolation: im.Interpolation.average,
         )
-      : source;
+      : oriented;
   final w = image.width;
   final h = image.height;
   final gray = Uint8List(w * h);
@@ -117,14 +107,18 @@ EdgeDetection detectDocument(Uint8List bytes) {
     return best;
   }
 
-  final left = strongest(col, (w * .02).round(), (w * .38).round());
-  final right = strongest(col, (w * .62).round(), (w * .98).round());
-  final top = strongest(row, (h * .02).round(), (h * .38).round());
-  final bottom = strongest(row, (h * .62).round(), (h * .98).round());
+  // Bands assume the document sits left-of-center / right-of-center rather
+  // than requiring it to fill most of the frame, so smaller or off-center
+  // documents (common in casual freight photos) still get found.
+  final left = strongest(col, (w * .02).round(), (w * .45).round());
+  final right = strongest(col, (w * .55).round(), (w * .98).round());
+  final top = strongest(row, (h * .02).round(), (h * .45).round());
+  final bottom = strongest(row, (h * .55).round(), (h * .98).round());
 
   ({double slope, double intercept, double fit}) fitVertical(int center) {
     final samples = <Offset>[];
-    final radius = math.max(6, (w * .12).round());
+    // Wide enough to follow a visibly rotated/skewed edge across the frame.
+    final radius = math.max(10, (w * .20).round());
     for (var y = top; y <= bottom; y += math.max(3, h ~/ 80)) {
       var bestX = center;
       var best = -1;
@@ -146,7 +140,7 @@ EdgeDetection detectDocument(Uint8List bytes) {
 
   ({double slope, double intercept, double fit}) fitHorizontal(int center) {
     final samples = <Offset>[];
-    final radius = math.max(6, (h * .12).round());
+    final radius = math.max(10, (h * .20).round());
     for (var x = left; x <= right; x += math.max(3, w ~/ 80)) {
       var bestY = center;
       var best = -1;
@@ -192,7 +186,9 @@ EdgeDetection detectDocument(Uint8List bytes) {
     0.0,
     1.0,
   );
-  final areaScore = ((area - .18) / .55).clamp(0.0, 1.0);
+  // A document rarely fills the whole frame in a casual photo — score full
+  // marks well below full-frame coverage instead of requiring ~73%+.
+  final areaScore = ((area - .10) / .35).clamp(0.0, 1.0);
   final confidence = (.65 * contrastScore + .35 * areaScore).clamp(0.0, 1.0);
   final safe =
       confidence < .18 || right - left < w * .25 || bottom - top < h * .25;
@@ -332,15 +328,36 @@ im.Image _perspectiveWarp(
   ];
   final h = _homography(dst, src);
   final output = im.Image(width: width, height: height, numChannels: 3);
+  final maxX = source.width - 1;
+  final maxY = source.height - 1;
   for (var y = 0; y < height; y++) {
     for (var x = 0; x < width; x++) {
       final d = h[6] * x + h[7] * y + 1;
-      final sx = (h[0] * x + h[1] * y + h[2]) / d;
-      final sy = (h[3] * x + h[4] * y + h[5]) / d;
-      final ix = sx.round().clamp(0, source.width - 1);
-      final iy = sy.round().clamp(0, source.height - 1);
-      final p = source.getPixel(ix, iy);
-      output.setPixelRgb(x, y, p.r, p.g, p.b);
+      final sx = ((h[0] * x + h[1] * y + h[2]) / d).clamp(0.0, maxX.toDouble());
+      final sy = ((h[3] * x + h[4] * y + h[5]) / d).clamp(0.0, maxY.toDouble());
+      // Bilinear sample: averages the 4 neighboring source pixels instead of
+      // picking the single nearest one, which avoids jagged/aliased edges
+      // (especially on text) whenever the warp isn't exactly 1:1 scale.
+      final x0 = sx.floor();
+      final y0 = sy.floor();
+      final x1 = math.min(x0 + 1, maxX);
+      final y1 = math.min(y0 + 1, maxY);
+      final fx = sx - x0;
+      final fy = sy - y0;
+      final p00 = source.getPixel(x0, y0);
+      final p10 = source.getPixel(x1, y0);
+      final p01 = source.getPixel(x0, y1);
+      final p11 = source.getPixel(x1, y1);
+      double lerp(num a, num b, double t) => a + (b - a) * t;
+      double bilinear(num a, num b, num c, num d) =>
+          lerp(lerp(a, b, fx), lerp(c, d, fx), fy);
+      output.setPixelRgb(
+        x,
+        y,
+        bilinear(p00.r, p10.r, p01.r, p11.r).round(),
+        bilinear(p00.g, p10.g, p01.g, p11.g).round(),
+        bilinear(p00.b, p10.b, p01.b, p11.b).round(),
+      );
     }
   }
   return output;

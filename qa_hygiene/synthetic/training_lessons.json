@@ -17,6 +17,21 @@
         "hygiene",
         "storage"
       ]
+    },
+    {
+      "id": "20260909T182901Z",
+      "ts": "2026-09-09T18:29:01Z",
+      "title": "Packaging scripts must ignore Flutter stderr warnings",
+      "lesson": "With ErrorActionPreference=Stop, Flutter KGP/plugin warnings on stderr become terminating NativeCommandError in PowerShell even when exit code is 0, so build-android-apk.ps1 can skip copying the APK to dist. Invoke-RepoFlutter must set ErrorActionPreference=Continue around the flutter call and only fail on non-zero exit.",
+      "do_not_regress": "Keep Invoke-RepoFlutter stderr-tolerant; never treat Flutter warnings as build failure.",
+      "case_ids": [
+        "packaging_stderr_tolerance"
+      ],
+      "tags": [
+        "hygiene",
+        "packaging",
+        "android"
+      ]
     }
   ],
   "run_snapshots": [
@@ -185,7 +200,90 @@
       ],
       "gate_fails": [],
       "next": "Read qa_hygiene summary; delete dead/legacy/scratch paths; keep .gitignore blocking re-commit."
+    },
+    {
+      "ts": "2026-09-09T18:26:40Z",
+      "run_id": "20260909T182640Z",
+      "mean_composite": 1.0,
+      "ok": true,
+      "top_failures": [
+        {
+          "case_id": "auto_delete_safe_dead_paths",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0,
+            "integrity": 1.0,
+            "coverage": 1.0
+          },
+          "gates": {
+            "success": true,
+            "delete_errors_zero": true,
+            "all_ok": true
+          },
+          "duration_ms": 48.0
+        },
+        {
+          "case_id": "no_remaining_safe_dead_roots",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "clean_roots": true,
+            "all_ok": true
+          },
+          "duration_ms": 0.0
+        },
+        {
+          "case_id": "gitignore_blocks_dead_patterns",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "legacy_ignored": true,
+            "tmp_ignored": true,
+            "all_ok": true
+          },
+          "duration_ms": 1.0
+        },
+        {
+          "case_id": "protected_trees_intact",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "protected_ok": true,
+            "all_ok": true
+          },
+          "duration_ms": 0.0
+        },
+        {
+          "case_id": "no_nested_full_repo_mirror",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "no_mirror": true,
+            "all_ok": true
+          },
+          "duration_ms": 6.0
+        }
+      ],
+      "gate_fails": [],
+      "next": "Read qa_hygiene summary; delete dead/legacy/scratch paths; keep .gitignore blocking re-commit."
     }
   ],
-  "updated_at": "2026-08-22T18:44:48Z"
+  "updated_at": "2026-09-09T18:26:40Z"
 }

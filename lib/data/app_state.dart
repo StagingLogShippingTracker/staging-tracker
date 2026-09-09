@@ -60,6 +60,9 @@ final changelogRepoProvider = Provider(
 final rosterRepoProvider = Provider(
   (ref) => RosterRepository(ref.watch(supabaseClientProvider)),
 );
+final sharedCarriersProvider = Provider(
+  (ref) => shared.SharedCarriersClient(ref.watch(supabaseClientProvider)),
+);
 final photoStorageProvider = Provider(
   (ref) => PhotoStorage(ref.watch(supabaseClientProvider)),
 );
@@ -405,7 +408,6 @@ Future<void> hideRememberedMemory(WidgetRef ref, String value) async {
   }
 }
 
-const carrierRosterType = 'carrier';
 const customerRosterType = 'customer';
 const personRosterType = 'person_by';
 
@@ -416,10 +418,11 @@ List<String> filterCarrierSuggestions(
   return filterRememberedValues(values, hidden: hidden);
 }
 
+/// Shared cross-app carrier directory (same store as Wear and Swift Document
+/// Generator's "Carrier" field) — not the legacy per-app `dropdown_roster`
+/// "carrier" type.
 final carrierSuggestionsProvider = FutureProvider<List<String>>((ref) async {
-  final values = await ref
-      .watch(rosterRepoProvider)
-      .valuesFor(carrierRosterType);
+  final values = await ref.watch(sharedCarriersProvider).fetchNames();
   final prefs = await ref.watch(prefsProvider.future);
   return filterCarrierSuggestions(values, hidden: prefs.hiddenMemory);
 });
@@ -866,6 +869,22 @@ class OperationsService {
     }, locationCategory: locationCategory);
   }
 
+  /// Mid-state marker between staged and shipped — informational only.
+  /// Ship and Quick Ship bypass this entirely and are unaffected either way.
+  Future<void> setPreparedForShipping(
+    StagingEntry entry,
+    bool prepared,
+  ) async {
+    await _staging.update(entry.id, {'prepared_for_shipping': prepared});
+    await _log.log(
+      'staging',
+      prepared
+          ? 'Marked SO ${entry.so} Prepared for Shipping'
+          : 'Unmarked SO ${entry.so} Prepared for Shipping',
+    );
+    await _ref.read(appDataProvider.notifier).refresh();
+  }
+
   Future<void> updateShipped(String id, Map<String, dynamic> payload) async {
     await _shipped.update(id, payload);
     final carrier = payload['carrier']?.toString();
@@ -1186,7 +1205,7 @@ class OperationsService {
     final prefs = await _ref.read(prefsProvider.future);
     final values = filterCarrierSuggestions([raw], hidden: prefs.hiddenMemory);
     if (values.isEmpty) return;
-    await _roster.remember(carrierRosterType, values.single);
+    await _ref.read(sharedCarriersProvider).remember(values.single);
     _ref.invalidate(carrierSuggestionsProvider);
   }
 

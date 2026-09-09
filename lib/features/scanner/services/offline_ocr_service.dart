@@ -12,18 +12,21 @@ const _maxOcrDimension = 2000;
 Uint8List _prepareForOcr(Uint8List bytes) {
   final decoded = im.decodeImage(bytes);
   if (decoded == null) return bytes;
-  var image = im.bakeOrientation(decoded);
-  final longEdge = math.max(image.width, image.height);
-  if (longEdge > _maxOcrDimension) {
-    final scale = _maxOcrDimension / longEdge;
-    image = im.copyResize(
-      image,
-      width: math.max(1, (image.width * scale).round()),
-      height: math.max(1, (image.height * scale).round()),
-      interpolation: im.Interpolation.linear,
-    );
-  }
-  return Uint8List.fromList(im.encodeJpg(image, quality: 90));
+  final longEdge = math.max(decoded.width, decoded.height);
+  // processedBytes already came from this app's own JPEG-encoding pipeline
+  // (document_processing_service.dart caps at the same 2000px limit), so the
+  // common case needs no further resize — skip the extra lossy re-encode
+  // pass entirely rather than compounding JPEG generations on every scan.
+  if (longEdge <= _maxOcrDimension) return bytes;
+  final image = im.bakeOrientation(decoded);
+  final scale = _maxOcrDimension / longEdge;
+  final resized = im.copyResize(
+    image,
+    width: math.max(1, (image.width * scale).round()),
+    height: math.max(1, (image.height * scale).round()),
+    interpolation: im.Interpolation.linear,
+  );
+  return Uint8List.fromList(im.encodeJpg(resized, quality: 92));
 }
 
 /// A single cached native session. Android uses the bundled ML Kit Latin model;

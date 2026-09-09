@@ -12,6 +12,7 @@ class StagingEntry {
     this.stagedBy,
     this.photoUrls = const [],
     this.entryDate,
+    this.preparedForShipping = false,
   });
 
   final String id;
@@ -27,6 +28,10 @@ class StagingEntry {
   final List<String> photoUrls;
   final DateTime? entryDate;
 
+  /// Mid-state marker between staged and shipped — staff-set, informational
+  /// only. Ship and Quick Ship bypass it entirely.
+  final bool preparedForShipping;
+
   factory StagingEntry.fromMap(Map<String, dynamic> m) {
     return StagingEntry(
       id: '${m['id']}',
@@ -41,6 +46,7 @@ class StagingEntry {
       stagedBy: m['staged_by']?.toString(),
       photoUrls: _asStringList(m['photo_urls']),
       entryDate: _asDate(m['entry_date']),
+      preparedForShipping: m['prepared_for_shipping'] == true,
     );
   }
 

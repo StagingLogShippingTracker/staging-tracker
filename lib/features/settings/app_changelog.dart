@@ -20,6 +20,15 @@ class AppChangelog {
   /// Ordered newest-first, same campaign-wave pattern as Document Generator.
   static const sections = <ChangelogSection>[
     ChangelogSection(
+      version: 'v1.1.46',
+      bullets: [
+        'New "Prepared for Shipping" marker for staged entries — informational only; Ship and Quick Ship are unaffected',
+        'Scanner: a page that failed processing or OCR is no longer stuck — Retry and every tool work on it again',
+        'Scanner: better edge detection for smaller or off-center documents, sharper perspective correction, faster processing',
+        'Carrier now uses the same shared directory as Staged By/Shipped By, Wear, and Swift Document Generator',
+      ],
+    ),
+    ChangelogSection(
       version: 'v1.1.45',
       bullets: [
         'Prompt windows no longer stack from rapid clicks or F-keys (intentional multi-step dialogs still work)',

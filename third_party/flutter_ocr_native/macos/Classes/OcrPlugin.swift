@@ -352,12 +352,9 @@ public class OcrPlugin: NSObject, FlutterPlugin {
         guard text.contains(where: { $0.isLetter || $0.isNumber }) else {
             return false
         }
-        let letters = text.filter { $0.isLetter }
-        if letters.count >= 4 {
-            let vowels = CharacterSet(charactersIn: "aeiouAEIOU")
-            let hasVowel = letters.unicodeScalars.contains(where: { vowels.contains($0) })
-            if !hasVowel { return false }
-        }
+        // Deliberately no vowel-presence check here: real freight terminology
+        // (NMFC, MFST, SHPT, CNTR, VIN/tracking-number fragments, etc.) is
+        // frequently all-consonant and would otherwise be silently dropped.
         return true
     }
 

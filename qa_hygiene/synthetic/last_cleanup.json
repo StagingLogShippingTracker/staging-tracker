@@ -1,9 +1,37 @@
 {
-  "ts": "2026-08-22T18:44:48Z",
-  "before": [],
-  "deleted": [],
+  "ts": "2026-09-09T18:26:40Z",
+  "before": [
+    {
+      "path": ".tmp-android-err.txt",
+      "kind": "file",
+      "files": 1,
+      "bytes": 4154,
+      "reason": "safe_root_pattern"
+    },
+    {
+      "path": ".tmp-claude-tail.txt",
+      "kind": "file",
+      "files": 1,
+      "bytes": 27470,
+      "reason": "safe_root_pattern"
+    }
+  ],
+  "deleted": [
+    {
+      "path": ".tmp-android-err.txt",
+      "deleted": true,
+      "files_removed": 1,
+      "bytes_removed": 4154
+    },
+    {
+      "path": ".tmp-claude-tail.txt",
+      "deleted": true,
+      "files_removed": 1,
+      "bytes_removed": 27470
+    }
+  ],
   "after": [],
-  "bytes_freed": 0,
-  "files_freed": 0,
+  "bytes_freed": 31624,
+  "files_freed": 2,
   "gitignore_added": []
 }

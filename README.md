@@ -159,11 +159,27 @@ GitHub Pages is **not** used.
 
 ## Remembered entry fields and locations
 
-Customer, Staged By, Shipped By, Carrier, and other person-by fields accept
-either a searchable remembered value or free text. A new value is written to
-`dropdown_roster` only after the business operation succeeds. Values hidden in
-local memory and operational sentinels such as `CONSOLIDATED` and
-`RETURNED TO STOCK` are excluded from suggestions.
+Customer and location fields accept either a searchable remembered value or
+free text. A new value is written to `dropdown_roster` only after the business
+operation succeeds. Values hidden in local memory and operational sentinels
+such as `CONSOLIDATED` and `RETURNED TO STOCK` are excluded from suggestions.
+
+**Carrier** and person-name fields (**Staged By**, **Shipped By**, **Picked
+by**, **Returned by**) use *different*, cross-app directories instead of
+`dropdown_roster` — `shared_carriers` / `shared_carrier_tombstones` for
+Carrier, `shared_contacts` / `shared_contact_tombstones` for person names
+(both open to the `anon` role, same as everything else since the open-anon
+migration). These are the same directories Swift Document Generator's
+"Carrier" and "Swift Contact" fields read and write, and Wear's "Carrier" and
+"Shipped By" fields read and write directly via `SharedCarriersClient` /
+`SharedContactsClient`
+(`packages/swift_staging_shared/lib/src/shared_name_directory.dart`) — a value
+entered on any surface is immediately visible on the others. `dropdown_roster`'s
+legacy `carrier` and `person_by` types are not read or written by any live
+suggestion path — `person_by` was a one-time app-side seed source
+(`lib/data/contact_memory_host.dart`, guarded by a SharedPreferences flag);
+`carrier`'s handful of pre-migration values were seeded into `shared_carriers`
+directly.
 
 Every editable location uses a drill-in selector with four categories:
 

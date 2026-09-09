@@ -846,6 +846,7 @@ class EntryCard extends StatelessWidget {
     required this.subtitle,
     required this.details,
     this.dbStatus,
+    this.prepared = false,
     this.color,
     this.onTap,
     this.trailing,
@@ -855,6 +856,7 @@ class EntryCard extends StatelessWidget {
   final String subtitle;
   final List<String> details;
   final String? dbStatus;
+  final bool prepared;
   final Color? color;
   final VoidCallback? onTap;
   final Widget? trailing;
@@ -897,6 +899,10 @@ class EntryCard extends StatelessWidget {
                           ),
                           if (style != null)
                             IndustrialStatusBadge(status: style.label),
+                          if (prepared) ...[
+                            const SizedBox(width: 6),
+                            const PreparedForShippingBadge(compact: true),
+                          ],
                         ],
                       ),
                       const SizedBox(height: 4),

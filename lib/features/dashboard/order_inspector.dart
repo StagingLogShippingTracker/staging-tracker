@@ -9,6 +9,7 @@ import '../../data/app_state.dart';
 import '../../domain/models.dart';
 import '../../domain/status.dart';
 import '../shared/industrial_widgets.dart';
+import '../shared/log_tables.dart' show toggleStagingPrepared;
 import '../shared/order_history_dialog.dart';
 import '../shared/widgets.dart';
 import '../staging/ship_dialog.dart';
@@ -48,6 +49,10 @@ class OrderInspector extends ConsumerWidget {
           Row(
             children: [
               IndustrialStatusBadge(status: uiStatus),
+              if (entry.preparedForShipping) ...[
+                const SizedBox(width: 6),
+                const PreparedForShippingBadge(),
+              ],
               if (urgent) ...[
                 const SizedBox(width: 8),
                 Container(
@@ -96,6 +101,21 @@ class OrderInspector extends ConsumerWidget {
                   onPressed: () => showSplitDialog(context, ref, entry: entry),
                   icon: const Icon(Icons.call_split, size: 16),
                   label: const Text('Split'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () =>
+                      toggleStagingPrepared(context, ref, entry),
+                  icon: Icon(
+                    entry.preparedForShipping
+                        ? Icons.remove_done
+                        : Icons.inventory_2_outlined,
+                    size: 16,
+                  ),
+                  label: Text(
+                    entry.preparedForShipping
+                        ? 'Unmark Prepared'
+                        : 'Mark Prepared',
+                  ),
                 ),
               ],
               OutlinedButton.icon(

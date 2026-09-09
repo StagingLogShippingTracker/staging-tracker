@@ -888,6 +888,10 @@ class _StagingSoCard extends StatelessWidget {
                           ),
                           const SizedBox(width: 6),
                           IndustrialStatusBadge(status: statusLabel),
+                          if (entry.preparedForShipping) ...[
+                            const SizedBox(width: 6),
+                            const PreparedForShippingBadge(compact: true),
+                          ],
                         ],
                       ),
                       const SizedBox(height: 4),

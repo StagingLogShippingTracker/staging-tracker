@@ -12,9 +12,20 @@ function Invoke-RepoFlutter {
     [string[]]$Arguments
   )
 
-  & $script:RepoFlutter @Arguments
-  if ($LASTEXITCODE -ne 0) {
-    throw "flutter $($Arguments -join ' ') failed (exit $LASTEXITCODE)."
+  # Flutter often writes plugin/KGP notices to stderr even on success. With
+  # $ErrorActionPreference=Stop (set by packaging scripts), PowerShell would
+  # otherwise treat those NativeCommandError records as terminating failures
+  # after a successful build and skip the dist/ copy step.
+  $prev = $ErrorActionPreference
+  $ErrorActionPreference = 'Continue'
+  try {
+    & $script:RepoFlutter @Arguments
+    $code = $LASTEXITCODE
+  } finally {
+    $ErrorActionPreference = $prev
+  }
+  if ($code -ne 0) {
+    throw "flutter $($Arguments -join ' ') failed (exit $code)."
   }
 }
 

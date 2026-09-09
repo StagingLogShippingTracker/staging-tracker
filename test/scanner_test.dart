@@ -55,6 +55,10 @@ void main() {
     final detection = detectDocument(bytes);
     expect(detection.confidence, greaterThan(.15));
     expect(detection.corners.isValid, isTrue);
+    // A clean, high-contrast, frame-filling fixture should be a genuine
+    // detection, not the hardcoded inset fallback — `isValid` alone is true
+    // for both, so it can't tell them apart.
+    expect(detection.diagnostics, isNot(contains('fallback=inset')));
 
     final first = processDocument(
       bytes: bytes,
@@ -70,6 +74,51 @@ void main() {
     );
     expect(first, orderedEquals(second));
     expect(im.decodeImage(first), isNotNull);
+  });
+
+  test('detects a smaller, off-center document without falling back', () {
+    // Document occupies roughly the left-hand 45% x 55% of the frame,
+    // clear of the frame edges on all sides — the kind of casually framed
+    // photo that a fixed >=62%-frame-coverage search would miss entirely.
+    const width = 480;
+    const height = 640;
+    final image = im.Image(width: width, height: height);
+    im.fill(image, color: im.ColorRgb8(60, 70, 80));
+    im.fillRect(
+      image,
+      x1: 40,
+      y1: 60,
+      x2: 220,
+      y2: 410,
+      color: im.ColorRgb8(238, 235, 220),
+    );
+    for (var y = 110; y < 380; y += 24) {
+      im.drawLine(
+        image,
+        x1: 60,
+        y1: y,
+        x2: 200,
+        y2: y,
+        color: im.ColorRgb8(45, 45, 45),
+        thickness: 2,
+      );
+    }
+    final bytes = Uint8List.fromList(im.encodeJpg(image, quality: 95));
+
+    final detection = detectDocument(bytes);
+    expect(detection.diagnostics, isNot(contains('fallback=inset')));
+    expect(detection.confidence, greaterThan(.15));
+
+    final corners = detection.corners.points;
+    final maxX = corners.map((p) => p.dx).reduce((a, b) => a > b ? a : b);
+    final minY = corners.map((p) => p.dy).reduce((a, b) => a < b ? a : b);
+    final maxY = corners.map((p) => p.dy).reduce((a, b) => a > b ? a : b);
+    // Detected box should track the actual ~0.08-0.46 x / 0.09-0.64 y
+    // document, not the frame-filling 0.04-0.96 fallback rectangle.
+    expect(maxX, lessThan(.6));
+    expect(minY, lessThan(.2));
+    expect(maxY, greaterThan(.35));
+    expect(maxY, lessThan(.85));
   });
 
   test('adaptive threshold preserves a valid high resolution page', () {

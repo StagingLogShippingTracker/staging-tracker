@@ -94,6 +94,7 @@ class ScanPage {
     this.work = ScanWork.idle,
     this.ocr,
     this.error,
+    this.failedFrom,
   });
 
   final String id;
@@ -109,6 +110,10 @@ class ScanPage {
   final ScanOcrResult? ocr;
   final String? error;
 
+  /// Which stage failed, so Retry can re-run exactly that stage instead of
+  /// redoing already-successful work.
+  final ScanWork? failedFrom;
+
   ScanPage copyWith({
     Uint8List? originalBytes,
     Uint8List? processedBytes,
@@ -122,6 +127,8 @@ class ScanPage {
     bool clearOcr = false,
     String? error,
     bool clearError = false,
+    ScanWork? failedFrom,
+    bool clearFailedFrom = false,
   }) {
     return ScanPage(
       id: id,
@@ -136,6 +143,8 @@ class ScanPage {
       work: work ?? this.work,
       ocr: clearOcr ? null : (ocr ?? this.ocr),
       error: clearError ? null : (error ?? this.error),
+      failedFrom:
+          clearFailedFrom ? null : (failedFrom ?? this.failedFrom),
     );
   }
 }

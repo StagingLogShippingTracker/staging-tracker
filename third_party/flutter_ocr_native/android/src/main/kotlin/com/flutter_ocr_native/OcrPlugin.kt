@@ -602,9 +602,9 @@ class OcrPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
         val alphaNum = normalized.count { it.isLetterOrDigit() }
         if (alphaNum == 0) return false
 
-        val letters = normalized.replace(Regex("[^A-Za-z]"), "")
-        if (letters.length >= 4 && !letters.contains(Regex("[aeiouAEIOU]"))) return false
-
+        // Deliberately no vowel-presence check here: real freight terminology
+        // (NMFC, MFST, SHPT, CNTR, VIN/tracking-number fragments, etc.) is
+        // frequently all-consonant and would otherwise be silently dropped.
         return true
     }
 

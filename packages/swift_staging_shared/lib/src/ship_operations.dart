@@ -7,6 +7,7 @@ import 'formatters.dart';
 import 'inventory_rpc.dart';
 import 'models.dart';
 import 'repositories.dart';
+import 'shared_name_directory.dart';
 import 'validation.dart';
 
 /// Shared ship-confirm path used by Wear (and available to phone/desktop).
@@ -16,16 +17,22 @@ class ShipOperations {
         _roster = RosterRepository(client),
         _photos = PhotoStorage(client),
         _notify = NotifyRepository(client),
-        _rpc = InventoryRpc(client);
+        _rpc = InventoryRpc(client),
+        _contacts = SharedContactsClient(client),
+        _carriers = SharedCarriersClient(client);
 
   final StagingRepository _staging;
   final RosterRepository _roster;
   final PhotoStorage _photos;
   final NotifyRepository _notify;
   final InventoryRpc _rpc;
+  final SharedContactsClient _contacts;
+  final SharedCarriersClient _carriers;
 
   StagingRepository get staging => _staging;
   RosterRepository get roster => _roster;
+  SharedContactsClient get contacts => _contacts;
+  SharedCarriersClient get carriers => _carriers;
 
   Future<List<StagingEntry>> fetchStaging() => _staging.fetchAll();
 
@@ -64,8 +71,11 @@ class ShipOperations {
       notificationStatus: notifStatus,
     );
     try {
-      await _roster.remember('carrier', carrier);
-      await _roster.remember('person_by', shippedBy);
+      // Shared cross-app directories (same stores as "Carrier"/"Staged By"
+      // on Windows/Android and Swift Document Generator's "Carrier"/"Swift
+      // Contact" fields) — not the legacy per-app `dropdown_roster` types.
+      await _carriers.remember(carrier);
+      await _contacts.remember(shippedBy);
     } catch (_) {
       // Roster memory is best-effort; inventory already moved.
     }

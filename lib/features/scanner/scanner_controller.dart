@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
@@ -5,6 +7,12 @@ import '../../data/app_state.dart';
 import 'models/scan_models.dart';
 import 'services/document_processing_service.dart';
 import 'services/offline_ocr_service.dart';
+
+/// Ceiling on each pipeline stage so a stalled native call or pathological
+/// image leaves a page in "failed" (retryable) rather than stuck spinning.
+const _detectTimeout = Duration(seconds: 20);
+const _processTimeout = Duration(seconds: 30);
+const _recognizeTimeout = Duration(seconds: 30);
 
 class ScannerController extends ChangeNotifier {
   ScannerController({
@@ -15,6 +23,37 @@ class ScannerController extends ChangeNotifier {
 
   final DocumentProcessingService _processing;
   final OfflineOcrService _ocr;
+  final Set<Timer> _timers = {};
+
+  /// Like [Future.timeout], but the underlying [Timer] is tracked and
+  /// force-cancelled on [dispose] instead of lingering (harmlessly, but
+  /// noisily in tests) until it would have fired.
+  Future<T> _withTimeout<T>(Future<T> future, Duration duration) {
+    final completer = Completer<T>();
+    late final Timer timer;
+    timer = Timer(duration, () {
+      _timers.remove(timer);
+      if (!completer.isCompleted) {
+        completer.completeError(
+          TimeoutException('Timed out after $duration'),
+        );
+      }
+    });
+    _timers.add(timer);
+    future.then(
+      (value) {
+        timer.cancel();
+        _timers.remove(timer);
+        if (!completer.isCompleted) completer.complete(value);
+      },
+      onError: (Object error, StackTrace stack) {
+        timer.cancel();
+        _timers.remove(timer);
+        if (!completer.isCompleted) completer.completeError(error, stack);
+      },
+    );
+    return completer.future;
+  }
   final List<ScanPage> _pages = [];
   bool _disposed = false;
   int selectedIndex = 0;
@@ -54,27 +93,49 @@ class ScannerController extends ChangeNotifier {
     selectedIndex = index;
     _notify();
     try {
-      final detection = await _processing.detect(photo.bytes);
+      final detection =
+          await _withTimeout(_processing.detect(photo.bytes), _detectTimeout);
       _pages[index] = _pages[index].copyWith(
         corners: detection.corners,
         detectionConfidence: detection.confidence,
         diagnostics: detection.diagnostics,
         work: ScanWork.processing,
         clearError: true,
+        clearFailedFrom: true,
       );
       _notify();
       await _reprocess(index);
     } catch (error) {
+      if (index >= _pages.length || _pages[index].id != page.id) return;
       _pages[index] = _pages[index].copyWith(
         work: ScanWork.failed,
-        error: error.toString(),
+        failedFrom: ScanWork.detecting,
+        error: _friendlyError(error, ScanWork.detecting),
       );
       _notify();
     }
   }
 
+  /// Re-runs whichever stage failed, without redoing already-successful work.
+  Future<void> retry() async {
+    final page = selected;
+    if (page == null) return;
+    switch (page.failedFrom) {
+      case ScanWork.detecting:
+        await addPhoto(
+          (bytes: page.originalBytes, name: page.name),
+          replaceIndex: selectedIndex,
+        );
+      case ScanWork.recognizing:
+        await runOcr();
+      case ScanWork.processing:
+      default:
+        await _reprocess(selectedIndex);
+    }
+  }
+
   void select(int index) {
-    selectedIndex = index.clamp(0, _pages.length - 1);
+    selectedIndex = _pages.isEmpty ? 0 : index.clamp(0, _pages.length - 1);
     _notify();
   }
 
@@ -86,6 +147,7 @@ class ScannerController extends ChangeNotifier {
       work: ScanWork.processing,
       clearOcr: true,
       clearError: true,
+      clearFailedFrom: true,
     );
     _notify();
     await _reprocess(index);
@@ -99,6 +161,7 @@ class ScannerController extends ChangeNotifier {
       work: ScanWork.processing,
       clearOcr: true,
       clearError: true,
+      clearFailedFrom: true,
     );
     _notify();
     await _reprocess(index);
@@ -112,6 +175,7 @@ class ScannerController extends ChangeNotifier {
       work: ScanWork.processing,
       clearOcr: true,
       clearError: true,
+      clearFailedFrom: true,
     );
     _notify();
     await _reprocess(index);
@@ -119,6 +183,12 @@ class ScannerController extends ChangeNotifier {
 
   Future<void> _reprocess(int index) async {
     final page = _pages[index];
+    _pages[index] = page.copyWith(
+      work: ScanWork.processing,
+      clearError: true,
+      clearFailedFrom: true,
+    );
+    _notify();
     try {
       // Fast path: original framing with no rotation skips heavy warp/enhance.
       final skipWarp = page.enhancement == ScanEnhancement.original &&
@@ -126,11 +196,14 @@ class ScannerController extends ChangeNotifier {
           page.corners == DocumentCorners.full;
       final bytes = skipWarp
           ? page.originalBytes
-          : await _processing.process(
-              bytes: page.originalBytes,
-              corners: page.corners,
-              enhancement: page.enhancement,
-              rotation: page.rotation,
+          : await _withTimeout(
+              _processing.process(
+                bytes: page.originalBytes,
+                corners: page.corners,
+                enhancement: page.enhancement,
+                rotation: page.rotation,
+              ),
+              _processTimeout,
             );
       if (index >= _pages.length || _pages[index].id != page.id) return;
       _pages[index] = _pages[index].copyWith(
@@ -142,7 +215,8 @@ class ScannerController extends ChangeNotifier {
       if (index < _pages.length && _pages[index].id == page.id) {
         _pages[index] = _pages[index].copyWith(
           work: ScanWork.failed,
-          error: error.toString(),
+          failedFrom: ScanWork.processing,
+          error: _friendlyError(error, ScanWork.processing),
         );
       }
     }
@@ -153,10 +227,17 @@ class ScannerController extends ChangeNotifier {
     final page = selected;
     if (page == null) return;
     final index = selectedIndex;
-    _pages[index] = page.copyWith(work: ScanWork.recognizing, clearError: true);
+    _pages[index] = page.copyWith(
+      work: ScanWork.recognizing,
+      clearError: true,
+      clearFailedFrom: true,
+    );
     _notify();
     try {
-      final result = await _ocr.recognize(page.processedBytes);
+      final result = await _withTimeout(
+        _ocr.recognize(page.processedBytes),
+        _recognizeTimeout,
+      );
       if (index >= _pages.length || _pages[index].id != page.id) return;
       _pages[index] = _pages[index].copyWith(
         ocr: result,
@@ -165,16 +246,10 @@ class ScannerController extends ChangeNotifier {
       );
     } catch (error) {
       if (index < _pages.length && _pages[index].id == page.id) {
-        final message = error.toString();
-        final friendly = message.contains('NOT_INITIALIZED') ||
-                message.contains('Windows OCR language is not installed')
-            ? 'Offline OCR is unavailable. Install English OCR: '
-                'Settings → Time & language → Language & region → '
-                'Add English (United States) → Options → Optical character recognition.'
-            : 'OCR failed: $message';
         _pages[index] = _pages[index].copyWith(
           work: ScanWork.failed,
-          error: friendly,
+          failedFrom: ScanWork.recognizing,
+          error: _friendlyError(error, ScanWork.recognizing),
         );
       }
     }
@@ -217,7 +292,40 @@ class ScannerController extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    for (final timer in _timers) {
+      timer.cancel();
+    }
+    _timers.clear();
     _ocr.dispose();
     super.dispose();
   }
+}
+
+/// Readable error text for a failed pipeline stage, including a timeout hint
+/// and the existing "OCR language not installed" guidance for Windows.
+String _friendlyError(Object error, ScanWork stage) {
+  if (error is TimeoutException) {
+    final what = switch (stage) {
+      ScanWork.detecting => 'Detecting the document edges',
+      ScanWork.processing => 'Processing the image',
+      ScanWork.recognizing => 'Recognizing text',
+      _ => 'This step',
+    };
+    return '$what took too long and was cancelled. Tap Retry to try again.';
+  }
+  final message = error.toString();
+  if (stage == ScanWork.recognizing &&
+      (message.contains('NOT_INITIALIZED') ||
+          message.contains('Windows OCR language is not installed'))) {
+    return 'Offline OCR is unavailable. Install English OCR: '
+        'Settings → Time & language → Language & region → '
+        'Add English (United States) → Options → Optical character recognition.';
+  }
+  final what = switch (stage) {
+    ScanWork.detecting => 'Detection failed',
+    ScanWork.processing => 'Processing failed',
+    ScanWork.recognizing => 'OCR failed',
+    _ => 'Failed',
+  };
+  return '$what: $message';
 }

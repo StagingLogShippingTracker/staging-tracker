@@ -1,11 +1,11 @@
 {
-  "ts": "2026-08-22T18:45:14.603243Z",
+  "ts": "2026-09-09T18:26:08.574493Z",
   "domain": "ops",
   "cases": [
     {
       "case_id": "container_counts_total",
       "ok": true,
-      "duration_ms": 2,
+      "duration_ms": 3,
       "metrics_raw": {
         "integrity": true
       }
@@ -13,7 +13,7 @@
     {
       "case_id": "container_type_label",
       "ok": true,
-      "duration_ms": 0
+      "duration_ms": 1
     },
     {
       "case_id": "ship_fields_reject_empty",
@@ -26,7 +26,7 @@
     {
       "case_id": "return_fields_reject_empty",
       "ok": true,
-      "duration_ms": 1
+      "duration_ms": 0
     },
     {
       "case_id": "so_advisories_smoke",
@@ -39,7 +39,7 @@
     {
       "case_id": "container_parse_mixed",
       "ok": true,
-      "duration_ms": 0
+      "duration_ms": 1
     },
     {
       "case_id": "container_add_commutative",
@@ -57,12 +57,12 @@
     {
       "case_id": "consolidate_undo_window_2m",
       "ok": true,
-      "duration_ms": 1
+      "duration_ms": 0
     },
     {
       "case_id": "status_urgency_weights",
       "ok": true,
-      "duration_ms": 13
+      "duration_ms": 17
     }
   ],
   "notes": []

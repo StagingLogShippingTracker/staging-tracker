@@ -1,11 +1,11 @@
 {
-  "ts": "2026-08-22T18:45:34.603582Z",
+  "ts": "2026-09-09T18:26:18.707587Z",
   "domain": "scanner",
   "cases": [
     {
       "case_id": "scan_work_state_machine",
       "ok": true,
-      "duration_ms": 3,
+      "duration_ms": 2,
       "metrics_raw": {
         "coverage": 1.0
       }
@@ -13,12 +13,12 @@
     {
       "case_id": "document_corners_full_default",
       "ok": true,
-      "duration_ms": 3
+      "duration_ms": 2
     },
     {
       "case_id": "enhancement_enum_stable",
       "ok": true,
-      "duration_ms": 1
+      "duration_ms": 0
     },
     {
       "case_id": "ocr_result_model_fields",
@@ -28,12 +28,12 @@
     {
       "case_id": "offline_ocr_service_constructs",
       "ok": true,
-      "duration_ms": 2
+      "duration_ms": 0
     },
     {
       "case_id": "scan_screen_exports",
       "ok": true,
-      "duration_ms": 31
+      "duration_ms": 17
     }
   ],
   "notes": [

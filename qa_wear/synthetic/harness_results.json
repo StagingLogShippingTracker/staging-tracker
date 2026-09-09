@@ -1,5 +1,5 @@
 {
-  "ts": "2026-08-22T18:46:26.289197Z",
+  "ts": "2026-09-09T18:26:39.218892Z",
   "domain": "wear",
   "cases": [
     {
@@ -13,7 +13,7 @@
     {
       "case_id": "wear_theme_dark_only",
       "ok": true,
-      "duration_ms": 160
+      "duration_ms": 104
     },
     {
       "case_id": "wear_ship_payload_cc",
@@ -26,7 +26,7 @@
     {
       "case_id": "wear_ship_validation_empty_carrier",
       "ok": true,
-      "duration_ms": 2
+      "duration_ms": 0
     },
     {
       "case_id": "wear_update_platform_is_wear",
@@ -47,7 +47,7 @@
     {
       "case_id": "wear_verify_audit_order",
       "ok": true,
-      "duration_ms": 7
+      "duration_ms": 4
     }
   ],
   "notes": [

@@ -25,6 +25,7 @@
 
 #include <fstream>
 #include <memory>
+#include <mutex>
 #include <regex>
 #include <string>
 #include <thread>
@@ -101,6 +102,10 @@ class FlutterOcrNativePlugin : public flutter::Plugin {
 
   ocr::OcrEngine ocr_engine_{nullptr};
   ULONG_PTR gdiplus_token_{0};
+  // RecognizeFromBytes spawns a new detached thread per call, so overlapping
+  // calls (a fast double-tap, or two pages processed close together) could
+  // otherwise race on these two members inside EnsureInitialized.
+  std::mutex init_mutex_;
 };
 
 void FlutterOcrNativePlugin::RegisterWithRegistrar(
@@ -122,6 +127,7 @@ void FlutterOcrNativePlugin::RegisterWithRegistrar(
 FlutterOcrNativePlugin::FlutterOcrNativePlugin() = default;
 
 void FlutterOcrNativePlugin::EnsureInitialized() {
+  std::lock_guard<std::mutex> lock(init_mutex_);
   if (ocr_engine_) return;
 
   // The Flutter Windows runner already initializes COM as STA. Initializing
@@ -282,8 +288,6 @@ flutter::EncodableMap FlutterOcrNativePlugin::ProcessOcrResult(
   for (const auto& line : ocr_result.Lines()) {
     std::string line_text;
     flutter::EncodableList elements;
-    double total_confidence = 0;
-    int word_count = 0;
 
     for (const auto& word : line.Words()) {
       auto text = winrt::to_string(word.Text());
@@ -299,13 +303,14 @@ flutter::EncodableMap FlutterOcrNativePlugin::ProcessOcrResult(
       flutter::EncodableMap element;
       element[flutter::EncodableValue("text")] = flutter::EncodableValue(text);
       element[flutter::EncodableValue("boundingBox")] = flutter::EncodableValue(bbox);
-      element[flutter::EncodableValue("confidence")] = flutter::EncodableValue(0.9);
+      // Windows.Media.Ocr's OcrWord exposes no real per-word confidence —
+      // leave it null rather than reporting a fabricated number as if it
+      // were a measured value.
+      element[flutter::EncodableValue("confidence")] = flutter::EncodableValue();
 
       elements.push_back(flutter::EncodableValue(element));
       if (!line_text.empty()) line_text += " ";
       line_text += text;
-      total_confidence += 0.9;
-      word_count++;
     }
 
     if (elements.empty()) continue;
@@ -317,12 +322,10 @@ flutter::EncodableMap FlutterOcrNativePlugin::ProcessOcrResult(
     line_bbox[flutter::EncodableValue("width")] = flutter::EncodableValue((double)line_rect.Width);
     line_bbox[flutter::EncodableValue("height")] = flutter::EncodableValue((double)line_rect.Height);
 
-    double avg_conf = word_count > 0 ? total_confidence / word_count : 0.9;
-
     flutter::EncodableMap line_map;
     line_map[flutter::EncodableValue("text")] = flutter::EncodableValue(line_text);
     line_map[flutter::EncodableValue("boundingBox")] = flutter::EncodableValue(line_bbox);
-    line_map[flutter::EncodableValue("confidence")] = flutter::EncodableValue(avg_conf);
+    line_map[flutter::EncodableValue("confidence")] = flutter::EncodableValue();
     line_map[flutter::EncodableValue("elements")] = flutter::EncodableValue(elements);
 
     flutter::EncodableMap block;

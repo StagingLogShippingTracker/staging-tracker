@@ -622,6 +622,7 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
   String _zoneFilter = _allZones;
   String _statusFilter = _allStatuses;
   String _stagerFilter = _allStagers;
+  bool _preparedOnly = false;
 
   void _inspect(StagingEntry entry) => widget.onInspect?.call(entry);
 
@@ -636,6 +637,9 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
       }
       final stager = (e.stagedBy ?? '').trim();
       if (_stagerFilter != _allStagers && stager != _stagerFilter) {
+        return false;
+      }
+      if (_preparedOnly && !e.preparedForShipping) {
         return false;
       }
       return true;
@@ -730,6 +734,18 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
           .read(operationsProvider)
           .deleteRecord(table: 'staging', id: e.id, so: e.so);
       if (mounted) showOk(context, 'Deleted SO ${e.so}');
+    } catch (err) {
+      if (mounted) showError(context, err);
+    }
+  }
+
+  Future<void> _togglePrepared(StagingEntry e) async {
+    final next = !e.preparedForShipping;
+    try {
+      await ref.read(operationsProvider).setPreparedForShipping(e, next);
+      if (mounted) {
+        showOk(context, next ? 'Marked prepared for shipping' : 'Unmarked');
+      }
     } catch (err) {
       if (mounted) showError(context, err);
     }
@@ -835,6 +851,18 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
                 items: stagers,
                 width: 140,
                 onChanged: (v) => setState(() => _stagerFilter = v),
+              ),
+              FilterChip(
+                label: const Text('Prepared only'),
+                avatar: Icon(
+                  Icons.inventory_2_outlined,
+                  size: 16,
+                  color: _preparedOnly
+                      ? IndustrialTheme.skyBlue
+                      : IndustrialTheme.chromeOf(context).muted,
+                ),
+                selected: _preparedOnly,
+                onSelected: (v) => setState(() => _preparedOnly = v),
               ),
               Text(
                 '${sorted.length} entr${sorted.length == 1 ? 'y' : 'ies'}',
@@ -976,6 +1004,7 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
       title: e.so,
       subtitle: e.customer,
       dbStatus: e.status,
+      prepared: e.preparedForShipping,
       details: [
         if (e.location.trim().isNotEmpty) e.location,
         if (e.type.trim().isNotEmpty) e.type,
@@ -1003,16 +1032,29 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
                     showSplitDialog(context, ref, entry: e);
                   case 'return':
                     showReturnDialog(context, ref, entry: e);
+                  case 'prepared':
+                    _togglePrepared(e);
                   case 'delete':
                     _deleteOne(e);
                 }
               },
-              itemBuilder: (context) => const [
-                PopupMenuItem(value: 'edit', child: Text('Edit')),
-                PopupMenuItem(value: 'ship', child: Text('Ship')),
-                PopupMenuItem(value: 'split', child: Text('Split Entry')),
-                PopupMenuItem(value: 'return', child: Text('Return to Stock')),
-                PopupMenuItem(value: 'delete', child: Text('Delete')),
+              itemBuilder: (context) => [
+                const PopupMenuItem(value: 'edit', child: Text('Edit')),
+                const PopupMenuItem(value: 'ship', child: Text('Ship')),
+                const PopupMenuItem(value: 'split', child: Text('Split Entry')),
+                const PopupMenuItem(
+                  value: 'return',
+                  child: Text('Return to Stock'),
+                ),
+                PopupMenuItem(
+                  value: 'prepared',
+                  child: Text(
+                    e.preparedForShipping
+                        ? 'Unmark Prepared for Shipping'
+                        : 'Mark Prepared for Shipping',
+                  ),
+                ),
+                const PopupMenuItem(value: 'delete', child: Text('Delete')),
               ],
             )
           : null,
@@ -1107,6 +1149,10 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
                           ),
                         ),
                         IndustrialStatusBadge(status: statusLabel),
+                        if (e.preparedForShipping) ...[
+                          const SizedBox(width: 6),
+                          const PreparedForShippingBadge(compact: true),
+                        ],
                       ],
                     ),
                     const SizedBox(height: 4),
@@ -1158,22 +1204,32 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
                         showSplitDialog(context, ref, entry: e);
                       case 'return':
                         showReturnDialog(context, ref, entry: e);
+                      case 'prepared':
+                        _togglePrepared(e);
                       case 'delete':
                         _deleteOne(e);
                     }
                   },
-                  itemBuilder: (context) => const [
-                    PopupMenuItem(value: 'edit', child: Text('Edit')),
-                    PopupMenuItem(value: 'ship', child: Text('Ship')),
-                    PopupMenuItem(
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(value: 'edit', child: Text('Edit')),
+                    const PopupMenuItem(value: 'ship', child: Text('Ship')),
+                    const PopupMenuItem(
                       value: 'split',
                       child: Text('Split Entry'),
                     ),
-                    PopupMenuItem(
+                    const PopupMenuItem(
                       value: 'return',
                       child: Text('Return to Stock'),
                     ),
                     PopupMenuItem(
+                      value: 'prepared',
+                      child: Text(
+                        e.preparedForShipping
+                            ? 'Unmark Prepared for Shipping'
+                            : 'Mark Prepared for Shipping',
+                      ),
+                    ),
+                    const PopupMenuItem(
                       value: 'delete',
                       child: Text('Delete'),
                     ),
@@ -1379,7 +1435,19 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
                           width: statusW,
                           child: Padding(
                             padding: cellPad,
-                            child: IndustrialStatusBadge(status: statusLabel),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IndustrialStatusBadge(status: statusLabel),
+                                if (e.preparedForShipping) ...[
+                                  const SizedBox(height: 4),
+                                  const PreparedForShippingBadge(
+                                    compact: true,
+                                  ),
+                                ],
+                              ],
+                            ),
                           ),
                         ),
                         SizedBox(
@@ -1455,24 +1523,34 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
                                             ref,
                                             entry: e,
                                           );
+                                        case 'prepared':
+                                          _togglePrepared(e);
                                         case 'delete':
                                           _deleteOne(e);
                                       }
                                     },
-                                    itemBuilder: (context) => const [
-                                      PopupMenuItem(
+                                    itemBuilder: (context) => [
+                                      const PopupMenuItem(
                                         value: 'edit',
                                         child: Text('Edit'),
                                       ),
-                                      PopupMenuItem(
+                                      const PopupMenuItem(
                                         value: 'split',
                                         child: Text('Split Entry'),
                                       ),
-                                      PopupMenuItem(
+                                      const PopupMenuItem(
                                         value: 'return',
                                         child: Text('Return to Stock'),
                                       ),
                                       PopupMenuItem(
+                                        value: 'prepared',
+                                        child: Text(
+                                          e.preparedForShipping
+                                              ? 'Unmark Prepared for Shipping'
+                                              : 'Mark Prepared for Shipping',
+                                        ),
+                                      ),
+                                      const PopupMenuItem(
                                         value: 'delete',
                                         child: Text('Delete'),
                                       ),
@@ -2487,6 +2565,22 @@ Future<void> deleteStagingEntry(
   }
 }
 
+Future<void> toggleStagingPrepared(
+  BuildContext context,
+  WidgetRef ref,
+  StagingEntry e,
+) async {
+  final next = !e.preparedForShipping;
+  try {
+    await ref.read(operationsProvider).setPreparedForShipping(e, next);
+    if (context.mounted) {
+      showOk(context, next ? 'Marked prepared for shipping' : 'Unmarked');
+    }
+  } catch (err) {
+    if (context.mounted) showError(context, err);
+  }
+}
+
 Future<void> deleteShippedEntry(
   BuildContext context,
   WidgetRef ref,
@@ -2741,7 +2835,15 @@ class StagingInspectorBody extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        IndustrialStatusBadge(status: status),
+        Row(
+          children: [
+            IndustrialStatusBadge(status: status),
+            if (entry.preparedForShipping) ...[
+              const SizedBox(width: 6),
+              const PreparedForShippingBadge(),
+            ],
+          ],
+        ),
         const SizedBox(height: 12),
         Wrap(
           spacing: 8,
@@ -2780,6 +2882,20 @@ class StagingInspectorBody extends ConsumerWidget {
                     showReturnDialog(context, ref, entry: entry),
                 icon: const Icon(Icons.undo, size: 16),
                 label: const Text('Return to Stock'),
+              ),
+              OutlinedButton.icon(
+                onPressed: () => toggleStagingPrepared(context, ref, entry),
+                icon: Icon(
+                  entry.preparedForShipping
+                      ? Icons.remove_done
+                      : Icons.inventory_2_outlined,
+                  size: 16,
+                ),
+                label: Text(
+                  entry.preparedForShipping
+                      ? 'Unmark Prepared'
+                      : 'Mark Prepared',
+                ),
               ),
             ],
             OutlinedButton.icon(

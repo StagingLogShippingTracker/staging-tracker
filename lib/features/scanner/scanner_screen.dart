@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image/image.dart' as im;
 
 import '../../core/popup_gate.dart';
 import '../../core/theme.dart';
@@ -338,6 +339,9 @@ class _DocumentScannerScreenState extends State<DocumentScannerScreen> {
         children: [
           if (_manual)
             ManualCornerEditor(
+              // Rebuilds fresh (instead of reusing stale corner state) when
+              // the selected page changes mid-edit.
+              key: ValueKey(page.id),
               imageBytes: page.originalBytes,
               corners: page.corners,
               onChanged: (corners) {
@@ -383,6 +387,11 @@ class _DocumentScannerScreenState extends State<DocumentScannerScreen> {
   DocumentCorners? _pendingCorners;
 
   Widget _tools(ScanPage page) {
+    // Failed is treated as an editable end state, not a dead end: every
+    // control below stays enabled so the user has a way out besides deleting
+    // the whole page.
+    final actionable =
+        page.work == ScanWork.idle || page.work == ScanWork.failed;
     final status = switch (page.work) {
       ScanWork.detecting => 'Detecting page edges…',
       ScanWork.processing => 'Processing full-resolution page…',
@@ -413,7 +422,7 @@ class _DocumentScannerScreenState extends State<DocumentScannerScreen> {
             for (final mode in ScanEnhancement.values)
               DropdownMenuItem(value: mode, child: Text(mode.label)),
           ],
-          onChanged: page.work == ScanWork.idle
+          onChanged: actionable
               ? (mode) {
                   if (mode != null) _controller.setEnhancement(mode);
                 }
@@ -424,14 +433,21 @@ class _DocumentScannerScreenState extends State<DocumentScannerScreen> {
           spacing: 8,
           runSpacing: 8,
           children: [
+            if (page.work == ScanWork.failed)
+              FilledButton.icon(
+                key: const Key('scanner-retry'),
+                onPressed: _controller.retry,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Retry'),
+              ),
             OutlinedButton.icon(
-              onPressed: page.work == ScanWork.idle ? _controller.rotate : null,
+              onPressed: actionable ? _controller.rotate : null,
               icon: const Icon(Icons.rotate_90_degrees_cw),
               label: const Text('Rotate'),
             ),
             OutlinedButton.icon(
               key: const Key('manual-corners'),
-              onPressed: page.work == ScanWork.idle
+              onPressed: actionable
                   ? () async {
                       if (_manual && _pendingCorners != null) {
                         final corners = _pendingCorners!;
@@ -452,13 +468,13 @@ class _DocumentScannerScreenState extends State<DocumentScannerScreen> {
               label: Text(_manual ? 'Apply corners' : 'Adjust corners'),
             ),
             OutlinedButton.icon(
-              onPressed: page.work == ScanWork.idle ? _replace : null,
+              onPressed: actionable ? _replace : null,
               icon: const Icon(Icons.replay),
               label: const Text('Replace'),
             ),
             IconButton(
               tooltip: 'Delete page',
-              onPressed: page.work == ScanWork.idle
+              onPressed: actionable
                   ? () => _controller.remove(_controller.selectedIndex)
                   : null,
               icon: const Icon(Icons.delete_outline, color: SlstColors.danger),
@@ -468,7 +484,7 @@ class _DocumentScannerScreenState extends State<DocumentScannerScreen> {
         const Divider(height: 24),
         FilledButton.icon(
           key: const Key('run-ocr'),
-          onPressed: page.work == ScanWork.idle ? _controller.runOcr : null,
+          onPressed: actionable ? _controller.runOcr : null,
           icon: const Icon(Icons.text_snippet_outlined),
           label: Text(
             page.ocr == null ? 'Run offline OCR' : 'Re-run offline OCR',
@@ -568,20 +584,59 @@ class ManualCornerEditor extends StatefulWidget {
 class _ManualCornerEditorState extends State<ManualCornerEditor> {
   late DocumentCorners corners = widget.corners;
   int? active;
+  late ({int width, int height})? _dimensions = _decode(widget.imageBytes);
+
+  @override
+  void didUpdateWidget(ManualCornerEditor oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.imageBytes != widget.imageBytes) {
+      _dimensions = _decode(widget.imageBytes);
+    }
+  }
+
+  // Only the pixel dimensions are needed (for letterboxing math) — decoding
+  // synchronously via `package:image` avoids an async gap entirely; the
+  // pixels themselves are rendered separately by `Image.memory` below.
+  static ({int width, int height})? _decode(Uint8List bytes) {
+    final image = im.decodeImage(bytes);
+    if (image == null) return null;
+    return (width: image.width, height: image.height);
+  }
+
+  /// The letterboxed image rect within [box] under BoxFit.contain — matches
+  /// what `Image.memory(..., fit: BoxFit.contain)` actually renders, so
+  /// corner points line up with the visible image instead of a stretched one.
+  Rect _contentRect(Size box) {
+    final dims = _dimensions;
+    if (dims == null || dims.height == 0) return Offset.zero & box;
+    final imageAspect = dims.width / dims.height;
+    final boxAspect = box.width / box.height;
+    if (imageAspect > boxAspect) {
+      final height = box.width / imageAspect;
+      return Rect.fromLTWH(0, (box.height - height) / 2, box.width, height);
+    }
+    final width = box.height * imageAspect;
+    return Rect.fromLTWH((box.width - width) / 2, 0, width, box.height);
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_dimensions == null) {
+      return const Center(child: Icon(Icons.broken_image_outlined, size: 48));
+    }
     return LayoutBuilder(
       builder: (context, box) {
         final size = Size(box.maxWidth, box.maxHeight);
+        final content = _contentRect(size);
         int nearest(Offset position) {
           var result = 0;
           var distance = double.infinity;
           for (var i = 0; i < corners.points.length; i++) {
-            final p = Offset(
-              corners.points[i].dx * size.width,
-              corners.points[i].dy * size.height,
-            );
+            final p = content.topLeft +
+                Offset(
+                  corners.points[i].dx * content.width,
+                  corners.points[i].dy * content.height,
+                );
             final d = (p - position).distanceSquared;
             if (d < distance) {
               result = i;
@@ -596,11 +651,12 @@ class _ManualCornerEditorState extends State<ManualCornerEditor> {
           onPanStart: (details) => active = nearest(details.localPosition),
           onPanUpdate: (details) {
             if (active == null) return;
+            final local = details.localPosition - content.topLeft;
             final next = corners.replace(
               active!,
               Offset(
-                details.localPosition.dx / size.width,
-                details.localPosition.dy / size.height,
+                local.dx / content.width,
+                local.dy / content.height,
               ),
             );
             if (!next.isValid) return;
@@ -609,9 +665,9 @@ class _ManualCornerEditorState extends State<ManualCornerEditor> {
           },
           onPanEnd: (_) => active = null,
           child: CustomPaint(
-            foregroundPainter: _CornerPainter(corners),
+            foregroundPainter: _CornerPainter(corners, content),
             child: SizedBox.expand(
-              child: Image.memory(widget.imageBytes, fit: BoxFit.fill),
+              child: Image.memory(widget.imageBytes, fit: BoxFit.contain),
             ),
           ),
         );
@@ -621,13 +677,17 @@ class _ManualCornerEditorState extends State<ManualCornerEditor> {
 }
 
 class _CornerPainter extends CustomPainter {
-  const _CornerPainter(this.corners);
+  const _CornerPainter(this.corners, this.content);
   final DocumentCorners corners;
+  final Rect content;
 
   @override
   void paint(Canvas canvas, Size size) {
     final points = corners.points
-        .map((p) => Offset(p.dx * size.width, p.dy * size.height))
+        .map(
+          (p) => content.topLeft +
+              Offset(p.dx * content.width, p.dy * content.height),
+        )
         .toList();
     final path = Path()..moveTo(points[0].dx, points[0].dy);
     for (final point in points.skip(1)) {
@@ -649,5 +709,5 @@ class _CornerPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _CornerPainter oldDelegate) =>
-      oldDelegate.corners != corners;
+      oldDelegate.corners != corners || oldDelegate.content != content;
 }
