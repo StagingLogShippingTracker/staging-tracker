@@ -65,6 +65,20 @@ class _SharedNameDirectory {
       onConflict: 'name_key',
     );
   }
+
+  /// Permanently removes a name from the shared directory and tombstones it,
+  /// so every app stops suggesting it (until it's typed again, which clears
+  /// the tombstone via [remember]). Mirrors [remember]'s upsert-then-clear
+  /// shape in reverse.
+  Future<void> forget(String raw) async {
+    final key = nameKey(raw);
+    if (key.isEmpty) return;
+    await _client.from(table).delete().eq('name_key', key);
+    await _client.from(tombstoneTable).upsert(
+      {'name_key': key, 'deleted_at': DateTime.now().toUtc().toIso8601String()},
+      onConflict: 'name_key',
+    );
+  }
 }
 
 /// Cross-app shared person-name directory (`shared_contacts` /
@@ -95,6 +109,8 @@ class SharedContactsClient {
       _directory.fetchNames(limit: limit);
 
   Future<void> remember(String raw) => _directory.remember(raw);
+
+  Future<void> forget(String raw) => _directory.forget(raw);
 }
 
 /// Cross-app shared carrier-name directory (`shared_carriers` /
@@ -117,4 +133,6 @@ class SharedCarriersClient {
       _directory.fetchNames(limit: limit);
 
   Future<void> remember(String raw) => _directory.remember(raw);
+
+  Future<void> forget(String raw) => _directory.forget(raw);
 }

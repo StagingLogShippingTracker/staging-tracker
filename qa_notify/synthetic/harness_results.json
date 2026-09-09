@@ -1,5 +1,5 @@
 {
-  "ts": "2026-09-05T22:08:26.889393Z",
+  "ts": "2026-09-09T21:19:30.833017Z",
   "domain": "notify",
   "cases": [
     {
@@ -103,7 +103,7 @@
     {
       "case_id": "subject_uppercase_all_types",
       "ok": true,
-      "duration_ms": 0,
+      "duration_ms": 2,
       "metrics_raw": {
         "coverage": 1.0
       }
@@ -128,7 +128,7 @@
     {
       "case_id": "no_make_webhook_in_flutter",
       "ok": true,
-      "duration_ms": 64,
+      "duration_ms": 66,
       "gates_raw": {
         "no_webhook_in_clients": true
       }
@@ -136,7 +136,7 @@
     {
       "case_id": "feedback_to_warehouse2",
       "ok": true,
-      "duration_ms": 0
+      "duration_ms": 1
     },
     {
       "case_id": "warehouse_cc_default",

@@ -1,5 +1,5 @@
 {
-  "ts": "2026-08-22T18:46:10.618824Z",
+  "ts": "2026-09-09T22:14:06.576115Z",
   "domain": "update",
   "cases": [
     {
@@ -13,12 +13,12 @@
     {
       "case_id": "classify_windows_portable_zip",
       "ok": true,
-      "duration_ms": 16
+      "duration_ms": 0
     },
     {
       "case_id": "classify_android_apk",
       "ok": true,
-      "duration_ms": 4
+      "duration_ms": 0
     },
     {
       "case_id": "classify_wear_apk",
@@ -28,7 +28,7 @@
     {
       "case_id": "wear_wins_over_android_token",
       "ok": true,
-      "duration_ms": 1,
+      "duration_ms": 0,
       "gates_raw": {
         "wear_precedence": true
       }
@@ -44,7 +44,7 @@
     {
       "case_id": "windows_update_requires_setup_not_portable",
       "ok": true,
-      "duration_ms": 4,
+      "duration_ms": 0,
       "gates_raw": {
         "setup_required": true
       }
@@ -57,7 +57,7 @@
     {
       "case_id": "wear_never_reads_android_url",
       "ok": true,
-      "duration_ms": 1
+      "duration_ms": 0
     },
     {
       "case_id": "github_latest_api_configured",
@@ -67,7 +67,7 @@
     {
       "case_id": "denver_prompt_1500",
       "ok": true,
-      "duration_ms": 1
+      "duration_ms": 0
     },
     {
       "case_id": "snooze_three_days",

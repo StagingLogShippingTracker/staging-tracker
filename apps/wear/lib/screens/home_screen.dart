@@ -270,17 +270,31 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               );
               if (shipped == true) _refresh();
             },
-            child: Padding(
+              child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(
-                    e.so,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleSmall,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          e.so,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
+                      ),
+                      if (e.preparedForShipping) ...[
+                        const SizedBox(width: 4),
+                        const Icon(
+                          Icons.inventory_2_outlined,
+                          size: 12,
+                          color: WearTheme.ok,
+                        ),
+                      ],
+                    ],
                   ),
                   Text(
                     e.customer,

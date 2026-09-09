@@ -1,11 +1,11 @@
 {
-  "ts": "2026-08-22T18:44:56.988079Z",
+  "ts": "2026-09-09T21:19:25.819636Z",
   "domain": "location",
   "cases": [
     {
       "case_id": "location_parse_aisle",
       "ok": true,
-      "duration_ms": 4,
+      "duration_ms": 5,
       "metrics_raw": {
         "integrity": true
       }
@@ -13,7 +13,7 @@
     {
       "case_id": "location_category_filter",
       "ok": true,
-      "duration_ms": 2,
+      "duration_ms": 1,
       "metrics_raw": {
         "coverage": 1.0
       }

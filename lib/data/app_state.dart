@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -167,13 +168,29 @@ class AppDataNotifier extends StateNotifier<AppData> {
   AppDataNotifier(this._ref, {bool initialize = true})
     : super(AppData(loading: initialize)) {
     if (initialize) {
-      refresh();
+      _initialLoad = refresh();
       _bindRealtime();
       _startPolling();
     }
   }
 
   final Ref _ref;
+  Future<void>? _initialLoad;
+
+  /// Resolves once the first staging+shipped load has settled — success or
+  /// error, never throws. Used to gate the Windows splash screen and the
+  /// held Android/Wear native launch screens on real Supabase data instead
+  /// of a fixed delay or first-frame-only check. See [appDataReadyProvider].
+  Future<void> get initialLoad => _initialLoad ?? Future<void>.value();
+
+  /// Ticks 0 → 1 as the two initial-load fetches (staging, shipped) settle —
+  /// mirrors Swift Document Generator's `StartupSync.progress` so the
+  /// Windows splash screen shows real progress instead of a purely
+  /// indeterminate bar. Only meaningful before the first load settles;
+  /// left alone (and harmless) during later background polling.
+  final ValueNotifier<double> initialLoadProgress = ValueNotifier<double>(
+    0.0,
+  );
   RealtimeChannel? _channel;
   Timer? _realtimeDebounce;
   Timer? _pollTimer;
@@ -218,9 +235,38 @@ class AppDataNotifier extends StateNotifier<AppData> {
       state = state.copyWith(error: null);
     }
     try {
+      // Only tick the splash-screen progress notifier during the very first
+      // load (same signal already used above for the blocking `loading`
+      // state) — background polling refreshes reuse this same code path
+      // but nobody is still watching the notifier by then.
+      var done = 0;
+      void tick() {
+        if (hasCachedRows) return;
+        done++;
+        initialLoadProgress.value = (done / 2).clamp(0.0, 1.0);
+      }
+
       final results = await Future.wait([
-        _ref.read(stagingRepoProvider).fetchAll(),
-        _ref.read(shippedRepoProvider).fetchAll(),
+        _ref
+            .read(stagingRepoProvider)
+            .fetchAll()
+            .then((v) {
+              tick();
+              return v;
+            }, onError: (Object e, StackTrace st) {
+              tick();
+              Error.throwWithStackTrace(e, st);
+            }),
+        _ref
+            .read(shippedRepoProvider)
+            .fetchAll()
+            .then((v) {
+              tick();
+              return v;
+            }, onError: (Object e, StackTrace st) {
+              tick();
+              Error.throwWithStackTrace(e, st);
+            }),
       ]).timeout(_fetchTimeout);
       if (_disposed) return;
       final nextStaging = results[0] as List<StagingEntry>;
@@ -341,9 +387,40 @@ class AppDataNotifier extends StateNotifier<AppData> {
     _reconnectTimer?.cancel();
     unawaited(_channel?.unsubscribe());
     _channel = null;
+    initialLoadProgress.dispose();
     super.dispose();
   }
 }
+
+/// Resolves once the initial Supabase staging+shipped load has settled,
+/// capped at 9s so a slow/offline network can never hang the Windows splash
+/// screen (or Android/Wear's held native launch screen) forever — mirrors
+/// Swift Document Generator's StartupSync.ready timeout. Never throws; a
+/// real fetch failure still shows up via [AppData.error] once the app
+/// renders. This does not add a second Supabase round-trip — it awaits the
+/// same in-flight load [appDataProvider] itself triggers on first access.
+final appDataReadyProvider = FutureProvider<void>((ref) async {
+  final notifier = ref.watch(appDataProvider.notifier);
+  try {
+    await notifier.initialLoad.timeout(const Duration(seconds: 9));
+  } catch (_) {
+    // Timed out, or the fetch itself failed — either way the splash/launch
+    // screen gate must settle so the app is never stuck loading forever.
+  }
+  // Land the progress bar at 100% even on timeout (same as Document
+  // Generator's StartupSync) so the Windows splash never freezes mid-tick.
+  notifier.initialLoadProgress.value = 1.0;
+});
+
+/// Windows-only: [appDataReadyProvider] plus a short cosmetic settle so the
+/// progress bar visibly hits 100% before [SlstApp] swaps to the routed UI —
+/// mirrors Document Generator's WindowsSplashScreen 220ms handoff. Android
+/// and Wear still release their native launch screen on [appDataReadyProvider]
+/// alone (no settle delay).
+final windowsSplashGateProvider = FutureProvider<void>((ref) async {
+  await ref.watch(appDataReadyProvider.future);
+  await Future<void>.delayed(const Duration(milliseconds: 220));
+});
 
 final appDataProvider = StateNotifierProvider<AppDataNotifier, AppData>(
   (ref) => AppDataNotifier(ref),
@@ -401,11 +478,25 @@ Future<void> hideRememberedMemory(WidgetRef ref, String value) async {
   await prefs.hideMemory(value);
   ref.invalidate(prefsProvider);
   ref.invalidate(customerSuggestionsProvider);
-  ref.invalidate(personSuggestionsProvider);
   ref.invalidate(carrierSuggestionsProvider);
   for (final category in LocationCategory.values) {
     ref.invalidate(locationSuggestionsProvider(category));
   }
+}
+
+/// Permanently removes a carrier from the shared cross-app directory (same
+/// store as Wear and Swift Document Generator's "Carrier" field) so it stops
+/// being suggested everywhere, then falls back to the local-only hide too —
+/// mirrors the person-name directory's real forget, unlike the legacy
+/// per-device-only hide the field used before the carrier unification.
+/// Best-effort: a network hiccup still leaves the value hidden locally.
+Future<void> forgetCarrier(WidgetRef ref, String value) async {
+  try {
+    await ref.read(sharedCarriersProvider).forget(value);
+  } catch (_) {
+    // Cross-app removal is best-effort; the local hide below still applies.
+  }
+  await hideRememberedMemory(ref, value);
 }
 
 const customerRosterType = 'customer';
@@ -425,10 +516,6 @@ final carrierSuggestionsProvider = FutureProvider<List<String>>((ref) async {
   final values = await ref.watch(sharedCarriersProvider).fetchNames();
   final prefs = await ref.watch(prefsProvider.future);
   return filterCarrierSuggestions(values, hidden: prefs.hiddenMemory);
-});
-
-final personSuggestionsProvider = Provider<List<String>>((ref) {
-  return ref.watch(personNameMemoryProvider).names;
 });
 
 final customerSuggestionsProvider = FutureProvider<List<String>>((ref) async {
@@ -1242,7 +1329,6 @@ class OperationsService {
       await remember(category.rosterType, location);
     }
     _ref.invalidate(customerSuggestionsProvider);
-    _ref.invalidate(personSuggestionsProvider);
     for (final category in LocationCategory.values) {
       _ref.invalidate(locationSuggestionsProvider(category));
     }

@@ -240,6 +240,25 @@ class _ShipConfirmScreenState extends State<ShipConfirmScreen> {
                     '${e.location}\n${e.type} ×${e.qty}',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
+                  if (e.preparedForShipping) ...[
+                    const SizedBox(height: 6),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.inventory_2_outlined,
+                          size: 12,
+                          color: WearTheme.ok,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'PREPARED FOR SHIPPING',
+                          style: Theme.of(context).textTheme.labelSmall
+                              ?.copyWith(color: WearTheme.ok),
+                        ),
+                      ],
+                    ),
+                  ],
                   const SizedBox(height: 12),
                   Text('CARRIER', style: Theme.of(context).textTheme.labelSmall),
                   const SizedBox(height: 4),

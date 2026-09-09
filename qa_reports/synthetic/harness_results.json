@@ -1,11 +1,11 @@
 {
-  "ts": "2026-08-22T18:45:24.210338Z",
+  "ts": "2026-09-09T21:19:32.177221Z",
   "domain": "reports",
   "cases": [
     {
       "case_id": "audit_location_order_box_before_aisle",
       "ok": true,
-      "duration_ms": 3,
+      "duration_ms": 5,
       "gates_raw": {
         "box_before_aisle": true
       }
@@ -13,12 +13,12 @@
     {
       "case_id": "audit_mode_enum_roundtrip",
       "ok": true,
-      "duration_ms": 0
+      "duration_ms": 1
     },
     {
       "case_id": "loc_key_priority_bands",
       "ok": true,
-      "duration_ms": 1,
+      "duration_ms": 0,
       "metrics_raw": {
         "integrity": true
       }
@@ -26,7 +26,7 @@
     {
       "case_id": "wear_svr_same_comparator",
       "ok": true,
-      "duration_ms": 9
+      "duration_ms": 13
     }
   ],
   "notes": [

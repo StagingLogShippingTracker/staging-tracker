@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -8,14 +10,23 @@ import 'screens/home_screen.dart';
 import 'screens/pair_screen.dart';
 import 'theme.dart';
 import 'wear_pair_prefs.dart';
+import 'wear_startup.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Hold Wear's existing native launch screen (launch_background.xml) open
+  // past Flutter's normal "first frame drawn" auto-dismiss point, until the
+  // same Supabase-data-ready signal the phone app's Windows splash screen
+  // awaits has settled — see WearStartup. No new splash UI on Wear, just a
+  // later handoff. Paired with allowFirstFrame() once startup.ready settles.
+  WidgetsBinding.instance.deferFirstFrame();
   await Supabase.initialize(
     url: AppConfig.supabaseUrl,
     publishableKey: AppConfig.supabaseAnonKey,
   );
   await SharedPreferences.getInstance();
+  final startup = WearStartup();
+  unawaited(startup.ready.then((_) => WidgetsBinding.instance.allowFirstFrame()));
   runApp(const ProviderScope(child: SlstWearApp()));
 }
 

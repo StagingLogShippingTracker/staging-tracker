@@ -20,6 +20,15 @@ class AppChangelog {
   /// Ordered newest-first, same campaign-wave pattern as Document Generator.
   static const sections = <ChangelogSection>[
     ChangelogSection(
+      version: 'v1.1.47',
+      bullets: [
+        'Windows splash matches Document Generator — Swift mark, real progress, briysce-apps lockup; holds until staging data is ready',
+        'Android and Wear keep their existing launch screens, held open until the same Supabase-ready signal (9s cap)',
+        'Carrier Forget removes the name everywhere (shared directory + tombstones), same as Staged By / Shipped By',
+        'Prepared for Shipping carries through split, consolidate, and undo; Wear shows the marker on list and ship confirm',
+      ],
+    ),
+    ChangelogSection(
       version: 'v1.1.46',
       bullets: [
         'New "Prepared for Shipping" marker for staged entries — informational only; Ship and Quick Ship are unaffected',

@@ -2,7 +2,23 @@
   "domain": "contacts",
   "version": 1,
   "purpose": "Incremental training memory for this improve loop. Score \u2192 fix \u2192 re-score \u2192 keep lessons \u2192 expand cases. Covers every design element, function, operation, and third-party connector for this domain.",
-  "lessons": [],
+  "lessons": [
+    {
+      "id": "20260909T192849Z",
+      "ts": "2026-09-09T19:28:49Z",
+      "title": "Carrier 'Forget' only hid locally; shared_carrier_tombstones was dead",
+      "lesson": "1.1.46 gave Carrier its own shared_carriers/shared_carrier_tombstones tables (parity with shared_contacts), but _SharedNameDirectory only ever implemented fetchNames()+remember() \u2014 no forget(). The Carrier field's 'Forget this value' button called the generic local-only hideRememberedMemory (SharedPreferences), same as Customer/Location, so a forgotten carrier kept reappearing on other devices/apps and the tombstone table was never written to. Person names already had true cross-device forget via the separate contact_sync.dart path. Fixed: added forget() to _SharedNameDirectory (delete row + upsert tombstone), exposed on SharedCarriersClient/SharedContactsClient, wired CarrierSuggestionField to call it (best-effort) before the local hide so the UI still responds instantly if offline.",
+      "do_not_regress": "Any new shared_* directory (values+tombstones pair) must expose and wire a real forget() \u2014 do not ship a tombstones table that nothing ever inserts into. 'Forget this value' must mean the same thing (cross-app, cross-device) for every field that claims a shared directory, not just person names.",
+      "case_ids": [
+        "carrier_forget_cross_app"
+      ],
+      "tags": [
+        "contacts",
+        "carrier",
+        "shared-directory"
+      ]
+    }
+  ],
   "run_snapshots": [
     {
       "ts": "2026-08-22T18:35:45Z",
@@ -263,7 +279,267 @@
       ],
       "gate_fails": [],
       "next": "Read qa_contacts summary; roster remember + contacts.json integrity."
+    },
+    {
+      "ts": "2026-09-09T19:14:56Z",
+      "run_id": "20260909T191456Z",
+      "mean_composite": 1.0,
+      "ok": true,
+      "top_failures": [
+        {
+          "case_id": "contacts_asset_present",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "asset_on_disk": true,
+            "all_ok": true
+          },
+          "duration_ms": 2.0
+        },
+        {
+          "case_id": "bundled_contacts_json_parses",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0,
+            "integrity": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 21.0
+        },
+        {
+          "case_id": "contact_required_fields",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 4.0
+        },
+        {
+          "case_id": "roster_types_stable",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0,
+            "coverage": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 6.0
+        }
+      ],
+      "gate_fails": [],
+      "next": "Read qa_contacts summary; roster remember + contacts.json integrity."
+    },
+    {
+      "ts": "2026-09-09T19:28:05Z",
+      "run_id": "20260909T192805Z",
+      "mean_composite": 1.0,
+      "ok": true,
+      "top_failures": [
+        {
+          "case_id": "contacts_asset_present",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "asset_on_disk": true,
+            "all_ok": true
+          },
+          "duration_ms": 1.0
+        },
+        {
+          "case_id": "bundled_contacts_json_parses",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0,
+            "integrity": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 10.0
+        },
+        {
+          "case_id": "contact_required_fields",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 4.0
+        },
+        {
+          "case_id": "roster_types_stable",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0,
+            "coverage": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 7.0
+        }
+      ],
+      "gate_fails": [],
+      "next": "Read qa_contacts summary; roster remember + contacts.json integrity."
+    },
+    {
+      "ts": "2026-09-09T19:45:24Z",
+      "run_id": "20260909T194524Z",
+      "mean_composite": 1.0,
+      "ok": true,
+      "top_failures": [
+        {
+          "case_id": "contacts_asset_present",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "asset_on_disk": true,
+            "all_ok": true
+          },
+          "duration_ms": 1.0
+        },
+        {
+          "case_id": "bundled_contacts_json_parses",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0,
+            "integrity": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 12.0
+        },
+        {
+          "case_id": "contact_required_fields",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 3.0
+        },
+        {
+          "case_id": "roster_types_stable",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0,
+            "coverage": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 3.0
+        }
+      ],
+      "gate_fails": [],
+      "next": "Read qa_contacts summary; roster remember + contacts.json integrity."
+    },
+    {
+      "ts": "2026-09-09T22:14:17Z",
+      "run_id": "20260909T221417Z",
+      "mean_composite": 1.0,
+      "ok": true,
+      "top_failures": [
+        {
+          "case_id": "contacts_asset_present",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "asset_on_disk": true,
+            "all_ok": true
+          },
+          "duration_ms": 1.0
+        },
+        {
+          "case_id": "bundled_contacts_json_parses",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0,
+            "integrity": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 13.0
+        },
+        {
+          "case_id": "contact_required_fields",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 5.0
+        },
+        {
+          "case_id": "roster_types_stable",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0,
+            "coverage": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 5.0
+        }
+      ],
+      "gate_fails": [],
+      "next": "Read qa_contacts summary; roster remember + contacts.json integrity."
     }
   ],
-  "updated_at": "2026-09-09T18:26:30Z"
+  "updated_at": "2026-09-09T22:14:17Z"
 }

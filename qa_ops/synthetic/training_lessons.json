@@ -13,6 +13,40 @@
       "tags": [
         "validation"
       ]
+    },
+    {
+      "id": "20260909T192849Z",
+      "ts": "2026-09-09T19:28:49Z",
+      "title": "Split/Consolidate/reverse-consolidation now carry prepared_for_shipping",
+      "lesson": "Fixed via migrations 20260909193000_carry_prepared_through_transforms.sql and 20260909194500_reverse_consolidation_null_photo_urls.sql. split_staging now copies the source row's prepared_for_shipping to both new rows (nothing physically changed). consolidate_staging sets the merged row's value to true only if every source row was prepared (bool AND across the loop via v_all_prepared) \u2014 a partially-ready consolidation must not claim full readiness. reverse_consolidation restores each row's original value from the undo snapshot's jsonb (the data was already captured via to_jsonb(), just never read back out). Verified live via a do-block smoke test (split carries true/true; partial consolidate -> false; all-prepared consolidate -> true; reverse restores true+false correctly), with test rows cleaned up after. While verifying, also found and fixed an unrelated pre-existing crash: reverse_consolidation's jsonb_array_elements_text(photo_urls) raised 'cannot extract elements from a scalar' whenever a consolidated source had NULL photo_urls (to_jsonb serializes SQL NULL as JSON null, which coalesce(...,'[]') does not treat as absent). The app always sends photo_urls: [] so this was dormant, but the column has no NOT NULL/default. Now guarded with jsonb_typeof(...) = 'array'.",
+      "do_not_regress": "Any future per-row flag added to staging must have its split/consolidate/undo behavior deliberately decided, not left to fall out of the RPC's insert column list. Any jsonb snapshot restore path must handle JSON null (via to_jsonb of a NULL column) as distinct from an absent key \u2014 check jsonb_typeof before treating a value as an array/object.",
+      "case_ids": [
+        "prepared_flag_survives_row_transforms",
+        "consolidate_requires_unanimous_prepared",
+        "reverse_consolidation_null_photo_urls_safe"
+      ],
+      "tags": [
+        "ops",
+        "prepared-for-shipping",
+        "consolidate",
+        "split",
+        "bugfix"
+      ]
+    },
+    {
+      "id": "20260909T194926Z",
+      "ts": "2026-09-09T19:49:26Z",
+      "title": "Verified live RPC changes with self-cleaning do-block smoke tests",
+      "lesson": "For plpgsql RPC changes on the live Supabase DB, verified correctness with a do $$ ... exception when others then cleanup; raise; end $$ block: set_config('request.jwt.claims', ..., true) to simulate auth.uid() for security invoker functions, insert clearly-tagged TEST-*-AUDIT rows, call the real RPCs, assert with raise exception on failure, then clean up in both the success path and the exception handler so no test residue survives even on failure.",
+      "do_not_regress": "Never leave TEST-*-AUDIT rows or unconsumed consolidation_undo tokens in the live database after a verification pass.",
+      "case_ids": [
+        "self_cleaning_live_rpc_verification"
+      ],
+      "tags": [
+        "ops",
+        "supabase",
+        "testing-pattern"
+      ]
     }
   ],
   "run_snapshots": [
@@ -483,7 +517,241 @@
       ],
       "gate_fails": [],
       "next": "Read qa_ops summary; fix container/status/split/consolidate failures; expand inventory edges."
+    },
+    {
+      "ts": "2026-09-09T19:15:09Z",
+      "run_id": "20260909T191509Z",
+      "mean_composite": 1.0,
+      "ok": true,
+      "top_failures": [
+        {
+          "case_id": "container_counts_total",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0,
+            "integrity": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 1.0
+        },
+        {
+          "case_id": "container_type_label",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 0.0
+        },
+        {
+          "case_id": "ship_fields_reject_empty",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "rejects_empty_customer": true,
+            "all_ok": true
+          },
+          "duration_ms": 0.0
+        },
+        {
+          "case_id": "return_fields_reject_empty",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 0.0
+        },
+        {
+          "case_id": "so_advisories_smoke",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0,
+            "integrity": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 0.0
+        }
+      ],
+      "gate_fails": [],
+      "next": "Read qa_ops summary; fix container/status/split/consolidate failures; expand inventory edges."
+    },
+    {
+      "ts": "2026-09-09T19:45:19Z",
+      "run_id": "20260909T194519Z",
+      "mean_composite": 1.0,
+      "ok": true,
+      "top_failures": [
+        {
+          "case_id": "container_counts_total",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0,
+            "integrity": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 1.0
+        },
+        {
+          "case_id": "container_type_label",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 1.0
+        },
+        {
+          "case_id": "ship_fields_reject_empty",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "rejects_empty_customer": true,
+            "all_ok": true
+          },
+          "duration_ms": 0.0
+        },
+        {
+          "case_id": "return_fields_reject_empty",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 1.0
+        },
+        {
+          "case_id": "so_advisories_smoke",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0,
+            "integrity": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 0.0
+        }
+      ],
+      "gate_fails": [],
+      "next": "Read qa_ops summary; fix container/status/split/consolidate failures; expand inventory edges."
+    },
+    {
+      "ts": "2026-09-09T22:14:12Z",
+      "run_id": "20260909T221412Z",
+      "mean_composite": 1.0,
+      "ok": true,
+      "top_failures": [
+        {
+          "case_id": "container_counts_total",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0,
+            "integrity": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 0.0
+        },
+        {
+          "case_id": "container_type_label",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 1.0
+        },
+        {
+          "case_id": "ship_fields_reject_empty",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "rejects_empty_customer": true,
+            "all_ok": true
+          },
+          "duration_ms": 1.0
+        },
+        {
+          "case_id": "return_fields_reject_empty",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 0.0
+        },
+        {
+          "case_id": "so_advisories_smoke",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0,
+            "integrity": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 0.0
+        }
+      ],
+      "gate_fails": [],
+      "next": "Read qa_ops summary; fix container/status/split/consolidate failures; expand inventory edges."
     }
   ],
-  "updated_at": "2026-09-09T18:26:08Z"
+  "updated_at": "2026-09-09T22:14:12Z"
 }

@@ -7,18 +7,18 @@ import '../../data/person_name_memory.dart';
 import '../../data/remembered_contacts.dart';
 import '../../domain/models.dart';
 
-enum RememberedEntryKind { customer, person }
-
+// Customer is the only live user of this field — the legacy `person` kind
+// (superseded by the richer PersonSuggestionField below) was removed along
+// with the now-always-true `kind == customer` branches it required. See
+// qa_contacts/synthetic/training_lessons.json for context.
 class RememberedEntryField extends ConsumerStatefulWidget {
   const RememberedEntryField({
     super.key,
     required this.controller,
-    required this.kind,
     required this.label,
   });
 
   final TextEditingController controller;
-  final RememberedEntryKind kind;
   final String label;
 
   @override
@@ -48,15 +48,8 @@ class _RememberedEntryFieldState extends ConsumerState<RememberedEntryField> {
 
   @override
   Widget build(BuildContext context) {
-    final suggestions = widget.kind == RememberedEntryKind.customer
-        ? ref.watch(customerSuggestionsProvider).valueOrNull ?? const <String>[]
-        : ref.watch(personNameMemoryProvider).names;
-    final noun = widget.kind == RememberedEntryKind.customer
-        ? 'customer'
-        : widget.label.toLowerCase();
-    final icon = widget.kind == RememberedEntryKind.customer
-        ? Icons.business_outlined
-        : Icons.person_outline;
+    final suggestions =
+        ref.watch(customerSuggestionsProvider).valueOrNull ?? const <String>[];
 
     return LayoutBuilder(
       builder: (context, constraints) => RawAutocomplete<String>(
@@ -83,7 +76,7 @@ class _RememberedEntryFieldState extends ConsumerState<RememberedEntryField> {
             textInputAction: TextInputAction.next,
             decoration: InputDecoration(
               labelText: widget.label,
-              helperText: 'Select a remembered $noun or type a new one',
+              helperText: 'Select a remembered customer or type a new one',
               suffixIcon: const Icon(Icons.arrow_drop_down),
             ),
             onSubmitted: (_) => onSubmitted(),
@@ -110,7 +103,7 @@ class _RememberedEntryFieldState extends ConsumerState<RememberedEntryField> {
                     final suggestion = visible[index];
                     return ListTile(
                       dense: true,
-                      leading: Icon(icon),
+                      leading: const Icon(Icons.business_outlined),
                       title: Text(
                         suggestion,
                         maxLines: 1,
@@ -149,11 +142,8 @@ class CustomerSuggestionField extends StatelessWidget {
   final String label;
 
   @override
-  Widget build(BuildContext context) => RememberedEntryField(
-    controller: controller,
-    kind: RememberedEntryKind.customer,
-    label: label,
-  );
+  Widget build(BuildContext context) =>
+      RememberedEntryField(controller: controller, label: label);
 }
 
 class PersonSuggestionField extends ConsumerStatefulWidget {
@@ -499,11 +489,14 @@ class _CarrierSuggestionFieldState
   bool _isHidden(String value) =>
       _hiddenLocal.contains(value.trim().toLowerCase());
 
-  Future<void> _hide(String value) async {
+  Future<void> _forget(String value) async {
     final key = value.trim().toLowerCase();
     if (key.isEmpty) return;
     setState(() => _hiddenLocal.add(key));
-    await hideRememberedMemory(ref, value);
+    // Real cross-app removal (writes a shared_carrier_tombstones row so
+    // Wear and Document Generator stop suggesting it too), not just a
+    // local-device hide.
+    await forgetCarrier(ref, value);
   }
 
   @override
@@ -576,7 +569,7 @@ class _CarrierSuggestionFieldState
                           size: 18,
                           color: Color(0xFFEF4444),
                         ),
-                        onPressed: () => _hide(carrier),
+                        onPressed: () => _forget(carrier),
                       ),
                       onTap: () => onSelected(carrier),
                     );

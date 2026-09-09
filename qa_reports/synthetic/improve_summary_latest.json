@@ -1,6 +1,6 @@
 {
-  "run_id": "20260822T184524Z",
-  "ts": "2026-08-22T18:45:24Z",
+  "run_id": "20260909T191513Z",
+  "ts": "2026-09-09T19:15:13Z",
   "domain": "reports",
   "ok": true,
   "harness_ok": true,
@@ -8,7 +8,7 @@
   "n_cases": 4,
   "n_scored": 4,
   "mean_composite": 1.0,
-  "elapsed_s": 9.61,
+  "elapsed_s": 3.86,
   "gate_fails": [],
   "top_failures": [
     {
@@ -23,7 +23,7 @@
         "box_before_aisle": true,
         "all_ok": true
       },
-      "duration_ms": 3.0
+      "duration_ms": 2.0
     },
     {
       "case_id": "audit_mode_enum_roundtrip",
@@ -50,7 +50,7 @@
         "success": true,
         "all_ok": true
       },
-      "duration_ms": 1.0
+      "duration_ms": 0.0
     },
     {
       "case_id": "wear_svr_same_comparator",
@@ -63,7 +63,7 @@
         "success": true,
         "all_ok": true
       },
-      "duration_ms": 9.0
+      "duration_ms": 4.0
     }
   ],
   "metric_hotspots": [],

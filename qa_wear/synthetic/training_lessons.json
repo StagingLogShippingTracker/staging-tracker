@@ -2,7 +2,22 @@
   "domain": "wear",
   "version": 1,
   "purpose": "Incremental training memory for this improve loop. Score \u2192 fix \u2192 re-score \u2192 keep lessons \u2192 expand cases. Covers every design element, function, operation, and third-party connector for this domain.",
-  "lessons": [],
+  "lessons": [
+    {
+      "id": "20260909T192849Z",
+      "ts": "2026-09-09T19:28:49Z",
+      "title": "Wear staging list/ship-confirm never showed Prepared for Shipping",
+      "lesson": "1.1.46 added StagingEntry.preparedForShipping end-to-end on Windows/Android (badges in dashboard, order inspector, staging log table) but Wear's home_screen staging list and ship_confirm_screen never referenced the field at all, even though Wear is the device staff use right before shipping and the marker is meant to help triage what's actually ready to load. Added a small ok-colored inventory icon next to the SO in the list, and a 'PREPARED FOR SHIPPING' label on the ship-confirm screen when true. Informational only \u2014 Ship still bypasses it exactly as before.",
+      "do_not_regress": "New StagingEntry fields that matter for floor decisions must be surfaced on Wear too, not just Windows/Android \u2014 check apps/wear screens whenever a staging-visible field is added.",
+      "case_ids": [
+        "wear_shows_prepared_marker"
+      ],
+      "tags": [
+        "wear",
+        "prepared-for-shipping"
+      ]
+    }
+  ],
   "run_snapshots": [
     {
       "ts": "2026-08-22T18:37:24Z",
@@ -315,7 +330,241 @@
       ],
       "gate_fails": [],
       "next": "Read qa_wear summary; fix pair/ship/verify/update Wear regressions."
+    },
+    {
+      "ts": "2026-09-09T19:15:36Z",
+      "run_id": "20260909T191536Z",
+      "mean_composite": 1.0,
+      "ok": true,
+      "top_failures": [
+        {
+          "case_id": "wear_brand_title",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "brand_title": true,
+            "all_ok": true
+          },
+          "duration_ms": 0.0
+        },
+        {
+          "case_id": "wear_theme_dark_only",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 38.0
+        },
+        {
+          "case_id": "wear_ship_payload_cc",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0,
+            "integrity": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 0.0
+        },
+        {
+          "case_id": "wear_ship_validation_empty_carrier",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 0.0
+        },
+        {
+          "case_id": "wear_update_platform_is_wear",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "wear_platform": true,
+            "all_ok": true
+          },
+          "duration_ms": 0.0
+        }
+      ],
+      "gate_fails": [],
+      "next": "Read qa_wear summary; fix pair/ship/verify/update Wear regressions."
+    },
+    {
+      "ts": "2026-09-09T19:28:09Z",
+      "run_id": "20260909T192809Z",
+      "mean_composite": 1.0,
+      "ok": true,
+      "top_failures": [
+        {
+          "case_id": "wear_brand_title",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "brand_title": true,
+            "all_ok": true
+          },
+          "duration_ms": 0.0
+        },
+        {
+          "case_id": "wear_theme_dark_only",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 37.0
+        },
+        {
+          "case_id": "wear_ship_payload_cc",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0,
+            "integrity": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 0.0
+        },
+        {
+          "case_id": "wear_ship_validation_empty_carrier",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 0.0
+        },
+        {
+          "case_id": "wear_update_platform_is_wear",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "wear_platform": true,
+            "all_ok": true
+          },
+          "duration_ms": 0.0
+        }
+      ],
+      "gate_fails": [],
+      "next": "Read qa_wear summary; fix pair/ship/verify/update Wear regressions."
+    },
+    {
+      "ts": "2026-09-09T22:14:00Z",
+      "run_id": "20260909T221400Z",
+      "mean_composite": 1.0,
+      "ok": true,
+      "top_failures": [
+        {
+          "case_id": "wear_brand_title",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "brand_title": true,
+            "all_ok": true
+          },
+          "duration_ms": 0.0
+        },
+        {
+          "case_id": "wear_theme_dark_only",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 49.0
+        },
+        {
+          "case_id": "wear_ship_payload_cc",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0,
+            "integrity": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 0.0
+        },
+        {
+          "case_id": "wear_ship_validation_empty_carrier",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "all_ok": true
+          },
+          "duration_ms": 0.0
+        },
+        {
+          "case_id": "wear_update_platform_is_wear",
+          "composite": 1.0,
+          "metrics": {
+            "success": 1.0,
+            "speed": 1.0
+          },
+          "gates": {
+            "success": true,
+            "wear_platform": true,
+            "all_ok": true
+          },
+          "duration_ms": 0.0
+        }
+      ],
+      "gate_fails": [],
+      "next": "Read qa_wear summary; fix pair/ship/verify/update Wear regressions."
     }
   ],
-  "updated_at": "2026-09-09T18:26:39Z"
+  "updated_at": "2026-09-09T22:14:00Z"
 }

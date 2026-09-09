@@ -50,3 +50,6 @@ _legacy*/
 legacy-*/
 dist-native-log.txt
 flutter_*.log
+
+# Generated splash/load-screen preview screenshots (local review only)
+qa_windows_splash_preview/
