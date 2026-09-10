@@ -138,6 +138,12 @@ class IndustrialTheme {
   static const Color hotRed = Color(0xFFEF4444); // Rush / Hotshot
   static const Color purple = Color(0xFF8B5CF6); // Future / special action
   static const Color slateMuted = Color(0xFF4B5563); // Delivered / occupied
+  /// Selectable-target highlight in location pickers. Deliberately a hue no
+  /// status legend uses (cyan) — the warehouse floor map's Rush/Hotshot red
+  /// and Partial amber already sit in the same red-orange family as the
+  /// brand accent, so reusing that accent for "you can tap this" reads as a
+  /// status color to anyone who has learned the dashboard legend.
+  static const Color pickCyan = Color(0xFF22D3EE);
   /// Awaiting Instructions in **light** mode only (darker than empty map seats).
   static const Color awaiting = Color(0xFF1F2937);
 

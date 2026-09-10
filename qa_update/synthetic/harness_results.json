@@ -1,11 +1,11 @@
 {
-  "ts": "2026-09-09T22:14:06.576115Z",
+  "ts": "2026-09-10T07:07:41.043659Z",
   "domain": "update",
   "cases": [
     {
       "case_id": "classify_windows_setup_exe",
       "ok": true,
-      "duration_ms": 0,
+      "duration_ms": 1,
       "metrics_raw": {
         "integrity": true
       }
@@ -18,7 +18,7 @@
     {
       "case_id": "classify_android_apk",
       "ok": true,
-      "duration_ms": 0
+      "duration_ms": 1
     },
     {
       "case_id": "classify_wear_apk",
@@ -44,7 +44,7 @@
     {
       "case_id": "windows_update_requires_setup_not_portable",
       "ok": true,
-      "duration_ms": 0,
+      "duration_ms": 1,
       "gates_raw": {
         "setup_required": true
       }

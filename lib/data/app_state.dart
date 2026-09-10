@@ -393,12 +393,12 @@ class AppDataNotifier extends StateNotifier<AppData> {
 }
 
 /// Resolves once the initial Supabase staging+shipped load has settled,
-/// capped at 9s so a slow/offline network can never hang the Windows splash
-/// screen (or Android/Wear's held native launch screen) forever — mirrors
-/// Swift Document Generator's StartupSync.ready timeout. Never throws; a
-/// real fetch failure still shows up via [AppData.error] once the app
-/// renders. This does not add a second Supabase round-trip — it awaits the
-/// same in-flight load [appDataProvider] itself triggers on first access.
+/// capped at 9s so a slow/offline network can never hang the Windows/Android
+/// splash screen forever — mirrors Swift Document Generator's
+/// StartupSync.ready timeout. Never throws; a real fetch failure still shows
+/// up via [AppData.error] once the app renders. This does not add a second
+/// Supabase round-trip — it awaits the same in-flight load [appDataProvider]
+/// itself triggers on first access.
 final appDataReadyProvider = FutureProvider<void>((ref) async {
   final notifier = ref.watch(appDataProvider.notifier);
   try {
@@ -408,16 +408,17 @@ final appDataReadyProvider = FutureProvider<void>((ref) async {
     // screen gate must settle so the app is never stuck loading forever.
   }
   // Land the progress bar at 100% even on timeout (same as Document
-  // Generator's StartupSync) so the Windows splash never freezes mid-tick.
+  // Generator's StartupSync) so the splash screen never freezes mid-tick.
   notifier.initialLoadProgress.value = 1.0;
 });
 
-/// Windows-only: [appDataReadyProvider] plus a short cosmetic settle so the
-/// progress bar visibly hits 100% before [SlstApp] swaps to the routed UI —
-/// mirrors Document Generator's WindowsSplashScreen 220ms handoff. Android
-/// and Wear still release their native launch screen on [appDataReadyProvider]
-/// alone (no settle delay).
-final windowsSplashGateProvider = FutureProvider<void>((ref) async {
+/// Windows and Android: [appDataReadyProvider] plus a short cosmetic settle
+/// so the progress bar visibly hits 100% before [SlstApp] swaps from
+/// [WindowsSplashScreen]/`AndroidSplashScreen` to the routed UI — mirrors
+/// Document Generator's splash-screen 220ms handoff. Wear uses the same
+/// signal via its own `WearStartup` (a separate Flutter project, so it
+/// can't watch this provider directly).
+final appSplashGateProvider = FutureProvider<void>((ref) async {
   await ref.watch(appDataReadyProvider.future);
   await Future<void>.delayed(const Duration(milliseconds: 220));
 });

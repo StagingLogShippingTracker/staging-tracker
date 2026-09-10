@@ -265,46 +265,72 @@ Widget _soHistoryLink(
   );
 }
 
-/// Industrial list ↔ cards toggle (sky accent when cards active).
+/// Industrial list ↔ cards toggle: an icon-labeled segmented control so the
+/// current mode and the alternative are both visible without hovering — a
+/// bare unlabeled switch here read as an unexplained control, and relying on
+/// a hover tooltip alone is a dead end on the touchscreens this app also
+/// runs on.
 Widget _logViewModeToggle(BuildContext context, WidgetRef ref) {
   final mode = ref.watch(logViewModeProvider);
   final isCards = mode == LogViewMode.card;
+  final chrome = IndustrialTheme.chromeOf(context);
 
-  return Tooltip(
-    message: isCards ? 'Card view' : 'List view',
-    child: Semantics(
-      label: 'Toggle card or list view',
-      toggled: isCards,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: () => ref.read(logViewModeProvider.notifier).toggle(),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          curve: Curves.easeOut,
-          width: 38,
-          height: 22,
-          padding: const EdgeInsets.all(2),
-          decoration: BoxDecoration(
-            color: isCards
-                ? IndustrialTheme.chromeAccent
-                : IndustrialTheme.chromeOf(context).header,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: IndustrialTheme.chromeOf(context).border),
-          ),
-          child: AnimatedAlign(
-            duration: const Duration(milliseconds: 180),
+  Widget segment({
+    required IconData icon,
+    required String tooltip,
+    required bool selected,
+    required LogViewMode target,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: Semantics(
+        label: tooltip,
+        selected: selected,
+        button: true,
+        child: InkWell(
+          onTap: () => ref.read(logViewModeProvider.notifier).setMode(target),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
             curve: Curves.easeOut,
-            alignment: isCards ? Alignment.centerRight : Alignment.centerLeft,
-            child: Container(
-              width: 18,
-              height: 18,
-              decoration: BoxDecoration(
-                color: IndustrialTheme.chromeOf(context).ink,
-                shape: BoxShape.circle,
-              ),
+            width: 30,
+            height: 26,
+            alignment: Alignment.center,
+            color: selected ? IndustrialTheme.chromeAccent : Colors.transparent,
+            child: Icon(
+              icon,
+              size: 15,
+              color: selected ? Colors.white : chrome.muted,
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  return DecoratedBox(
+    decoration: BoxDecoration(
+      color: chrome.header,
+      borderRadius: BorderRadius.circular(7),
+      border: Border.all(color: chrome.border),
+    ),
+    child: ClipRRect(
+      borderRadius: BorderRadius.circular(6),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          segment(
+            icon: Icons.view_list_rounded,
+            tooltip: 'List view',
+            selected: !isCards,
+            target: LogViewMode.list,
+          ),
+          segment(
+            icon: Icons.grid_view_rounded,
+            tooltip: 'Card view',
+            selected: isCards,
+            target: LogViewMode.card,
+          ),
+        ],
       ),
     ),
   );

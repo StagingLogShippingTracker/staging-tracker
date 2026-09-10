@@ -1,19 +1,23 @@
 import 'package:flutter/material.dart';
-import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/popup_gate.dart';
 import '../../core/theme.dart';
 
-/// How To Use prompt: first [maxShows] launches of each app version, until
-/// product asks to stop this campaign style.
+/// How To Use prompt: first [maxShows] launches ever on this device.
+///
+/// Deliberately NOT keyed per app version — this app ships small updates
+/// often, and re-explaining the whole app on every update (stacked right
+/// after What's New) trained users to reflexively dismiss both. Basic
+/// navigation doesn't change release to release, so this is onboarding for
+/// a new device/install, not a per-release notice.
 class HowToUsePrompt {
   HowToUsePrompt._();
 
   static const maxShows = 3;
   static const title = 'How to use';
 
-  static String campaignIdFor(String version) => 'how_to_use_$version';
+  static const campaignId = 'how_to_use_v1';
 
   static const intro =
       'Swift Staging & Shipping Log is the warehouse floor book for Swift '
@@ -134,17 +138,10 @@ Future<void> showHowToUseDialog(BuildContext context) async {
 Future<void> maybeShowHowToUsePrompt(BuildContext context) async {
   if (!context.mounted) return;
 
-  String version = 'unknown';
-  try {
-    final info = await PackageInfo.fromPlatform();
-    version = info.version.trim();
-  } catch (_) {}
-  if (version.isEmpty) return;
-
-  final campaignId = HowToUsePrompt.campaignIdFor(version);
+  const campaignId = HowToUsePrompt.campaignId;
   var state = await loadHowToUsePromptState();
   if (state.campaignId != campaignId) {
-    state = HowToUsePromptState(
+    state = const HowToUsePromptState(
       campaignId: campaignId,
       timesShown: 0,
     );

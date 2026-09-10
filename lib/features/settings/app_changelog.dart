@@ -20,6 +20,18 @@ class AppChangelog {
   /// Ordered newest-first, same campaign-wave pattern as Document Generator.
   static const sections = <ChangelogSection>[
     ChangelogSection(
+      version: 'v1.1.48',
+      bullets: [
+        'Fixed: Pair Watch failed with a "Missing or invalid apikey" error — the app now sends the project\'s current key',
+        'Android and Wear now get their own branded load screen (Swift mark, real progress) instead of holding a plain native launch screen',
+        'Cleaned up raw error text (e.g. "Exception: ...") shown after a failed save or notification — messages now read as plain English',
+        'The list/card view switch now shows list and grid icons instead of an unlabeled toggle',
+        'Location picker highlights selectable bays in a distinct color, no longer the same red used for Rush/Hotshot elsewhere on the map',
+        'What\'s New and How to Use no longer both pop up back-to-back on every update; How to Use now only appears a few times ever, not once per version',
+        'Fixed the floor summary text (Skids/Boxes/Crates/Pipe) getting cut off at the bottom of the window',
+      ],
+    ),
+    ChangelogSection(
       version: 'v1.1.47',
       bullets: [
         'Windows splash matches Document Generator — Swift mark, real progress, briysce-apps lockup; holds until staging data is ready',
@@ -168,6 +180,7 @@ Future<void> showWhatsNewDialog(BuildContext context) async {
     version: version,
     versionLabel: versionLabel,
     footer: 'You can reopen this anytime from Settings.',
+    sections: AppChangelog.sections,
   );
 }
 
@@ -201,16 +214,23 @@ Future<void> maybeShowChangelogPrompt(BuildContext context) async {
   final remainingBefore = AppChangelog.maxShows - state.timesShown;
   final remainingAfter = remainingBefore - 1;
   final footer = remainingAfter <= 0
-      ? 'This is the last time this summary will appear on this device.'
+      ? 'This is the last time this summary will appear on this device. '
+          'See Settings for the full history.'
       : remainingAfter == 1
           ? 'This summary will appear 1 more time on this device.'
           : 'This summary will appear $remainingAfter more times on this device.';
 
+  // Just the current version here — this pops up unprompted, often on a
+  // phone screen, so it should be a quick read. The full back-catalog stays
+  // one tap away in Settings via showWhatsNewDialog.
   await _showChangelogDialog(
     context,
     version: version,
     versionLabel: versionLabel,
     footer: footer,
+    sections: AppChangelog.sections.isNotEmpty
+        ? [AppChangelog.sections.first]
+        : const [],
   );
 
   await saveChangelogPromptState(
@@ -226,6 +246,7 @@ Future<void> _showChangelogDialog(
   required String version,
   required String versionLabel,
   required String footer,
+  required List<ChangelogSection> sections,
 }) async {
   await PopupGate.exclusive<void>(PopupKeys.whatsNew, () {
     return showDialog<void>(
@@ -254,7 +275,7 @@ Future<void> _showChangelogDialog(
                   ),
                   const SizedBox(height: 12),
                 ],
-                for (final section in AppChangelog.sections) ...[
+                for (final section in sections) ...[
                   Text(
                     section.version,
                     style: const TextStyle(

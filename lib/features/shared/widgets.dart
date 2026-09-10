@@ -972,11 +972,24 @@ class BrandFooter extends StatelessWidget {
   Widget build(BuildContext context) => const SizedBox.shrink();
 }
 
+/// Strips Dart's generated `SomeException: ` / `SomeError: ` prefix so users
+/// see the message a developer wrote, not the exception's type name.
+final _errorTypePrefix = RegExp(r'^[_$A-Za-z][\w$]*(?:Exception|Error):\s*');
+
+String friendlyErrorMessage(Object error) {
+  final raw = error.toString().trim();
+  final stripped = raw.replaceFirst(_errorTypePrefix, '');
+  return stripped.isEmpty ? 'Something went wrong. Please try again.' : stripped;
+}
+
 Future<void> showError(BuildContext context, Object error) async {
   if (!context.mounted) return;
   final scheme = Theme.of(context).colorScheme;
   ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(content: Text(error.toString()), backgroundColor: scheme.error),
+    SnackBar(
+      content: Text(friendlyErrorMessage(error)),
+      backgroundColor: scheme.error,
+    ),
   );
 }
 

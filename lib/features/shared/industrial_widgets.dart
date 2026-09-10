@@ -878,24 +878,24 @@ class CommandDock extends StatelessWidget {
         child: Row(
           children: [
             Expanded(
-              flex: 3,
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(children: hotkeyButtons),
               ),
             ),
             const SizedBox(width: 12),
-            Flexible(
-              child: Text(
-                floorTotalsText,
-                maxLines: 1,
-                softWrap: false,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.right,
-                style: IndustrialTheme.mono(
-                  fontSize: 12,
-                  color: IndustrialTheme.chromeOf(context).muted,
-                ),
+            // Intrinsic width (not Flexible) so this short summary never gets
+            // squeezed by the hotkey row — the hotkey row already scrolls
+            // horizontally and should absorb width pressure instead.
+            Text(
+              floorTotalsText,
+              maxLines: 1,
+              softWrap: false,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.right,
+              style: IndustrialTheme.mono(
+                fontSize: 12,
+                color: IndustrialTheme.chromeOf(context).muted,
               ),
             ),
           ],

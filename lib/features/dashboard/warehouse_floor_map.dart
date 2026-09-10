@@ -859,7 +859,7 @@ class _FloorEntryCard extends ConsumerWidget {
   }
 }
 
-Color _pickAccent(BuildContext context) => IndustrialTheme.chromeAccent;
+Color _pickAccent(BuildContext context) => IndustrialTheme.pickCyan;
 
 /// Dark fill + diagonal hatch for zones/bays that cannot be selected.
 class _PickBlockedOverlay extends StatelessWidget {

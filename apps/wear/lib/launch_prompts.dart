@@ -85,11 +85,20 @@ Future<void> _maybeShowCampaign(
   await prefs.setInt('${prefsPrefix}_shown', shown + 1);
 }
 
+/// Matches Dart/Supabase exception `toString()` wrappers like
+/// `FunctionException(status: 401, ...)` or `PostgrestException(...)` so
+/// their internal structure (status codes, raw server payloads) never
+/// reaches this small screen — same intent as the phone app's
+/// `friendlyErrorMessage`, but Wear's version also redacts anything
+/// email/JWT-shaped and caps length for a tiny display.
+final _wrappedExceptionShape = RegExp(r'^[A-Za-z][\w$]*\([\s\S]*\)$');
+
 String wearSafeError(Object error) {
   final text = error.toString();
   if (text.contains('@') ||
       text.toLowerCase().contains('email') ||
-      text.toLowerCase().contains('jwt')) {
+      text.toLowerCase().contains('jwt') ||
+      _wrappedExceptionShape.hasMatch(text)) {
     return 'Could not complete that step. Try again.';
   }
   if (text.length > 120) {

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme.dart';
 import '../../data/sibling_apps.dart';
+import '../shared/widgets.dart' show showError;
 
 /// Expanded-rail footer that advertises sibling Swift Operations apps.
 class OperationsAppsRail extends StatefulWidget {
@@ -57,9 +58,7 @@ class _OperationsAppsRailState extends State<OperationsAppsRail> {
       setState(() => _status = result.launched ? null : result.status);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
-      );
+      showError(context, e);
     } finally {
       if (mounted) {
         setState(() {

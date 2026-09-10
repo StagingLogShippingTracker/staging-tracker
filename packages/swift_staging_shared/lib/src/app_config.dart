@@ -5,10 +5,22 @@ class AppConfig {
   );
 
   /// Public anon key only — never put service-role or Make webhook secrets here.
+  ///
+  /// This is the project's modern `sb_publishable_...` key, not the legacy
+  /// anon JWT. Both authenticate as the anon role for Postgrest/Storage/
+  /// Realtime, but Supabase Edge Functions on this project now read the
+  /// *current* project key back out of `Deno.env.get('SUPABASE_ANON_KEY')`
+  /// — which is this publishable key, not the old JWT — and functions like
+  /// `watch-pair` reject a request whose `apikey` header doesn't match it
+  /// exactly. Sending the legacy JWT here (as this app did before) produced
+  /// a "Missing or invalid apikey" 401 from every Edge Function call,
+  /// including Pair Watch, even though Postgrest calls worked fine either
+  /// way. Keep this in sync with the project's current key if it ever
+  /// rotates again (Supabase dashboard → Settings → API, or the `get_
+  /// publishable_keys` MCP tool).
   static const supabaseAnonKey = String.fromEnvironment(
     'SUPABASE_ANON_KEY',
-    defaultValue:
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdkcnBkaXd5a21ueWJta2FkbHJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1MjMyMTIsImV4cCI6MjA5NjA5OTIxMn0.Z7ih_vQic1GtzCyZmTEV-RWJnmuaNZQDfOV2_Fvan5g',
+    defaultValue: 'sb_publishable_nge-ONSQVLDmNzUH2gSmqQ_oCLI4lP1',
   );
 
   static const freightPhotosBucket = 'freight-photos';
