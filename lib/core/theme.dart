@@ -5,8 +5,19 @@ import 'package:google_fonts/google_fonts.dart';
 
 /// Swift Document Generator brand surfaces (chrome only — not status colours).
 class SwiftBrandColors {
-  static const accent = Color(0xFFCE4E30);
+  /// Brand accent, used as a *fill* behind white labels. Nudged a hair darker
+  /// than the original #CE4E30 so white-on-accent clears WCAG AA for normal
+  /// text (4.52:1, was 4.41:1) — the shift is imperceptible next to the old
+  /// value but takes every filled button from failing to passing.
+  static const accent = Color(0xFFCB4D2F);
   static const accentHover = Color(0xFFB8442A);
+
+  /// Accent for accent-coloured *text* (SO links, inline links, version
+  /// headings). The fill accent is far too dark on dark chrome and too light
+  /// on paper to carry small text — these are lightness-shifted so the same
+  /// brand hue clears 4.5:1 on every surface in its own theme.
+  static const accentTextLight = Color(0xFFA34029);
+  static const accentTextDark = Color(0xFFD17661);
   static const accentSoftLight = Color(0xFFF8EBE7);
   static const accentSoftDark = Color(0xFF3A221C);
   static const bgLight = Color(0xFFF4F2EF);
@@ -37,6 +48,7 @@ class IndustrialChrome extends ThemeExtension<IndustrialChrome> {
     required this.ink,
     required this.muted,
     required this.accentSoft,
+    required this.accentText,
     required this.inputFill,
   });
 
@@ -47,6 +59,11 @@ class IndustrialChrome extends ThemeExtension<IndustrialChrome> {
   final Color ink;
   final Color muted;
   final Color accentSoft;
+
+  /// Brand accent at a lightness that clears WCAG AA as small text on this
+  /// theme's surfaces. Use for accent-coloured text; use
+  /// [IndustrialTheme.chromeAccent] for accent fills.
+  final Color accentText;
   final Color inputFill;
 
   static IndustrialChrome of(BuildContext context) {
@@ -61,6 +78,7 @@ class IndustrialChrome extends ThemeExtension<IndustrialChrome> {
     ink: SwiftBrandColors.inkLight,
     muted: SwiftBrandColors.mutedLight,
     accentSoft: SwiftBrandColors.accentSoftLight,
+    accentText: SwiftBrandColors.accentTextLight,
     inputFill: SwiftBrandColors.inputLight,
   );
 
@@ -72,6 +90,7 @@ class IndustrialChrome extends ThemeExtension<IndustrialChrome> {
     ink: SwiftBrandColors.inkDark,
     muted: SwiftBrandColors.mutedDark,
     accentSoft: SwiftBrandColors.accentSoftDark,
+    accentText: SwiftBrandColors.accentTextDark,
     inputFill: SwiftBrandColors.inputDark,
   );
 
@@ -84,6 +103,7 @@ class IndustrialChrome extends ThemeExtension<IndustrialChrome> {
     Color? ink,
     Color? muted,
     Color? accentSoft,
+    Color? accentText,
     Color? inputFill,
   }) {
     return IndustrialChrome(
@@ -94,6 +114,7 @@ class IndustrialChrome extends ThemeExtension<IndustrialChrome> {
       ink: ink ?? this.ink,
       muted: muted ?? this.muted,
       accentSoft: accentSoft ?? this.accentSoft,
+      accentText: accentText ?? this.accentText,
       inputFill: inputFill ?? this.inputFill,
     );
   }
@@ -109,6 +130,7 @@ class IndustrialChrome extends ThemeExtension<IndustrialChrome> {
       ink: Color.lerp(ink, other.ink, t)!,
       muted: Color.lerp(muted, other.muted, t)!,
       accentSoft: Color.lerp(accentSoft, other.accentSoft, t)!,
+      accentText: Color.lerp(accentText, other.accentText, t)!,
       inputFill: Color.lerp(inputFill, other.inputFill, t)!,
     );
   }
@@ -274,6 +296,15 @@ class IndustrialTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: chrome.inputFill,
+        // Helper lines sat at the same size and weight as the field label and
+        // were told apart only by colour, so the two blurred together on a
+        // quick scan. Step the helper down and let it stay muted.
+        helperStyle: GoogleFonts.inter(
+          fontSize: 11,
+          height: 1.3,
+          color: muted,
+        ),
+        helperMaxLines: 2,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 12,
           vertical: 10,

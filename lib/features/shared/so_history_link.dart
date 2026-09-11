@@ -34,12 +34,16 @@ class SoHistoryLink extends ConsumerWidget {
           minimumSize: const WidgetStatePropertyAll(Size(0, 32)),
           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
           visualDensity: VisualDensity.compact,
-          foregroundColor: const WidgetStatePropertyAll(IndustrialTheme.chromeAccent),
+          foregroundColor: WidgetStatePropertyAll(
+            IndustrialTheme.chromeOf(context).accentText,
+          ),
           overlayColor: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.hovered) ||
                 states.contains(WidgetState.focused) ||
                 states.contains(WidgetState.pressed)) {
-              return IndustrialTheme.chromeAccent.withValues(alpha: 0.18);
+              return IndustrialTheme.chromeOf(
+                context,
+              ).accentText.withValues(alpha: 0.18);
             }
             return null;
           }),
@@ -56,7 +60,7 @@ class SoHistoryLink extends ConsumerWidget {
                 style: IndustrialTheme.mono(
                   fontSize: fontSize,
                   fontWeight: FontWeight.w700,
-                  color: IndustrialTheme.chromeAccent,
+                  color: IndustrialTheme.chromeOf(context).accentText,
                 ).copyWith(decoration: TextDecoration.none),
               )
             : ConstrainedBox(
@@ -68,7 +72,7 @@ class SoHistoryLink extends ConsumerWidget {
                   style: IndustrialTheme.mono(
                     fontSize: fontSize,
                     fontWeight: FontWeight.w700,
-                    color: IndustrialTheme.chromeAccent,
+                    color: IndustrialTheme.chromeOf(context).accentText,
                   ).copyWith(decoration: TextDecoration.none),
                 ),
               ),

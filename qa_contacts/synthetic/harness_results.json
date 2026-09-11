@@ -1,11 +1,11 @@
 {
-  "ts": "2026-09-10T07:06:25.021821Z",
+  "ts": "2026-09-11T03:07:55.480277Z",
   "domain": "contacts",
   "cases": [
     {
       "case_id": "contacts_asset_present",
       "ok": true,
-      "duration_ms": 7,
+      "duration_ms": 0,
       "gates_raw": {
         "asset_on_disk": true
       }
@@ -13,7 +13,7 @@
     {
       "case_id": "bundled_contacts_json_parses",
       "ok": true,
-      "duration_ms": 67,
+      "duration_ms": 11,
       "metrics_raw": {
         "integrity": true
       }
@@ -21,12 +21,12 @@
     {
       "case_id": "contact_required_fields",
       "ok": true,
-      "duration_ms": 47
+      "duration_ms": 4
     },
     {
       "case_id": "roster_types_stable",
       "ok": true,
-      "duration_ms": 28,
+      "duration_ms": 5,
       "metrics_raw": {
         "coverage": 1.0
       }

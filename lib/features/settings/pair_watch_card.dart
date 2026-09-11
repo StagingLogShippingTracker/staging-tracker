@@ -71,11 +71,8 @@ class _PairWatchCardState extends ConsumerState<PairWatchCard> {
                   ),
                 ],
               ),
-              const SizedBox(height: 4),
-              Text(
-                'PAIR WATCH',
-                style: Theme.of(context).textTheme.labelSmall,
-              ),
+              // The eyebrow here just repeated the heading above it. Feedback
+              // and Update earn theirs by saying something the title doesn't.
               const SizedBox(height: 8),
               Text(
                 'Generate a 6-digit code on this device, then enter it on the '

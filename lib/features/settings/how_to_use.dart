@@ -198,10 +198,10 @@ Future<void> _showHowToUseDialog(
                 for (final section in HowToUsePrompt.sections) ...[
                   Text(
                     section.title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.w700,
                       fontSize: 14,
-                      color: IndustrialTheme.chromeAccent,
+                      color: chrome.accentText,
                       letterSpacing: 0.2,
                     ),
                   ),

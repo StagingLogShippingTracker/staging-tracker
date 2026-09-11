@@ -41,6 +41,7 @@ class _QuickShipSheetState extends ConsumerState<QuickShipSheet> {
   final _crates = TextEditingController();
   final _pipe = TextEditingController();
   final _other = TextEditingController();
+  final _scroll = ScrollController();
   bool _notify = true;
   bool _busy = false;
   final _photos = <PhotoBytes>[];
@@ -83,6 +84,7 @@ class _QuickShipSheetState extends ConsumerState<QuickShipSheet> {
     _crates.dispose();
     _pipe.dispose();
     _other.dispose();
+    _scroll.dispose();
     super.dispose();
   }
 
@@ -143,12 +145,31 @@ class _QuickShipSheetState extends ConsumerState<QuickShipSheet> {
   @override
   Widget build(BuildContext context) {
     final bottom = MediaQuery.viewInsetsOf(context).bottom;
+    // Pin Quick Ship below the scroll viewport. It used to sit at the end of
+    // the scrolling column, so on a short dialog the button someone opened
+    // this sheet to press was off-screen with no cue that it was there.
     return Padding(
       padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottom),
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          const actionReserve = 78.0;
+          final maxScroll = constraints.maxHeight.isFinite
+              ? (constraints.maxHeight - actionReserve).clamp(120.0, 10000.0)
+              : 640.0;
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ConstrainedBox(
+                constraints: BoxConstraints(maxHeight: maxScroll),
+                child: Scrollbar(
+                  controller: _scroll,
+                  thumbVisibility: true,
+                  child: SingleChildScrollView(
+                    controller: _scroll,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
             Row(
               children: [
                 const Icon(Icons.bolt, color: IndustrialTheme.mintGreen),
@@ -232,19 +253,25 @@ class _QuickShipSheetState extends ConsumerState<QuickShipSheet> {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            FilledButton.icon(
-              style: FilledButton.styleFrom(
-                backgroundColor: SlstColors.green,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
+                      ],
+                    ),
+                  ),
+                ),
               ),
-              onPressed: _busy ? null : _save,
-              icon: const Icon(Icons.bolt),
-              label: Text(_busy ? 'Shipping…' : 'Quick Ship'),
-            ),
-          ],
-        ),
+              const SizedBox(height: 12),
+              FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: SlstColors.green,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+                onPressed: _busy ? null : _save,
+                icon: const Icon(Icons.bolt),
+                label: Text(_busy ? 'Shipping…' : 'Quick Ship'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

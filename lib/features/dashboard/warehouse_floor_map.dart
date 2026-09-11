@@ -29,6 +29,9 @@ const _mapChromeOnLightApp = IndustrialChrome(
   ink: SwiftBrandColors.inkDark,
   muted: Color(0xFFD0CFC8),
   accentSoft: Color(0xFF5A3C34),
+  // This field sits much lighter than app-dark chrome, so accent text needs
+  // to be lighter again to clear 4.5:1 on it (4.60 on surface, 5.36 on base).
+  accentText: Color(0xFFEDC0B6),
   inputFill: Color(0xFF3F454E),
 );
 
@@ -110,9 +113,11 @@ class WarehouseFloorMap extends ConsumerWidget {
   static const _levels = ['A', 'B', 'C', 'D', 'E', 'F'];
 
   /// Modestly compact bay seats — still easy to click, less dashboard height.
-  static const double _seat = 13;
+  /// Sized to carry an 11pt aisle letter: these codes are how someone finds a
+  /// physical pallet, so they were too small to read at the previous 13/9.
+  static const double _seat = 15;
   static const double _gap = 1.5;
-  static const double _aisleLabelW = 12;
+  static const double _aisleLabelW = 14;
   static const double _aisleLabelPad = 3;
   static double get _aisleLabelTotal => _aisleLabelW + _aisleLabelPad;
   static double get _rowH => _seat + _gap;
@@ -974,16 +979,23 @@ class _NotUsBite extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            ColoredBox(color: chrome.accentSoft),
-            CustomPaint(painter: _NotUsHatchPainter(color: chrome.border)),
+            // Neighbouring tenant's space — nothing here is actionable, so it
+            // stays background. At full-strength fill it was the heaviest
+            // element on the dashboard despite being the least relevant.
+            ColoredBox(color: chrome.accentSoft.withValues(alpha: 0.3)),
+            CustomPaint(
+              painter: _NotUsHatchPainter(
+                color: chrome.border.withValues(alpha: 0.5),
+              ),
+            ),
             Center(
               child: Text(
                 'NOT US',
                 textAlign: TextAlign.center,
                 style: IndustrialTheme.mono(
-                  fontSize: 18,
+                  fontSize: 13,
                   fontWeight: FontWeight.bold,
-                  color: chrome.muted,
+                  color: chrome.muted.withValues(alpha: 0.6),
                 ),
               ),
             ),
@@ -1243,7 +1255,7 @@ class _Pane extends ConsumerWidget {
       label.toUpperCase(),
       textAlign: TextAlign.center,
       style: IndustrialTheme.mono(
-        fontSize: compact ? 8 : 9,
+        fontSize: compact ? 10 : 11,
         fontWeight: FontWeight.bold,
         color: pick != null && enabled
             ? _pickAccent(context)
@@ -1251,9 +1263,14 @@ class _Pane extends ConsumerWidget {
                 ? _mapChrome(context).ink
                 : _mapSeatLabelColor(context, occupied: false),
       ),
+      // "RECEIVING" used to fracture into "RECEIVI"/"NG" in a narrow block.
+      // Explicit line breaks in a label are still honoured; anything that
+      // still doesn't fit scales down as a whole word instead of breaking.
+      softWrap: false,
       maxLines: verticalText ? 12 : 3,
-      overflow: TextOverflow.ellipsis,
+      overflow: TextOverflow.visible,
     );
+    final fitted = FittedBox(fit: BoxFit.scaleDown, child: text);
 
     final body = muted
         ? Container(
@@ -1263,8 +1280,9 @@ class _Pane extends ConsumerWidget {
               color: _mapChrome(context).header.withValues(alpha: 0.55),
               border: Border.all(color: border.withValues(alpha: 0.85)),
             ),
-            child:
-                verticalText ? RotatedBox(quarterTurns: 1, child: text) : text,
+            child: verticalText
+                ? RotatedBox(quarterTurns: 1, child: fitted)
+                : fitted,
           )
         : _OccupancyBox(
             colors: pick != null && enabled
@@ -1279,8 +1297,9 @@ class _Pane extends ConsumerWidget {
                 ? _pickAccent(context).withValues(alpha: 0.95)
                 : border.withValues(alpha: 0.85),
             padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
-            child:
-                verticalText ? RotatedBox(quarterTurns: 1, child: text) : text,
+            child: verticalText
+                ? RotatedBox(quarterTurns: 1, child: fitted)
+                : fitted,
           );
 
     if (muted) {
@@ -1614,7 +1633,7 @@ class _StatusLegend extends StatelessWidget {
                     item.$1,
                     softWrap: false,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          fontSize: 10,
+                          fontSize: 11,
                         ),
                   ),
                 ],
@@ -1719,7 +1738,7 @@ class _AisleRow extends StatelessWidget {
                 child: Text(
                   aisle,
                   style: IndustrialTheme.mono(
-                    fontSize: 9,
+                    fontSize: 11,
                     fontWeight: FontWeight.bold,
                     color: aislePick == true
                         ? _pickAccent(context)

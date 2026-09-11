@@ -350,7 +350,7 @@ class OrderHistoryDialog extends StatelessWidget {
                           style: IndustrialTheme.mono(
                             fontSize: 18,
                             fontWeight: FontWeight.w700,
-                            color: IndustrialTheme.chromeAccent,
+                            color: IndustrialTheme.chromeOf(context).accentText,
                           ),
                         ),
                       ],

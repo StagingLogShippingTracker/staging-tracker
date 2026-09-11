@@ -20,6 +20,19 @@ class AppChangelog {
   /// Ordered newest-first, same campaign-wave pattern as Document Generator.
   static const sections = <ChangelogSection>[
     ChangelogSection(
+      version: 'v1.1.49',
+      bullets: [
+        'Staging and Shipped logs now fit the window — Timestamp, Shipped By and Actions are no longer cut off at the right edge',
+        'Rows stay the same height whether or not they carry the Prepared marker, so the list scans evenly',
+        'SO numbers, links and contact initials use a brand red that meets accessibility contrast on both themes',
+        'Dashboard KPIs are one strip instead of eight boxes, and categories sitting at zero step back so live counts stand out',
+        'Warehouse floor map: bigger aisle letters and zone names, and "RECEIVING" no longer splits across lines mid-word',
+        'The neighbouring-tenant block on the floor map fades into the background instead of dominating the map',
+        'Quick Ship keeps its button on screen instead of hiding it below the fold',
+        'Field hints sit a step below their labels so the two no longer blur together',
+      ],
+    ),
+    ChangelogSection(
       version: 'v1.1.48',
       bullets: [
         'Fixed: Pair Watch failed with a "Missing or invalid apikey" error — the app now sends the project\'s current key',
@@ -278,10 +291,10 @@ Future<void> _showChangelogDialog(
                 for (final section in sections) ...[
                   Text(
                     section.version,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.w700,
                       fontSize: 15,
-                      color: IndustrialTheme.chromeAccent,
+                      color: chrome.accentText,
                       letterSpacing: 0.3,
                     ),
                   ),

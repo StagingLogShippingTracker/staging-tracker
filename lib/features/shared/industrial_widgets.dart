@@ -461,6 +461,11 @@ class IndustrialStatusBadge extends StatelessWidget {
 class PreparedForShippingBadge extends StatelessWidget {
   const PreparedForShippingBadge({super.key, this.compact = false});
 
+  /// Rendered height of the compact badge (2px padding + 1px border each side
+  /// around a 10pt line). Grid rows reserve this whether or not the badge is
+  /// showing, so a prepared row never stands taller than its neighbours.
+  static const double compactHeight = 20;
+
   final bool compact;
 
   @override
@@ -539,7 +544,7 @@ class IndustrialZonePill extends StatelessWidget {
             fontSize: 11,
             color: value == '—'
                 ? IndustrialTheme.chromeOf(context).muted
-                : IndustrialTheme.chromeAccent,
+                : IndustrialTheme.chromeOf(context).accentText,
           ),
         ),
       ),
@@ -765,6 +770,7 @@ class IndustrialKpiCard extends StatelessWidget {
     required this.subtext,
     this.onTap,
     this.compact = false,
+    this.grouped = false,
   });
 
   /// Dense single-row KPI strip variant.
@@ -774,6 +780,7 @@ class IndustrialKpiCard extends StatelessWidget {
     required this.value,
     this.subtext = '',
     this.onTap,
+    this.grouped = false,
   }) : compact = true;
 
   final String label;
@@ -782,13 +789,19 @@ class IndustrialKpiCard extends StatelessWidget {
   final VoidCallback? onTap;
   final bool compact;
 
+  /// Drops this card's own border/fill so a row of them can sit inside one
+  /// shared container instead of reading as N separate raised objects.
+  final bool grouped;
+
   @override
   Widget build(BuildContext context) {
-    final card = Card(
-      clipBehavior: Clip.antiAlias,
-      // Intrinsic height: label + value + subtitle only — never stretch to
-      // fill a tall grid cell on narrow layouts.
-      child: Padding(
+    final chrome = IndustrialTheme.chromeOf(context);
+    // A category with nothing in it shouldn't compete with a live count for
+    // attention — half the strip is usually zero on a given day.
+    final isZero = value.trim() == '0';
+    final valueColor = isZero ? chrome.muted : chrome.ink;
+
+    final body = Padding(
         padding: EdgeInsets.symmetric(
           horizontal: compact ? 12 : 16,
           vertical: compact ? 12 : 16,
@@ -803,7 +816,7 @@ class IndustrialKpiCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               softWrap: true,
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                fontSize: compact ? 9 : null,
+                fontSize: compact ? 10 : null,
                 height: compact ? 1.1 : null,
                 letterSpacing: compact ? 0.2 : null,
               ),
@@ -816,7 +829,7 @@ class IndustrialKpiCard extends StatelessWidget {
               style: IndustrialTheme.mono(
                 fontSize: compact ? 18 : 24,
                 fontWeight: FontWeight.bold,
-                color: IndustrialTheme.chromeOf(context).ink,
+                color: valueColor,
               ),
             ),
             if (subtext.isNotEmpty) ...[
@@ -825,15 +838,23 @@ class IndustrialKpiCard extends StatelessWidget {
                 subtext,
                 style: Theme.of(
                   context,
-                ).textTheme.bodySmall?.copyWith(fontSize: compact ? 9 : null),
+                ).textTheme.bodySmall?.copyWith(fontSize: compact ? 10 : null),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
             ],
           ],
         ),
-      ),
-    );
+      );
+
+    final card = grouped
+        ? body
+        : Card(
+            clipBehavior: Clip.antiAlias,
+            // Intrinsic height: label + value + subtitle only — never stretch
+            // to fill a tall grid cell on narrow layouts.
+            child: body,
+          );
     // Width fills the strip/grid cell; height stays content-sized.
     final sized = compact
         ? SizedBox(width: double.infinity, child: card)

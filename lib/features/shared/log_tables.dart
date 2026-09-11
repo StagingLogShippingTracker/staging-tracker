@@ -1,4 +1,5 @@
 import 'dart:io' show Platform;
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
@@ -53,21 +54,102 @@ Color _zebraRowColor(BuildContext context, int index, {bool selected = false}) {
       : Colors.transparent;
 }
 
+/// One column in a desktop log grid.
+class _GridCol {
+  const _GridCol(this.id, this.base, {this.dropRank = 0, this.maxGrow = 0});
+
+  final String id;
+
+  /// Narrowest width this column reads well at.
+  final double base;
+
+  /// 0 keeps the column at every width. Higher ranks are dropped first when
+  /// the viewport can't hold every column.
+  final int dropRank;
+
+  /// How much leftover viewport width this column may absorb.
+  final double maxGrow;
+}
+
+/// Resolved widths for one render of a grid. A width of 0 means "dropped".
+class _GridLayout {
+  const _GridLayout(this._widths, this.total);
+
+  final Map<String, double> _widths;
+
+  /// Width to hand the grid's outer [SizedBox].
+  final double total;
+
+  bool shows(String id) => (_widths[id] ?? 0) > 0;
+  double operator [](String id) => _widths[id] ?? 0;
+}
+
+/// Fits [cols] into [available], dropping the lowest-value columns rather than
+/// letting the grid run past the viewport edge.
+///
+/// These grids used to be one fixed pixel width inside a horizontal scroller,
+/// so on an ordinary maximized window the rightmost columns were simply cut
+/// off — "Timestamp" rendered as "TI" and its cells as "AU". A clipped *header*
+/// reads as a broken table rather than "there is more to scroll", so the grid
+/// now sizes itself to the space it actually has: low-value columns drop out
+/// (every dropped field is still on the row's inspector panel) and the
+/// flexible columns absorb whatever slack is left over.
+_GridLayout _fitGrid(
+  List<_GridCol> cols, {
+  required double chrome,
+  required double available,
+}) {
+  var width = chrome + cols.fold<double>(0, (sum, c) => sum + c.base);
+  final dropped = <String>{};
+
+  if (available.isFinite && available > 0) {
+    final droppable = cols.where((c) => c.dropRank > 0).toList()
+      ..sort((a, b) => b.dropRank.compareTo(a.dropRank));
+    for (final col in droppable) {
+      if (width <= available) break;
+      dropped.add(col.id);
+      width -= col.base;
+    }
+  }
+
+  final widths = <String, double>{
+    for (final c in cols) c.id: dropped.contains(c.id) ? 0 : c.base,
+  };
+
+  final growable =
+      cols.where((c) => c.maxGrow > 0 && !dropped.contains(c.id)).toList();
+  if (growable.isNotEmpty && available.isFinite && available > width) {
+    final share = (available - width) / growable.length;
+    for (final col in growable) {
+      final add = math.min(share, col.maxGrow);
+      widths[col.id] = widths[col.id]! + add;
+      width += add;
+    }
+  }
+
+  return _GridLayout(widths, width);
+}
+
 /// Industrial log grid with left/right arrows + horizontal scrollbar.
+///
+/// [gridBuilder] receives the viewport width so the grid can fit its columns
+/// to it (see [_fitGrid]) instead of overflowing a fixed width.
 ///
 /// When [fillsViewport] is true, the parent must give a bounded height. Rows
 /// scroll vertically inside that viewport so the horizontal chrome stays pinned
 /// to the visible table panel (not at the document end under tall content).
 Widget _industrialGridWithPinnedHorizontalChrome({
-  required Widget grid,
+  required Widget Function(double availableWidth) gridBuilder,
   required bool fillsViewport,
 }) {
   if (!fillsViewport) {
     return HorizontalScrollWithArrows(
-      builder: (context, controller) => SingleChildScrollView(
-        controller: controller,
-        scrollDirection: Axis.horizontal,
-        child: grid,
+      builder: (context, controller) => LayoutBuilder(
+        builder: (context, constraints) => SingleChildScrollView(
+          controller: controller,
+          scrollDirection: Axis.horizontal,
+          child: gridBuilder(constraints.maxWidth),
+        ),
       ),
     );
   }
@@ -76,6 +158,7 @@ Widget _industrialGridWithPinnedHorizontalChrome({
     builder: (context, controller) {
       return LayoutBuilder(
         builder: (context, constraints) {
+          final grid = gridBuilder(constraints.maxWidth);
           final maxH = constraints.maxHeight;
           final table = !maxH.isFinite || maxH <= 0
               ? grid
@@ -242,7 +325,7 @@ Widget _photosButton(BuildContext context, String so, List<String> paths) {
     style: TextButton.styleFrom(
       padding: const EdgeInsets.symmetric(horizontal: 8),
       minimumSize: const Size(0, 32),
-      foregroundColor: IndustrialTheme.chromeAccent,
+      foregroundColor: IndustrialTheme.chromeOf(context).accentText,
     ),
     onPressed: () =>
         showPhotosDialog(context, title: 'Photos — SO $so', paths: paths),
@@ -990,11 +1073,14 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
         sortedLength: sorted.length,
       );
     } else {
-      final grid = _stagingIndustrialGrid(canWrite: canWrite, rows: rows);
       // Pin arrows + horizontal scrollbar to the table panel viewport; scroll
       // rows vertically inside that bounded height (not the outer page).
       final horizontal = _industrialGridWithPinnedHorizontalChrome(
-        grid: grid,
+        gridBuilder: (availableWidth) => _stagingIndustrialGrid(
+          canWrite: canWrite,
+          rows: rows,
+          availableWidth: availableWidth,
+        ),
         fillsViewport: widget.fillsViewport,
       );
       body = Column(
@@ -1322,33 +1408,40 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
   Widget _stagingIndustrialGrid({
     required bool canWrite,
     required List<StagingEntry> rows,
+    required double availableWidth,
   }) {
-    const soW = 120.0;
-    const clientW = 168.0;
-    const zoneW = 118.0;
-    const containerW = 140.0;
-    const weightW = 118.0;
-    const statusW = 140.0;
-    const stagerW = 118.0;
-    const timeW = 128.0;
-    const photosW = 80.0;
-    const actionsW = 148.0;
     const cellPad = EdgeInsets.symmetric(horizontal: 10, vertical: 10);
     final batchW = _batch ? 44.0 : 0.0;
-    final totalW =
-        3 +
-        batchW +
-        soW +
-        clientW +
-        zoneW +
-        containerW +
-        weightW +
-        statusW +
-        stagerW +
-        timeW +
-        photosW +
-        (canWrite ? actionsW : 0) +
-        24;
+    // SO / Client / Zone / Containers / Status are what an operator scans to
+    // find a row, so they never drop. Photos and Weight go first, then Stager,
+    // then Timestamp — all four stay readable on the row inspector.
+    final cols = _fitGrid(
+      [
+        const _GridCol('so', 112),
+        const _GridCol('client', 150, maxGrow: 110),
+        const _GridCol('zone', 104),
+        const _GridCol('containers', 112, maxGrow: 40),
+        const _GridCol('weight', 96, dropRank: 3),
+        const _GridCol('status', 132, maxGrow: 60),
+        const _GridCol('stager', 112, dropRank: 2, maxGrow: 50),
+        const _GridCol('time', 128, dropRank: 1),
+        const _GridCol('photos', 76, dropRank: 4),
+        if (canWrite) const _GridCol('actions', 148),
+      ],
+      chrome: 3 + batchW + 24,
+      available: availableWidth,
+    );
+    final soW = cols['so'];
+    final clientW = cols['client'];
+    final zoneW = cols['zone'];
+    final containerW = cols['containers'];
+    final weightW = cols['weight'];
+    final statusW = cols['status'];
+    final stagerW = cols['stager'];
+    final timeW = cols['time'];
+    final photosW = cols['photos'];
+    final actionsW = cols['actions'];
+    final totalW = cols.total;
 
     Widget headerCell(String label, double width) =>
         SizedBox(width: width, child: IndustrialColumnHeader(label));
@@ -1369,11 +1462,11 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
                 headerCell('Client', clientW),
                 headerCell('Zone', zoneW),
                 headerCell('Containers', containerW),
-                headerCell('Weight (lbs)', weightW),
+                if (cols.shows('weight')) headerCell('Weight (lbs)', weightW),
                 headerCell('Status', statusW),
-                headerCell('Stager', stagerW),
-                headerCell('Timestamp', timeW),
-                headerCell('Photos', photosW),
+                if (cols.shows('stager')) headerCell('Stager', stagerW),
+                if (cols.shows('time')) headerCell('Timestamp', timeW),
+                if (cols.shows('photos')) headerCell('Photos', photosW),
                 if (canWrite) headerCell('Actions', actionsW),
               ],
             ),
@@ -1450,13 +1543,14 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
                             child: _containerCell(context, e.type, e.qty),
                           ),
                         ),
-                        SizedBox(
-                          width: weightW,
-                          child: Padding(
-                            padding: cellPad,
-                            child: IndustrialWeightPill(e.weight),
+                        if (cols.shows('weight'))
+                          SizedBox(
+                            width: weightW,
+                            child: Padding(
+                              padding: cellPad,
+                              child: IndustrialWeightPill(e.weight),
+                            ),
                           ),
-                        ),
                         SizedBox(
                           width: statusW,
                           child: Padding(
@@ -1466,44 +1560,56 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 IndustrialStatusBadge(status: statusLabel),
-                                if (e.preparedForShipping) ...[
-                                  const SizedBox(height: 4),
-                                  const PreparedForShippingBadge(
-                                    compact: true,
-                                  ),
-                                ],
+                                // The Prepared line is always reserved, empty
+                                // or not: letting it appear only on some rows
+                                // made those rows taller than their neighbours
+                                // and broke the zebra rhythm when scanning.
+                                const SizedBox(height: 4),
+                                SizedBox(
+                                  height:
+                                      PreparedForShippingBadge.compactHeight,
+                                  child: e.preparedForShipping
+                                      ? const PreparedForShippingBadge(
+                                          compact: true,
+                                        )
+                                      : null,
+                                ),
                               ],
                             ),
                           ),
                         ),
-                        SizedBox(
-                          width: stagerW,
-                          child: Padding(
-                            padding: cellPad,
-                            child: _clipText(context, 
-                              e.stagedBy ?? '',
-                              maxWidth: stagerW - 20,
-                              muted: true,
+                        if (cols.shows('stager'))
+                          SizedBox(
+                            width: stagerW,
+                            child: Padding(
+                              padding: cellPad,
+                              child: _clipText(
+                                context,
+                                e.stagedBy ?? '',
+                                maxWidth: stagerW - 20,
+                                muted: true,
+                              ),
                             ),
                           ),
-                        ),
-                        SizedBox(
-                          width: timeW,
-                          child: Padding(
-                            padding: cellPad,
-                            child: _mutedStamp(context, e.entryDate),
-                          ),
-                        ),
-                        SizedBox(
-                          width: photosW,
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 6,
+                        if (cols.shows('time'))
+                          SizedBox(
+                            width: timeW,
+                            child: Padding(
+                              padding: cellPad,
+                              child: _mutedStamp(context, e.entryDate),
                             ),
-                            child: _photosButton(context, e.so, e.photoUrls),
                           ),
-                        ),
+                        if (cols.shows('photos'))
+                          SizedBox(
+                            width: photosW,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              child: _photosButton(context, e.so, e.photoUrls),
+                            ),
+                          ),
                         if (canWrite)
                           SizedBox(
                             width: actionsW,
@@ -1975,9 +2081,12 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
         sortedLength: sorted.length,
       );
     } else {
-      final grid = _shippedIndustrialGrid(canWrite: canWrite, rows: rows);
       final horizontal = _industrialGridWithPinnedHorizontalChrome(
-        grid: grid,
+        gridBuilder: (availableWidth) => _shippedIndustrialGrid(
+          canWrite: canWrite,
+          rows: rows,
+          availableWidth: availableWidth,
+        ),
         fillsViewport: widget.fillsViewport,
       );
       body = Column(
@@ -2286,35 +2395,44 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
   Widget _shippedIndustrialGrid({
     required bool canWrite,
     required List<ShippedEntry> rows,
+    required double availableWidth,
   }) {
-    const soW = 120.0;
-    const clientW = 160.0;
-    const containerW = 140.0;
-    const carrierW = 130.0;
-    const zoneW = 118.0;
-    const weightW = 118.0;
-    const shippedW = 128.0;
-    const byW = 110.0;
-    const pmdW = 120.0;
-    const photosW = 80.0;
-    const actionsW = 56.0;
     const cellPad = EdgeInsets.symmetric(horizontal: 10, vertical: 10);
     final batchW = _batch ? 44.0 : 0.0;
-    final totalW =
-        3 +
-        batchW +
-        soW +
-        clientW +
-        containerW +
-        carrierW +
-        zoneW +
-        weightW +
-        shippedW +
-        byW +
-        pmdW +
-        photosW +
-        (canWrite ? actionsW : 0) +
-        24;
+    // SO / Client / Containers / Carrier identify a shipment; the rest drop in
+    // order of how rarely they settle a question at a glance. Everything
+    // dropped is still on the row inspector.
+    final cols = _fitGrid(
+      [
+        const _GridCol('so', 112),
+        const _GridCol('client', 150, maxGrow: 110),
+        const _GridCol('containers', 112, maxGrow: 40),
+        const _GridCol('carrier', 124, maxGrow: 50),
+        const _GridCol('zone', 104, dropRank: 3),
+        const _GridCol('weight', 96, dropRank: 4),
+        const _GridCol('shipped', 128, dropRank: 1),
+        const _GridCol('by', 110, dropRank: 2, maxGrow: 40),
+        const _GridCol('pmd', 120, dropRank: 5),
+        const _GridCol('photos', 76, dropRank: 6),
+        // Wide enough for the "ACTIONS" header itself — at 56 it broke
+        // mid-word into "ACTIO"/"NS" even though the cell is just a ⋮ menu.
+        if (canWrite) const _GridCol('actions', 84),
+      ],
+      chrome: 3 + batchW + 24,
+      available: availableWidth,
+    );
+    final soW = cols['so'];
+    final clientW = cols['client'];
+    final containerW = cols['containers'];
+    final carrierW = cols['carrier'];
+    final zoneW = cols['zone'];
+    final weightW = cols['weight'];
+    final shippedW = cols['shipped'];
+    final byW = cols['by'];
+    final pmdW = cols['pmd'];
+    final photosW = cols['photos'];
+    final actionsW = cols['actions'];
+    final totalW = cols.total;
 
     Widget headerCell(String label, double width) =>
         SizedBox(width: width, child: IndustrialColumnHeader(label));
@@ -2335,12 +2453,12 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
                 headerCell('Client', clientW),
                 headerCell('Containers', containerW),
                 headerCell('Carrier', carrierW),
-                headerCell('Zone', zoneW),
-                headerCell('Weight (lbs)', weightW),
-                headerCell('Shipped', shippedW),
-                headerCell('By', byW),
-                headerCell("PM'd", pmdW),
-                headerCell('Photos', photosW),
+                if (cols.shows('zone')) headerCell('Zone', zoneW),
+                if (cols.shows('weight')) headerCell('Weight (lbs)', weightW),
+                if (cols.shows('shipped')) headerCell('Shipped', shippedW),
+                if (cols.shows('by')) headerCell('By', byW),
+                if (cols.shows('pmd')) headerCell("PM'd", pmdW),
+                if (cols.shows('photos')) headerCell('Photos', photosW),
                 if (canWrite) headerCell('Actions', actionsW),
               ],
             ),
@@ -2425,55 +2543,66 @@ class _ShippedLogCardState extends ConsumerState<ShippedLogCard> {
                                   ),
                           ),
                         ),
-                        SizedBox(
-                          width: zoneW,
-                          child: Padding(
-                            padding: cellPad,
-                            child: IndustrialZonePill(e.location),
-                          ),
-                        ),
-                        SizedBox(
-                          width: weightW,
-                          child: Padding(
-                            padding: cellPad,
-                            child: IndustrialWeightPill(e.weight),
-                          ),
-                        ),
-                        SizedBox(
-                          width: shippedW,
-                          child: Padding(
-                            padding: cellPad,
-                            child: _mutedStamp(context, e.shippedAt),
-                          ),
-                        ),
-                        SizedBox(
-                          width: byW,
-                          child: Padding(
-                            padding: cellPad,
-                            child: _clipText(context, 
-                              e.shippedBy ?? '',
-                              maxWidth: byW - 20,
-                              muted: true,
+                        if (cols.shows('zone'))
+                          SizedBox(
+                            width: zoneW,
+                            child: Padding(
+                              padding: cellPad,
+                              child: IndustrialZonePill(e.location),
                             ),
                           ),
-                        ),
-                        SizedBox(
-                          width: pmdW,
-                          child: Padding(
-                            padding: cellPad,
-                            child: _pmNotificationCell(context, e, maxWidth: pmdW - 20),
-                          ),
-                        ),
-                        SizedBox(
-                          width: photosW,
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 6,
+                        if (cols.shows('weight'))
+                          SizedBox(
+                            width: weightW,
+                            child: Padding(
+                              padding: cellPad,
+                              child: IndustrialWeightPill(e.weight),
                             ),
-                            child: _photosButton(context, e.so, e.photoUrls),
                           ),
-                        ),
+                        if (cols.shows('shipped'))
+                          SizedBox(
+                            width: shippedW,
+                            child: Padding(
+                              padding: cellPad,
+                              child: _mutedStamp(context, e.shippedAt),
+                            ),
+                          ),
+                        if (cols.shows('by'))
+                          SizedBox(
+                            width: byW,
+                            child: Padding(
+                              padding: cellPad,
+                              child: _clipText(
+                                context,
+                                e.shippedBy ?? '',
+                                maxWidth: byW - 20,
+                                muted: true,
+                              ),
+                            ),
+                          ),
+                        if (cols.shows('pmd'))
+                          SizedBox(
+                            width: pmdW,
+                            child: Padding(
+                              padding: cellPad,
+                              child: _pmNotificationCell(
+                                context,
+                                e,
+                                maxWidth: pmdW - 20,
+                              ),
+                            ),
+                          ),
+                        if (cols.shows('photos'))
+                          SizedBox(
+                            width: photosW,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              child: _photosButton(context, e.so, e.photoUrls),
+                            ),
+                          ),
                         if (canWrite)
                           SizedBox(
                             width: actionsW,

@@ -1,11 +1,11 @@
 {
-  "ts": "2026-09-10T07:07:02.666730Z",
+  "ts": "2026-09-11T03:07:58.532801Z",
   "domain": "location",
   "cases": [
     {
       "case_id": "location_parse_aisle",
       "ok": true,
-      "duration_ms": 23,
+      "duration_ms": 3,
       "metrics_raw": {
         "integrity": true
       }
@@ -13,7 +13,7 @@
     {
       "case_id": "location_category_filter",
       "ok": true,
-      "duration_ms": 7,
+      "duration_ms": 2,
       "metrics_raw": {
         "coverage": 1.0
       }
@@ -21,7 +21,7 @@
     {
       "case_id": "map_pick_mode_blocks_freetext",
       "ok": true,
-      "duration_ms": 3,
+      "duration_ms": 0,
       "gates_raw": {
         "aisle_has_map_mode": true,
         "floor_has_map_mode": true,
@@ -32,7 +32,7 @@
     {
       "case_id": "outside_tiles_ok",
       "ok": true,
-      "duration_ms": 1
+      "duration_ms": 0
     },
     {
       "case_id": "floor_zone_pickable_matrix",
@@ -45,12 +45,12 @@
     {
       "case_id": "canonical_location_labels",
       "ok": true,
-      "duration_ms": 1
+      "duration_ms": 0
     },
     {
       "case_id": "b02_partial_supersedes_slots",
       "ok": true,
-      "duration_ms": 6
+      "duration_ms": 0
     },
     {
       "case_id": "partial_bay_conflict_skids_crates",
@@ -60,12 +60,12 @@
     {
       "case_id": "drive_gap_bays_reserved",
       "ok": true,
-      "duration_ms": 1
+      "duration_ms": 0
     },
     {
       "case_id": "seeded_outside_no_freetext",
       "ok": true,
-      "duration_ms": 1,
+      "duration_ms": 0,
       "gates_raw": {
         "no_freetext_outside_seeds": true
       }

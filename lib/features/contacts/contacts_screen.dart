@@ -88,7 +88,7 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen> {
                               _initials(c.name),
                               style: TextStyle(
                                 fontWeight: FontWeight.w800,
-                                color: IndustrialTheme.chromeAccent,
+                                color: IndustrialTheme.chromeOf(context).accentText,
                               ),
                             ),
                           ),

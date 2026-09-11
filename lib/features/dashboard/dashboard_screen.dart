@@ -374,10 +374,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           final scroll = contentWidth < needed;
                           final phone = contentWidth < _boardStackBreakpoint;
 
-                          Widget cardAt(int i) => IndustrialKpiCard.compact(
+                          Widget cardAt(int i, {bool grouped = false}) =>
+                              IndustrialKpiCard.compact(
                             label: kpis[i].label,
                             value: '${totals[kpis[i].key] ?? 0}',
                             subtext: kpis[i].subtext,
+                            grouped: grouped,
                             onTap: kpis[i].detail == null
                                 ? () => context.go('/shipped')
                                 : () => showStatDetailDialog(
@@ -441,21 +443,32 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
                           // Always scroll horizontally on desktop/tablet so
                           // narrow widths never clip the trailing KPI cards.
+                          // One bordered strip with hairline dividers rather
+                          // than eight separately-bordered boxes — same data,
+                          // far less chrome competing for the eye.
+                          final chrome = IndustrialTheme.chromeOf(context);
                           final cellW = scroll
                               ? minCell
-                              : (contentWidth -
-                                        (kpis.length - 1) * _kpiGap) /
-                                    kpis.length;
-                          return SizedBox(
+                              : (contentWidth - 2) / kpis.length;
+                          return Container(
                             height: 92,
+                            decoration: BoxDecoration(
+                              color: chrome.surface,
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: chrome.border),
+                            ),
+                            clipBehavior: Clip.antiAlias,
                             child: ListView.separated(
                               scrollDirection: Axis.horizontal,
                               itemCount: kpis.length,
-                              separatorBuilder: (_, _) =>
-                                  const SizedBox(width: _kpiGap),
+                              separatorBuilder: (_, _) => VerticalDivider(
+                                width: 1,
+                                thickness: 1,
+                                color: chrome.border,
+                              ),
                               itemBuilder: (context, i) => SizedBox(
                                 width: cellW < minCell ? minCell : cellW,
-                                child: cardAt(i),
+                                child: cardAt(i, grouped: true),
                               ),
                             ),
                           );

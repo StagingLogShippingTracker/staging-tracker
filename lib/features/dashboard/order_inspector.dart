@@ -154,7 +154,7 @@ class OrderInspector extends ConsumerWidget {
                 onPressed: () =>
                     showOrderHistoryDialog(context, ref, so: entry.so),
                 style: TextButton.styleFrom(
-                  foregroundColor: IndustrialTheme.chromeAccent,
+                  foregroundColor: IndustrialTheme.chromeOf(context).accentText,
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                   minimumSize: const Size(0, 32),
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
