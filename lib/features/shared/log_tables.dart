@@ -1248,23 +1248,29 @@ class _StagingLogCardState extends ConsumerState<StagingLogCard> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
+                    // The SO is the number someone scans this list for, so it
+                    // keeps its natural width and the badges wrap to the next
+                    // line when they don't fit. As an Expanded child in a Row
+                    // it gave up its width instead: on a phone, a long status
+                    // ("Awaiting Instructions") plus the Prepared badge left
+                    // it a single character wide, rendering 1411731 as seven
+                    // stacked digits.
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        Expanded(
-                          child: Text(
-                            e.so,
-                            style: IndustrialTheme.mono(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                              color: IndustrialTheme.chromeOf(context).ink,
-                            ),
+                        Text(
+                          e.so,
+                          style: IndustrialTheme.mono(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: IndustrialTheme.chromeOf(context).ink,
                           ),
                         ),
                         IndustrialStatusBadge(status: statusLabel),
-                        if (e.preparedForShipping) ...[
-                          const SizedBox(width: 6),
+                        if (e.preparedForShipping)
                           const PreparedForShippingBadge(compact: true),
-                        ],
                       ],
                     ),
                     const SizedBox(height: 4),

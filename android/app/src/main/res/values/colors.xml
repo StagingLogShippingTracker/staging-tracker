@@ -2,4 +2,8 @@
 <resources>
     <color name="launch_background">#091019</color>
     <color name="splash_icon_background">#091019</color>
+    <!-- Adaptive-icon plate. Without an adaptive icon Android 12+ fell back to
+         the legacy square icon and drew it on its own near-white plate, which
+         is where the white squircle behind the splash logo came from. -->
+    <color name="ic_launcher_background">#141618</color>
 </resources>

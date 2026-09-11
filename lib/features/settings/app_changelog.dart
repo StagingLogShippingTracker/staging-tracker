@@ -20,6 +20,13 @@ class AppChangelog {
   /// Ordered newest-first, same campaign-wave pattern as Document Generator.
   static const sections = <ChangelogSection>[
     ChangelogSection(
+      version: 'v1.1.50',
+      bullets: [
+        'Phone: SO numbers no longer stack one digit per line on rows carrying the Prepared marker — the status badges wrap underneath instead',
+        'Android: the app icon and startup screen no longer sit on a white square; both now use a dark tile like Swift Document Generator',
+      ],
+    ),
+    ChangelogSection(
       version: 'v1.1.49',
       bullets: [
         'Staging and Shipped logs now fit the window — Timestamp, Shipped By and Actions are no longer cut off at the right edge',
